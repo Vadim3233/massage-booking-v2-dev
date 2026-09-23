@@ -88,6 +88,50 @@ describe('Chain Mode scheduling engine', () => {
     expect(result).toContain('17:00')
   })
 
+  it('moves the before-chain slot earlier for a 90-minute treatment', () => {
+    const result = getAvailableTimes({
+      workingHours: {
+        start: '10:00',
+        end: '20:00',
+      },
+      anchor: null,
+      bookings: [
+        {
+          start: '15:00',
+          end: '16:00',
+        },
+      ],
+      holds: [],
+      blockedPeriods: [],
+      requestedDurationMinutes: 90,
+      travelBufferMinutes: 60,
+    })
+
+    expect(result).toEqual(['12:30', '17:00'])
+  })
+
+  it('does not return an after-chain slot when the treatment would finish after working hours', () => {
+    const result = getAvailableTimes({
+      workingHours: {
+        start: '10:00',
+        end: '18:00',
+      },
+      anchor: null,
+      bookings: [
+        {
+          start: '15:00',
+          end: '16:00',
+        },
+      ],
+      holds: [],
+      blockedPeriods: [],
+      requestedDurationMinutes: 90,
+      travelBufferMinutes: 60,
+    })
+
+    expect(result).toEqual(['12:30'])
+  })
+
   it('allows the last treatment to finish exactly at the end of working hours', () => {
     const result = getAvailableTimes({
       workingHours: {
