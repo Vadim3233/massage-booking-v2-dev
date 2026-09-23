@@ -603,4 +603,148 @@ describe('Chain Mode scheduling engine', () => {
     expect(result).toEqual(['17:00'])
   })
 
+
+  it('allows an edge slot when blocked time ends exactly at the reserved interval start', () => {
+    const result = getAvailableTimes({
+      workingHours: {
+        start: '10:00',
+        end: '20:00',
+      },
+      anchor: null,
+      bookings: [
+        {
+          start: '15:00',
+          end: '16:00',
+        },
+      ],
+      holds: [],
+      blockedPeriods: [
+        {
+          start: '12:00',
+          end: '13:00',
+        },
+      ],
+      requestedDurationMinutes: 60,
+      travelBufferMinutes: 60,
+    })
+
+    expect(result).toEqual(['13:00', '17:00'])
+  })
+
+  it('allows an edge slot when blocked time starts exactly at the reserved interval end', () => {
+    const result = getAvailableTimes({
+      workingHours: {
+        start: '10:00',
+        end: '20:00',
+      },
+      anchor: null,
+      bookings: [
+        {
+          start: '15:00',
+          end: '16:00',
+        },
+      ],
+      holds: [],
+      blockedPeriods: [
+        {
+          start: '18:00',
+          end: '19:00',
+        },
+      ],
+      requestedDurationMinutes: 60,
+      travelBufferMinutes: 60,
+    })
+
+    expect(result).toEqual(['13:00', '17:00'])
+  })
+
+  it('uses the outer boundaries of confirmed bookings and active holds together', () => {
+    const result = getAvailableTimes({
+      workingHours: {
+        start: '09:00',
+        end: '22:00',
+      },
+      anchor: null,
+      bookings: [
+        {
+          start: '15:00',
+          end: '16:00',
+        },
+      ],
+      holds: [
+        {
+          start: '18:00',
+          end: '19:00',
+          expiresAt: '2026-09-23T18:00:00Z',
+        },
+      ],
+      blockedPeriods: [],
+      currentTime: '2026-09-23T16:00:00Z',
+      requestedDurationMinutes: 60,
+      travelBufferMinutes: 60,
+    })
+
+    expect(result).toEqual(['13:00', '20:00'])
+  })
+
+  it('ignores expired holds when active holds are also present', () => {
+    const result = getAvailableTimes({
+      workingHours: {
+        start: '09:00',
+        end: '22:00',
+      },
+      anchor: null,
+      bookings: [],
+      holds: [
+        {
+          start: '12:00',
+          end: '13:00',
+          expiresAt: '2026-09-23T15:00:00Z',
+        },
+        {
+          start: '15:00',
+          end: '16:00',
+          expiresAt: '2026-09-23T18:00:00Z',
+        },
+      ],
+      blockedPeriods: [],
+      currentTime: '2026-09-23T16:00:00Z',
+      requestedDurationMinutes: 60,
+      travelBufferMinutes: 60,
+    })
+
+    expect(result).toEqual(['13:00', '17:00'])
+  })
+
+  it('applies multiple blocked periods independently on an empty day', () => {
+    const result = getAvailableTimes({
+      workingHours: {
+        start: '10:00',
+        end: '15:00',
+      },
+      anchor: null,
+      bookings: [],
+      holds: [],
+      blockedPeriods: [
+        {
+          start: '10:30',
+          end: '11:00',
+        },
+        {
+          start: '13:00',
+          end: '13:30',
+        },
+      ],
+      requestedDurationMinutes: 60,
+      travelBufferMinutes: 60,
+    })
+
+    expect(result).toEqual([
+      '11:00',
+      '11:30',
+      '13:30',
+      '14:00',
+    ])
+  })
+
 })
