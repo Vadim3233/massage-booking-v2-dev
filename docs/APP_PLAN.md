@@ -30,6 +30,25 @@ Proposed entry points: `booking.vadmassage.com/` (booking), `/account` (client a
 - Provide versioned, validated operations such as `identify_client`, `get_availability`, `quote_booking`, `create_booking_hold`, `confirm_booking`, `get_booking`, `reschedule_booking`, `cancel_booking`, and admin day summaries. Names are proposed contracts, not evidence of existing RPCs.
 - Bank transfer is the default payment route; cash may require approval. Payment verification and booking confirmation are distinct states. Avoid recording a transfer as paid solely because the client says it was sent.
 
+
+## Performance and maintainability guardrails from the V1 review
+
+The V1 code-level review identified efficiency problems caused mainly by repeated data loading, duplicated state and accumulated code. V2 should preserve the product while preventing those patterns from returning.
+
+- **Bound Calendar reads by date range.** Admin Calendar must request only the visible/needed range. Historical data should load separately instead of fetching the entire booking history whenever the date changes.
+- **Deduplicate initial requests.** Avoid multiple components independently requesting the same booking/client/settings data during initial render. Shared query/cache ownership should be explicit.
+- **Use canonical client reads.** Admin Clients must read canonical client records rather than rebuilding the client directory from all bookings on every render.
+- **Database is authoritative.** Do not maintain competing business records in database columns, JSON notes, React state and browser storage. Browser caches may accelerate reads but must be disposable and clearly staleable.
+- **Lazy-load heavy Admin surfaces.** Analytics, detailed Settings, receipts/documents and other infrequent panels should load only when opened. Calendar, Clients, bookings and payments remain immediately accessible.
+- **Separate Client/Admin presentation bundles where useful.** Keep styles and components feature-scoped; avoid rebuilding another giant shared stylesheet with successive override layers.
+- **Remove dead code instead of hiding it.** Do not retain permanently disabled JSX, superseded helpers or unused large assets in V2.
+- **Memoize only real derived work.** Expensive derived lists or summaries should be calculated from stable inputs and recomputed only when those inputs change. Prefer better data ownership over adding cache layers everywhere.
+- **Do not confuse file splitting with performance.** Splitting large files is required for ownership, testing and maintainability; actual runtime performance comes from bounded reads, lazy loading, reduced duplication and smaller active bundles.
+- **Keep rare technical controls out of the primary workflow.** Advanced scheduling/configuration belongs under Settings/advanced areas, while Calendar, Clients, bookings and payments remain the operational core.
+- **Never trade reliability for lightness.** Security checks, booking holds, buffer/conflict validation, server revalidation and regression/integration tests are mandatory even if removing them would make the code appear smaller.
+
+These are V2 design constraints, not a request to spend time cleaning V1. The old app remains a reference while V2 implements the same useful behavior with clean ownership.
+
 ## Agent interfaces — planned, not integrated
 
 Client WhatsApp conversation → approved Meta/WhatsApp integration → restricted VAD Booking API → booking core. An assistant may gather missing information and explain options; the booking core supplies valid slots and prices. Confirm appointment details with the client before creation. Recognize returning clients by normalized phone number, confirm their saved address and use stronger checks before exposing private details or changing an existing booking.
@@ -82,7 +101,7 @@ The WhatsApp agent is another interface, not another booking system. It may coll
 | Scheduling engine | In progress | Boundary, anchor, before-chain, buffer, hold and conflict scenarios pass meaningful tests. |
 | Data model and secure API | Planned | Canonical client/address/booking schema; migrations and role-limited operations; atomic hold and booking flow; agent-ready versioned contracts, audit source/actor and idempotency. |
 | Client booking | Planned | Complete a real booking end to end on mobile, including back navigation and payment instructions. |
-| Admin | Planned | Calendar, clients, manual bookings, payment and cancellation actions work end to end on mobile. |
+| Admin | Planned | Calendar, clients, manual bookings, payment and cancellation actions work end to end on mobile; Calendar reads are range-bounded and heavy secondary panels are lazy-loaded. |
 | Reliability release gate | Planned | Exercise real booking, change, cancellation, duplicate request and failed-payment paths against a safe environment; inspect network/database errors. |
 | Agent-ready integration boundary | Planned with V2 core | Channel-neutral API, canonical client/channel links, idempotency, actor/source audit, event outbox and separate client/admin scopes. No Meta dependency yet. |
 | WhatsApp receptionist | Deferred | Verify Meta integration path, then answer FAQs using approved business content. |
