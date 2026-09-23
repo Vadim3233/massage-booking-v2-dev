@@ -742,6 +742,7 @@ describe('Chain Mode scheduling engine', () => {
     expect(result).toEqual([
       '11:00',
       '11:30',
+      '12:00',
       '13:30',
       '14:00',
     ])
