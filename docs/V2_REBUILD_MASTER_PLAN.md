@@ -8,6 +8,14 @@ The goal is **not** to invent a different product. The old app is the product sp
 
 The old repository remains a read-only reference. V2 is implemented independently.
 
+### Documentation hierarchy
+
+- `docs/APP_PLAN.md` is the strategic product/architecture plan and includes agent-readiness requirements.
+- `docs/DECISIONS.md` records durable architectural decisions and their reasons.
+- This file is the detailed V1-to-V2 rebuild/implementation plan.
+
+Read all three before substantial architectural work. If they diverge, update the documents in the same change instead of creating another competing source of truth.
+
 ---
 
 ## 2. Sources reviewed
