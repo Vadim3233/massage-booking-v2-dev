@@ -44,31 +44,35 @@ export function getAvailableTimes({
   }
 
   // Existing chain:
-  // find the earliest existing treatment start.
+  // find the earliest treatment start and latest treatment end.
   const bookingStarts = bookings.map((booking) =>
     timeToMinutes(booking.start)
   )
+  const bookingEnds = bookings.map((booking) =>
+    timeToMinutes(booking.end)
+  )
 
   const chainStart = Math.min(...bookingStarts)
+  const chainEnd = Math.max(...bookingEnds)
 
-  // A new treatment attached before the chain needs:
-  //
-  // treatment → travel → existing chain
-  //
-  // Example:
-  // 13:00–14:00 treatment
-  // 14:00–15:00 travel
-  // 15:00 existing booking
+  // Before chain:
+  // treatment -> travel -> existing chain
   const beforeChainStart =
     chainStart - travelBufferMinutes - requestedDurationMinutes
 
+  // After chain:
+  // existing chain -> travel -> treatment
+  const afterChainStart = chainEnd + travelBufferMinutes
+
   const availableTimes = []
 
-  // Working hours refer to treatment time.
-  // Therefore the proposed treatment itself must not start
-  // before working hours begin.
+  // Working hours apply to treatment time itself.
   if (beforeChainStart >= workingStart) {
     availableTimes.push(minutesToTime(beforeChainStart))
+  }
+
+  if (afterChainStart + requestedDurationMinutes <= workingEnd) {
+    availableTimes.push(minutesToTime(afterChainStart))
   }
 
   return availableTimes
