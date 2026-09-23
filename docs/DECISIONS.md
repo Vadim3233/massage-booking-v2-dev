@@ -80,3 +80,22 @@ Updated: 2026-09-23. These are design decisions and intended requirements; imple
 **Decision:** V2 will use feature-scoped components, styles and modules, but file splitting alone is not treated as a performance optimization. Performance work focuses on bounded queries, reduced duplicate work, lazy loading and smaller active bundles. Dead or permanently disabled code is removed rather than hidden.
 
 **Reason:** V1's very large App/Admin/CSS files made regression risk high, while some runtime cost came from data-loading and repeated calculations rather than file size itself.
+
+
+## ADR-014 — One visit, separate session rows
+
+**Decision:** A booking represents one visit to one address and start time. Each person's treatment is stored as a separate `booking_sessions` row. The booking stores the summed treatment duration, while pricing and session identity remain per session.
+
+**Reason:** This preserves the V1 client experience while permanently preventing the old `2 × 60 = 1 × 120` modelling error. It also keeps travel buffer around the visit rather than between sessions inside the same visit.
+
+## ADR-015 — Payment has one authoritative record per booking
+
+**Decision:** V2 uses one authoritative booking-payment record linked one-to-one with the booking. Booking status and payment status remain separate state machines; payment state is not duplicated in a second order authority and booking JSON notes.
+
+**Reason:** V1 could disagree across order state, booking state and notes. A single payment authority makes verification, cash approval, cancellation and refund history explicit.
+
+## ADR-016 — Calendar blocking uses one canonical block model
+
+**Decision:** Date-specific unavailable time and Admin personal events use one canonical calendar-block model with a type/kind field and optional personal-event presentation metadata.
+
+**Reason:** Both concepts block availability. A single scheduling-block source simplifies availability queries while still allowing Admin to distinguish blocked time from named personal events.
