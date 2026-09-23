@@ -110,9 +110,6 @@ export function getAvailableTimes({
   // treatment -> travel -> existing chain
   const beforeChainStart =
     chainStart - travelBufferMinutes - requestedDurationMinutes
-  const beforeChainTreatmentEnd =
-    beforeChainStart + requestedDurationMinutes
-
   // After chain:
   // existing chain -> travel -> treatment
   const afterChainStart = chainEnd + travelBufferMinutes
