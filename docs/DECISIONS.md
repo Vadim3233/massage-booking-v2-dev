@@ -61,3 +61,22 @@ Updated: 2026-09-23. These are design decisions and intended requirements; imple
 **Decision:** V2 will include a channel-neutral, versioned integration boundary, separate permission scopes, source/actor audit, idempotent commands and committed-event notification hooks as part of the core architecture. Actual Meta/Muse/WhatsApp agent implementation remains deferred until the core booking journeys are reliable and the current provider capabilities are verified.
 
 **Reason:** These boundaries are inexpensive to design into the clean rebuild but expensive to retrofit after the database and booking contracts are established. They also avoid making V2 dependent on a particular external AI product.
+
+
+## ADR-011 — Bounded reads and on-demand Admin loading
+
+**Decision:** Calendar and operational reads must be scoped to the date/data range needed by the current screen. Historical data loads separately. Analytics, detailed Settings, receipts/documents and similarly heavy secondary surfaces should be lazy-loaded when opened.
+
+**Reason:** V1 repeatedly loaded all bookings and bundled heavy Admin surfaces into the initial workspace. That increased database traffic, render work and coupling without adding product value.
+
+## ADR-012 — Canonical records over derived or duplicated browser business state
+
+**Decision:** Supabase canonical records are the source of truth for clients, bookings, payments and settings. Admin client lists come from canonical client data, not reconstruction from booking history. Browser storage and React state may hold temporary UI/draft/cache state only and must not become an alternative business database.
+
+**Reason:** V1 represented booking/client data in database columns, JSON notes, React state and browser storage at the same time. The resulting contradictions and stale compatibility layers were a major reliability problem.
+
+## ADR-013 — Maintainability changes must target ownership, not cosmetic file splitting
+
+**Decision:** V2 will use feature-scoped components, styles and modules, but file splitting alone is not treated as a performance optimization. Performance work focuses on bounded queries, reduced duplicate work, lazy loading and smaller active bundles. Dead or permanently disabled code is removed rather than hidden.
+
+**Reason:** V1's very large App/Admin/CSS files made regression risk high, while some runtime cost came from data-loading and repeated calculations rather than file size itself.
