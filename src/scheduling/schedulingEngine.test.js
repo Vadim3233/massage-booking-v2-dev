@@ -66,6 +66,28 @@ describe('Chain Mode scheduling engine', () => {
     expect(result).toContain('13:00')
   })
 
+  it('returns the correct after-chain slot', () => {
+    const result = getAvailableTimes({
+      workingHours: {
+        start: '10:00',
+        end: '20:00',
+      },
+      anchor: null,
+      bookings: [
+        {
+          start: '15:00',
+          end: '16:00',
+        },
+      ],
+      holds: [],
+      blockedPeriods: [],
+      requestedDurationMinutes: 60,
+      travelBufferMinutes: 60,
+    })
+
+    expect(result).toContain('17:00')
+  })
+
   it('allows the last treatment to finish exactly at the end of working hours', () => {
     const result = getAvailableTimes({
       workingHours: {
