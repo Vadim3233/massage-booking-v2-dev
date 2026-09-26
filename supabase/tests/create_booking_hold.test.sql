@@ -3,45 +3,12 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions, pg_temp;
 
-select plan(7);
-
--- These are local-only contract rows. FK enforcement is disabled only for the
--- setup insert so auth.uid() can be simulated without creating Auth accounts.
-set local session_replication_role = replica;
-
-insert into public.clients (
-  id,
-  auth_user_id,
-  first_name,
-  last_name,
-  online_booking_enabled
-)
-values
-  (
-    '00000000-0000-0000-0000-000000001101',
-    '00000000-0000-0000-0000-000000001001',
-    'Hold',
-    'Client',
-    true
-  ),
-  (
-    '00000000-0000-0000-0000-000000001102',
-    '00000000-0000-0000-0000-000000001002',
-    'Disabled',
-    'Client',
-    false
-  )
-on conflict (id) do nothing;
-
-set local session_replication_role = origin;
-
-delete from public.command_requests
-where scope like 'client_booking_hold:%';
+select plan(9);
 
 delete from public.booking_holds
-where client_id in (
-  '00000000-0000-0000-0000-000000001101',
-  '00000000-0000-0000-0000-000000001102'
+where client_key in (
+  'hold-client-key-000000000001',
+  'hold-client-key-000000000002'
 );
 
 delete from public.calendar_blocks
@@ -67,69 +34,55 @@ values (
   null
 );
 
--- 1. User without a linked canonical client is rejected.
-select set_config(
-  'request.jwt.claim.sub',
-  '00000000-0000-0000-0000-000000001099',
-  true
-);
-set local role authenticated;
-select throws_ok(
-  $$select * from public.create_booking_hold(
-    '2031-02-03', 600, 60, 'hold-test-unlinked'
-  )$$,
-  '42501',
-  'Client profile is not linked to this account',
-  'hold creation requires a linked canonical client'
-);
-reset role;
-
--- 2. Disabled client cannot create a hold.
-select set_config(
-  'request.jwt.claim.sub',
-  '00000000-0000-0000-0000-000000001002',
-  true
-);
-set local role authenticated;
-select throws_ok(
-  $$select * from public.create_booking_hold(
-    '2031-02-03', 600, 60, 'hold-test-disabled'
-  )$$,
-  '42501',
-  'Online booking is disabled for this client',
-  'online booking access is enforced'
-);
-reset role;
-
--- 3. Available slot creates a hold.
-select set_config(
-  'request.jwt.claim.sub',
-  '00000000-0000-0000-0000-000000001001',
-  true
-);
-set local role authenticated;
+-- 1. The V1-compatible booking flow can create a hold before authentication.
+set local role anon;
 select lives_ok(
   $$select * from public.create_booking_hold(
-    '2031-02-03', 600, 60, 'hold-test-create'
+    '2031-02-03',
+    600,
+    60,
+    'hold-client-key-000000000001'
   )$$,
-  'available slot creates a booking hold'
+  'anonymous public booking flow can create a hold'
 );
 reset role;
 
+-- 2. Hold state is private but stores the expected server-authoritative values.
 select is(
   (
     select count(*)::integer
     from public.booking_holds
-    where client_id = '00000000-0000-0000-0000-000000001101'
+    where client_key = 'hold-client-key-000000000001'
+      and client_id is null
       and date = '2031-02-03'
       and start_minutes = 600
       and treatment_duration_minutes = 60
       and travel_buffer_minutes = 60
       and status = 'active'
-      and expires_at = created_at + interval '60 minutes'
   ),
   1,
-  'created hold has expected slot, buffer, state and expiry'
+  'hold stores the chosen slot with the server 60-minute travel buffer'
+);
+
+-- 3. Slot-selection hold is ten minutes, matching the existing product.
+select is(
+  (
+    select expires_at
+    from public.booking_holds
+    where client_key = 'hold-client-key-000000000001'
+      and status = 'active'
+    order by created_at desc
+    limit 1
+  ),
+  (
+    select created_at + interval '10 minutes'
+    from public.booking_holds
+    where client_key = 'hold-client-key-000000000001'
+      and status = 'active'
+    order by created_at desc
+    limit 1
+  ),
+  'pre-auth slot hold expires after 10 minutes'
 );
 
 -- 4. Active hold immediately participates in Chain Mode.
@@ -140,25 +93,26 @@ select is(
       array[]::integer[]
     )
     from public.compute_booking_availability(
-      '2031-02-03', 60, now(), 60
+      '2031-02-03',
+      60,
+      now(),
+      60
     ) a
   ),
   array[720]::integer[],
-  'active hold immediately changes availability'
+  'active hold immediately changes availability to the next outer edge'
 );
 
--- 5. Same idempotency key does not create a duplicate.
-select set_config(
-  'request.jwt.claim.sub',
-  '00000000-0000-0000-0000-000000001001',
-  true
-);
-set local role authenticated;
+-- 5. A retry by the same browser key refreshes rather than duplicates.
+set local role anon;
 select lives_ok(
   $$select * from public.create_booking_hold(
-    '2031-02-03', 600, 60, 'hold-test-create'
+    '2031-02-03',
+    600,
+    60,
+    'hold-client-key-000000000001'
   )$$,
-  'idempotent retry returns successfully'
+  'same browser key can refresh its selected hold'
 );
 reset role;
 
@@ -166,10 +120,86 @@ select is(
   (
     select count(*)::integer
     from public.booking_holds
-    where client_id = '00000000-0000-0000-0000-000000001101'
+    where client_key = 'hold-client-key-000000000001'
   ),
   1,
-  'idempotent retry creates no duplicate hold'
+  'refresh does not create a duplicate hold'
+);
+
+-- 6. Another browser cannot reserve the already-held slot.
+set local role anon;
+select throws_ok(
+  $$select * from public.create_booking_hold(
+    '2031-02-03',
+    600,
+    60,
+    'hold-client-key-000000000002'
+  )$$,
+  '23P01',
+  'Requested time is no longer available',
+  'different browser key cannot take an active held slot'
+);
+reset role;
+
+-- 7. Hold release requires all three opaque ownership values.
+set local role anon;
+select throws_ok(
+  format(
+    'select * from public.release_booking_hold(%L::uuid, %L::uuid, %L)',
+    (
+      select id
+      from public.booking_holds
+      where client_key = 'hold-client-key-000000000001'
+      limit 1
+    ),
+    '00000000-0000-0000-0000-000000000099',
+    'hold-client-key-000000000001'
+  ),
+  '42501',
+  'Booking hold token is invalid',
+  'wrong hold token cannot release a reservation'
+);
+reset role;
+
+-- 8. Correct token releases the hold.
+set local role anon;
+select is(
+  (
+    select r.released
+    from public.release_booking_hold(
+      (
+        select id
+        from public.booking_holds
+        where client_key = 'hold-client-key-000000000001'
+        limit 1
+      ),
+      (
+        select hold_token
+        from public.booking_holds
+        where client_key = 'hold-client-key-000000000001'
+        limit 1
+      ),
+      'hold-client-key-000000000001'
+    ) r
+  ),
+  true,
+  'correct hold token releases the reservation'
+);
+reset role;
+
+-- 9. Released hold no longer blocks the original slot.
+select ok(
+  exists (
+    select 1
+    from public.compute_booking_availability(
+      '2031-02-03',
+      60,
+      now(),
+      60
+    ) a
+    where a.start_minutes = 600
+  ),
+  'released hold no longer blocks availability'
 );
 
 select * from finish();
