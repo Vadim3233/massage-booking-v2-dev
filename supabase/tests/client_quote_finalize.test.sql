@@ -178,7 +178,7 @@ reset role;
 -- Create a pre-auth 60-minute hold.
 set local role anon;
 select lives_ok(
-  $select * from public.create_booking_hold(
+  $$select * from public.create_booking_hold(
     current_setting('test.finalize_date1')::date,
     600,
     60,
@@ -440,7 +440,7 @@ select is(
 -- 18. First-time client cannot create a second active future reservation.
 set local role anon;
 select lives_ok(
-  $select * from public.create_booking_hold(
+  $$select * from public.create_booking_hold(
     current_setting('test.finalize_date2')::date,
     600,
     60,
