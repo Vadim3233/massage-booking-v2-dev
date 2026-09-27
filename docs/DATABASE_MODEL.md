@@ -1,6 +1,6 @@
 # VAD Massage Booking V2 — Database Model
 
-Updated: 2026-09-23.
+Updated: 2026-09-27.
 
 This is the target V2 database model. It is a design specification, not evidence that the tables or RPCs already exist. Implement it through committed Supabase migrations and contract tests.
 
@@ -61,7 +61,9 @@ Suggested columns:
 Rules:
 
 - Admin can create a client without an Auth account.
-- Registration can link an Auth account to one canonical client.
+- Registration activates through `activate_my_client_account`, using the confirmed Auth email as the identity authority.
+- If exactly one unlinked canonical client has that confirmed email, activation links it instead of creating a duplicate.
+- Ambiguous duplicate email matches fail for manual resolution; an email already linked to another Auth account cannot be taken over.
 - Phone/WhatsApp is a lookup clue, not the canonical identity.
 - Clients never submit arbitrary `clients.id` values in public booking commands; server-side identity resolution derives it.
 
@@ -223,25 +225,30 @@ This intentionally avoids separate overlapping blocking tables.
 
 Purpose: temporary reservation while a booking is being completed.
 
-Suggested columns:
+Implemented core columns:
 
 - `id uuid primary key`
-- `client_id uuid not null`
+- `client_id uuid null` — null while the public flow is still pre-auth
+- `client_key text null` — opaque browser identity for the pre-auth hold
+- `hold_token uuid not null` — secret proof used to release/finalize the hold
 - `date date not null`
 - `start_minutes integer not null`
 - `treatment_duration_minutes integer not null`
 - `travel_buffer_minutes integer not null`
 - `expires_at timestamptz not null`
 - `status text` — `active`, `consumed`, `released`
-- `created_at timestamptz`
+- timestamps
 
 Rules:
 
+- V1-compatible public flow may create the hold before sign-in
+- the pre-auth hold lasts 10 minutes
 - only active, unexpired holds block availability
-- finalization validates ownership and expiry again
+- hold creation and release use an opaque browser client key plus hold token; private hold rows are not exposed to anon
+- finalization authenticates the client, resolves the canonical client and validates the hold key/token/expiry again
 - consuming the hold happens in the same transaction that creates the booking
 - failed finalization must not leave a partially created booking/payment
-- public booking hold creation is rate-limited
+- public booking hold creation must receive abuse/rate controls before release
 
 Useful index:
 
@@ -322,14 +329,17 @@ The sum of session durations must equal `bookings.treatment_duration_minutes` wh
 - `preference_label_snapshot text`
 - primary key on booking session + preference
 
-### `booking_enhancements`
+### `booking_session_enhancements`
+
+Enhancements are stored against the session they belong to, matching the per-session review model.
 
 - `id uuid primary key`
-- `booking_id uuid not null`
+- `booking_session_id uuid not null`
 - `enhancement_id uuid not null`
-- `name_snapshot text`
-- `price_gbp numeric(10,2)`
-- `duration_minutes integer`
+- `enhancement_name_snapshot text`
+- `quantity integer not null`
+- `unit_price_gbp numeric(10,2)`
+- `duration_minutes_snapshot integer`
 
 ## 8. Payments
 
@@ -337,20 +347,18 @@ The sum of session durations must equal `bookings.treatment_duration_minutes` wh
 
 One authoritative payment record per booking.
 
-Suggested columns:
+Implemented core columns:
 
 - `id uuid primary key`
 - `booking_id uuid not null unique`
 - `method text not null` — `bank_transfer`, `cash`
-- `payment_status text not null`
-- `amount_due_gbp numeric(10,2) not null`
-- `reference text`
-- `client_reported_at timestamptz null`
+- `status text not null`
+- `amount_gbp numeric(10,2) not null`
+- `payment_reference text`
+- `admin_notes text`
 - `verified_at timestamptz null`
-- `received_at timestamptz null`
-- `approved_at timestamptz null`
-- `rejected_at timestamptz null`
-- `updated_by uuid null`
+- `verified_by uuid null`
+- `paid_at timestamptz null`
 - timestamps
 
 Do not duplicate payment status in another order object and a booking row.
@@ -380,17 +388,16 @@ Examples:
 
 ### Payment statuses
 
-Initial target:
+Implemented core statuses:
 
-- `awaiting_verification`
-- `cash_pending_approval`
-- `cash_on_arrival`
+- `awaiting_verification` — bank transfer reported/submitted, awaiting Admin verification
+- `awaiting_approval` — cash request awaiting Admin approval
+- `approved` — cash-on-arrival request approved, but cash not yet recorded as paid
 - `paid`
-- `refunded`
-- `cancelled`
 - `rejected`
+- `refunded`
 
-The exact transition matrix must be implemented and tested before UI status controls are built.
+Cancellation is a booking-state action and does not erase or fabricate payment history. The exact transition matrix still requires dedicated contract tests before UI status controls are built.
 
 ## 10. Waitlist
 
@@ -567,6 +574,7 @@ Names are targets and may be refined before SQL implementation:
 
 ### Client/write
 
+- `activate_my_client_account`
 - `create_booking_hold`
 - `release_booking_hold`
 - `finalize_client_booking`
