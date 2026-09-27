@@ -1,6 +1,6 @@
 # VAD Massage Booking V2 — App Plan
 
-Updated: 2026-09-23. This is the product plan, not a claim that every feature is implemented. Check code, migrations and deployment before marking work done.
+Updated: 2026-09-27. This is the product plan, not a claim that every feature is implemented. Check code, migrations and deployment before marking work done.
 
 ## Goal and architecture
 
@@ -97,9 +97,9 @@ The WhatsApp agent is another interface, not another booking system. It may coll
 
 | Phase | Status | Deliverable and acceptance evidence |
 | --- | --- | --- |
-| V2 foundation | In progress, verify repository | Vite/React, Supabase connection and test runner; inspect existing files before changing status. |
-| Scheduling engine | In progress | Boundary, anchor, before-chain, buffer, hold and conflict scenarios pass meaningful tests. |
-| Data model and secure API | Planned | Canonical client/address/booking schema; migrations and role-limited operations; atomic hold and booking flow; agent-ready versioned contracts, audit source/actor and idempotency. |
+| V2 foundation | Core verified | Vite/React, linked Supabase project and Vitest/local Supabase test runners are working; fresh local database resets reproduce committed migrations. |
+| Scheduling engine | Core verified | JavaScript Chain Mode tests and database availability/hold/public-discovery contract tests pass locally; public availability and holds use the shared server scheduling implementation. |
+| Data model and secure API | In progress | Canonical identity/catalogue/scheduling/booking/payment/audit tables are migrated; public discovery and pre-auth holds are live in V2. Client account activation is the next tested migration before quote/finalization. |
 | Client booking | Planned | Complete a real booking end to end on mobile, including back navigation and payment instructions. |
 | Admin | Planned | Calendar, clients, manual bookings, payment and cancellation actions work end to end on mobile; Calendar reads are range-bounded and heavy secondary panels are lazy-loaded. |
 | Reliability release gate | Planned | Exercise real booking, change, cancellation, duplicate request and failed-payment paths against a safe environment; inspect network/database errors. |
