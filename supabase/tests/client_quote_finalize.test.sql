@@ -3,7 +3,18 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions, pg_temp;
 
-select plan(18);
+select plan(19);
+
+select set_config(
+  'test.finalize_date1',
+  ((now() at time zone 'Europe/London')::date + 10)::text,
+  true
+);
+select set_config(
+  'test.finalize_date2',
+  ((now() at time zone 'Europe/London')::date + 11)::text,
+  true
+);
 
 -- Catalogue fixtures.
 insert into public.services (id, slug, name, active, display_order)
@@ -62,13 +73,18 @@ values (
 );
 
 -- Future scheduling fixture.
-delete from public.working_hours_overrides where date in ('2031-03-03', '2031-03-04');
+delete from public.working_hours_overrides
+where date in (
+  current_setting('test.finalize_date1')::date,
+  current_setting('test.finalize_date2')::date
+);
+
 insert into public.working_hours_overrides (
   date, available, start_minutes, end_minutes, start_mode, fixed_start_minutes
 )
 values
-  ('2031-03-03', true, 600, 1200, 'flexible', null),
-  ('2031-03-04', true, 600, 1200, 'flexible', null);
+  (current_setting('test.finalize_date1')::date, true, 600, 1200, 'flexible', null),
+  (current_setting('test.finalize_date2')::date, true, 600, 1200, 'flexible', null);
 
 -- Auth/client fixture.
 insert into auth.users (
@@ -162,8 +178,8 @@ reset role;
 -- Create a pre-auth 60-minute hold.
 set local role anon;
 select lives_ok(
-  $$select * from public.create_booking_hold(
-    '2031-03-03',
+  $select * from public.create_booking_hold(
+    current_setting('test.finalize_date1')::date,
     600,
     60,
     'finalize-hold-client-key-0000001'
@@ -252,7 +268,7 @@ select is(
     select b.total_gbp
     from public.bookings b
     where b.client_id = '00000000-0000-0000-0000-000000004501'
-      and b.date = '2031-03-03'
+      and b.date = current_setting('test.finalize_date1')::date
   ),
   115.00::numeric,
   'finalized booking stores the authoritative server total'
@@ -265,7 +281,7 @@ select is(
     from public.booking_sessions bs
     join public.bookings b on b.id = bs.booking_id
     where b.client_id = '00000000-0000-0000-0000-000000004501'
-      and b.date = '2031-03-03'
+      and b.date = current_setting('test.finalize_date1')::date
       and bs.duration_minutes = 60
   ),
   1,
@@ -280,7 +296,7 @@ select is(
     join public.booking_sessions bs on bs.id = bsp.booking_session_id
     join public.bookings b on b.id = bs.booking_id
     where b.client_id = '00000000-0000-0000-0000-000000004501'
-      and b.date = '2031-03-03'
+      and b.date = current_setting('test.finalize_date1')::date
       and bsp.preference_label_snapshot = 'More neck'
   ),
   1,
@@ -294,7 +310,7 @@ select is(
     from public.booking_enhancements be
     join public.bookings b on b.id = be.booking_id
     where b.client_id = '00000000-0000-0000-0000-000000004501'
-      and b.date = '2031-03-03'
+      and b.date = current_setting('test.finalize_date1')::date
       and be.enhancement_id = '00000000-0000-0000-0000-000000004201'
   ),
   1,
@@ -308,7 +324,7 @@ select is(
     from public.booking_payments bp
     join public.bookings b on b.id = bp.booking_id
     where b.client_id = '00000000-0000-0000-0000-000000004501'
-      and b.date = '2031-03-03'
+      and b.date = current_setting('test.finalize_date1')::date
   ),
   'awaiting_verification',
   'bank transfer remains awaiting Admin verification'
@@ -320,7 +336,7 @@ select is(
     select b.booking_status
     from public.bookings b
     where b.client_id = '00000000-0000-0000-0000-000000004501'
-      and b.date = '2031-03-03'
+      and b.date = current_setting('test.finalize_date1')::date
   ),
   'awaiting_payment_verification',
   'bank-transfer booking remains awaiting payment verification'
@@ -343,7 +359,7 @@ select is(
     select b.postcode_snapshot
     from public.bookings b
     where b.client_id = '00000000-0000-0000-0000-000000004501'
-      and b.date = '2031-03-03'
+      and b.date = current_setting('test.finalize_date1')::date
   ),
   'SW1A 1AA',
   'booking stores an immutable address snapshot'
@@ -356,7 +372,7 @@ select is(
     from public.event_outbox eo
     join public.bookings b on b.id = eo.aggregate_id
     where b.client_id = '00000000-0000-0000-0000-000000004501'
-      and b.date = '2031-03-03'
+      and b.date = current_setting('test.finalize_date1')::date
       and eo.event_type = 'booking.created'
       and eo.delivery_status = 'pending'
   ),
@@ -415,7 +431,7 @@ select is(
     select count(*)::integer
     from public.bookings b
     where b.client_id = '00000000-0000-0000-0000-000000004501'
-      and b.date = '2031-03-03'
+      and b.date = current_setting('test.finalize_date1')::date
   ),
   1,
   'idempotent retry creates no duplicate booking'
@@ -424,8 +440,8 @@ select is(
 -- 18. First-time client cannot create a second active future reservation.
 set local role anon;
 select lives_ok(
-  $$select * from public.create_booking_hold(
-    '2031-03-04',
+  $select * from public.create_booking_hold(
+    current_setting('test.finalize_date2')::date,
     600,
     60,
     'finalize-hold-client-key-0000002'
