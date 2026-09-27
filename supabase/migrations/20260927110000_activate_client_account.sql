@@ -104,8 +104,8 @@ begin
       using errcode = '23505';
   end if;
 
-  select count(*)::integer, min(c.id)
-  into v_candidate_count, v_candidate_id
+  select count(*)::integer
+  into v_candidate_count
   from public.clients c
   where c.normalized_email = v_auth_email
     and c.auth_user_id is null;
@@ -116,6 +116,13 @@ begin
   end if;
 
   if v_candidate_count = 1 then
+    select c.id
+    into v_candidate_id
+    from public.clients c
+    where c.normalized_email = v_auth_email
+      and c.auth_user_id is null
+    limit 1;
+
     update public.clients c
     set
       auth_user_id = v_user_id,
