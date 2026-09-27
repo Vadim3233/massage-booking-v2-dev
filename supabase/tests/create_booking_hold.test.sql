@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions, pg_temp;
 
-select plan(9);
+select plan(10);
 
 delete from public.booking_holds
 where client_key in (
@@ -141,17 +141,39 @@ select throws_ok(
 );
 reset role;
 
--- 7. Hold release requires all three opaque ownership values.
-set local role anon;
-select throws_ok(
-  format(
-    'select * from public.release_booking_hold(%L::uuid, %L::uuid, %L)',
+-- Capture opaque values while the test owner can inspect the private table.
+do $
+begin
+  perform set_config(
+    'test.booking_hold_id',
     (
-      select id
+      select id::text
       from public.booking_holds
       where client_key = 'hold-client-key-000000000001'
       limit 1
     ),
+    true
+  );
+
+  perform set_config(
+    'test.booking_hold_token',
+    (
+      select hold_token::text
+      from public.booking_holds
+      where client_key = 'hold-client-key-000000000001'
+      limit 1
+    ),
+    true
+  );
+end;
+$;
+
+-- 8. Hold release requires all three opaque ownership values.
+set local role anon;
+select throws_ok(
+  format(
+    'select * from public.release_booking_hold(%L::uuid, %L::uuid, %L)',
+    current_setting('test.booking_hold_id'),
     '00000000-0000-0000-0000-000000000099',
     'hold-client-key-000000000001'
   ),
@@ -161,24 +183,14 @@ select throws_ok(
 );
 reset role;
 
--- 8. Correct token releases the hold.
+-- 9. Correct token releases the hold.
 set local role anon;
 select is(
   (
     select r.released
     from public.release_booking_hold(
-      (
-        select id
-        from public.booking_holds
-        where client_key = 'hold-client-key-000000000001'
-        limit 1
-      ),
-      (
-        select hold_token
-        from public.booking_holds
-        where client_key = 'hold-client-key-000000000001'
-        limit 1
-      ),
+      current_setting('test.booking_hold_id')::uuid,
+      current_setting('test.booking_hold_token')::uuid,
       'hold-client-key-000000000001'
     ) r
   ),
@@ -187,7 +199,7 @@ select is(
 );
 reset role;
 
--- 9. Released hold no longer blocks the original slot.
+-- 10. Released hold no longer blocks the original slot.
 select ok(
   exists (
     select 1
