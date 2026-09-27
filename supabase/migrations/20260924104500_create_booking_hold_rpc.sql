@@ -130,13 +130,13 @@ begin
   for update;
 
   -- Own current hold must not block moving or refreshing the selection.
-  update public.booking_holds
+  update public.booking_holds as h
   set
     status = 'released',
-    expires_at = least(expires_at, v_now)
-  where client_key = v_client_key
-    and status = 'active'
-    and expires_at > v_now;
+    expires_at = least(h.expires_at, v_now)
+  where h.client_key = v_client_key
+    and h.status = 'active'
+    and h.expires_at > v_now;
 
   if not exists (
     select 1
@@ -259,11 +259,11 @@ begin
     return;
   end if;
 
-  update public.booking_holds
+  update public.booking_holds as h
   set
     status = 'released',
-    expires_at = least(expires_at, now())
-  where id = v_hold.id;
+    expires_at = least(h.expires_at, now())
+  where h.id = v_hold.id;
 
   released := true;
   return next;
