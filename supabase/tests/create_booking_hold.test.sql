@@ -142,7 +142,7 @@ select throws_ok(
 reset role;
 
 -- Capture opaque values while the test owner can inspect the private table.
-do $
+do $capture$
 begin
   perform set_config(
     'test.booking_hold_id',
@@ -166,7 +166,7 @@ begin
     true
   );
 end;
-$;
+$capture$;
 
 -- 8. Hold release requires all three opaque ownership values.
 set local role anon;
