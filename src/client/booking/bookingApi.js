@@ -54,8 +54,9 @@ export function createBookingApi(client) {
       entries.push(['conflicts', await unwrap(client.from('session_preference_conflicts').select('preference_id,conflicting_preference_id'))])
       return Object.fromEntries(entries)
     },
-    availability: (date, duration) => unwrap(client.rpc('get_booking_availability', {
+    availability: (date, duration, hold = null, key = null) => unwrap(client.rpc('get_booking_availability', {
       p_date: date, p_treatment_duration_minutes: duration,
+      ...(hold ? { p_hold_id: hold.hold_id, p_hold_token: hold.hold_token, p_client_key: key } : {}),
     })),
     hold: (date, start, duration, key) => one(client.rpc('create_booking_hold', {
       p_date: date, p_start_minutes: start, p_treatment_duration_minutes: duration, p_client_key: key,

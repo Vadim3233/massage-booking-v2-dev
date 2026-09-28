@@ -27,6 +27,9 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
     subscribe: (listener) => { listeners.add(listener); return () => listeners.delete(listener) },
     getSnapshot: () => state,
     setError: (error) => publish({ error }),
+    availability(date, duration) {
+      return api.availability(date, duration, activeHold(state.draft, now()) ? state.draft.hold : null, clientKey)
+    },
     expireHold() {
       // An ambiguous finalization must first be retried with its original key.
       if (state.busy || state.draft.pending || state.draft.bookingId || !state.draft.hold || activeHold(state.draft, now())) return

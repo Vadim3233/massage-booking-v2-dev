@@ -145,3 +145,22 @@ describe('hold continuation and draft recovery', () => {
     expect(f.api.release).not.toHaveBeenCalled()
   })
 })
+
+
+describe('owner-aware availability adapter state', () => {
+  it('passes the persisted active hold and browser key, including after reload', async () => {
+    const f = fixture(); f.api.availability = vi.fn().mockResolvedValue([])
+    await f.store.availability(f.draft.date, 120)
+    expect(f.api.availability).toHaveBeenLastCalledWith(f.draft.date, 120, f.draft.hold, f.clientKey)
+    await createBookingStore(f).availability(f.draft.date, 120)
+    expect(f.api.availability).toHaveBeenLastCalledWith(f.draft.date, 120, f.draft.hold, f.clientKey)
+  })
+  it('does not send an expired or released hold for exclusion', async () => {
+    const f = fixture(); f.api.availability = vi.fn().mockResolvedValue([])
+    await createBookingStore({ ...f, now: () => Date.parse('2026-10-02') }).availability(f.draft.date, 120)
+    expect(f.api.availability).toHaveBeenLastCalledWith(f.draft.date, 120, null, f.clientKey)
+    await f.store.releaseHold()
+    await f.store.availability(f.draft.date, 120)
+    expect(f.api.availability).toHaveBeenLastCalledWith(f.draft.date, 120, null, f.clientKey)
+  })
+})

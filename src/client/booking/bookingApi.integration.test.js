@@ -31,7 +31,25 @@ describe('real local Supabase client adapter', () => {
     expect(Date.parse(draft.hold.expires_at) - before).toBeLessThan(1210000)
     expect((await fixture.publicApi.availability(draft.date, 120)).some((slot) => slot.start_minutes === draft.start)).toBe(false)
   })
+  it('returns owner-aware alternatives over real HTTP and rejects forged identity', async () => {
+    const full = Array.from({ length: 21 }, (_, i) => ({ start_minutes: 600 + i * 30 }))
+    expect(await fixture.publicApi.availability(draft.date, 120, draft.hold, key)).toEqual(full)
+    expect(await fixture.publicApi.availability(draft.date, 120)).toEqual([{ start_minutes: 780 }])
+    await expect(fixture.publicApi.availability(draft.date, 120, { ...draft.hold, hold_token: crypto.randomUUID() }, key)).rejects.toMatchObject({ code: '42501' })
+    await expect(fixture.publicApi.availability(draft.date, 120, draft.hold, fixture.key())).rejects.toMatchObject({ code: '42501' })
+    const otherKey = fixture.key()
+    const other = await fixture.publicApi.hold(draft.date, 780, 120, otherKey)
+    expect(await fixture.publicApi.availability(draft.date, 120, draft.hold, key)).toEqual([{ start_minutes: 600 }, { start_minutes: 960 }])
+    await fixture.publicApi.release(other, otherKey)
+    const original = draft.hold
+    draft.hold = await fixture.publicApi.hold(draft.date, 630, 120, key)
+    draft.start = 630
+    expect((await unwrap(fixture.admin.from('booking_holds').select('status').eq('id', original.hold_id)))[0].status).toBe('released')
+    expect(await fixture.api.availability(draft.date, 120, draft.hold, key)).toEqual(full)
+    await expect(fixture.publicApi.availability(draft.date, 120, original, key)).rejects.toMatchObject({ code: '42501' })
+  })
   it('extends once under concurrent retries and keeps the slot unavailable', async () => {
+    const before = await unwrap(fixture.admin.from('booking_holds').select('id,status').eq('client_key', key))
     await expect(fixture.publicApi.extend({ ...draft.hold, hold_token: crypto.randomUUID() }, key)).rejects.toMatchObject({ code: '42501' })
     await expect(fixture.publicApi.extend(draft.hold, fixture.key())).rejects.toMatchObject({ code: '42501' })
     const responses = await Promise.all([fixture.publicApi.extend(draft.hold, key), fixture.api.extend(draft.hold, key)])
@@ -40,7 +58,8 @@ describe('real local Supabase client adapter', () => {
     expect(await fixture.publicApi.extend(draft.hold, key)).toEqual(responses[0])
     const repeated = await fixture.publicApi.hold(draft.date, draft.start, 120, key)
     expect(repeated).toEqual({ ...draft.hold, expires_at: responses[0].expires_at })
-    expect(await unwrap(fixture.admin.from('booking_holds').select('id').eq('client_key', key))).toHaveLength(1)
+    expect(await unwrap(fixture.admin.from('booking_holds').select('id,status').eq('client_key', key))).toEqual(before)
+    expect(before.filter((hold) => hold.status === 'active')).toHaveLength(1)
     expect((await fixture.publicApi.availability(draft.date, 120)).some((slot) => slot.start_minutes === draft.start)).toBe(false)
     draft.hold = { ...draft.hold, ...responses[0] }
   })

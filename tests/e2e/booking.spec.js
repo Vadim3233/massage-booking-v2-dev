@@ -219,3 +219,32 @@ test('countdown expiry returns to time selection without losing entered details'
   expect(draft.enhancementIds).toEqual([fixture.ids.enhancement])
   expect(draft.sessions.map((s) => s.duration_minutes)).toEqual([60, 60])
 })
+
+
+test('owner alternatives remain complete after Back and reload and switching releases the old hold', async ({ page }) => {
+  await toReview(page)
+  const original = await page.evaluate(() => JSON.parse(sessionStorage.getItem('vad-v2-booking-draft-v1')).draft.hold)
+  await page.goBack()
+  await expect(page.getByRole('heading', { name: 'Choose date and time' })).toBeVisible()
+  const slots = page.locator('.slots button')
+  const expected = Array.from({ length: 21 }, (_, i) => {
+    const minutes = 600 + i * 30
+    return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
+  })
+  await expect(slots).toHaveText(expected)
+  expect(await fixture.publicApi.availability(fixture.date, 120)).toEqual([{ start_minutes: 780 }])
+  await page.reload()
+  await expect(slots).toHaveText(expected)
+  await page.getByRole('button', { name: '10:30', exact: true }).click()
+  await expect(page.getByRole('button', { name: '10:30', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(slots).toHaveText(expected)
+  expect((await unwrap(fixture.admin.from('booking_holds').select('status').eq('id', original.hold_id)))[0].status).toBe('released')
+  expect(await fixture.publicApi.availability(fixture.date, 120)).toEqual([{ start_minutes: 810 }])
+  await page.getByRole('button', { name: 'Review booking', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Review your booking' })).toBeVisible()
+  await page.goBack()
+  await expect(slots).toHaveText(expected)
+  await page.reload()
+  await expect(slots).toHaveText(expected)
+  await expect(page.getByRole('button', { name: '10:30', exact: true })).toHaveAttribute('aria-pressed', 'true')
+})
