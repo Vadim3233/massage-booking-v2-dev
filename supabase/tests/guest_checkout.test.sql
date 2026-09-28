@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions, pg_temp;
 
-select plan(7);
+select plan(8);
 
 insert into auth.users (
   instance_id,
@@ -64,7 +64,6 @@ values (
   '07700 900999'
 );
 
--- 1. Permanent accounts cannot use the guest activation contract.
 select set_config(
   'request.jwt.claims',
   '{"sub":"00000000-0000-0000-0000-000000004002","role":"authenticated","is_anonymous":false}',
@@ -86,7 +85,6 @@ select throws_ok(
 );
 reset role;
 
--- 2. Anonymous Auth session creates its own client.
 select set_config(
   'request.jwt.claims',
   '{"sub":"00000000-0000-0000-0000-000000004001","role":"authenticated","is_anonymous":true}',
@@ -122,7 +120,6 @@ select is(
   'guest contact details are stored on the scoped client'
 );
 
--- 3. Repeating guest activation is idempotent.
 select set_config(
   'request.jwt.claims',
   '{"sub":"00000000-0000-0000-0000-000000004001","role":"authenticated","is_anonymous":true}',
@@ -156,7 +153,6 @@ select is(
   'repeat guest activation creates no duplicate for the same anonymous session'
 );
 
--- 4. An unverified guest email never claims an existing permanent client.
 select set_config(
   'request.jwt.claims',
   '{"sub":"00000000-0000-0000-0000-000000004001","role":"authenticated","is_anonymous":true}',
@@ -194,7 +190,6 @@ select is(
   'existing permanent client ownership is unchanged'
 );
 
--- 5. Server-side validation rejects missing guest contact details.
 select set_config(
   'request.jwt.claims',
   '{"sub":"00000000-0000-0000-0000-000000004001","role":"authenticated","is_anonymous":true}',
