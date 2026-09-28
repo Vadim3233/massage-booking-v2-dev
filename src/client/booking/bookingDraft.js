@@ -1,7 +1,7 @@
 export const STEPS = ['Area', 'Treatment', 'Duration', 'Date & Time', 'Review', 'Your Details', 'Payment', 'Confirmation']
 export const draftKey = 'vad-v2-booking-draft-v1'
 export const holdKey = 'vad-v2-hold-client-v1'
-export const emptyDetails = { first_name: '', last_name: '', phone: '', savedAddressId: '', address_line_1: '', address_line_2: '', city: 'London', postcode: '', entry_instructions: '' }
+export const emptyDetails = { first_name: '', last_name: '', email: '', phone: '', savedAddressId: '', address_line_1: '', address_line_2: '', city: 'London', postcode: '', entry_instructions: '' }
 export const newDraft = () => ({ areaId: '', serviceId: '', sessions: [], enhancementIds: [], date: '', start: null, hold: null, details: { ...emptyDetails }, note: '', paymentMethod: 'bank_transfer', pending: null, bookingId: null })
 export const durationOf = (draft) => draft.sessions.reduce((sum, session) => sum + session.duration_minutes, 0)
 export const activeHold = (draft, now = Date.now()) => Boolean(draft.hold && Date.parse(draft.hold.expires_at) > now)
@@ -27,7 +27,7 @@ export function restoreDraft(storage) {
 }
 
 export function validDetails(details) {
-  return ['first_name', 'last_name', 'phone'].every((key) => details[key].trim()) &&
+  return ['first_name', 'last_name', 'email', 'phone'].every((key) => details[key].trim()) &&
     (Boolean(details.savedAddressId) || ['address_line_1', 'city', 'postcode'].every((key) => details[key].trim()))
 }
 
