@@ -124,3 +124,39 @@ test('changing duration releases the old hold and refreshes availability', async
   const draft = await page.evaluate(() => JSON.parse(sessionStorage.getItem('vad-v2-booking-draft-v1')).draft)
   await fixture.publicApi.release(draft.hold, await page.evaluate(() => localStorage.getItem('vad-v2-hold-client-v1')))
 })
+
+
+test('guest checkout completes without creating a password account', async ({ page }) => {
+  await toReview(page)
+  await page.getByRole('button', { name: 'Continue to your details' }).click()
+  await expect(page.getByRole('button', { name: 'Continue as guest' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Continue with Google' })).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Continue as guest' }).click()
+  await expect(page.getByRole('heading', { name: 'Your details', exact: true })).toBeVisible()
+
+  const guestEmail = `guest-${crypto.randomUUID()}@example.test`
+  await page.getByLabel('First name', { exact: true }).fill('Guest')
+  await page.getByLabel('Last name', { exact: true }).fill('Client')
+  await page.getByLabel('Email address', { exact: true }).fill(guestEmail)
+  await page.getByLabel('Contact number', { exact: true }).fill('+44 7700 900321')
+  await page.getByLabel('Street address', { exact: true }).fill('20 Guest Street')
+  await page.getByLabel('Postcode', { exact: true }).fill('SW1A 2AA')
+  await page.getByRole('button', { name: 'Continue to payment' }).click()
+
+  await expect(page.getByRole('heading', { name: 'One last step' })).toBeVisible()
+  const clients = await unwrap(fixture.admin.from('clients').select('auth_user_id').eq('normalized_email', guestEmail))
+  expect(clients).toHaveLength(1)
+  expect(clients[0].auth_user_id).toBeTruthy()
+  await fixture.trackUser(clients[0].auth_user_id)
+
+  await page.getByRole('radio', { name: 'Request cash payment' }).check()
+  await page.getByLabel('I understand the payment and cancellation terms.').check()
+  await page.getByRole('button', { name: 'Request cash payment', exact: true }).click()
+
+  await expect(page.getByRole('heading', { name: 'Booking request received' })).toBeVisible()
+  await expect(page.getByText('Payment: awaiting approval', { exact: true })).toBeVisible()
+  const bookings = await unwrap(fixture.admin.from('bookings').select('id').eq('client_id',
+    (await unwrap(fixture.admin.from('clients').select('id').eq('auth_user_id', clients[0].auth_user_id)))[0].id))
+  expect(bookings).toHaveLength(1)
+})
