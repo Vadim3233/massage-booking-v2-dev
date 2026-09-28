@@ -9,7 +9,6 @@ export default function DetailsStep({ draft, user, api, edit, next, report, gues
     let live = true
     if (guest) {
       edit({ ownerUserId: user.id })
-      setLoading(false)
       return () => { live = false }
     }
 

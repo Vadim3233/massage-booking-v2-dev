@@ -63,6 +63,9 @@ export function createBookingApi(client) {
     release: (hold, key) => one(client.rpc('release_booking_hold', {
       p_hold_id: hold.hold_id, p_hold_token: hold.hold_token, p_client_key: key,
     })),
+    extend: (hold, key) => one(client.rpc('extend_booking_hold', {
+      p_hold_id: hold.hold_id, p_hold_token: hold.hold_token, p_client_key: key,
+    })),
     quote: (draft) => one(client.rpc('quote_client_booking', quoteParams(draft))),
     activate: (details = {}) => one(client.rpc('activate_my_client_account', {
       p_first_name: details.first_name?.trim() || null,

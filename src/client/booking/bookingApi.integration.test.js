@@ -22,14 +22,27 @@ describe('real local Supabase client adapter', () => {
     expect(catalogue.preferences.some((item) => item.id === fixture.ids.preference)).toBe(true)
     expect(await fixture.publicApi.quote(draft)).toMatchObject({ treatment_duration_minutes: 120, enhancements_total_gbp: 10, total_gbp: 200 })
   })
-  it('creates a real pre-auth ten-minute hold from public availability', async () => {
+  it('creates a real pre-auth twenty-minute hold from public availability', async () => {
     const slots = await fixture.publicApi.availability(draft.date, 120)
     draft.start = slots[0].start_minutes
     const before = Date.now()
     draft.hold = await fixture.publicApi.hold(draft.date, draft.start, 120, key)
-    expect(Date.parse(draft.hold.expires_at) - before).toBeGreaterThan(590000)
-    expect(Date.parse(draft.hold.expires_at) - before).toBeLessThan(610000)
+    expect(Date.parse(draft.hold.expires_at) - before).toBeGreaterThan(1190000)
+    expect(Date.parse(draft.hold.expires_at) - before).toBeLessThan(1210000)
     expect((await fixture.publicApi.availability(draft.date, 120)).some((slot) => slot.start_minutes === draft.start)).toBe(false)
+  })
+  it('extends once under concurrent retries and keeps the slot unavailable', async () => {
+    await expect(fixture.publicApi.extend({ ...draft.hold, hold_token: crypto.randomUUID() }, key)).rejects.toMatchObject({ code: '42501' })
+    await expect(fixture.publicApi.extend(draft.hold, fixture.key())).rejects.toMatchObject({ code: '42501' })
+    const responses = await Promise.all([fixture.publicApi.extend(draft.hold, key), fixture.api.extend(draft.hold, key)])
+    expect(responses[0]).toEqual(responses[1])
+    expect(Date.parse(responses[0].expires_at) - Date.parse(draft.hold.expires_at)).toBe(600000)
+    expect(await fixture.publicApi.extend(draft.hold, key)).toEqual(responses[0])
+    const repeated = await fixture.publicApi.hold(draft.date, draft.start, 120, key)
+    expect(repeated).toEqual({ ...draft.hold, expires_at: responses[0].expires_at })
+    expect(await unwrap(fixture.admin.from('booking_holds').select('id').eq('client_key', key))).toHaveLength(1)
+    expect((await fixture.publicApi.availability(draft.date, 120)).some((slot) => slot.start_minutes === draft.start)).toBe(false)
+    draft.hold = { ...draft.hold, ...responses[0] }
   })
   it('rolls back all writes when session preferences conflict', async () => {
     const invalid = structuredClone(draft)
@@ -63,6 +76,19 @@ describe('real local Supabase client adapter', () => {
     const hold = await fixture.publicApi.hold(draft.date, slots[0].start_minutes, 60, ownKey)
     await expect(fixture.publicApi.release(hold, fixture.key())).rejects.toMatchObject({ code: '42501' })
     await fixture.publicApi.release(hold, ownKey)
+  })
+  it('rejects expired, released and consumed holds and release frees the slot', async () => {
+    await expect(fixture.publicApi.extend(draft.hold, key)).rejects.toMatchObject({ code: '23P01' })
+    const ownKey = fixture.key()
+    const slots = await fixture.publicApi.availability(draft.date, 60)
+    const start = slots[0].start_minutes
+    const hold = await fixture.publicApi.hold(draft.date, start, 60, ownKey)
+    await fixture.publicApi.release(hold, ownKey)
+    await expect(fixture.publicApi.extend(hold, ownKey)).rejects.toMatchObject({ code: '23P01' })
+    expect((await fixture.publicApi.availability(draft.date, 60)).some((slot) => slot.start_minutes === start)).toBe(true)
+    const next = await fixture.publicApi.hold(draft.date, start, 60, ownKey)
+    await unwrap(fixture.admin.from('booking_holds').update({ expires_at: new Date(Date.now() - 1000).toISOString() }).eq('id', next.hold_id))
+    await expect(fixture.publicApi.extend(next, ownKey)).rejects.toMatchObject({ code: '23P01' })
   })
   it('can request cash for a returning client without marking it paid', async () => {
     await unwrap(fixture.admin.from('bookings').update({ booking_status: 'completed' }).eq('id', result.booking_id))

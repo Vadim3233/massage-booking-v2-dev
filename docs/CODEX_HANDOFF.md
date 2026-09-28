@@ -20,7 +20,7 @@ Area → Treatment → Duration → Date & Time → Review → Your Details → 
 
 - Real active catalogue and explicit deployed RPC adapters.
 - Distinct 60/90/120 session rows, maximum 240 minutes per visit.
-- Server availability and pre-auth ten-minute holds, persistent opaque browser key, obsolete-hold release.
+- Server availability and pre-auth twenty-minute holds with one server-authoritative ten-minute extension, persistent opaque browser key, obsolete-hold release. See `BOOKING_HOLD_EXTENSION.md` for the local-only migration and validation.
 - Browser history, temporary draft persistence, hold-expiry feedback.
 - Server quotes, appointment-level enhancements with zero public scheduling impact, per-session preferences.
 - Email registration/login, Google redirect, password recovery/update and canonical account activation.

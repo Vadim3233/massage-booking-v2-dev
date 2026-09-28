@@ -11,6 +11,7 @@ import ReviewStep from './components/ReviewStep.jsx'
 import DetailsStep from './components/DetailsStep.jsx'
 import PaymentStep from './components/PaymentStep.jsx'
 import ConfirmationStep from './components/ConfirmationStep.jsx'
+import HoldNotice from './components/HoldNotice.jsx'
 import { paymentConfig } from './paymentConfig.js'
 import './booking.css'
 
@@ -33,6 +34,7 @@ export default function BookingFlow() {
   useEffect(() => { const timer = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(timer) }, [])
   const held = activeHold(draft, clock)
   const remaining = draft.hold ? Math.max(0, Math.ceil((Date.parse(draft.hold.expires_at) - clock) / 1000)) : 0
+  useEffect(() => { store.expireHold() }, [store, clock, busy])
   async function goWithQuote(target) { if (await store.loadQuote()) navigate(target) }
   const needsAuth = step >= 5 && !auth.session
   const isGuest = Boolean(auth.session?.user?.is_anonymous)
@@ -43,7 +45,7 @@ export default function BookingFlow() {
   return <main className="booking-shell">
     <header className="brand"><a href="/">VM <span>VadMassage</span></a><span>Massage at your place</span></header>
     <nav aria-label="Booking progress"><ol className="progress">{STEPS.map((label, index) => <li key={label} aria-current={step === index ? 'step' : undefined}>{label}</li>)}</ol></nav>
-    {draft.hold && !draft.bookingId && <p className="hold" role="status">{held ? `Your time is held for ${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}` : 'Your time hold has expired. Choose a time again; your other details are saved.'}</p>}
+    {!draft.bookingId && <HoldNotice hold={draft.hold} remaining={remaining} busy={busy} pending={draft.pending} extend={store.extendHold} release={store.releaseHold} />}
     {error && step !== 6 && <p role="alert" className="error">{error}</p>}
     {auth.error && <p role="alert" className="error">{auth.error}</p>}
     {!catalogue ? <><p>Loading booking options…</p><button onClick={() => setCatalogueAttempt(catalogueAttempt + 1)}>Retry</button></> : <>

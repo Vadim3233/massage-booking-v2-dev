@@ -82,7 +82,7 @@ test('real expired-hold rejection never shows a successful confirmation', async 
   await unwrap(fixture.admin.from('booking_holds').update({ expires_at: new Date(Date.now() - 1000).toISOString() }).eq('id', held.hold_id))
   await page.getByRole('button', { name: 'Submit bank-transfer booking' }).click()
   await expect(page.getByRole('alert')).toContainText('Time slot is no longer available')
-  await expect(page.getByRole('button', { name: 'Submit bank-transfer booking' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Choose date and time' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Booking request received' })).toHaveCount(0)
   expect(await unwrap(fixture.admin.from('bookings').select('id').eq('client_id', fixture.profile.client_id))).toHaveLength(0)
 })
@@ -160,4 +160,62 @@ test('guest checkout completes without creating a password account', async ({ pa
   const bookings = await unwrap(fixture.admin.from('bookings').select('id').eq('client_id',
     (await unwrap(fixture.admin.from('clients').select('id').eq('auth_user_id', clients[0].auth_user_id)))[0].id))
   expect(bookings).toHaveLength(1)
+})
+
+
+async function ageHold(page, minutesRemaining) {
+  const held = await page.evaluate(() => JSON.parse(sessionStorage.getItem('vad-v2-booking-draft-v1')).draft.hold)
+  const expires = new Date(Date.now() + minutesRemaining * 60000).toISOString()
+  await unwrap(fixture.admin.from('booking_holds').update({ expires_at: expires,
+    created_at: new Date(Date.parse(expires) - 20 * 60000).toISOString() }).eq('id', held.hold_id))
+  await page.evaluate((expires_at) => {
+    const saved = JSON.parse(sessionStorage.getItem('vad-v2-booking-draft-v1'))
+    saved.draft.hold.expires_at = expires_at
+    sessionStorage.setItem('vad-v2-booking-draft-v1', JSON.stringify(saved))
+  }, expires)
+  await page.reload()
+  return { ...held, expires_at: expires }
+}
+
+test('five-minute prompt extends the same real hold once and survives reload', async ({ page }) => {
+  await toPayment(page)
+  const held = await ageHold(page, 4.9)
+  await expect(page.getByText('Still booking? Your appointment time is held for another 5 minutes.')).toBeVisible()
+  await page.getByRole('button', { name: 'Keep my time', exact: true }).click()
+  await expect(page.getByText('Your one-time 10-minute extension has been applied.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Keep my time', exact: true })).toHaveCount(0)
+  const rows = await unwrap(fixture.admin.from('booking_holds').select('id,expires_at,extended_at').eq('id', held.hold_id))
+  expect(Date.parse(rows[0].expires_at) - Date.parse(held.expires_at)).toBe(600000)
+  expect(rows[0].extended_at).toBeTruthy()
+  expect((await fixture.publicApi.availability(fixture.date, 120)).some((slot) => slot.start_minutes === 600)).toBe(false)
+  await page.reload()
+  await expect(page.getByText('Your one-time 10-minute extension has been applied.')).toBeVisible()
+})
+
+test('release at the prompt frees the slot and preserves address and sessions', async ({ page }) => {
+  await toPayment(page)
+  const held = await ageHold(page, 4.9)
+  await page.getByRole('button', { name: 'Release time', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Choose date and time' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '10:00', exact: true })).toBeVisible()
+  expect((await unwrap(fixture.admin.from('booking_holds').select('status').eq('id', held.hold_id)))[0].status).toBe('released')
+  const draft = await page.evaluate(() => JSON.parse(sessionStorage.getItem('vad-v2-booking-draft-v1')).draft)
+  expect(draft.details.address_line_1).toBe('10 Browser Street')
+  expect(draft.sessions.map((s) => s.duration_minutes)).toEqual([60, 60])
+  await page.getByRole('button', { name: '10:00', exact: true }).click()
+  await page.getByRole('button', { name: 'Review booking', exact: true }).click()
+  await page.getByRole('button', { name: 'Continue to your details' }).click()
+  await expect(page.getByLabel('Street address', { exact: true })).toHaveValue('10 Browser Street')
+})
+
+test('countdown expiry returns to time selection without losing entered details', async ({ page }) => {
+  await toPayment(page)
+  await ageHold(page, 0.05)
+  await expect(page.getByRole('heading', { name: 'Choose date and time' })).toBeVisible({ timeout: 10000 })
+  await expect(page.getByRole('alert')).toContainText('Your time hold has expired')
+  const draft = await page.evaluate(() => JSON.parse(sessionStorage.getItem('vad-v2-booking-draft-v1')).draft)
+  expect(draft.hold).toBeNull()
+  expect(draft.details.address_line_1).toBe('10 Browser Street')
+  expect(draft.enhancementIds).toEqual([fixture.ids.enhancement])
+  expect(draft.sessions.map((s) => s.duration_minutes)).toEqual([60, 60])
 })

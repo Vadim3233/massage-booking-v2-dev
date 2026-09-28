@@ -19,10 +19,40 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
       publish({ error: error.message || 'Unable to complete this request. Please retry.' })
     } finally { publish({ busy: false }) }
   }
+  function clearHold(message) {
+    save({ ...state.draft, hold: null, start: null })
+    publish({ step: allowedStep(state.draft, 3, now()), error: message })
+  }
   return {
     subscribe: (listener) => { listeners.add(listener); return () => listeners.delete(listener) },
     getSnapshot: () => state,
     setError: (error) => publish({ error }),
+    expireHold() {
+      // An ambiguous finalization must first be retried with its original key.
+      if (state.busy || state.draft.pending || state.draft.bookingId || !state.draft.hold || activeHold(state.draft, now())) return
+      try { clearHold('Your time hold has expired. Choose another time; your details are saved.') }
+      catch (error) { publish({ error: error.message }) }
+    },
+    releaseHold() { return run(async () => {
+      if (state.draft.pending || state.draft.bookingId || !state.draft.hold) return
+      await api.release(state.draft.hold, clientKey)
+      clearHold('Your time has been released. Choose another time; your details are saved.')
+      return true
+    }) },
+    extendHold() { return run(async () => {
+      if (state.draft.pending || state.draft.bookingId || !state.draft.hold) return
+      try {
+        const extension = await api.extend(state.draft.hold, clientKey)
+        if (extension.hold_id !== state.draft.hold.hold_id || !Number.isFinite(Date.parse(extension.expires_at)) || extension.extension_used !== true) {
+          throw new Error('Unable to verify the hold extension. Please retry.')
+        }
+        save({ ...state.draft, hold: { ...state.draft.hold, ...extension } })
+        return true
+      } catch (error) {
+        if (error.code === '23P01') clearHold('Your time hold has expired or been released. Choose another time; your details are saved.')
+        throw error
+      }
+    }) },
     navigate(step) { publish({ step: allowedStep(state.draft, step, now()), error: '' }) },
     edit(patch) {
       if (state.busy || state.draft.pending || state.draft.bookingId) return
@@ -44,7 +74,7 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
       if (state.draft.pending || state.draft.bookingId) return
       const hold = await api.hold(state.draft.date, start, durationOf(state.draft), clientKey)
       // create_booking_hold atomically replaces any previous hold for this key.
-      save({ ...state.draft, start, hold })
+      save({ ...state.draft, start, hold: { ...hold, extension_used: hold.hold_id === state.draft.hold?.hold_id && state.draft.hold.extension_used } })
       return true
     }) },
     loadQuote() { return run(async () => {
@@ -70,7 +100,10 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
       try { result = await api.finalize(state.draft.pending) }
       catch (error) {
         // PostgreSQL errors roll back the transaction. Transport errors are ambiguous.
-        if (/^[0-9A-Z]{5}$/.test(error.code || '') && !error.code.startsWith('PGRST')) save({ ...state.draft, pending: null })
+        if (/^[0-9A-Z]{5}$/.test(error.code || '') && !error.code.startsWith('PGRST')) {
+          save({ ...state.draft, pending: null })
+          if (error.code === '23P01') clearHold('Your time is no longer available. Choose another time; your details are saved.')
+        }
         throw error
       }
       if (!result.booking_id || !result.booking_reference) throw new Error('Unable to verify the booking result. Please retry the same request.')

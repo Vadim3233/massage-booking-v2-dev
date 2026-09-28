@@ -64,7 +64,7 @@ select is(
   'hold stores the chosen slot with the server 60-minute travel buffer'
 );
 
--- 3. Slot-selection hold is ten minutes, matching the existing product.
+-- 3. Slot-selection hold is twenty minutes.
 select is(
   (
     select expires_at
@@ -75,14 +75,14 @@ select is(
     limit 1
   ),
   (
-    select created_at + interval '10 minutes'
+    select created_at + interval '20 minutes'
     from public.booking_holds
     where client_key = 'hold-client-key-000000000001'
       and status = 'active'
     order by created_at desc
     limit 1
   ),
-  'pre-auth slot hold expires after 10 minutes'
+  'pre-auth slot hold expires after 20 minutes'
 );
 
 -- 4. Active hold immediately participates in Chain Mode.

@@ -47,3 +47,6 @@
   .preference-chips { gap: 6px; padding: 2px 10px 10px; }
   .booking-shell button.preference-chip { min-height: 34px; padding: 6px 10px; font-size: 12px; }
 }
+
+.hold { position: sticky; top: 0; z-index: 5; border: 1px solid #d9dfd9; }
+.hold p { margin: 4px 0; }

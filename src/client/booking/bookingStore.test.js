@@ -106,3 +106,42 @@ describe('booking state transitions', () => {
     expect(store.getSnapshot().error).toContain('account used')
   })
 })
+
+
+describe('hold continuation and draft recovery', () => {
+  it('applies only a verified server extension and persists it across reload', async () => {
+    const f = fixture()
+    f.api.extend = vi.fn().mockResolvedValue({ hold_id: 'hold', expires_at: '2026-10-01T10:20:00Z', extension_used: true })
+    await f.store.extendHold()
+    expect(f.api.extend).toHaveBeenCalledWith(f.draft.hold, f.clientKey)
+    const reloaded = createBookingStore(f)
+    expect(reloaded.getSnapshot().draft.hold).toMatchObject({ hold_token: 'token', expires_at: '2026-10-01T10:20:00Z', extension_used: true })
+  })
+  it('does not advance the local timer after an extension failure', async () => {
+    const f = fixture(); f.api.extend = vi.fn().mockRejectedValue(new Error('Network unavailable'))
+    await f.store.extendHold()
+    expect(f.store.getSnapshot().draft.hold).toEqual(f.draft.hold)
+    expect(f.store.getSnapshot().error).toBe('Network unavailable')
+  })
+  it.each(['release', 'expiry'])('preserves all draft fields after %s and returns to time selection', async (action) => {
+    const f = fixture()
+    f.store.edit({ details: { ...f.draft.details, first_name: 'Saved', address_line_1: '1 Saved Road' }, note: 'Keep notes', paymentMethod: 'cash' })
+    f.store.navigate(5)
+    if (action === 'release') await f.store.releaseHold()
+    else { f.store.edit({ hold: { ...f.draft.hold, expires_at: '2000-01-01' } }); f.store.expireHold() }
+    expect(f.store.getSnapshot().step).toBe(3)
+    expect(restoreDraft(f.storage)).toMatchObject({ ...f.draft, hold: null, start: null,
+      details: { ...f.draft.details, first_name: 'Saved', address_line_1: '1 Saved Road' }, note: 'Keep notes', paymentMethod: 'cash' })
+  })
+  it('preserves ambiguous finalization for safe retry even if its hold expires', async () => {
+    const f = fixture(); await f.store.loadQuote()
+    f.api.finalize.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    await f.store.finalize()
+    const pending = f.store.getSnapshot().draft.pending
+    const reloaded = createBookingStore({ ...f, now: () => Date.parse('2026-10-02') })
+    reloaded.expireHold(); await reloaded.releaseHold(); await reloaded.extendHold()
+    expect(reloaded.getSnapshot().draft.pending).toEqual(pending)
+    expect(reloaded.getSnapshot().step).toBe(6)
+    expect(f.api.release).not.toHaveBeenCalled()
+  })
+})
