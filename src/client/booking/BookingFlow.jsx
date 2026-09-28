@@ -44,7 +44,7 @@ export default function BookingFlow() {
     <header className="brand"><a href="/">VM <span>VadMassage</span></a><span>Massage at your place</span></header>
     <nav aria-label="Booking progress"><ol className="progress">{STEPS.map((label, index) => <li key={label} aria-current={step === index ? 'step' : undefined}>{label}</li>)}</ol></nav>
     {draft.hold && !draft.bookingId && <p className="hold" role="status">{held ? `Your time is held for ${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}` : 'Your time hold has expired. Choose a time again; your other details are saved.'}</p>}
-    {error && <p role="alert" className="error">{error}</p>}
+    {error && step !== 6 && <p role="alert" className="error">{error}</p>}
     {auth.error && <p role="alert" className="error">{auth.error}</p>}
     {!catalogue ? <><p>Loading booking options…</p><button onClick={() => setCatalogueAttempt(catalogueAttempt + 1)}>Retry</button></> : <>
       {step > 0 && step < 7 && !draft.pending && <button disabled={busy} onClick={() => navigate(step - 1)}>Back</button>}
@@ -59,7 +59,7 @@ export default function BookingFlow() {
         {!auth.ready && step >= 5 && <p role="status">Checking your account…</p>}
         {auth.ready && (needsAuth || auth.recovery) && <AuthPanel client={supabase} recovery={auth.recovery} onRecovered={auth.finishRecovery} onGuest={startGuest} />}
         {step === 5 && auth.session && !auth.recovery && <DetailsStep key={auth.session.user.id} draft={draft} user={auth.session.user} api={api} edit={store.edit} report={store.setError} guest={isGuest} next={() => goWithQuote(6)} />}
-        {step === 6 && auth.session && !auth.recovery && <PaymentStep draft={draft} quote={quote} bank={bank} edit={store.edit} refresh={store.loadQuote} finalize={() => store.finalize(auth.session.user.id)} />}
+        {step === 6 && auth.session && !auth.recovery && <PaymentStep draft={draft} quote={quote} bank={bank} edit={store.edit} refresh={store.loadQuote} finalize={() => store.finalize(auth.session.user.id)} held={held} error={error} chooseTimeAgain={() => navigate(3)} />}
         {step === 7 && auth.session && !auth.recovery && <ConfirmationStep id={draft.bookingId} result={result} api={api} bank={bank} />}
       </fieldset>
     </>}
