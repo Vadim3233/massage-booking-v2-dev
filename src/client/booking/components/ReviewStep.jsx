@@ -1,11 +1,75 @@
 import { dateLabel, money, timeLabel } from '../bookingDraft.js'
 
+const PREFERENCE_GROUPS = [
+  { title: 'Focus on', aliases: ['Focus on', 'Focus area', 'Focus'], empty: 'Optional' },
+  { title: 'Pressure', aliases: ['Pressure'], empty: 'Your preference' },
+  { title: 'Include', aliases: ['Include'], empty: 'Optional' },
+  { title: 'Avoid', aliases: ['Avoid'], empty: 'Optional' },
+]
+
 export function PriceSummary({ quote }) {
   if (!quote) return <p role="status">Refresh your price to continue.</p>
   return <dl className="prices">{[
     ['Treatments', quote.service_subtotal_gbp], ['Enhancements', quote.enhancements_total_gbp],
     ['Travel fee', quote.travel_fee_gbp], ['Congestion fee', quote.congestion_fee_gbp], ['Total', quote.total_gbp],
   ].map(([label, amount]) => <div key={label}><dt>{label}</dt><dd>{money(amount)}</dd></div>)}</dl>
+}
+
+function preferenceConflict(preferenceId, selectedIds, conflicts) {
+  return conflicts.some((conflict) =>
+    (conflict.preference_id === preferenceId && selectedIds.includes(conflict.conflicting_preference_id)) ||
+    (conflict.conflicting_preference_id === preferenceId && selectedIds.includes(conflict.preference_id)))
+}
+
+function preferenceSummary(group, selected) {
+  if (!selected.length) return group.empty
+  if (selected.length <= 2) return selected.map((preference) => preference.label).join(', ')
+  return `${selected.length} selected`
+}
+
+function PreferenceGroups({ preferences, conflicts, selectedIds, change }) {
+  const knownCategories = new Set(PREFERENCE_GROUPS.flatMap((group) => group.aliases))
+  const groups = [
+    ...PREFERENCE_GROUPS.map((group) => ({
+      ...group,
+      preferences: preferences.filter((preference) => group.aliases.includes(preference.category)),
+    })),
+    ...[...new Set(preferences.filter((preference) => !knownCategories.has(preference.category)).map((preference) => preference.category))]
+      .map((category) => ({
+        title: category,
+        aliases: [category],
+        empty: 'Optional',
+        preferences: preferences.filter((preference) => preference.category === category),
+      })),
+  ].filter((group) => group.preferences.length)
+
+  return <div className="preference-groups">{groups.map((group) => {
+    const selected = group.preferences.filter((preference) => selectedIds.includes(preference.id))
+    return <details className="preference-group" key={group.title}>
+      <summary>
+        <strong>{group.title}</strong>
+        <span>{preferenceSummary(group, selected)}</span>
+      </summary>
+      <div className="preference-chips">{group.preferences.map((preference) => {
+        const isSelected = selectedIds.includes(preference.id)
+        const conflicting = preferenceConflict(preference.id, selectedIds, conflicts)
+        return <button
+          key={preference.id}
+          type="button"
+          className="preference-chip"
+          aria-pressed={isSelected}
+          disabled={!isSelected && conflicting}
+          onClick={() => change(
+            isSelected
+              ? selectedIds.filter((id) => id !== preference.id)
+              : [...selectedIds, preference.id]
+          )}
+        >
+          {preference.label}
+        </button>
+      })}</div>
+    </details>
+  })}</div>
 }
 
 export default function ReviewStep({ draft, catalogue, quote, edit, navigate, refresh, next }) {
@@ -22,13 +86,15 @@ export default function ReviewStep({ draft, catalogue, quote, edit, navigate, re
     {draft.sessions.map((session, index) => <section className="panel" key={index}>
       <h2>Session {index + 1} · {session.duration_minutes} minutes</h2>
       <label>Guest name (optional)<input value={session.recipient_name} maxLength={120} onChange={(event) => sessionEdit(index, { recipient_name: event.target.value })} /></label>
-      <fieldset><legend>Session preferences</legend><div className="chips">{catalogue.preferences.map((preference) => {
-        const selected = session.preference_ids.includes(preference.id)
-        const conflicting = catalogue.conflicts.some((conflict) =>
-          (conflict.preference_id === preference.id && session.preference_ids.includes(conflict.conflicting_preference_id)) ||
-          (conflict.conflicting_preference_id === preference.id && session.preference_ids.includes(conflict.preference_id)))
-        return <label key={preference.id} className="check"><input type="checkbox" checked={selected} disabled={!selected && conflicting} onChange={() => sessionEdit(index, { preference_ids: selected ? session.preference_ids.filter((id) => id !== preference.id) : [...session.preference_ids, preference.id] })} />{preference.label}</label>
-      })}</div></fieldset>
+      <fieldset>
+        <legend>Session preferences</legend>
+        <PreferenceGroups
+          preferences={catalogue.preferences}
+          conflicts={catalogue.conflicts}
+          selectedIds={session.preference_ids}
+          change={(preference_ids) => sessionEdit(index, { preference_ids })}
+        />
+      </fieldset>
     </section>)}
     <section className="panel"><h2>Enhance your appointment</h2><p>Optional additions, applied once to your visit.</p>
       {catalogue.enhancements.map((enhancement) => <label key={enhancement.id} className="check"><input type="checkbox" checked={draft.enhancementIds.includes(enhancement.id)} onChange={() => edit({ enhancementIds: draft.enhancementIds.includes(enhancement.id) ? draft.enhancementIds.filter((id) => id !== enhancement.id) : [...draft.enhancementIds, enhancement.id] })} />{enhancement.name} · {money(enhancement.price_gbp)}<small>{enhancement.description}</small></label>)}
