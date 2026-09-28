@@ -82,6 +82,7 @@ test('real expired-hold rejection never shows a successful confirmation', async 
   await unwrap(fixture.admin.from('booking_holds').update({ expires_at: new Date(Date.now() - 1000).toISOString() }).eq('id', held.hold_id))
   await page.getByRole('button', { name: 'Submit bank-transfer booking' }).click()
   await expect(page.getByRole('alert')).toContainText('Time slot is no longer available')
+  await expect(page.getByRole('button', { name: 'Submit bank-transfer booking' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Booking request received' })).toHaveCount(0)
   expect(await unwrap(fixture.admin.from('bookings').select('id').eq('client_id', fixture.profile.client_id))).toHaveLength(0)
 })
