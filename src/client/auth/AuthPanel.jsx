@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { unwrap } from '../booking/bookingApi.js'
 
-export default function AuthPanel({ client, recovery = false, onRecovered }) {
+export default function AuthPanel({ client, recovery = false, onRecovered, onGuest }) {
   const [mode, setMode] = useState('login')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
@@ -20,18 +20,25 @@ export default function AuthPanel({ client, recovery = false, onRecovered }) {
         await unwrap(client.auth.updateUser({ password: fields.password })); onRecovered(); return
       }
       if (mode === 'register') {
-        await unwrap(client.auth.signUp({ email: fields.email, password: fields.password,
+        const data = await unwrap(client.auth.signUp({ email: fields.email, password: fields.password,
           options: { emailRedirectTo: redirectTo, data: { first_name: fields.first_name, last_name: fields.last_name } } }))
-        setMessage('Check your email to confirm your account, then sign in. Your booking draft stays here; your time hold still expires after 10 minutes.')
+        if (!data.session) setMessage('Check your email to confirm your account, then return to this booking. Your selections stay here while the time hold remains active.')
       } else if (mode === 'reset') {
         await unwrap(client.auth.resetPasswordForEmail(fields.email, { redirectTo }))
         setMessage('Check your email for the password reset link.')
       } else await unwrap(client.auth.signInWithPassword({ email: fields.email, password: fields.password }))
     })
   }
+  const heading = recovery ? 'Choose a new password' : mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Complete your booking'
   return <section className="panel">
-    <h2>{recovery ? 'Choose a new password' : mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Sign in to complete your booking'}</h2>
-    <p>Your selections will stay here while you sign in.</p>
+    <h2>{heading}</h2>
+    {mode === 'login' && !recovery
+      ? <p>Continue as a guest, or sign in if you already have an account.</p>
+      : <p>Your selections will stay here while you continue.</p>}
+    {mode === 'login' && !recovery && <button className="primary" type="button" disabled={busy} onClick={() => act(onGuest)}>
+      {busy ? 'Please wait…' : 'Continue as guest'}
+    </button>}
+    {mode === 'login' && !recovery && <p><strong>Returning client?</strong> Sign in below.</p>}
     <form onSubmit={submit}>
       <fieldset disabled={busy}>
         {mode === 'register' && !recovery && <div className="two-columns">
@@ -46,7 +53,6 @@ export default function AuthPanel({ client, recovery = false, onRecovered }) {
     {!recovery && <div className="actions">
       <button disabled={busy} onClick={() => setMode(mode === 'register' ? 'login' : 'register')}>{mode === 'register' ? 'Already registered? Sign in' : 'Create an account'}</button>
       <button disabled={busy} onClick={() => setMode(mode === 'reset' ? 'login' : 'reset')}>{mode === 'reset' ? 'Back to sign in' : 'Forgot password?'}</button>
-      <button disabled={busy} onClick={() => act(() => unwrap(client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } })))}>Continue with Google</button>
     </div>}
     {error && <p role="alert" className="error">{error}</p>}
     {message && <p role="status">{message}</p>}
