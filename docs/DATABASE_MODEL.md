@@ -331,7 +331,7 @@ The sum of session durations must equal `bookings.treatment_duration_minutes` wh
 
 ### `booking_session_enhancements`
 
-Enhancements are stored against the session they belong to, matching the per-session review model.
+This foundational table exists for possible session-specific use. The public V1-compatible flow does not write it: public enhancements apply once to the appointment and are stored in `booking_enhancements` by migration `20260927193000_client_quote_finalize.sql`.
 
 - `id uuid primary key`
 - `booking_session_id uuid not null`
@@ -342,6 +342,8 @@ Enhancements are stored against the session they belong to, matching the per-ses
 - `duration_minutes_snapshot integer`
 
 ## 8. Payments
+
+Public appointment enhancements use `booking_enhancements` (`booking_id`, `enhancement_id`, immutable name/price snapshots, quantity 1, duration snapshot 0). They change the quote but not the scheduled treatment duration.
 
 ### `booking_payments`
 

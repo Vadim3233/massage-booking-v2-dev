@@ -1,0 +1,54 @@
+import { useState } from 'react'
+import { unwrap } from '../booking/bookingApi.js'
+
+export default function AuthPanel({ client, recovery = false, onRecovered }) {
+  const [mode, setMode] = useState('login')
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const redirectTo = `${window.location.origin}${window.location.pathname}?step=5`
+  async function act(action) {
+    setBusy(true); setError(''); setMessage('')
+    try { await action() } catch (err) { setError(err.message || 'Sign-in failed. Please retry.') }
+    finally { setBusy(false) }
+  }
+  function submit(event) {
+    event.preventDefault()
+    const fields = Object.fromEntries(new FormData(event.currentTarget))
+    act(async () => {
+      if (recovery) {
+        await unwrap(client.auth.updateUser({ password: fields.password })); onRecovered(); return
+      }
+      if (mode === 'register') {
+        await unwrap(client.auth.signUp({ email: fields.email, password: fields.password,
+          options: { emailRedirectTo: redirectTo, data: { first_name: fields.first_name, last_name: fields.last_name } } }))
+        setMessage('Check your email to confirm your account, then sign in. Your booking draft stays here; your time hold still expires after 10 minutes.')
+      } else if (mode === 'reset') {
+        await unwrap(client.auth.resetPasswordForEmail(fields.email, { redirectTo }))
+        setMessage('Check your email for the password reset link.')
+      } else await unwrap(client.auth.signInWithPassword({ email: fields.email, password: fields.password }))
+    })
+  }
+  return <section className="panel">
+    <h2>{recovery ? 'Choose a new password' : mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Sign in to complete your booking'}</h2>
+    <p>Your selections will stay here while you sign in.</p>
+    <form onSubmit={submit}>
+      <fieldset disabled={busy}>
+        {mode === 'register' && !recovery && <div className="two-columns">
+          <label>First name<input name="first_name" autoComplete="given-name" required /></label>
+          <label>Last name<input name="last_name" autoComplete="family-name" required /></label>
+        </div>}
+        {!recovery && <label>Email address<input name="email" type="email" autoComplete="email" required /></label>}
+        {(mode !== 'reset' || recovery) && <label>Password<input name="password" type="password" minLength={8} autoComplete={mode === 'register' || recovery ? 'new-password' : 'current-password'} required /></label>}
+        <button className="primary" type="submit">{busy ? 'Please wait…' : recovery ? 'Save password' : mode === 'register' ? 'Register' : mode === 'reset' ? 'Send reset link' : 'Sign in'}</button>
+      </fieldset>
+    </form>
+    {!recovery && <div className="actions">
+      <button disabled={busy} onClick={() => setMode(mode === 'register' ? 'login' : 'register')}>{mode === 'register' ? 'Already registered? Sign in' : 'Create an account'}</button>
+      <button disabled={busy} onClick={() => setMode(mode === 'reset' ? 'login' : 'reset')}>{mode === 'reset' ? 'Back to sign in' : 'Forgot password?'}</button>
+      <button disabled={busy} onClick={() => act(() => unwrap(client.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } })))}>Continue with Google</button>
+    </div>}
+    {error && <p role="alert" className="error">{error}</p>}
+    {message && <p role="status">{message}</p>}
+  </section>
+}

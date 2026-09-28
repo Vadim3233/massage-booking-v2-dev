@@ -99,3 +99,13 @@ Updated: 2026-09-23. These are design decisions and intended requirements; imple
 **Decision:** Date-specific unavailable time and Admin personal events use one canonical calendar-block model with a type/kind field and optional personal-event presentation metadata.
 
 **Reason:** Both concepts block availability. A single scheduling-block source simplifies availability queries while still allowing Admin to distinguish blocked time from named personal events.
+
+## ADR-017 — Client draft, finalization and payment reference (2026-09-27)
+
+**Decision:** Keep unfinished booking inputs and an in-flight finalization request in versioned session storage; keep only the opaque hold client key in local storage. An ambiguous transport failure locks the request for retry using the identical payload and idempotency key. Store only the returned booking ID for subsequent authenticated server reads, not a browser booking database.
+
+**Reason:** Reloads and authentication redirects must preserve the draft without creating duplicate bookings. Confirmation requires a successful finalization result or an authenticated read of the canonical booking.
+
+**Decision:** Public bank details use explicit `VITE_BANK_*` configuration, matching V1's configuration approach. Finalization supplies the payment reference; the UI does not invent it before booking creation. Bank-transfer submission remains awaiting verification, and cash remains awaiting approval. No notification-delivery claims are made from the browser.
+
+**Reason:** The deployed V2 finalization contract returns the reference only after the atomic transaction. A client-side reference or preliminary order would restore the V1 architecture defect. Missing bank configuration is visible and prevents bank-transfer submission.

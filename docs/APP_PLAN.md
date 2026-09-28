@@ -99,8 +99,8 @@ The WhatsApp agent is another interface, not another booking system. It may coll
 | --- | --- | --- |
 | V2 foundation | Core verified | Vite/React, linked Supabase project and Vitest/local Supabase test runners are working; fresh local database resets reproduce committed migrations. |
 | Scheduling engine | Core verified | JavaScript Chain Mode tests and database availability/hold/public-discovery contract tests pass locally; public availability and holds use the shared server scheduling implementation. |
-| Data model and secure API | In progress | Canonical identity/catalogue/scheduling/booking/payment/audit tables are migrated; public discovery and pre-auth holds are live in V2. Client account activation is the next tested migration before quote/finalization. |
-| Client booking | Planned | Complete a real booking end to end on mobile, including back navigation and payment instructions. |
+| Data model and secure API | Core verified | Canonical identity, public discovery, pre-auth holds, client activation, quote and atomic finalization are deployed through migration `20260927193000`; read-only migration status verified 2026-09-27. No remote changes made during the UI slice. |
+| Client booking | First slice implemented locally | Area through server-backed Confirmation, email/Google authentication, saved addresses, distinct sessions, preferences, enhancements, authoritative quotes and retry-safe finalization. See `CLIENT_BOOKING_SLICE.md` for verification and release gaps. |
 | Admin | Planned | Calendar, clients, manual bookings, payment and cancellation actions work end to end on mobile; Calendar reads are range-bounded and heavy secondary panels are lazy-loaded. |
 | Reliability release gate | Planned | Exercise real booking, change, cancellation, duplicate request and failed-payment paths against a safe environment; inspect network/database errors. |
 | Agent-ready integration boundary | Planned with V2 core | Channel-neutral API, canonical client/channel links, idempotency, actor/source audit, event outbox and separate client/admin scopes. No Meta dependency yet. |
