@@ -35,6 +35,11 @@ export default function BookingFlow() {
   const remaining = draft.hold ? Math.max(0, Math.ceil((Date.parse(draft.hold.expires_at) - clock) / 1000)) : 0
   async function goWithQuote(target) { if (await store.loadQuote()) navigate(target) }
   const needsAuth = step >= 5 && !auth.session
+  const isGuest = Boolean(auth.session?.user?.is_anonymous)
+  async function startGuest() {
+    const { error: guestError } = await supabase.auth.signInAnonymously()
+    if (guestError) throw guestError
+  }
   return <main className="booking-shell">
     <header className="brand"><a href="/">VM <span>VadMassage</span></a><span>Massage at your place</span></header>
     <nav aria-label="Booking progress"><ol className="progress">{STEPS.map((label, index) => <li key={label} aria-current={step === index ? 'step' : undefined}>{label}</li>)}</ol></nav>
@@ -52,8 +57,8 @@ export default function BookingFlow() {
         {step === 3 && <TimeStep key={`${draft.date}:${draft.hold?.hold_token}:${held}`} draft={draft} api={api} selectDate={(date) => store.changeSelection({ date })} selectSlot={store.selectSlot} next={() => goWithQuote(4)} />}
         {step === 4 && <ReviewStep draft={draft} catalogue={catalogue} quote={quote} edit={store.edit} navigate={navigate} refresh={store.loadQuote} next={() => goWithQuote(5)} />}
         {!auth.ready && step >= 5 && <p role="status">Checking your account…</p>}
-        {auth.ready && (needsAuth || auth.recovery) && <AuthPanel client={supabase} recovery={auth.recovery} onRecovered={auth.finishRecovery} />}
-        {step === 5 && auth.session && !auth.recovery && <DetailsStep key={auth.session.user.id} draft={draft} user={auth.session.user} api={api} edit={store.edit} report={store.setError} next={() => goWithQuote(6)} />}
+        {auth.ready && (needsAuth || auth.recovery) && <AuthPanel client={supabase} recovery={auth.recovery} onRecovered={auth.finishRecovery} onGuest={startGuest} />}
+        {step === 5 && auth.session && !auth.recovery && <DetailsStep key={auth.session.user.id} draft={draft} user={auth.session.user} api={api} edit={store.edit} report={store.setError} guest={isGuest} next={() => goWithQuote(6)} />}
         {step === 6 && auth.session && !auth.recovery && <PaymentStep draft={draft} quote={quote} bank={bank} edit={store.edit} refresh={store.loadQuote} finalize={() => store.finalize(auth.session.user.id)} />}
         {step === 7 && auth.session && !auth.recovery && <ConfirmationStep id={draft.bookingId} result={result} api={api} bank={bank} />}
       </fieldset>
