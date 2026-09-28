@@ -69,6 +69,12 @@ export function createBookingApi(client) {
       p_last_name: details.last_name?.trim() || null,
       p_phone: details.phone?.trim() || null,
     })),
+    activateGuest: (details = {}) => one(client.rpc('activate_guest_client_account', {
+      p_first_name: details.first_name?.trim() || null,
+      p_last_name: details.last_name?.trim() || null,
+      p_email: details.email?.trim() || null,
+      p_phone: details.phone?.trim() || null,
+    })),
     addresses: () => unwrap(client.from('client_addresses')
       .select('id,label,address_line_1,address_line_2,city,postcode,entry_instructions,is_default')
       .order('is_default', { ascending: false })),
