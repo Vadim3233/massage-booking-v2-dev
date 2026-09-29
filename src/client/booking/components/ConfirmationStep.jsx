@@ -19,7 +19,17 @@ export default function ConfirmationStep({ id, api, bank }) {
     <h1>I've received your booking</h1>
     <p>{bankTransfer ? "Thank you. I look forward to seeing you. I'll check your transfer and confirm your appointment as soon as possible." : "Thank you. I look forward to seeing you. I'll confirm your appointment as soon as possible."}</p>
     <BookingSummary booking={booking} />
-    <section><h2>What happens next</h2><p>{bankTransfer ? 'Vad will check your transfer and review your appointment.' : 'Vad will review your cash booking request.'} Your appointment is awaiting approval.</p></section>
+    <section><h2>What happens next</h2>
+      {bankTransfer ? <ol>
+        <li>I'll check your transfer.</li>
+        <li>I'll confirm your appointment by email.</li>
+        <li>You'll receive your appointment reminder.</li>
+      </ol> : <ol>
+        <li>I'll confirm your appointment as soon as possible.</li>
+        <li>You'll receive confirmation by email.</li>
+        <li>You'll receive your appointment reminder.</li>
+      </ol>}
+    </section>
     {bankTransfer && <details><summary>Bank transfer details</summary><BankDetails bank={bank} reference={booking.booking_payments.payment_reference} /></details>}
     <p><a href="https://vadmassage.com">Contact Vad</a></p>
   </>
