@@ -283,7 +283,7 @@ test('expired payment reservation releases time and preserves the draft', async 
   const id = await page.evaluate(() => JSON.parse(sessionStorage.getItem('vad-v2-booking-draft-v1')).draft.bookingId)
   await unwrap(fixture.admin.from('bookings').update({ payment_reservation_expires_at: new Date(Date.now()-1000).toISOString() }).eq('id',id))
   await page.reload()
-  await expect(page.getByRole('alert')).toContainText('payment reservation has expired')
+  await expect(page.getByRole('alert')).toContainText('time reserved for this booking has expired')
   expect((await fixture.publicApi.availability(fixture.date,120)).some((s) => s.start_minutes===600)).toBe(true)
   await page.getByRole('button', { name: 'Choose another time', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Choose date and time' })).toBeVisible()
