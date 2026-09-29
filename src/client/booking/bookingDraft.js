@@ -4,7 +4,19 @@ export const holdKey = 'vad-v2-hold-client-v1'
 export const emptyDetails = { first_name: '', last_name: '', email: '', phone: '', savedAddressId: '', address_line_1: '', address_line_2: '', city: 'London', postcode: '', entry_instructions: '' }
 export const newDraft = () => ({ areaId: '', serviceId: '', sessions: [], enhancementIds: [], date: '', start: null, hold: null, details: { ...emptyDetails }, note: '', paymentMethod: 'bank_transfer', pending: null, bookingId: null })
 export const durationOf = (draft) => draft.sessions.reduce((sum, session) => sum + session.duration_minutes, 0)
-export const activeHold = (draft, now = Date.now()) => Boolean(draft.hold && Date.parse(draft.hold.expires_at) > now)
+export function validHold(hold) {
+  return Boolean(
+    hold &&
+    typeof hold.hold_id === 'string' &&
+    hold.hold_id &&
+    typeof hold.hold_token === 'string' &&
+    hold.hold_token &&
+    Number.isFinite(Date.parse(hold.expires_at))
+  )
+}
+
+export const activeHold = (draft, now = Date.now()) =>
+  Boolean(validHold(draft.hold) && Date.parse(draft.hold.expires_at) > now)
 export const newSession = (duration) => ({ duration_minutes: duration, recipient_name: '', preference_ids: [] })
 
 export function browserClientKey(storage, uuid = () => crypto.randomUUID()) {
@@ -20,7 +32,12 @@ export function restoreDraft(storage) {
   try {
     const saved = JSON.parse(storage.getItem(draftKey))
     if (saved?.version === 1 && Array.isArray(saved.draft?.sessions)) {
-      return { ...newDraft(), ...saved.draft, details: { ...emptyDetails, ...saved.draft.details } }
+      const draft = { ...newDraft(), ...saved.draft, details: { ...emptyDetails, ...saved.draft.details } }
+      if (draft.hold && !validHold(draft.hold)) {
+        draft.hold = null
+        draft.start = null
+      }
+      return draft
     }
   } catch { /* An unreadable UI draft is not a database fallback. */ }
   return newDraft()
