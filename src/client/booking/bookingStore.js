@@ -1,10 +1,10 @@
-import { activeHold, allowedStep, draftKey, durationOf, restoreDraft } from './bookingDraft.js'
+import { activeHold, allowedStep, draftKey, durationOf, parseBookingStep, restoreDraft } from './bookingDraft.js'
 import { finalizeParams, quoteParams } from './bookingApi.js'
 
 // One owner for draft mutations and writes; synchronous busy guard prevents double clicks.
 export function createBookingStore({ api, storage, clientKey, uuid = () => crypto.randomUUID(), now = () => Date.now() }) {
   let state = { draft: restoreDraft(storage), step: 0, busy: false, error: '', quote: null, result: null }
-  state.step = allowedStep(state.draft, Number(new URLSearchParams(globalThis.location?.search).get('step')) || 0, now())
+  state.step = allowedStep(state.draft, parseBookingStep(new URLSearchParams(globalThis.location?.search).get('step')), now())
   const listeners = new Set()
   function publish(patch) { state = { ...state, ...patch }; listeners.forEach((listener) => listener()) }
   function save(draft) {
