@@ -26,13 +26,23 @@ export default function BookingFlow() {
   const navigate = useBookingHistory(store, step)
   const auth = useClientAuth(authApi)
   const [catalogue, setCatalogue] = useState(null)
+  const [catalogueError, setCatalogueError] = useState('')
   const [catalogueAttempt, setCatalogueAttempt] = useState(0)
   const [clock, setClock] = useState(Date.now)
   useEffect(() => {
     let live = true
-    api.catalogue().then((data) => { if (live) setCatalogue(data) }).catch((err) => { if (live) store.setError(err.message) })
+    api.catalogue()
+      .then((data) => {
+        if (!live) return
+        setCatalogue(data)
+        setCatalogueError('')
+      })
+      .catch((err) => {
+        if (!live) return
+        setCatalogueError(err.message || 'Unable to load booking options. Please retry.')
+      })
     return () => { live = false }
-  }, [store, catalogueAttempt])
+  }, [catalogueAttempt])
   useEffect(() => { const timer = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(timer) }, [])
   const held = activeHold(draft, clock)
   const remaining = draft.hold ? Math.max(0, Math.ceil((Date.parse(draft.hold.expires_at) - clock) / 1000)) : 0
@@ -49,7 +59,9 @@ export default function BookingFlow() {
     {!draft.bookingId && <HoldNotice hold={draft.hold} remaining={remaining} busy={busy} pending={draft.pending} extend={store.extendHold} release={store.releaseHold} />}
     {error && step !== 6 && <p role="alert" className="error">{error}</p>}
     {auth.error && <p role="alert" className="error">{auth.error}</p>}
-    {!catalogue ? <><p>Loading booking options…</p><button onClick={() => setCatalogueAttempt(catalogueAttempt + 1)}>Retry</button></> : <>
+    {!catalogue ? catalogueError
+      ? <><p role="alert" className="error">{catalogueError}</p><button onClick={() => { setCatalogueError(''); setCatalogueAttempt((attempt) => attempt + 1) }}>Retry booking options</button></>
+      : <p role="status">Loading booking options…</p> : <>
       {step > 0 && step < 7 && !draft.pending && <button disabled={busy} onClick={() => navigate(step - 1)}>Back</button>}
       {!held && step >= 4 && step < 7 && !draft.pending && <button onClick={() => navigate(3)}>Choose a time again</button>}
       {busy && <p role="status">Please wait…</p>}
