@@ -51,11 +51,12 @@ export function TimeStep({ draft, loadAvailability, selectDate, selectSlot, next
   const duration = durationOf(draft)
   useEffect(() => {
     let live = true
-    if (!draft.date) {
-      setAvailability({ slots: [], loading: false, error: '' })
-      return
-    }
-    setAvailability({ slots: [], loading: true, error: '' })
+    if (!draft.date) return undefined
+
+    Promise.resolve().then(() => {
+      if (live) setAvailability({ slots: [], loading: true, error: '' })
+    })
+
     loadAvailability(draft.date, duration).then((slots) => {
       if (live) setAvailability({ slots, loading: false, error: '' })
     }).catch((error) => {
