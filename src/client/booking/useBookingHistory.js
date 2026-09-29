@@ -1,14 +1,15 @@
 import { useEffect } from 'react'
+import { parseBookingStep } from './bookingDraft.js'
 
 export function useBookingHistory(store, step) {
   useEffect(() => {
     const url = new URL(window.location.href)
-    const requested = Number(url.searchParams.get('step')) || 0
+    const requested = parseBookingStep(url.searchParams.get('step'))
     if (requested !== step || window.history.state?.bookingStep === undefined) {
       url.searchParams.set('step', step)
       window.history.replaceState({ ...window.history.state, bookingStep: step }, '', url)
     }
-    const pop = () => store.navigate(Number(new URLSearchParams(window.location.search).get('step')) || 0)
+    const pop = () => store.navigate(parseBookingStep(new URLSearchParams(window.location.search).get('step')))
     const leave = (event) => {
       const { draft } = store.getSnapshot()
       if (draft.sessions.length && !draft.bookingId) { event.preventDefault(); event.returnValue = '' }
