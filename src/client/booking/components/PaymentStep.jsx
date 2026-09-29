@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { money } from '../bookingDraft.js'
 import { PriceSummary } from './ReviewStep.jsx'
 import BankDetails from './BankDetails.jsx'
 import BookingSummary from './BookingSummary.jsx'
@@ -31,10 +32,30 @@ export default function PaymentStep({ draft, quote, bank, api, store, finalize, 
     {expired ? <p role="alert">Your payment reservation has expired. Your details are saved. If you already sent money, contact Vad before booking again.</p>
       : <><p role="status">Your payment reservation expires in {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}.</p>
         <p>{cash ? "Thank you. I'll confirm your appointment as soon as possible." : 'Please make your bank transfer using the reference below, then let me know.'}</p></>}
-    <BookingSummary booking={booking} />
-    {!cash && !expired && <BankDetails bank={bank} reference={booking.booking_payments.payment_reference} />}
+    <BookingSummary booking={booking} paymentLabel={cash ? 'Cash on arrival' : undefined} />
+    {!cash && !expired && <section className="panel">
+      <h2>Bank transfer</h2>
+      <p>Amount to transfer: <strong>{money(booking.total_gbp)}</strong></p>
+      <BankDetails bank={bank} reference={booking.booking_payments.payment_reference} />
+      <h3>What happens next</h3>
+      <ol>
+        <li>Make the bank transfer.</li>
+        <li>Press <strong>I've made the bank transfer</strong>.</li>
+        <li>I'll check the payment and confirm your appointment.</li>
+      </ol>
+    </section>}
+    {cash && !expired && <section className="panel">
+      <h2>Cash on arrival</h2>
+      <p>You can pay the full amount in cash at your appointment.</p>
+      <h3>What happens next</h3>
+      <ol>
+        <li>Confirm your cash booking below.</li>
+        <li>I'll confirm your appointment as soon as possible.</li>
+        <li>You'll receive confirmation by email.</li>
+      </ol>
+    </section>}
     {!expired && <>
-      <p>Free cancellation up to 24 hours before your appointment. Cancellations within 24 hours are subject to the full appointment fee.</p>
+      <p>{cash ? 'Just a quick reminder: the full appointment fee applies to cancellations made within 24 hours of your appointment.' : 'Free cancellation up to 24 hours before your appointment. Cancellations within 24 hours are subject to the full appointment fee.'}</p>
       <label className="check"><input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} />I understand the payment and cancellation terms.</label>
     </>}
     {error && <p role="alert" className="error">{error}</p>}
