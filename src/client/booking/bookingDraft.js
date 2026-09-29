@@ -32,7 +32,7 @@ export function validDetails(details) {
 }
 
 export function allowedStep(draft, requested, now = Date.now()) {
-  if (draft.bookingId) return 7
+  if (draft.bookingId) return draft.paymentComplete === false ? 6 : 7
   if (draft.pending) return 6
   let maximum = 0
   if (draft.areaId) maximum = 1

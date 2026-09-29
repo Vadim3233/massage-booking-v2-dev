@@ -1,40 +1,49 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PriceSummary } from './ReviewStep.jsx'
+import BankDetails from './BankDetails.jsx'
+import BookingSummary from './BookingSummary.jsx'
 
-export function BankDetails({ bank }) {
-  return bank.configured ? <dl className="prices">
-    <div><dt>Account name</dt><dd>{bank.accountName}</dd></div>
-    <div><dt>Sort code</dt><dd>{bank.sortCode}</dd></div>
-    <div><dt>Account number</dt><dd>{bank.accountNumber}</dd></div>
-  </dl> : <p role="status">Bank-transfer details are currently unavailable. Please contact Vad before making a transfer.</p>
-}
-
-export default function PaymentStep({ draft, quote, bank, edit, refresh, finalize, held, error, chooseTimeAgain }) {
+export default function PaymentStep({ draft, quote, bank, api, store, finalize, held, error, chooseTimeAgain }) {
   const [acknowledged, setAcknowledged] = useState(false)
-
-  if (draft.pending) return <><h1>Check your booking request</h1>
-    <p>The result of your last request has not been verified. Retry it to retrieve the result safely. Your selections are locked to avoid a duplicate booking.</p>
+  const [view, setView] = useState({ booking: null, error: '' })
+  const [attempt, setAttempt] = useState(0)
+  const [clock, setClock] = useState(Date.now)
+  useEffect(() => {
+    if (!draft.bookingId) return
+    let live = true
+    api.booking(draft.bookingId).then((booking) => {
+      if (live) { setClock(Date.now()); setView({ booking, error: '' }); store.resumePayment(booking) }
+    }).catch((err) => { if (live) setView({ booking: null, error: err.message }) })
+    return () => { live = false }
+  }, [api, draft.bookingId, attempt, store])
+  useEffect(() => { const timer = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(timer) }, [])
+  if (!draft.bookingId) return <><h1>One last step</h1><PriceSummary quote={quote} />
+    <p>{draft.pending ? 'Your reservation response was interrupted. Retry the same request safely.' : 'Reserve your appointment to receive the payment reference before making a transfer.'}</p>
     {error && <p role="alert" className="error">{error}</p>}
-    <button className="primary" onClick={finalize}>Retry booking request</button>
+    {held || draft.pending ? <><button className="primary" onClick={finalize}>{draft.pending ? 'Retry booking request' : 'Reserve appointment'}</button><button onClick={store.loadQuote}>Refresh price</button></> : <button onClick={chooseTimeAgain}>Choose a new time</button>}
   </>
-
-  if (!held) return <><h1>Your time hold expired</h1>
-    <p>Your booking details are still saved, but the selected time is no longer reserved.</p>
-    <button className="primary" onClick={chooseTimeAgain}>Choose a new time</button>
-  </>
-
-  return <><h1>One last step</h1><PriceSummary quote={quote} /><button onClick={refresh}>Refresh price</button>
-    <label className="check"><input type="radio" name="payment" checked={draft.paymentMethod === 'bank_transfer'} onChange={() => edit({ paymentMethod: 'bank_transfer' })} />Bank transfer</label>
-    <label className="check"><input type="radio" name="payment" checked={draft.paymentMethod === 'cash'} onChange={() => edit({ paymentMethod: 'cash' })} />Request cash payment</label>
-    {draft.paymentMethod === 'bank_transfer' ? <section className="panel"><h2>Bank transfer</h2>
-      <BankDetails bank={bank} />
-      <p>Submit your booking to receive its payment reference, then use that reference for your transfer. Vad will check your payment before confirming the appointment.</p>
-    </section> : <section className="panel"><h2>Cash requires approval</h2><p>Your request will be sent to Vad for approval. Your appointment is not confirmed until approved.</p></section>}
-    <p>Free cancellation up to 24 hours before your appointment. Within 24 hours, the full appointment fee may apply.</p>
-    <label className="check"><input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} />I understand the payment and cancellation terms.</label>
+  const booking = view.booking
+  if (!booking) return <><h1>One last step</h1><p>Loading your payment reservation…</p>{view.error && <p role="alert">{view.error}</p>}<button onClick={() => setAttempt(attempt + 1)}>Refresh reservation</button></>
+  const remaining = Math.min(3600, Math.max(0, Math.ceil((Date.parse(booking.payment_reservation_expires_at) - clock) / 1000)))
+  const expired = booking.reservation_expired || remaining === 0
+  const cash = draft.paymentMethod === 'cash'
+  return <><h1>{cash ? 'Paying by cash' : 'One last step'}</h1>
+    {expired ? <p role="alert">Your payment reservation has expired. Your details are saved. If you already sent money, contact Vad before booking again.</p>
+      : <><p role="status">Your payment reservation expires in {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}.</p>
+        <p>{cash ? "Thank you. I'll confirm your appointment as soon as possible." : 'Please make your bank transfer using the reference below, then let me know.'}</p></>}
+    <BookingSummary booking={booking} />
+    {!cash && !expired && <BankDetails bank={bank} reference={booking.booking_payments.payment_reference} />}
+    {!expired && <>
+      <p>Free cancellation up to 24 hours before your appointment. Cancellations within 24 hours are subject to the full appointment fee.</p>
+      <label className="check"><input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} />I understand the payment and cancellation terms.</label>
+    </>}
     {error && <p role="alert" className="error">{error}</p>}
-    <button className="primary" disabled={!quote || !acknowledged || (draft.paymentMethod === 'bank_transfer' && !bank.configured)} onClick={finalize}>
-      {draft.paymentMethod === 'cash' ? 'Request cash payment' : 'Submit bank-transfer booking'}
-    </button>
+    {expired ? <button onClick={store.restartExpiredPayment}>Choose another time</button> : <>
+      <button className="primary" disabled={!acknowledged || (!cash && !bank.configured)} onClick={store.completePayment}>
+        {draft.paymentPending ? 'Retry payment request' : cash ? 'Confirm cash booking' : "I've made the bank transfer"}
+      </button>
+      {!draft.paymentPending && <button onClick={() => store.setPaymentMethod(cash ? 'bank_transfer' : 'cash')}>{cash ? 'Back to bank transfer' : "I'd like to pay cash"}</button>}
+    </>}
+    <p><a href="https://vadmassage.com">Contact Vad</a></p>
   </>
 }

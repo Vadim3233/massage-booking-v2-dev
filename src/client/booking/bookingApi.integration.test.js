@@ -75,18 +75,29 @@ describe('real local Supabase client adapter', () => {
   it('finalizes actual adapter payload with two separate sessions and pending payment', async () => {
     params = finalizeParams(draft, key, crypto.randomUUID())
     result = await fixture.api.finalize(params)
-    expect(result).toMatchObject({ total_gbp: 200, booking_status: 'awaiting_payment_verification', payment_status: 'awaiting_verification' })
+    expect(result).toMatchObject({ total_gbp: 200, booking_status: 'awaiting_transfer', payment_status: 'awaiting_transfer' })
     const booking = await fixture.api.booking(result.booking_id)
     expect(booking.booking_sessions.map((session) => session.duration_minutes)).toEqual([60, 60])
-    expect(booking.booking_payments.status).toBe('awaiting_verification')
+    expect(booking.booking_payments.status).toBe('awaiting_transfer')
+    expect(booking.booking_email_snapshot).toBe(fixture.email)
+    expect(Date.parse(booking.payment_reservation_expires_at) - Date.now()).toBeGreaterThan(3590000)
     expect((await fixture.api.addresses())[0].postcode).toBe('SW1A 1AA')
   })
   it('retries idempotently without duplicate bookings, enhancements or events', async () => {
-    expect(await fixture.api.finalize(params)).toEqual(result)
+    await unwrap(fixture.admin.from('services').update({ active: false }).eq('id', fixture.ids.service))
+    try { expect(await fixture.api.finalize(params)).toEqual(result) }
+    finally { await unwrap(fixture.admin.from('services').update({ active: true }).eq('id', fixture.ids.service)) }
     const bookings = await unwrap(fixture.admin.from('bookings').select('id').eq('client_id', fixture.profile.client_id))
     expect(bookings).toHaveLength(1)
     expect(await unwrap(fixture.admin.from('booking_enhancements').select('id').eq('booking_id', result.booking_id))).toHaveLength(1)
     expect(await unwrap(fixture.admin.from('event_outbox').select('id').eq('aggregate_id', result.booking_id))).toHaveLength(1)
+  })
+  it('declares the transfer idempotently without marking it paid', async () => {
+    const first = await fixture.api.declareTransfer(result.booking_id)
+    expect(first.booking_payments.status).toBe('awaiting_verification')
+    expect(await fixture.api.declareTransfer(result.booking_id)).toEqual(first)
+    const rows = await unwrap(fixture.admin.from('booking_payments').select('paid_at,status').eq('booking_id', result.booking_id))
+    expect(rows[0]).toEqual({ paid_at: null, status: 'awaiting_verification' })
   })
   it('rejects token theft and hides private records from anonymous callers', async () => {
     await expect(fixture.publicApi.booking(result.booking_id)).rejects.toBeDefined()

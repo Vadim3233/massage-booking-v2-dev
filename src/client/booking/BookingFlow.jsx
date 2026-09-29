@@ -35,7 +35,12 @@ export default function BookingFlow() {
   const held = activeHold(draft, clock)
   const remaining = draft.hold ? Math.max(0, Math.ceil((Date.parse(draft.hold.expires_at) - clock) / 1000)) : 0
   useEffect(() => { store.expireHold() }, [store, clock, busy])
-  async function goWithQuote(target) { if (await store.loadQuote()) navigate(target) }
+  async function goWithQuote(target) {
+    if (await store.loadQuote()) {
+      navigate(target)
+      if (target === 6) await store.finalize(auth.session?.user.id)
+    }
+  }
   const needsAuth = step >= 5 && !auth.session
   const isGuest = Boolean(auth.session?.user?.is_anonymous)
   async function startGuest() {
@@ -49,8 +54,8 @@ export default function BookingFlow() {
     {error && step !== 6 && <p role="alert" className="error">{error}</p>}
     {auth.error && <p role="alert" className="error">{auth.error}</p>}
     {!catalogue ? <><p>Loading booking options…</p><button onClick={() => setCatalogueAttempt(catalogueAttempt + 1)}>Retry</button></> : <>
-      {step > 0 && step < 7 && !draft.pending && <button disabled={busy} onClick={() => navigate(step - 1)}>Back</button>}
-      {!held && step >= 4 && step < 7 && !draft.pending && <button onClick={() => navigate(3)}>Choose a time again</button>}
+      {step > 0 && step < 7 && !draft.pending && !draft.bookingId && <button disabled={busy} onClick={() => navigate(step - 1)}>Back</button>}
+      {!held && step >= 4 && step < 7 && !draft.pending && !draft.bookingId && <button onClick={() => navigate(3)}>Choose a time again</button>}
       {busy && <p role="status">Please wait…</p>}
       <fieldset className="screen" disabled={busy}>
         {step === 0 && <AreaStep catalogue={catalogue} choose={async (areaId) => { if (areaId === draft.areaId || await store.changeSelection({ areaId })) navigate(1) }} />}
@@ -61,7 +66,7 @@ export default function BookingFlow() {
         {!auth.ready && step >= 5 && <p role="status">Checking your account…</p>}
         {auth.ready && (needsAuth || auth.recovery) && <AuthPanel client={supabase} recovery={auth.recovery} onRecovered={auth.finishRecovery} onGuest={startGuest} />}
         {step === 5 && auth.session && !auth.recovery && <DetailsStep key={auth.session.user.id} draft={draft} user={auth.session.user} api={api} edit={store.edit} report={store.setError} guest={isGuest} next={() => goWithQuote(6)} />}
-        {step === 6 && auth.session && !auth.recovery && <PaymentStep draft={draft} quote={quote} bank={bank} edit={store.edit} refresh={store.loadQuote} finalize={() => store.finalize(auth.session.user.id)} held={held} error={error} chooseTimeAgain={() => navigate(3)} />}
+        {step === 6 && auth.session && !auth.recovery && <PaymentStep draft={draft} quote={quote} bank={bank} api={api} store={store} finalize={() => store.finalize(auth.session.user.id)} held={held} error={error} chooseTimeAgain={() => navigate(3)} />}
         {step === 7 && auth.session && !auth.recovery && <ConfirmationStep id={draft.bookingId} result={result} api={api} bank={bank} />}
       </fieldset>
     </>}

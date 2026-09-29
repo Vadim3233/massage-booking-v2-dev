@@ -83,8 +83,8 @@ export function createBookingApi(client) {
       .select('id,label,address_line_1,address_line_2,city,postcode,entry_instructions,is_default')
       .order('is_default', { ascending: false })),
     finalize: (params) => one(client.rpc('finalize_client_booking', params)),
-    booking: (id) => unwrap(client.from('bookings').select(
-      'id,booking_reference,date,start_minutes,booking_status,total_gbp,service_area_name_snapshot,address_line_1_snapshot,address_line_2_snapshot,city_snapshot,postcode_snapshot,booking_sessions(position,duration_minutes,recipient_name,service_name_snapshot),booking_payments(method,status,payment_reference)'
-    ).eq('id', id).single()),
+    booking: (id) => unwrap(client.rpc('get_my_booking', { p_booking_id: id })),
+    declareTransfer: (id) => unwrap(client.rpc('declare_my_bank_transfer', { p_booking_id: id })),
+    confirmCash: (id) => unwrap(client.rpc('confirm_my_cash_booking', { p_booking_id: id })),
   }
 }

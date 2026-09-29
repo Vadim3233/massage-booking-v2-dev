@@ -164,3 +164,39 @@ describe('owner-aware availability adapter state', () => {
     expect(f.api.availability).toHaveBeenLastCalledWith(f.draft.date, 120, null, f.clientKey)
   })
 })
+
+
+describe('provisional payment state', () => {
+  it('stays at Payment for a server-created provisional reservation and restores after reload', async () => {
+    const f = fixture(); f.api.finalize.mockResolvedValue({ booking_id: 'provisional', booking_reference: 'REF', payment_status: 'awaiting_transfer' })
+    await f.store.loadQuote(); await f.store.finalize()
+    expect(f.store.getSnapshot().step).toBe(6)
+    expect(createBookingStore(f).getSnapshot().step).toBe(6)
+    expect(f.store.getSnapshot().draft.hold).toBeNull()
+  })
+  it('retains an ambiguous payment action and retries it even after reload', async () => {
+    const f=fixture(); f.api.finalize.mockResolvedValue({ booking_id:'provisional',booking_reference:'REF',payment_status:'awaiting_transfer' })
+    await f.store.loadQuote(); await f.store.finalize()
+    f.api.declareTransfer=vi.fn().mockRejectedValueOnce(new TypeError('Lost response')).mockResolvedValue({id:'provisional',booking_payments:{status:'awaiting_verification'}})
+    await f.store.completePayment()
+    expect(f.store.getSnapshot().step).toBe(6)
+    f.store.setPaymentMethod('cash')
+    expect(f.store.getSnapshot().draft.paymentMethod).toBe('bank_transfer')
+    const reloaded=createBookingStore(f); await reloaded.completePayment()
+    expect(reloaded.getSnapshot().step).toBe(7)
+    expect(f.api.declareTransfer).toHaveBeenCalledTimes(2)
+  })
+})
+
+
+it('clears only a server-expired payment reservation and preserves client details', async () => {
+  const f=fixture(); f.api.finalize.mockResolvedValue({booking_id:'provisional',booking_reference:'REF',payment_status:'awaiting_transfer'})
+  f.store.edit({details:{...f.draft.details,address_line_1:'Saved address'},note:'Saved note'})
+  await f.store.loadQuote(); await f.store.finalize()
+  f.api.booking=vi.fn().mockResolvedValue({reservation_expired:false})
+  await f.store.restartExpiredPayment()
+  expect(f.store.getSnapshot().draft.bookingId).toBe('provisional')
+  f.api.booking.mockResolvedValue({reservation_expired:true})
+  await f.store.restartExpiredPayment()
+  expect(f.store.getSnapshot()).toMatchObject({step:3,draft:{bookingId:null,note:'Saved note',details:{address_line_1:'Saved address'}}})
+})

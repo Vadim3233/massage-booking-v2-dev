@@ -317,7 +317,7 @@ select is(
   'finalization snapshots the appointment enhancement once'
 );
 
--- 11. Bank transfer is awaiting verification and not falsely paid.
+-- 11. Bank transfer is awaiting transfer and not falsely paid.
 select is(
   (
     select bp.status
@@ -326,8 +326,8 @@ select is(
     where b.client_id = '00000000-0000-0000-0000-000000004501'
       and b.date = current_setting('test.finalize_date1')::date
   ),
-  'awaiting_verification',
-  'bank transfer remains awaiting Admin verification'
+  'awaiting_transfer',
+  'bank transfer awaits the client transfer declaration'
 );
 
 -- 12. Booking state matches bank-transfer review state.
@@ -338,8 +338,8 @@ select is(
     where b.client_id = '00000000-0000-0000-0000-000000004501'
       and b.date = current_setting('test.finalize_date1')::date
   ),
-  'awaiting_payment_verification',
-  'bank-transfer booking remains awaiting payment verification'
+  'awaiting_transfer',
+  'bank-transfer booking remains awaiting transfer'
 );
 
 -- 13. Hold is consumed in the same committed transaction.

@@ -1,34 +1,26 @@
 import { useEffect, useState } from 'react'
-import { dateLabel, money, timeLabel } from '../bookingDraft.js'
-import { BankDetails } from './PaymentStep.jsx'
+import BankDetails from './BankDetails.jsx'
+import BookingSummary from './BookingSummary.jsx'
 
-export default function ConfirmationStep({ id, result, api, bank }) {
-  const [view, setView] = useState({ booking: null, error: '', loading: true })
+export default function ConfirmationStep({ id, api, bank }) {
+  const [view, setView] = useState({ booking: null, error: '' })
   const [attempt, setAttempt] = useState(0)
   useEffect(() => {
     let live = true
-    api.booking(id).then((booking) => { if (live) setView({ booking, error: '', loading: false }) })
-      .catch((error) => { if (live) setView({ booking: null, error: error.message, loading: false }) })
+    api.booking(id).then((booking) => { if (live) setView({ booking, error: '' }) })
+      .catch((error) => { if (live) setView({ booking: null, error: error.message }) })
     return () => { live = false }
   }, [api, id, attempt])
   const booking = view.booking
-  const payment = booking?.booking_payments
+  if (!booking) return <><h1>Retrieve your booking</h1><p>Loading your saved appointment…</p>{view.error && <><p role="alert">{view.error}</p><button onClick={() => setAttempt(attempt + 1)}>Retry loading booking</button></>}</>
+  if (booking.reservation_expired || booking.booking_payments.status === 'awaiting_transfer') return <><h1>Your transfer has not been declared</h1><p>Please return to Payment to complete your request.</p></>
+  const bankTransfer = booking.booking_payments.method === 'bank_transfer'
   return <>
-    <h1>{booking || result ? 'Booking request received' : 'Retrieve your booking'}</h1>
-    {result && !booking && <p>Booking reference: <strong>{result.booking_reference}</strong></p>}
-    {view.loading && <p role="status">Loading your saved appointment…</p>}
-    {view.error && <><p role="alert" className="error">{view.error}</p><button onClick={() => setAttempt(attempt + 1)}>Retry loading booking</button></>}
-    {booking && <section className="panel">
-      <p>Booking reference: <strong>{booking.booking_reference}</strong></p>
-      <p>{dateLabel(booking.date)} at {timeLabel(booking.start_minutes)} (London time)</p>
-      <p>{booking.service_area_name_snapshot} · {booking.address_line_1_snapshot}, {booking.city_snapshot}, {booking.postcode_snapshot}</p>
-      <ol>{[...booking.booking_sessions].sort((a, b) => a.position - b.position).map((session) => <li key={session.position}>{session.service_name_snapshot} · {session.duration_minutes} minutes{session.recipient_name ? ` · ${session.recipient_name}` : ''}</li>)}</ol>
-      <p>Total: <strong>{money(booking.total_gbp)}</strong></p>
-      <p>Appointment: {booking.booking_status.replaceAll('_', ' ')}</p>
-      <p>Payment: {payment.status.replaceAll('_', ' ')}</p>
-      {payment.method === 'bank_transfer' && <><h2>Your bank transfer</h2><BankDetails bank={bank} /><p>Payment reference: <strong>{payment.payment_reference}</strong></p><p>Your transfer must be verified by Vad. This request does not mark your payment as paid.</p></>}
-      {payment.method === 'cash' && <p>Vad will review your cash request before confirming your appointment.</p>}
-    </section>}
-    <p>For help with your appointment, <a href="https://vadmassage.com">contact Vad</a>.</p>
+    <h1>I've received your booking</h1>
+    <p>{bankTransfer ? "Thank you. I look forward to seeing you. I'll check your transfer and confirm your appointment as soon as possible." : "Thank you. I look forward to seeing you. I'll confirm your appointment as soon as possible."}</p>
+    <BookingSummary booking={booking} />
+    <section><h2>What happens next</h2><p>{bankTransfer ? 'Vad will check your transfer and review your appointment.' : 'Vad will review your cash booking request.'} Your appointment is awaiting approval.</p></section>
+    {bankTransfer && <details><summary>Bank transfer details</summary><BankDetails bank={bank} reference={booking.booking_payments.payment_reference} /></details>}
+    <p><a href="https://vadmassage.com">Contact Vad</a></p>
   </>
 }

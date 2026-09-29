@@ -56,6 +56,35 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
         throw error
       }
     }) },
+    setPaymentMethod(paymentMethod) {
+      if (state.busy || state.draft.paymentPending || state.draft.paymentComplete || !['cash', 'bank_transfer'].includes(paymentMethod)) return
+      try { save({ ...state.draft, paymentMethod }) } catch (error) { publish({ error: error.message }) }
+    },
+    resumePayment(booking) {
+      if (booking.id !== state.draft.bookingId) return
+      if (booking.booking_payments.status !== 'awaiting_transfer' && !booking.reservation_expired) {
+        try { save({ ...state.draft, paymentComplete: true, paymentPending: null }); publish({ step: 7 }) }
+        catch (error) { publish({ error: error.message }) }
+      }
+    },
+    completePayment() { return run(async () => {
+      if (!state.draft.bookingId) return
+      const action = state.draft.paymentPending || state.draft.paymentMethod
+      save({ ...state.draft, paymentPending: action })
+      const booking = await (action === 'cash' ? api.confirmCash(state.draft.bookingId) : api.declareTransfer(state.draft.bookingId))
+      if (booking.id !== state.draft.bookingId || booking.reservation_expired || booking.booking_payments.status === 'awaiting_transfer') {
+        throw new Error('Unable to verify your payment request. Please retry.')
+      }
+      save({ ...state.draft, paymentComplete: true, paymentPending: null })
+      publish({ step: 7 })
+      return booking
+    }) },
+    restartExpiredPayment() { return run(async () => {
+      const booking = await api.booking(state.draft.bookingId)
+      if (!booking.reservation_expired) throw new Error('This reservation is still active. Please refresh its payment details.')
+      save({ ...state.draft, bookingId: null, paymentComplete: false, paymentPending: null, pending: null, hold: null, start: null, paymentMethod: 'bank_transfer' })
+      publish({ step: 3, result: null, quote: null })
+    }) },
     navigate(step) { publish({ step: allowedStep(state.draft, step, now()), error: '' }) },
     edit(patch) {
       if (state.busy || state.draft.pending || state.draft.bookingId) return
@@ -110,8 +139,9 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
         throw error
       }
       if (!result.booking_id || !result.booking_reference) throw new Error('Unable to verify the booking result. Please retry the same request.')
-      save({ ...state.draft, bookingId: result.booking_id, pending: null, hold: null })
-      publish({ result, step: 7 })
+      const paymentComplete = result.payment_status !== 'awaiting_transfer'
+      save({ ...state.draft, bookingId: result.booking_id, pending: null, hold: null, paymentComplete })
+      publish({ result, step: paymentComplete ? 7 : 6 })
       return result
     }) },
   }
