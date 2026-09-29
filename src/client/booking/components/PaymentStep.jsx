@@ -29,8 +29,8 @@ export default function PaymentStep({ draft, quote, bank, api, store, finalize, 
   const expired = booking.reservation_expired || remaining === 0
   const cash = draft.paymentMethod === 'cash'
   return <><h1>{cash ? 'Paying by cash' : 'One last step'}</h1>
-    {expired ? <p role="alert">Your payment reservation has expired. Your details are saved. If you already sent money, contact Vad before booking again.</p>
-      : <><p role="status">Your payment reservation expires in {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')}.</p>
+    {expired ? <p role="alert">The time reserved for this booking has expired. Your details are saved. If you already sent money, contact Vad before booking again.</p>
+      : <><p role="status">Your appointment time is reserved for {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, '0')} while you finish this step.</p>
         <p>{cash ? "Thank you. I'll confirm your appointment as soon as possible." : 'Please make your bank transfer using the reference below, then let me know.'}</p></>}
     <BookingSummary booking={booking} paymentLabel={cash ? 'Cash on arrival' : undefined} />
     {!cash && !expired && <section className="panel">
