@@ -26,6 +26,33 @@ describe('booking draft and adapters', () => {
   it('recovers safely from corrupt temporary storage', () => {
     expect(restoreDraft({ getItem: () => '{broken' })).toEqual(newDraft())
   })
+  it('drops invalid persisted sessions and their dependent booking state', () => {
+    const storage = memory()
+    const draft = {
+      ...newDraft(),
+      areaId: 'area',
+      serviceId: 'service',
+      sessions: [{ duration_minutes: 75, recipient_name: '', preference_ids: [] }],
+      date: '2026-10-01',
+      start: 600,
+      hold: { hold_id: 'hold', hold_token: 'token', expires_at: '2026-10-01T10:10:00Z' },
+    }
+    storage.setItem(draftKey, JSON.stringify({ version: 1, draft }))
+
+    const restored = restoreDraft(storage)
+
+    expect(restored).toMatchObject({
+      areaId: 'area',
+      serviceId: 'service',
+      sessions: [],
+      date: '',
+      start: null,
+      hold: null,
+      pending: null,
+      bookingId: null,
+    })
+    expect(allowedStep(restored, 6, Date.parse('2026-10-01T10:00:00Z'))).toBe(2)
+  })
   it('drops an incomplete persisted hold instead of advancing the booking flow', () => {
     const storage = memory()
     const draft = {
