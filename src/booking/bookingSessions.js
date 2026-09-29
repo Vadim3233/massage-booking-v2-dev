@@ -1,4 +1,5 @@
 export const PUBLIC_SESSION_DURATIONS_MINUTES = [60, 90, 120]
+export const MAX_VISIT_TREATMENT_MINUTES = 240
 
 export function buildBookingSessionPlan(sessionDurationsMinutes = []) {
   if (!Array.isArray(sessionDurationsMinutes) || sessionDurationsMinutes.length === 0) {
@@ -25,4 +26,20 @@ export function buildBookingSessionPlan(sessionDurationsMinutes = []) {
       0
     ),
   }
+}
+
+
+export function canAddSession(sessionDurationsMinutes = [], nextDurationMinutes) {
+  const nextDuration = Number(nextDurationMinutes)
+
+  if (!PUBLIC_SESSION_DURATIONS_MINUTES.includes(nextDuration)) {
+    return false
+  }
+
+  const currentTotal = sessionDurationsMinutes.reduce(
+    (total, duration) => total + Number(duration || 0),
+    0
+  )
+
+  return currentTotal + nextDuration <= MAX_VISIT_TREATMENT_MINUTES
 }

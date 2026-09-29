@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildBookingSessionPlan } from './bookingSessions'
+import { buildBookingSessionPlan, canAddSession, MAX_VISIT_TREATMENT_MINUTES } from './bookingSessions'
 
 describe('booking session plan', () => {
   it('keeps two 60-minute sessions separate while reserving 120 treatment minutes', () => {
@@ -49,5 +49,18 @@ describe('booking session plan', () => {
     expect(() => buildBookingSessionPlan([])).toThrow(
       'At least one session duration is required'
     )
+  })
+})
+
+
+describe('visit duration rules', () => {
+  it('keeps the maximum treatment time in the booking domain', () => {
+    expect(MAX_VISIT_TREATMENT_MINUTES).toBe(240)
+    expect(canAddSession([120], 120)).toBe(true)
+    expect(canAddSession([120, 60], 90)).toBe(false)
+  })
+
+  it('rejects unsupported session durations before React renders a choice', () => {
+    expect(canAddSession([60], 75)).toBe(false)
   })
 })

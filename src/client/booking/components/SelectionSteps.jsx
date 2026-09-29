@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { activeHold, dateLabel, durationOf, londonDate, money, newSession, timeLabel } from '../bookingDraft.js'
+import { canAddSession, MAX_VISIT_TREATMENT_MINUTES } from '../../../booking/bookingSessions.js'
 
 export function AreaStep({ catalogue, choose }) {
   const [expanded, setExpanded] = useState(false)
@@ -36,11 +37,11 @@ export function DurationStep({ draft, catalogue, change, next }) {
           const index = draft.sessions.findLastIndex((session) => session.duration_minutes === price.duration_minutes)
           change(draft.sessions.filter((_, i) => i !== index))
         }}>−</button><output aria-label={`${price.duration_minutes} minute sessions`}>{count}</output>
-        <button aria-label={`Add ${price.duration_minutes} minutes`} disabled={total + price.duration_minutes > 240} onClick={() => change([...draft.sessions, newSession(price.duration_minutes)])}>+</button>
+        <button aria-label={`Add ${price.duration_minutes} minutes`} disabled={!canAddSession(draft.sessions.map((session) => session.duration_minutes), price.duration_minutes)} onClick={() => change([...draft.sessions, newSession(price.duration_minutes)])}>+</button>
       </div>
     })}
     {!prices.length && <p>This treatment currently has no bookable durations. Please select another treatment.</p>}
-    <p>{draft.sessions.length} session(s) · {total} minutes. Maximum 240 minutes per visit.</p>
+    <p>{draft.sessions.length} session(s) · {total} minutes. Maximum {MAX_VISIT_TREATMENT_MINUTES} minutes per visit.</p>
     <button className="primary" disabled={!total} onClick={next}>Choose date &amp; time</button>
   </>
 }
