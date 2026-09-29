@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildBookingSessionPlan } from './bookingSessions'
+import { buildBookingSessionPlan, canAddSession, MAX_VISIT_TREATMENT_MINUTES } from './bookingSessions'
 
 describe('booking session plan', () => {
   it('keeps two 60-minute sessions separate while reserving 120 treatment minutes', () => {
