@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createBookingStore } from './bookingStore.js'
-import { activeHold, allowedStep, browserClientKey, draftKey, durationOf, londonDate, newDraft, newSession, restoreDraft } from './bookingDraft.js'
+import { activeHold, allowedStep, browserClientKey, draftKey, durationOf, londonDate, newDraft, newSession, restoreDraft, validHold } from './bookingDraft.js'
 import { finalizeParams, quoteParams } from './bookingApi.js'
 import { paymentConfig } from './paymentConfig.js'
 
@@ -25,6 +25,25 @@ describe('booking draft and adapters', () => {
   })
   it('recovers safely from corrupt temporary storage', () => {
     expect(restoreDraft({ getItem: () => '{broken' })).toEqual(newDraft())
+  })
+  it('drops an incomplete persisted hold instead of advancing the booking flow', () => {
+    const storage = memory()
+    const draft = {
+      ...newDraft(),
+      areaId: 'area',
+      serviceId: 'service',
+      sessions: [newSession(60)],
+      date: '2026-10-01',
+      start: 600,
+      hold: { expires_at: '2026-10-01T10:10:00Z' },
+    }
+    storage.setItem(draftKey, JSON.stringify({ version: 1, draft }))
+
+    const restored = restoreDraft(storage)
+
+    expect(validHold(restored.hold)).toBe(false)
+    expect(restored).toMatchObject({ hold: null, start: null })
+    expect(allowedStep(restored, 6, Date.parse('2026-10-01T10:00:00Z'))).toBe(3)
   })
   it('keeps two 60-minute sessions distinct in the real RPC payload', () => {
     const { draft } = fixture(); expect(durationOf(draft)).toBe(120)
