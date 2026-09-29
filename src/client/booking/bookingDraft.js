@@ -19,6 +19,15 @@ export const activeHold = (draft, now = Date.now()) =>
   Boolean(validHold(draft.hold) && Date.parse(draft.hold.expires_at) > now)
 export const newSession = (duration) => ({ duration_minutes: duration, recipient_name: '', preference_ids: [] })
 
+function validPersistedSessions(sessions) {
+  return Array.isArray(sessions) && sessions.every((session) =>
+    session &&
+    typeof session === 'object' &&
+    [60, 90, 120].includes(Number(session.duration_minutes)) &&
+    Array.isArray(session.preference_ids)
+  )
+}
+
 export function browserClientKey(storage, uuid = () => crypto.randomUUID()) {
   let key = storage.getItem(holdKey)
   if (!key || !/^[A-Za-z0-9:_-]{20,120}$/.test(key)) {
@@ -33,7 +42,14 @@ export function restoreDraft(storage) {
     const saved = JSON.parse(storage.getItem(draftKey))
     if (saved?.version === 1 && Array.isArray(saved.draft?.sessions)) {
       const draft = { ...newDraft(), ...saved.draft, details: { ...emptyDetails, ...saved.draft.details } }
-      if (draft.hold && !validHold(draft.hold)) {
+      if (!validPersistedSessions(draft.sessions)) {
+        draft.sessions = []
+        draft.date = ''
+        draft.start = null
+        draft.hold = null
+        draft.pending = null
+        draft.bookingId = null
+      } else if (draft.hold && !validHold(draft.hold)) {
         draft.hold = null
         draft.start = null
       }
