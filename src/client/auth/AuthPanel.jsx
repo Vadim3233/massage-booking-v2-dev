@@ -1,7 +1,5 @@
 import { useState } from 'react'
-import { unwrap } from '../booking/bookingApi.js'
-
-export default function AuthPanel({ client, recovery = false, onRecovered, onGuest }) {
+export default function AuthPanel({ api, recovery = false, onRecovered, onGuest }) {
   const [mode, setMode] = useState('login')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
@@ -17,16 +15,21 @@ export default function AuthPanel({ client, recovery = false, onRecovered, onGue
     const fields = Object.fromEntries(new FormData(event.currentTarget))
     act(async () => {
       if (recovery) {
-        await unwrap(client.auth.updateUser({ password: fields.password })); onRecovered(); return
+        await api.updatePassword(fields.password); onRecovered(); return
       }
       if (mode === 'register') {
-        const data = await unwrap(client.auth.signUp({ email: fields.email, password: fields.password,
-          options: { emailRedirectTo: redirectTo, data: { first_name: fields.first_name, last_name: fields.last_name } } }))
+        const data = await api.signUp({
+          email: fields.email,
+          password: fields.password,
+          redirectTo,
+          firstName: fields.first_name,
+          lastName: fields.last_name,
+        })
         if (!data.session) setMessage('Check your email to confirm your account, then return to this booking. Your selections stay here while the time hold remains active.')
       } else if (mode === 'reset') {
-        await unwrap(client.auth.resetPasswordForEmail(fields.email, { redirectTo }))
+        await api.resetPasswordForEmail({ email: fields.email, redirectTo })
         setMessage('Check your email for the password reset link.')
-      } else await unwrap(client.auth.signInWithPassword({ email: fields.email, password: fields.password }))
+      } else await api.signInWithPassword({ email: fields.email, password: fields.password })
     })
   }
   const heading = recovery ? 'Choose a new password' : mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Complete your booking'
