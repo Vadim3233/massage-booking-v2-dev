@@ -51,3 +51,16 @@ describe('booking session plan', () => {
     )
   })
 })
+
+
+describe('visit duration rules', () => {
+  it('keeps the maximum treatment time in the booking domain', () => {
+    expect(MAX_VISIT_TREATMENT_MINUTES).toBe(240)
+    expect(canAddSession([120], 120)).toBe(true)
+    expect(canAddSession([120, 60], 90)).toBe(false)
+  })
+
+  it('rejects unsupported session durations before React renders a choice', () => {
+    expect(canAddSession([60], 75)).toBe(false)
+  })
+})
