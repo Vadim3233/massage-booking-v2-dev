@@ -77,7 +77,7 @@ export function TimeStep({ draft, loadAvailability, selectDate, selectSlot, next
       <button type="button" onClick={() => setAvailabilityAttempt((attempt) => attempt + 1)}>Retry available times</button>
     </div>}
     <div className="slots" aria-label="Available times">{slots.sort((a, b) => a - b).map((start) => <button key={start} aria-pressed={draft.start === start && activeHold(draft)} onClick={() => selectSlot(start)}>{timeLabel(start)}</button>)}</div>
-    {!availability.loading && !slots.length && <p>No suitable times on this day. Choose another date or <a href="https://vadmassage.com">contact Vad</a>.</p>}
+    {!availability.loading && !availability.error && !slots.length && <p>No suitable times on this day. Choose another date or <a href="https://vadmassage.com">contact Vad</a>.</p>}
     <button className="primary" disabled={!activeHold(draft)} onClick={next}>Review booking</button>
   </>
 }
