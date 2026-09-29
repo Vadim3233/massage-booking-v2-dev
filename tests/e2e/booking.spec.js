@@ -63,11 +63,11 @@ test('mobile bank-transfer journey, browser Back, reload and real persisted resu
   await page.getByLabel('I understand the payment and cancellation terms.').check()
   await page.getByRole('button', { name: "I've made the bank transfer" }).click()
   await expect(page.getByRole('heading', { name: "I've received your booking" })).toBeVisible()
-  await expect(page.getByText('Payment: Transfer declared — awaiting verification', { exact: true })).toBeVisible()
+  await expect(page.getByText('Payment: Transfer sent — I'll check it shortly', { exact: true })).toBeVisible()
   await expect(page.getByRole('listitem').filter({ hasText: 'Integration massage · 60 minutes' })).toHaveCount(2)
   await page.screenshot({ path: 'test-results/mobile-confirmation.png', fullPage: true })
   await page.reload()
-  await expect(page.getByText('Payment: Transfer declared — awaiting verification', { exact: true })).toBeVisible()
+  await expect(page.getByText('Payment: Transfer sent — I'll check it shortly', { exact: true })).toBeVisible()
   const bookings = await unwrap(fixture.admin.from('bookings').select('id,total_gbp,client_note').eq('client_id', fixture.profile.client_id))
   expect(bookings).toHaveLength(1); expect(bookings[0]).toMatchObject({ total_gbp: 200, client_note: 'Keep this note' })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
@@ -77,8 +77,10 @@ test('mobile bank-transfer journey, browser Back, reload and real persisted resu
 test('cash is an explicit request awaiting approval', async ({ page }) => {
   await toPayment(page)
   await page.getByRole('button', { name: "I'd like to pay cash", exact: true }).click()
+  await expect(page.getByText('Payment: Cash on arrival', { exact: true })).toBeVisible()
+  await expect(page.getByText('Payment: Awaiting your bank transfer', { exact: true })).toHaveCount(0)
   await page.getByRole('button', { name: 'Confirm cash booking', exact: true }).click()
-  await expect(page.getByText('Payment: Cash requested — awaiting approval', { exact: true })).toBeVisible()
+  await expect(page.getByText('Payment: Cash on arrival', { exact: true })).toBeVisible()
 })
 
 test('real expired-hold rejection never shows a successful confirmation', async ({ page }) => {
@@ -161,7 +163,7 @@ for (const method of ['cash', 'bank_transfer']) test(`guest ${method} checkout c
   await page.getByRole('button', { name: method === 'cash' ? 'Confirm cash booking' : "I've made the bank transfer", exact: true }).click()
   await expect(page.getByRole('heading', { name: "I've received your booking" })).toBeVisible()
   await expect(page.getByText(guestEmail, { exact: true })).toBeVisible()
-  await expect(page.getByText(method === 'cash' ? 'Payment: Cash requested — awaiting approval' : 'Payment: Transfer declared — awaiting verification', { exact: true })).toBeVisible()
+  await expect(page.getByText(method === 'cash' ? 'Payment: Cash on arrival' : 'Payment: Transfer sent — I'll check it shortly', { exact: true })).toBeVisible()
   const bookings = await unwrap(fixture.admin.from('bookings').select('id').eq('client_id',
     (await unwrap(fixture.admin.from('clients').select('id').eq('auth_user_id', clients[0].auth_user_id)))[0].id))
   expect(bookings).toHaveLength(1)
@@ -297,7 +299,7 @@ test('lost transfer response recovers the canonical result on reload without dou
   await expect(page.getByRole('button', { name: 'Retry payment request' })).toBeVisible()
   await page.reload()
   await expect(page.getByRole('heading', { name: "I've received your booking" })).toBeVisible()
-  await expect(page.getByText('Payment: Transfer declared — awaiting verification', { exact: true })).toBeVisible()
+  await expect(page.getByText('Payment: Transfer sent — I'll check it shortly', { exact: true })).toBeVisible()
   const rows = await unwrap(fixture.admin.from('bookings').select('id').eq('client_id',fixture.profile.client_id))
   expect(rows).toHaveLength(1)
   expect(await unwrap(fixture.admin.from('event_outbox').select('id').eq('aggregate_id',rows[0].id).eq('event_type','booking.transfer_declared'))).toHaveLength(1)
