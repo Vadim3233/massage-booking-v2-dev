@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createBookingStore } from './bookingStore.js'
-import { activeHold, allowedStep, browserClientKey, draftKey, durationOf, londonDate, newDraft, newSession, restoreDraft, validHold } from './bookingDraft.js'
+import { activeHold, allowedStep, browserClientKey, draftKey, durationOf, londonDate, newDraft, newSession, parseBookingStep, restoreDraft, validHold } from './bookingDraft.js'
 import { finalizeParams, quoteParams } from './bookingApi.js'
 import { paymentConfig } from './paymentConfig.js'
 
@@ -78,6 +78,15 @@ describe('booking draft and adapters', () => {
     const params = finalizeParams(draft, 'key', 'request')
     expect(params.p_enhancement_ids).toEqual(['extra']); expect(params.p_hold_token).toBe('token')
     expect(params).not.toHaveProperty('p_total_gbp'); expect(params).not.toHaveProperty('p_client_id')
+  })
+  it('normalizes invalid booking step deep links', () => {
+    expect(parseBookingStep(null)).toBe(0)
+    expect(parseBookingStep('')).toBe(0)
+    expect(parseBookingStep('2')).toBe(2)
+    expect(parseBookingStep('2.5')).toBe(0)
+    expect(parseBookingStep('-1')).toBe(0)
+    expect(parseBookingStep('8')).toBe(0)
+    expect(parseBookingStep('payment')).toBe(0)
   })
   it('guards browser forward navigation and expired holds', () => {
     const { draft, now } = fixture()
