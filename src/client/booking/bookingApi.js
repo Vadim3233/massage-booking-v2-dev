@@ -34,7 +34,9 @@ export function finalizeParams(draft, clientKey, idempotencyKey) {
     p_postcode: draft.details.postcode.trim(),
     p_entry_instructions: draft.details.entry_instructions.trim() || null,
     p_client_note: draft.note.trim() || null,
-    p_payment_method: draft.paymentMethod,
+    // Payment always starts as a provisional bank-transfer reservation.
+    // Cash is selected afterwards through confirm_my_cash_booking.
+    p_payment_method: 'bank_transfer',
     p_idempotency_key: idempotencyKey,
   }
 }
