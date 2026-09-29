@@ -47,21 +47,35 @@ export function DurationStep({ draft, catalogue, change, next }) {
 
 export function TimeStep({ draft, loadAvailability, selectDate, selectSlot, next }) {
   const [availability, setAvailability] = useState({ slots: [], loading: true, error: '' })
+  const [availabilityAttempt, setAvailabilityAttempt] = useState(0)
   const duration = durationOf(draft)
   useEffect(() => {
     let live = true
-    if (!draft.date) return
+    if (!draft.date) {
+      setAvailability({ slots: [], loading: false, error: '' })
+      return
+    }
+    setAvailability({ slots: [], loading: true, error: '' })
     loadAvailability(draft.date, duration).then((slots) => {
       if (live) setAvailability({ slots, loading: false, error: '' })
-    }).catch((error) => { if (live) setAvailability({ slots: [], loading: false, error: error.message }) })
+    }).catch((error) => {
+      if (live) setAvailability({
+        slots: [],
+        loading: false,
+        error: error.message || 'Unable to load available times. Please retry.',
+      })
+    })
     return () => { live = false }
-  }, [loadAvailability, draft.date, draft.hold?.hold_id, draft.hold?.hold_token, duration])
+  }, [loadAvailability, draft.date, draft.hold?.hold_id, draft.hold?.hold_token, duration, availabilityAttempt])
   const slots = availability.slots.map((slot) => slot.start_minutes)
   return <><h1>Choose date and time</h1><p>All appointment times are London time.</p>
     <label>Appointment date<input type="date" value={draft.date} min={londonDate()} max={londonDate(40)} onChange={(event) => selectDate(event.target.value)} /></label>
     <p>{dateLabel(draft.date)}</p>
     {availability.loading && draft.date && <p role="status">Loading available times…</p>}
-    {availability.error && <p className="error" role="alert">{availability.error}</p>}
+    {availability.error && <div>
+      <p className="error" role="alert">{availability.error}</p>
+      <button type="button" onClick={() => setAvailabilityAttempt((attempt) => attempt + 1)}>Retry available times</button>
+    </div>}
     <div className="slots" aria-label="Available times">{slots.sort((a, b) => a - b).map((start) => <button key={start} aria-pressed={draft.start === start && activeHold(draft)} onClick={() => selectSlot(start)}>{timeLabel(start)}</button>)}</div>
     {!availability.loading && !slots.length && <p>No suitable times on this day. Choose another date or <a href="https://vadmassage.com">contact Vad</a>.</p>}
     <button className="primary" disabled={!activeHold(draft)} onClick={next}>Review booking</button>
