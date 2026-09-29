@@ -1,4 +1,11 @@
 export const STEPS = ['Area', 'Treatment', 'Duration', 'Date & Time', 'Review', 'Your Details', 'Payment', 'Confirmation']
+
+export function parseBookingStep(value) {
+  if (value === null || value === undefined || value === '') return 0
+  if (!/^\d+$/.test(String(value))) return 0
+  const step = Number(value)
+  return Number.isInteger(step) && step >= 0 && step < STEPS.length ? step : 0
+}
 export const draftKey = 'vad-v2-booking-draft-v1'
 export const holdKey = 'vad-v2-hold-client-v1'
 export const emptyDetails = { first_name: '', last_name: '', email: '', phone: '', savedAddressId: '', address_line_1: '', address_line_2: '', city: 'London', postcode: '', entry_instructions: '' }
