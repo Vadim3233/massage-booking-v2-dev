@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions, pg_temp;
 
-select plan(15);
+select plan(16);
 
 select is(
   (select count(*)::integer from public.service_areas where active),
@@ -120,13 +120,23 @@ select results_eq(
     where weekday = 1
   $$,
   $$
-    values (true, 855, 1170, 'flexible'::text)
+    values (true, 870, 1170, 'flexible'::text)
   $$,
-  'Monday working hours are 14:15–19:30 flexible'
+  'Monday working hours are 14:30–19:30 flexible'
+);
+
+select is(
+  (select count(*)::integer from public.working_hours
+   where weekday between 1 and 5
+     and available = true
+     and start_mode = 'flexible'
+     and start_minutes = 870),
+  5,
+  'all five standard flexible weekdays start at 14:30'
 );
 
 select results_eq(
-  $$
+  $
     select available, start_minutes, end_minutes, start_mode
     from public.working_hours
     where weekday = 6
