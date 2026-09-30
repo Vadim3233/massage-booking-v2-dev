@@ -59,7 +59,9 @@ functions and adds the scoped read/payment RPCs. Older migration files are uncha
 Migration and frontend need a coordinated reviewed rollout: the old frontend does
 not know how to declare a newly provisional transfer. Do not deploy either part
 without approval. Real transfer verification, delivery of notifications and admin
-approval remain separate capabilities; this UI does not claim they have happened.
+approval remain separate capabilities. Until notification delivery exists,
+the UI says Vad will contact the client rather than promising automated
+confirmation emails or reminders.
 
 ## Validation
 
