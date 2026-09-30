@@ -22,12 +22,12 @@ export default function ConfirmationStep({ id, api, bank }) {
     <section><h2>What happens next</h2>
       {bankTransfer ? <ol>
         <li>I'll check your transfer.</li>
-        <li>I'll confirm your appointment by email.</li>
-        <li>You'll receive your appointment reminder.</li>
+        <li>I'll contact you once your appointment is confirmed.</li>
+        <li>Keep your booking reference for future enquiries.</li>
       </ol> : <ol>
         <li>I'll confirm your appointment as soon as possible.</li>
-        <li>You'll receive confirmation by email.</li>
-        <li>You'll receive your appointment reminder.</li>
+        <li>I'll contact you once your appointment is confirmed.</li>
+        <li>Keep your booking reference for future enquiries.</li>
       </ol>}
     </section>
     {bankTransfer && <details><summary>Bank transfer details</summary><BankDetails bank={bank} reference={booking.booking_payments.payment_reference} /></details>}
