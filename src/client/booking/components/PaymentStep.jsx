@@ -51,7 +51,7 @@ export default function PaymentStep({ draft, quote, bank, api, store, finalize, 
       <ol>
         <li>Confirm your cash booking below.</li>
         <li>I'll confirm your appointment as soon as possible.</li>
-        <li>You'll receive confirmation by email.</li>
+        <li>I'll contact you once your appointment is confirmed.</li>
       </ol>
     </section>}
     {!expired && <>
