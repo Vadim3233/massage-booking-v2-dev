@@ -136,7 +136,7 @@ select is(
 );
 
 select results_eq(
-  $
+  $$
     select available, start_minutes, end_minutes, start_mode
     from public.working_hours
     where weekday = 6
