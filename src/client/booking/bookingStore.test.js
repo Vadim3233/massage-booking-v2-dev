@@ -109,6 +109,49 @@ describe('booking state transitions', () => {
 
 
 describe('hold continuation and draft recovery', () => {
+  it('clears an expired hold immediately on reload while preserving the full draft', () => {
+    const f = fixture()
+    f.store.edit({ note: 'Saved note', sessions: [{ ...newSession(60), preference_ids: ['focus'] }, newSession(60)] })
+    const before = restoreDraft(f.storage)
+    const reloaded = createBookingStore({ ...f, now: () => Date.parse('2026-10-02') })
+    expect(reloaded.getSnapshot()).toMatchObject({ step: 3, error: 'Your selected time was released. Please choose an available time to continue.' })
+    expect(restoreDraft(f.storage)).toEqual({ ...before, hold: null, start: null })
+    expect(f.api.hold).not.toHaveBeenCalled()
+  })
+  it('reconciles expiry during navigation without relying on a timer', () => {
+    const f = fixture()
+    let clock = f.now()
+    const store = createBookingStore({ ...f, now: () => clock })
+    store.navigate(5)
+    clock += 20 * 60000
+    store.navigate(4)
+    expect(store.getSnapshot()).toMatchObject({ step: 3, draft: { hold: null, start: null } })
+    expect(store.getSnapshot().error).toContain('Your selected time was released')
+  })
+  it('keeps the friendly expiry message when the server rejects a late extension', async () => {
+    const f = fixture()
+    f.api.extend = vi.fn().mockRejectedValue({ code: '23P01', message: 'Server expiry rejection' })
+    expect(await f.store.extendHold()).toBe(false)
+    expect(f.store.getSnapshot()).toMatchObject({ step: 3, draft: { hold: null, start: null },
+      error: 'Your selected time was released. Please choose an available time to continue.' })
+    expect(f.api.hold).not.toHaveBeenCalled()
+  })
+  it('never renews a hold for edits, navigation or expiry checks', () => {
+    const f = fixture(); f.api.extend = vi.fn()
+    f.store.edit({ note: 'Typing' }); f.store.navigate(4); f.store.expireHold()
+    expect(restoreDraft(f.storage).hold).toEqual(f.draft.hold)
+    expect(f.api.hold).not.toHaveBeenCalled(); expect(f.api.extend).not.toHaveBeenCalled()
+  })
+  it('never expires or extends a provisional booking through pre-booking hold controls', async () => {
+    const f = fixture()
+    f.store.edit({ bookingId: 'provisional', paymentComplete: false })
+    const before = restoreDraft(f.storage)
+    const reloaded = createBookingStore({ ...f, now: () => Date.parse('2026-10-02') })
+    reloaded.expireHold(); await reloaded.releaseHold(); await reloaded.extendHold()
+    expect(reloaded.getSnapshot().step).toBe(6)
+    expect(restoreDraft(f.storage)).toEqual(before)
+    expect(f.api.release).not.toHaveBeenCalled()
+  })
   it('applies only a verified server extension and persists it across reload', async () => {
     const f = fixture()
     f.api.extend = vi.fn().mockResolvedValue({ hold_id: 'hold', expires_at: '2026-10-01T10:20:00Z', extension_used: true })

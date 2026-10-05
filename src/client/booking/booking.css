@@ -34,7 +34,7 @@
 .two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }.slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 20px 0; }
 .summary button { display: block; width: 100%; text-align: left; margin: 8px 0; }
 .prices > div { display: flex; gap: 20px; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e6e9e3; }.prices dd { margin: 0; font-weight: 650; text-align: right; overflow-wrap: anywhere; }.prices > div:last-child { font-weight: 700; }
-.actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }.error { padding: 16px; color: #8e3029; background: #fbece6; border-left: 3px solid #b45644; overflow-wrap: anywhere; }.hold { padding: 12px; background: #eaf0e4; font-size: 14px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }.error { padding: 16px; color: #8e3029; background: #fbece6; border-left: 3px solid #b45644; overflow-wrap: anywhere; }
 .booking-shell footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid #d9dfd9; font-size: 12px; }
 @media (max-width: 480px) {
   .booking-shell { padding: 18px; }
@@ -48,5 +48,8 @@
   .booking-shell button.preference-chip { min-height: 34px; padding: 6px 10px; font-size: 12px; }
 }
 
-.hold { position: sticky; top: 0; z-index: 5; border: 1px solid #d9dfd9; }
-.hold p { margin: 4px 0; }
+.hold-dialog { width: min(440px, calc(100% - 36px)); max-height: calc(100dvh - 36px); overflow: auto; box-sizing: border-box; padding: 24px; border: 1px solid #d9dfd9; border-radius: 12px; background: #fafbf7; color: #253b36; box-shadow: 0 16px 48px #0003; }
+.hold-dialog::backdrop { background: rgb(25 40 35 / 45%); }
+.hold-dialog .actions { flex-direction: column; }
+.booking-shell .hold-dialog button.primary { margin-top: 0; }
+.hold-dialog small { display: block; line-height: 1.5; }

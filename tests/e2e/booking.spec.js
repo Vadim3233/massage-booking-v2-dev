@@ -25,6 +25,9 @@ async function toReview(page) {
 async function toDetails(page) {
   await toReview(page)
   await page.getByLabel(/Integration enhancement/).check()
+  await page.locator('.preference-group summary').first().click()
+  await page.getByRole('button', { name: 'Integration focus', exact: true }).first().click()
+  await page.getByLabel('Session notes (optional)').fill('Preserve my note')
   await page.getByRole('button', { name: 'Continue to your details' }).click()
   await page.getByLabel('Email address', { exact: true }).fill(fixture.email)
   await page.getByLabel('Password', { exact: true }).fill(fixture.password)
@@ -170,6 +173,10 @@ for (const method of ['cash', 'bank_transfer']) test(`guest ${method} checkout c
 })
 
 
+async function readDraft(page) {
+  return page.evaluate(() => JSON.parse(sessionStorage.getItem('vad-v2-booking-draft-v1')).draft)
+}
+
 async function ageHold(page, minutesRemaining) {
   const held = await page.evaluate(() => JSON.parse(sessionStorage.getItem('vad-v2-booking-draft-v1')).draft.hold)
   const expires = new Date(Date.now() + minutesRemaining * 60000).toISOString()
@@ -184,29 +191,149 @@ async function ageHold(page, minutesRemaining) {
   return { ...held, expires_at: expires }
 }
 
-test('five-minute prompt extends the same real hold once and survives reload', async ({ page }) => {
+test('normal twenty-minute hold stays invisible through typing, login and Back navigation', async ({ page }) => {
+  const writes = []
+  page.on('request', (request) => {
+    if (/\/rpc\/(create_booking_hold|extend_booking_hold)$/.test(request.url())) writes.push(request.url())
+  })
   await toDetails(page)
-  const held = await ageHold(page, 4.9)
-  await expect(page.getByText('Still booking? Your appointment time is held for another 5 minutes.')).toBeVisible()
+  const before = await readDraft(page)
+  await expect(page.locator('.hold')).toHaveCount(0)
+  await expect(page.getByText(/Your time is held for/)).toHaveCount(0)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  const row = (await unwrap(fixture.admin.from('booking_holds').select('created_at,expires_at,extended_at').eq('id', before.hold.hold_id)))[0]
+  expect(Date.parse(row.expires_at) - Date.parse(row.created_at)).toBe(20 * 60000)
+  expect(row.extended_at).toBeNull()
+  await page.getByLabel('Street address', { exact: true }).fill('11 Still typing Street')
+  await page.goBack()
+  await expect(page.getByRole('heading', { name: 'Review your booking' })).toBeVisible()
+  await page.getByLabel('Session notes (optional)').fill('Still typing')
+  await page.reload()
+  expect((await readDraft(page)).hold).toEqual(before.hold)
+  expect(writes).toHaveLength(1)
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+})
+
+test('warning begins only in the final minute, traps focus and has no ticking countdown', async ({ page }) => {
+  await toDetails(page)
+  const held = await ageHold(page, 2)
+  await expect(page.getByRole('heading', { name: 'Your details', exact: true })).toBeVisible()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  // Move the browser clock without waiting two minutes; the deadline is fixed.
+  await page.clock.setFixedTime(new Date(Date.parse(held.expires_at) - 61000))
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.clock.setFixedTime(new Date(Date.parse(held.expires_at) - 60000))
+  const modal = page.getByRole('dialog', { name: 'Still booking?' })
+  await expect(modal).toBeVisible()
+  await expect(modal).toHaveAttribute('aria-modal', 'true')
+  await expect(modal).toContainText('Your selected appointment time is about to be released. Would you like to keep it?')
+  await expect(modal).not.toContainText(/\d+:\d+|seconds|minutes/)
+  await expect(modal.getByRole('button', { name: 'Keep my time' })).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(modal.getByRole('button', { name: 'Release time' })).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(modal.getByRole('button', { name: 'Keep my time' })).toBeFocused()
+  await page.keyboard.press('Shift+Tab')
+  await expect(modal.getByRole('button', { name: 'Release time' })).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(modal).toBeVisible()
+  await page.screenshot({ path: 'test-results/hold-warning-mobile.png', fullPage: true })
+})
+
+test('reload after expiry immediately returns to time selection and preserves the draft', async ({ page }) => {
+  await toDetails(page)
+  const before = await readDraft(page)
+  await ageHold(page, -1)
+  await expect(page.getByRole('heading', { name: 'Choose date and time' })).toBeVisible()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  expect(await readDraft(page)).toEqual({ ...before, hold: null, start: null })
+  expect((await fixture.publicApi.availability(fixture.date, 120)).some((s) => s.start_minutes === 600)).toBe(true)
+})
+
+for (const event of ['focus', 'pageshow', 'visibilitychange']) test(`resume via ${event} reconciles expiry without a timer tick`, async ({ page }) => {
+  await toDetails(page)
+  const held = await ageHold(page, 2)
+  await expect(page.getByRole('heading', { name: 'Your details', exact: true })).toBeVisible()
+  const before = await readDraft(page)
+  await page.clock.install()
+  await page.clock.pauseAt(new Date(Date.now() + 1000))
+  await unwrap(fixture.admin.from('booking_holds').update({ expires_at: new Date(Date.now() - 1000).toISOString() }).eq('id', held.hold_id))
+  await page.clock.setSystemTime(new Date(Date.parse(held.expires_at) + 1000))
+  await page.evaluate((name) => {
+    const target = name === 'visibilitychange' ? document : window
+    target.dispatchEvent(new Event(name))
+  }, event)
+  await expect(page.getByRole('heading', { name: 'Choose date and time' })).toBeVisible()
+  expect(await readDraft(page)).toEqual({ ...before, hold: null, start: null })
+  expect((await fixture.publicApi.availability(fixture.date, 120)).some((s) => s.start_minutes === 600)).toBe(true)
+})
+
+test('late extension rejected by the real server returns to time selection cleanly', async ({ page }) => {
+  await toDetails(page)
+  const before = await readDraft(page)
+  const held = await ageHold(page, 0.9)
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await unwrap(fixture.admin.from('booking_holds').update({ expires_at: new Date(Date.now() - 1000).toISOString() }).eq('id', held.hold_id))
+  const response = page.waitForResponse('**/rpc/extend_booking_hold')
+  await page.getByRole('button', { name: 'Keep my time' }).click()
+  expect((await (await response).json()).code).toBe('23P01')
+  await expect(page.getByRole('heading', { name: 'Choose date and time' })).toBeVisible()
+  await expect(page.getByRole('alert')).toHaveText('Your selected time was released. Please choose an available time to continue.')
+  expect(await readDraft(page)).toEqual({ ...before, hold: null, start: null })
+  expect((await unwrap(fixture.admin.from('booking_holds').select('extended_at').eq('id', held.hold_id)))[0].extended_at).toBeNull()
+})
+
+test('extension network failure is visible inside the modal and can be retried', async ({ page }) => {
+  await toDetails(page)
+  const held = await ageHold(page, 0.9)
+  const modal = page.getByRole('dialog', { name: 'Still booking?' })
+  await page.route('**/rpc/extend_booking_hold', (route) => route.abort(), { times: 1 })
+  await modal.getByRole('button', { name: 'Keep my time' }).click()
+  await expect(modal.getByRole('alert')).toBeVisible()
+  expect((await readDraft(page)).hold.expires_at).toBe(held.expires_at)
+  await modal.getByRole('button', { name: 'Keep my time' }).click()
+  await expect(modal).toHaveCount(0)
+  expect((await readDraft(page)).hold.extension_used).toBe(true)
+})
+
+test('one-minute modal extends the same real hold once and survives reload', async ({ page }) => {
+  await toDetails(page)
+  const held = await ageHold(page, 0.9)
+  await expect(page.getByRole('dialog', { name: 'Still booking?' })).toBeVisible()
   await page.getByRole('button', { name: 'Keep my time', exact: true }).click()
-  await expect(page.getByText('Your one-time 10-minute extension has been applied.')).toBeVisible()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.locator('.hold')).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Keep my time', exact: true })).toHaveCount(0)
   const rows = await unwrap(fixture.admin.from('booking_holds').select('id,expires_at,extended_at').eq('id', held.hold_id))
   expect(Date.parse(rows[0].expires_at) - Date.parse(held.expires_at)).toBe(600000)
   expect(rows[0].extended_at).toBeTruthy()
+  const current = await readDraft(page)
+  expect(current.hold.hold_id).toBe(held.hold_id)
+  expect(current.hold.hold_token).toBe(held.hold_token)
+  const key = await page.evaluate(() => localStorage.getItem('vad-v2-hold-client-v1'))
+  const retried = await fixture.publicApi.extend(held, key)
+  expect(Date.parse(retried.expires_at)).toBe(Date.parse(rows[0].expires_at))
+  expect(await unwrap(fixture.admin.from('booking_holds').select('id').eq('client_key', key))).toHaveLength(1)
   expect((await fixture.publicApi.availability(fixture.date, 120)).some((slot) => slot.start_minutes === 600)).toBe(false)
   await page.reload()
-  await expect(page.getByText('Your one-time 10-minute extension has been applied.')).toBeVisible()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.locator('.hold')).toHaveCount(0)
+  await ageHold(page, 0.9)
+  await expect(page.getByRole('heading', { name: 'Your details', exact: true })).toBeVisible()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
 })
 
 test('release at the prompt frees the slot and preserves address and sessions', async ({ page }) => {
   await toDetails(page)
-  const held = await ageHold(page, 4.9)
+  const before = await readDraft(page)
+  const held = await ageHold(page, 0.9)
   await page.getByRole('button', { name: 'Release time', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Choose date and time' })).toBeVisible()
   await expect(page.getByRole('button', { name: '10:00', exact: true })).toBeVisible()
   expect((await unwrap(fixture.admin.from('booking_holds').select('status').eq('id', held.hold_id)))[0].status).toBe('released')
   const draft = await page.evaluate(() => JSON.parse(sessionStorage.getItem('vad-v2-booking-draft-v1')).draft)
+  expect(draft).toEqual({ ...before, hold: null, start: null })
+  expect((await fixture.publicApi.availability(fixture.date, 120)).some((s) => s.start_minutes === 600)).toBe(true)
   expect(draft.details.address_line_1).toBe('10 Browser Street')
   expect(draft.sessions.map((s) => s.duration_minutes)).toEqual([60, 60])
   await page.getByRole('button', { name: '10:00', exact: true }).click()
@@ -215,12 +342,17 @@ test('release at the prompt frees the slot and preserves address and sessions', 
   await expect(page.getByLabel('Street address', { exact: true })).toHaveValue('10 Browser Street')
 })
 
-test('countdown expiry returns to time selection without losing entered details', async ({ page }) => {
+test('ignoring the modal releases availability at real expiry and preserves details', async ({ page }) => {
   await toDetails(page)
-  await ageHold(page, 0.05)
+  const before = await readDraft(page)
+  const held = await ageHold(page, 0.05)
+  await expect(page.getByRole('dialog', { name: 'Still booking?' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Choose date and time' })).toBeVisible({ timeout: 10000 })
-  await expect(page.getByRole('alert')).toContainText('Your time hold has expired')
+  await expect(page.getByRole('alert')).toContainText('Your selected time was released')
   const draft = await page.evaluate(() => JSON.parse(sessionStorage.getItem('vad-v2-booking-draft-v1')).draft)
+  expect(draft).toEqual({ ...before, hold: null, start: null })
+  expect((await fixture.publicApi.availability(fixture.date, 120)).some((s) => s.start_minutes === 600)).toBe(true)
+  expect((await unwrap(fixture.admin.from('booking_holds').select('extended_at').eq('id', held.hold_id)))[0].extended_at).toBeNull()
   expect(draft.hold).toBeNull()
   expect(draft.details.address_line_1).toBe('10 Browser Street')
   expect(draft.enhancementIds).toEqual([fixture.ids.enhancement])
@@ -259,6 +391,8 @@ test('owner alternatives remain complete after Back and reload and switching rel
 
 test('provisional payment shows canonical email/postcode and survives reload before transfer', async ({ page }) => {
   await toPayment(page)
+  await expect(page.getByRole('dialog', { name: 'Still booking?' })).toHaveCount(0)
+  await expect(page.locator('.hold')).toHaveCount(0)
   await expect(page.getByText(fixture.email, { exact: true })).toBeVisible()
   await expect(page.getByText('Payment: Awaiting your bank transfer', { exact: true })).toBeVisible()
   await expect(page.locator('[aria-current=step]')).toHaveText('Payment')
@@ -270,6 +404,7 @@ test('provisional payment shows canonical email/postcode and survives reload bef
   expect(row.booking_status).toBe('awaiting_transfer')
   await page.reload()
   await expect(page.getByRole('button', { name: 'Copy payment reference' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Still booking?' })).toHaveCount(0)
   await expect(page.getByText(row.booking_reference, { exact: true })).toHaveCount(2)
   await page.getByLabel('I understand the payment and cancellation terms.').check()
   await page.getByRole('button', { name: "I've made the bank transfer", exact: true }).click()

@@ -31,7 +31,21 @@ export default function BookingFlow() {
     api.catalogue().then((data) => { if (live) setCatalogue(data) }).catch((err) => { if (live) store.setError(err.message) })
     return () => { live = false }
   }, [store, catalogueAttempt])
-  useEffect(() => { const timer = setInterval(() => setClock(Date.now()), 1000); return () => clearInterval(timer) }, [])
+  useEffect(() => {
+    // Timers can pause in a sleeping tab. Reconcile the absolute server deadline
+    // immediately on return, as well as while the page is active.
+    const refresh = () => { setClock(Date.now()); store.expireHold() }
+    const timer = setInterval(refresh, 1000)
+    window.addEventListener('focus', refresh)
+    window.addEventListener('pageshow', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener('pageshow', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [store])
   const held = activeHold(draft, clock)
   const remaining = draft.hold ? Math.max(0, Math.ceil((Date.parse(draft.hold.expires_at) - clock) / 1000)) : 0
   useEffect(() => { store.expireHold() }, [store, clock, busy])
@@ -50,7 +64,7 @@ export default function BookingFlow() {
   return <main className="booking-shell">
     <header className="brand"><a href="/">VM <span>VadMassage</span></a><span>Massage at your place</span></header>
     <nav aria-label="Booking progress"><ol className="progress">{STEPS.map((label, index) => <li key={label} aria-current={step === index ? 'step' : undefined}>{label}</li>)}</ol></nav>
-    {!draft.bookingId && <HoldNotice hold={draft.hold} remaining={remaining} busy={busy} pending={draft.pending} extend={store.extendHold} release={store.releaseHold} />}
+    {!draft.bookingId && <HoldNotice hold={draft.hold} remaining={remaining} busy={busy} pending={draft.pending} error={error} extend={store.extendHold} release={store.releaseHold} />}
     {error && step !== 6 && <p role="alert" className="error">{error}</p>}
     {auth.error && <p role="alert" className="error">{auth.error}</p>}
     {!catalogue ? <><p>Loading booking options…</p><button onClick={() => setCatalogueAttempt(catalogueAttempt + 1)}>Retry</button></> : <>
