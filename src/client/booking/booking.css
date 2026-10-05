@@ -19,6 +19,7 @@
 .booking-shell fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }.booking-shell legend { padding: 12px 0; font-weight: 600; }
 .booking-shell label { display: grid; gap: 6px; margin: 14px 0; font-size: 14px; font-weight: 600; }
 .booking-shell input, .booking-shell textarea, .booking-shell select { width: 100%; min-width: 0; padding: 12px; border: 1px solid #becbbf; background: #fff; border-radius: 7px; color: #253b36; }
+.booking-shell input[type=date] { cursor: pointer; }
 .booking-shell textarea { min-height: 100px; resize: vertical; }
 .booking-shell .check { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-weight: 400; padding: 9px 0; }.booking-shell .check input { width: 20px; height: 20px; flex-shrink: 0; }.check small { width: 100%; }
 .preference-groups { display: grid; gap: 8px; }

@@ -58,7 +58,13 @@ export function TimeStep({ draft, loadAvailability, selectDate, selectSlot, next
   }, [loadAvailability, draft.date, draft.hold?.hold_id, draft.hold?.hold_token, duration])
   const slots = availability.slots.map((slot) => slot.start_minutes)
   return <><h1>Choose date and time</h1><p>All appointment times are London time.</p>
-    <label>Appointment date<input type="date" value={draft.date} min={londonDate()} max={londonDate(40)} onChange={(event) => selectDate(event.target.value)} /></label>
+    <label>Appointment date<input type="date" value={draft.date} min={londonDate()} max={londonDate(40)} onClick={(event) => {
+      try {
+        event.currentTarget.showPicker?.()
+      } catch {
+        // Keep native date entry available when the browser restricts showPicker.
+      }
+    }} onChange={(event) => selectDate(event.target.value)} /></label>
     <p>{dateLabel(draft.date)}</p>
     {availability.loading && draft.date && <p role="status">Loading available times…</p>}
     {availability.error && <p className="error" role="alert">{availability.error}</p>}
