@@ -133,7 +133,6 @@ test('changing duration releases the old hold and refreshes availability', async
   await fixture.publicApi.release(draft.hold, await page.evaluate(() => localStorage.getItem('vad-v2-hold-client-v1')))
 })
 
-
 for (const method of ['cash', 'bank_transfer']) test(`guest ${method} checkout completes without creating a password account`, async ({ page }) => {
   await toReview(page)
   await page.getByRole('button', { name: 'Continue to your details' }).click()
@@ -169,7 +168,6 @@ for (const method of ['cash', 'bank_transfer']) test(`guest ${method} checkout c
   expect(bookings).toHaveLength(1)
 })
 
-
 async function ageHold(page, minutesRemaining) {
   const held = await page.evaluate(() => JSON.parse(sessionStorage.getItem('vad-v2-booking-draft-v1')).draft.hold)
   const expires = new Date(Date.now() + minutesRemaining * 60000).toISOString()
@@ -184,24 +182,29 @@ async function ageHold(page, minutesRemaining) {
   return { ...held, expires_at: expires }
 }
 
-test('five-minute prompt extends the same real hold once and survives reload', async ({ page }) => {
+test('hold stays invisible until the final minute and extends the same real hold once', async ({ page }) => {
   await toDetails(page)
-  const held = await ageHold(page, 4.9)
-  await expect(page.getByText('Still booking? Your appointment time is held for another 5 minutes.')).toBeVisible()
+  await expect(page.getByText(/Your time is held for/)).toHaveCount(0)
+  await ageHold(page, 1.1)
+  await expect(page.getByRole('dialog', { name: 'Still booking?' })).toHaveCount(0)
+  const held = await ageHold(page, 0.9)
+  await expect(page.getByRole('dialog', { name: 'Still booking?' })).toBeVisible()
+  await expect(page.getByText('Your selected appointment time is about to be released. Would you like to keep it?')).toBeVisible()
   await page.getByRole('button', { name: 'Keep my time', exact: true }).click()
-  await expect(page.getByText('Your one-time 10-minute extension has been applied.')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Keep my time', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('dialog', { name: 'Still booking?' })).toHaveCount(0)
   const rows = await unwrap(fixture.admin.from('booking_holds').select('id,expires_at,extended_at').eq('id', held.hold_id))
   expect(Date.parse(rows[0].expires_at) - Date.parse(held.expires_at)).toBe(600000)
   expect(rows[0].extended_at).toBeTruthy()
   expect((await fixture.publicApi.availability(fixture.date, 120)).some((slot) => slot.start_minutes === 600)).toBe(false)
   await page.reload()
-  await expect(page.getByText('Your one-time 10-minute extension has been applied.')).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Still booking?' })).toHaveCount(0)
+  await expect(page.getByText(/Your time is held for/)).toHaveCount(0)
 })
 
-test('release at the prompt frees the slot and preserves address and sessions', async ({ page }) => {
+test('release at the one-minute modal frees the slot and preserves address and sessions', async ({ page }) => {
   await toDetails(page)
-  const held = await ageHold(page, 4.9)
+  const held = await ageHold(page, 0.9)
+  await expect(page.getByRole('dialog', { name: 'Still booking?' })).toBeVisible()
   await page.getByRole('button', { name: 'Release time', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Choose date and time' })).toBeVisible()
   await expect(page.getByRole('button', { name: '10:00', exact: true })).toBeVisible()
@@ -226,7 +229,6 @@ test('countdown expiry returns to time selection without losing entered details'
   expect(draft.enhancementIds).toEqual([fixture.ids.enhancement])
   expect(draft.sessions.map((s) => s.duration_minutes)).toEqual([60, 60])
 })
-
 
 test('owner alternatives remain complete after Back and reload and switching releases the old hold', async ({ page }) => {
   await toReview(page)
@@ -256,7 +258,6 @@ test('owner alternatives remain complete after Back and reload and switching rel
   await expect(page.getByRole('button', { name: '10:30', exact: true })).toHaveAttribute('aria-pressed', 'true')
 })
 
-
 test('provisional payment shows canonical email/postcode and survives reload before transfer', async ({ page }) => {
   await toPayment(page)
   await expect(page.getByText(fixture.email, { exact: true })).toBeVisible()
@@ -272,7 +273,7 @@ test('provisional payment shows canonical email/postcode and survives reload bef
   await expect(page.getByRole('button', { name: 'Copy payment reference' })).toBeVisible()
   await expect(page.getByText(row.booking_reference, { exact: true })).toHaveCount(2)
   await page.getByLabel('I understand the payment and cancellation terms.').check()
-  await page.getByRole('button', { name: "I've made the bank transfer", exact: true }).click()
+  await page.getByRole('button', { name: "I've made the bank transfer" }).click()
   await expect(page.getByRole('heading', { name: "I've received your booking" })).toBeVisible()
   await expect(page.getByText(fixture.email, { exact: true })).toBeVisible()
   await expect(page.getByText('10 Browser Street, London, SW1A 1AA', { exact: true })).toBeVisible()
@@ -295,7 +296,7 @@ test('expired payment reservation releases time and preserves the draft', async 
 test('lost transfer response recovers the canonical result on reload without double writes', async ({ page }) => {
   await toPayment(page)
   await page.route('**/rpc/declare_my_bank_transfer', async (route) => { await route.fetch(); await route.abort() }, { times: 1 })
-  await page.getByRole('button', { name: "I've made the bank transfer", exact: true }).click()
+  await page.getByRole('button', { name: "I've made the bank transfer" }).click()
   await expect(page.getByRole('button', { name: 'Retry payment request' })).toBeVisible()
   await page.reload()
   await expect(page.getByRole('heading', { name: "I've received your booking" })).toBeVisible()
@@ -304,7 +305,6 @@ test('lost transfer response recovers the canonical result on reload without dou
   expect(rows).toHaveLength(1)
   expect(await unwrap(fixture.admin.from('event_outbox').select('id').eq('aggregate_id',rows[0].id).eq('event_type','booking.transfer_declared'))).toHaveLength(1)
 })
-
 
 test('lost reservation response retries the same booking before any transfer', async ({ page }) => {
   await toDetails(page)
