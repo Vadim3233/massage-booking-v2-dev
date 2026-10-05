@@ -34,7 +34,16 @@
 .two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }.slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 20px 0; }
 .summary button { display: block; width: 100%; text-align: left; margin: 8px 0; }
 .prices > div { display: flex; gap: 20px; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e6e9e3; }.prices dd { margin: 0; font-weight: 650; text-align: right; overflow-wrap: anywhere; }.prices > div:last-child { font-weight: 700; }
-.actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }.error { padding: 16px; color: #8e3029; background: #fbece6; border-left: 3px solid #b45644; overflow-wrap: anywhere; }.hold { padding: 12px; background: #eaf0e4; font-size: 14px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }.error { padding: 16px; color: #8e3029; background: #fbece6; border-left: 3px solid #b45644; overflow-wrap: anywhere; }
+.hold-modal-backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; background: rgb(22 39 33 / 48%); }
+.hold-modal { width: min(100%, 430px); padding: 24px; background: #fff; border: 1px solid #d9dfd9; border-radius: 14px; box-shadow: 0 18px 50px rgb(0 0 0 / 18%); }
+.hold-modal h2 { margin-bottom: 10px; }
+.hold-modal p { margin: 0 0 16px; }
+.hold-modal small { display: block; color: #6d7a74; }
+.hold-modal .actions { margin: 18px 0 14px; }
+.hold-modal .actions button { flex: 1 1 160px; }
+.booking-shell .hold-modal button.hold-keep { color: #fff; background: #255443; border-color: #255443; }
+.booking-shell .hold-modal button.hold-keep:hover:not(:disabled) { color: #fff; background: #1e4638; border-color: #1e4638; }
 .booking-shell footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid #d9dfd9; font-size: 12px; }
 @media (max-width: 480px) {
   .booking-shell { padding: 18px; }
@@ -46,7 +55,6 @@
   .preference-group summary { min-height: 40px; padding: 8px 10px; }
   .preference-chips { gap: 6px; padding: 2px 10px 10px; }
   .booking-shell button.preference-chip { min-height: 34px; padding: 6px 10px; font-size: 12px; }
+  .hold-modal { padding: 20px; }
+  .hold-modal .actions button { flex-basis: 100%; }
 }
-
-.hold { position: sticky; top: 0; z-index: 5; border: 1px solid #d9dfd9; }
-.hold p { margin: 4px 0; }
