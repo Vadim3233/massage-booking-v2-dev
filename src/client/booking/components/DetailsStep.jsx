@@ -1,10 +1,23 @@
 import { useEffect, useState } from 'react'
 import { validDetails } from '../bookingDraft.js'
 
+const TEST_CLIENT = {
+  first_name: 'Oliver',
+  last_name: 'Green',
+  phone: '07123 456789',
+  address_line_1: '24 Test Street',
+  address_line_2: '',
+  city: 'London',
+  postcode: 'SW3 1AA',
+  entry_instructions: '',
+  savedAddressId: '',
+}
+
 export default function DetailsStep({ draft, user, api, edit, next, report, guest = false }) {
   const [addresses, setAddresses] = useState([])
   const [loading, setLoading] = useState(!guest)
   const [saving, setSaving] = useState(false)
+  const showTestFill = import.meta.env.DEV || new URLSearchParams(window.location.search).get('test') === '1'
   useEffect(() => {
     let live = true
     if (guest) {
@@ -33,6 +46,13 @@ export default function DetailsStep({ draft, user, api, edit, next, report, gues
   }, [api, user.id, guest])
   const details = draft.details
   function field(key, value) { edit({ details: { ...details, [key]: value } }) }
+  function fillTestClient() {
+    edit({ details: {
+      ...details,
+      ...TEST_CLIENT,
+      email: guest ? 'oliver.test@example.com' : (user.email || details.email || ''),
+    } })
+  }
   async function submit(event) {
     event.preventDefault(); setSaving(true)
     try {
@@ -46,6 +66,7 @@ export default function DetailsStep({ draft, user, api, edit, next, report, gues
   return <><h1>Your details</h1><p>{guest ? 'No account is required. Share the details I need for your visit.' : 'Share the details I need for your visit.'}</p>
     {loading && <p role="status">Loading your saved details…</p>}
     <form onSubmit={submit}><fieldset disabled={loading || saving}>
+      {showTestFill && <button type="button" onClick={fillTestClient}>Fill test client</button>}
       <div className="two-columns">
         <label>First name<input autoComplete="given-name" value={details.first_name} required onChange={(event) => field('first_name', event.target.value)} /></label>
         <label>Last name<input autoComplete="family-name" value={details.last_name} required onChange={(event) => field('last_name', event.target.value)} /></label>
