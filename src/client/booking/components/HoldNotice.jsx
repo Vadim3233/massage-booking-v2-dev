@@ -1,16 +1,29 @@
 export default function HoldNotice({ hold, remaining, busy, pending, extend, release }) {
-  if (!hold) return null
-  return <aside className="hold" aria-label="Appointment time hold">
-    <p role="status">{remaining > 0
-      ? `Your time is held for ${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, '0')}`
-      : 'Your time hold has expired. Your details are saved.'}</p>
-    {remaining > 0 && remaining <= 300 && !hold.extension_used && !pending && <>
-      <p role="alert">Still booking? Your appointment time is held for another 5 minutes.</p>
+  const shouldWarn = Boolean(
+    hold
+    && remaining > 0
+    && remaining <= 60
+    && !hold.extension_used
+    && !pending
+  )
+
+  if (!shouldWarn) return null
+
+  return <div className="hold-modal-backdrop">
+    <section
+      className="hold-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="hold-warning-title"
+      aria-describedby="hold-warning-copy"
+    >
+      <h2 id="hold-warning-title">Still booking?</h2>
+      <p id="hold-warning-copy">Your selected appointment time is about to be released. Would you like to keep it?</p>
       <div className="actions">
-        <button disabled={busy} onClick={extend}>Keep my time</button>
+        <button className="hold-keep" autoFocus disabled={busy} onClick={extend}>Keep my time</button>
         <button disabled={busy} onClick={release}>Release time</button>
       </div>
-    </>}
-    {hold.extension_used && remaining > 0 && <small>Your one-time 10-minute extension has been applied.</small>}
-  </aside>
+      <small>If you do nothing, the time will be released automatically.</small>
+    </section>
+  </div>
 }
