@@ -974,6 +974,7 @@ Define this once before building UI.
 
 ### Booking status examples
 
+- awaiting_payment (provisional reservation)
 - awaiting_payment_verification
 - awaiting_cash_approval
 - confirmed
@@ -983,6 +984,7 @@ Define this once before building UI.
 
 ### Payment status examples
 
+- awaiting_transfer (provisional reservation before client reports payment)
 - awaiting_verification
 - awaiting_approval
 - approved (cash agreed, not paid)
@@ -1337,7 +1339,7 @@ A feature is complete only when all relevant items exist:
 
 Repository main at `14552fa4c7d464c881326289a9bd93fb14862b9e` contains the client booking slice and a read-only Admin day Calendar, authenticated Admin shell, password recovery and bounded calendar adapter. APP_PLAN.md records prior test evidence; it was not rerun for this documentation change. Source presence does not prove deployment or release readiness.
 
-Admin settings, full agenda/multi-view support and operational writes remain planned. The earlier 11-test foundation snapshot is historical and must not drive a restart of completed work.
+A single-day agenda-style timeline already renders bookings, buffers, blocks and holds. Admin settings, multi-day agenda/additional views and operational writes remain planned. See V1_V2_CONTRACT_AUDIT.md for the feature-to-contract matrix and concrete P0 gaps. The earlier 11-test foundation snapshot is historical and must not drive a restart of completed work.
 
 Next: audit existing client safeguards and each retained V1 option against actual V2 contracts, then follow sections 18–19. Record implementation and validation evidence before changing status. Analytics remains deferred.
 
