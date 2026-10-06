@@ -1,6 +1,6 @@
 # VAD Massage Booking V2 — App Plan
 
-Updated: 2026-09-27. This is the product plan, not a claim that every feature is implemented. Check code, migrations and deployment before marking work done.
+Updated: 2026-10-06. This is the product plan, not a claim that every feature is implemented. Check code, migrations and deployment before marking work done.
 
 ## Goal and architecture
 
@@ -102,6 +102,8 @@ The WhatsApp agent is another interface, not another booking system. It may coll
 | Data model and secure API | Core verified | Canonical identity, public discovery, pre-auth holds, client activation, quote and atomic finalization are deployed through migration `20260927193000`; read-only migration status verified 2026-09-27. No remote changes made during the UI slice. |
 | Client booking | First slice implemented locally | Area through server-backed Confirmation, email/Google authentication, saved addresses, distinct sessions, preferences, enhancements, authoritative quotes and retry-safe finalization. See `CLIENT_BOOKING_SLICE.md` for verification and release gaps. |
 | Admin | Read-only Calendar slice verified locally | `/admin` lazy-loaded shell, email/password authentication with existing Admin authorization, bounded day Calendar and persisted booking details. Client management, manual bookings, editing, payment/cancellation actions and settings remain planned. |
+| Mobile UX & Reliability Hardening | Planned; audit existing coverage | P0 safeguards before optimisation; see V2_REBUILD_MASTER_PLAN.md section 18. |
+| V1 admin integration | Planned beyond read-only Calendar | Operational settings → agenda/calendar views → clients/appointments → payments → waitlist/notifications → documents/secondary settings; see section 19. Analytics deferred. |
 | Reliability release gate | Planned | Exercise real booking, change, cancellation, duplicate request and failed-payment paths against a safe environment; inspect network/database errors. |
 | Agent-ready integration boundary | Planned with V2 core | Channel-neutral API, canonical client/channel links, idempotency, actor/source audit, event outbox and separate client/admin scopes. No Meta dependency yet. |
 | WhatsApp receptionist | Deferred | Verify Meta integration path, then answer FAQs using approved business content. |
@@ -123,3 +125,10 @@ The compact two-row header supports previous/next day, date selection, Today and
 Data refreshes on date changes or explicit refresh; realtime updates are deferred. Details use the exact record in the loaded range snapshot, not an optimistic or fabricated record. The compact header remains sticky so date controls stay immediately accessible. Physical phone/Safari testing and Admin account provisioning are not included. No Admin write controls, analytics, settings, Telegram or client directory were added.
 
 Validation (2026-10-05), run sequentially: `npm test` 91/91 across 7 files (including real local Supabase Admin RLS/range/relationship tests); `npm run lint` passed; `npm run build` passed; `npx playwright test` 30/30 (7 Admin cases plus all 23 existing client journeys); `npx supabase test db` 147/147 across 10 files; `git diff --check` passed. Browser tests cover 320/360/390/412px, persisted exact-record details, cancellation, bounded date navigation, denied access, login failure and query error/retry. A 320px details screenshot was inspected. Work is isolated on `codex/admin-calendar-foundation`, based on `733072e`; original uncommitted date-field edits and installed skills remain untouched in the original worktree. No deployment or remote database operation was performed.
+
+
+## Admin integration scope — 2026-10-06
+
+Retain useful V1 options after adapting them to canonical V2 data and narrow authorized contracts. Analytics is deferred; financial configuration remains a later independent settings module. Operational settings belong with Admin core, not after it. Agenda is explicit, followed by Day, 3-Day, Week, Month and lightweight Year navigation/occupancy. Information-only V1 settings become concise explanations or shortcuts; unsupported integration switches are not recreated as functioning controls.
+
+The detailed ordering, settings risk decisions and acceptance criteria live in V2_REBUILD_MASTER_PLAN.md sections 18–19. Preserve prior verification evidence above as dated evidence, not a claim of new tests or deployment. First reconcile existing coverage, then implement gaps in small feature-owned changes. Server scheduling and historical booking/payment snapshots remain authoritative.
