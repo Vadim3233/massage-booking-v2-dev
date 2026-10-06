@@ -40,31 +40,39 @@ export function dayTimeline(data, date, now) {
   const context = dayContext(data, date, now)
   const rows = []
   const add = (kind, id, start, end, extra = {}) => rows.push({ kind, id, start, end, ...extra })
-  function buffers(row, prefix) {
+  const bufferIntervals = []
+  function buffers(row) {
     const buffer = Number(row.travel_buffer_minutes) || 0
     if (buffer <= 0) return
     const end = row.start_minutes + row.treatment_duration_minutes
-    add('buffer', `${prefix}-before`, Math.max(0, row.start_minutes - buffer), row.start_minutes)
-    add('buffer', `${prefix}-after`, end, Math.min(1440, end + buffer))
+    bufferIntervals.push([Math.max(0, row.start_minutes - buffer), row.start_minutes])
+    bufferIntervals.push([end, Math.min(1440, end + buffer)])
   }
   for (const booking of data.bookings) {
     add('booking', booking.id, booking.start_minutes, booking.start_minutes + booking.treatment_duration_minutes, { booking })
-    if (['confirmed', 'completed', 'awaiting_payment_verification', 'awaiting_cash_approval', 'awaiting_transfer'].includes(booking.booking_status) && !expired(booking, now)) buffers(booking, booking.id)
+    if (['confirmed', 'completed', 'awaiting_payment_verification', 'awaiting_cash_approval', 'awaiting_transfer'].includes(booking.booking_status) && !expired(booking, now)) buffers(booking)
   }
   for (const block of data.blocks) add('block', block.id, block.start_minutes, block.end_minutes, { title: block.title || 'Blocked time' })
   for (const hold of context.holds) {
     add('hold', hold.id, hold.start_minutes, hold.start_minutes + hold.treatment_duration_minutes)
-    buffers(hold, hold.id)
+    buffers(hold)
   }
+  // Normalize display intervals only; dayContext remains authoritative for free time.
+  const mergedBuffers = []
+  for (const [start, end] of bufferIntervals.sort((a, b) => a[0] - b[0])) {
+    if (end <= start) continue
+    const previous = mergedBuffers.at(-1)
+    if (previous && start <= previous[1]) previous[1] = Math.max(previous[1], end)
+    else mergedBuffers.push([start, end])
+  }
+  for (const [start, end] of mergedBuffers) add('buffer', `buffer-${start}-${end}`, start, end)
   if (context.hours?.available) {
-    add('boundary', 'work-start', context.hours.start_minutes, null, { title: 'Working day starts' })
-    add('boundary', 'work-end', context.hours.end_minutes, null, { title: 'Working day ends' })
     for (const [start, end] of context.gaps) {
       // Cancelled bookings stay visible without taking time out of free gaps.
       const cuts = [...new Set([start, end, ...data.bookings.flatMap(b => [b.start_minutes, b.start_minutes + b.treatment_duration_minutes]).filter(value => value > start && value < end)])].sort((a, b) => a - b)
       for (let i = 1; i < cuts.length; i++) add('free', `free-${cuts[i - 1]}`, cuts[i - 1], cuts[i])
     }
   }
-  const order = { boundary: 0, booking: 1, block: 2, hold: 3, buffer: 4, free: 5 }
+  const order = { booking: 1, block: 2, hold: 3, buffer: 4, free: 5 }
   return { ...context, rows: rows.sort((a, b) => a.start - b.start || order[a.kind] - order[b.kind]) }
 }

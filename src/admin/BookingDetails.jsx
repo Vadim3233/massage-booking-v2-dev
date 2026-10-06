@@ -19,8 +19,8 @@ export default function BookingDetails({ booking: b, close, now }) {
       <section className="admin-details-client"><h2 id="booking-title">{clientName(b)}</h2><p className={`admin-status ${state.tone}`}>{state.text}</p><p>Payment: {label(b.booking_payments?.method)} · {label(b.booking_payments?.status)}</p></section>
       <section><h3>Contact</h3><p>{email ? <a href={`mailto:${email}`}>{email}</a> : 'Email not recorded'}</p><p>{b.clients?.phone ? <a href={`tel:${b.clients.phone}`}>{b.clients.phone}</a> : 'Phone not recorded'}</p></section>
       <section><h3>Address</h3><address>{[b.address_line_1_snapshot, b.address_line_2_snapshot, b.city_snapshot, postcode(b.postcode_snapshot)].filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</address>{b.entry_instructions_snapshot && <p>{b.entry_instructions_snapshot}</p>}</section>
-      <section><h3>Sessions</h3><ol className="admin-session-list">{[...b.booking_sessions].sort((a, b) => a.position - b.position).map(s => <li key={s.id}>
-        <h4>{s.service_name_snapshot}</h4><p>{s.duration_minutes} minutes · {money(s.unit_price_gbp)}</p>{s.recipient_name && <p>{s.recipient_name}</p>}
+      <section><h3>Sessions</h3><ol className="admin-session-list">{[...b.booking_sessions].sort((a, b) => a.position - b.position).map((s, index) => <li key={s.id}>
+        <h4>{b.booking_sessions.length > 1 ? `Session ${index + 1}` : s.service_name_snapshot}{s.recipient_name && ` · ${s.recipient_name}`}</h4><p>{b.booking_sessions.length > 1 && `${s.service_name_snapshot} · `}{s.duration_minutes} minutes · {money(s.unit_price_gbp)}</p>
         {s.booking_session_preferences.length > 0 && <><h5>Preferences</h5><ul>{s.booking_session_preferences.map(p => <li key={p.preference_id}>{p.preference_category_snapshot}: {p.preference_label_snapshot}</li>)}</ul></>}
         {s.booking_session_enhancements.length > 0 && <><h5>Session enhancements</h5><ul>{s.booking_session_enhancements.map(e => <li key={e.id}>{e.enhancement_name_snapshot} × {e.quantity} · {money(e.unit_price_gbp)}</li>)}</ul></>}
       </li>)}</ol></section>

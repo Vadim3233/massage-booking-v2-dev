@@ -71,7 +71,7 @@ export default function Calendar({ signOut }) {
       {!current && <p role="status">Loading calendar…</p>}
       {current?.error && <><p role="alert">Could not load calendar: {current.error}</p><button onClick={() => setAttempt(value => value + 1)}>Retry calendar</button></>}
       {data && <>
-        {!timeline.hours?.available && <p className="admin-day-note">Not a working day</p>}
+        <p className="admin-working-hours">{timeline.hours?.available ? `Working hours ${time(timeline.hours.start_minutes)}–${time(timeline.hours.end_minutes)}` : 'Not a working day'}</p>
         {!data.bookings.length && <p className="admin-day-note">No appointments for this day.</p>}
         <ol className="admin-timeline" aria-label="Day timeline">
           {timeline.rows.map(row => <li key={`${row.kind}-${row.id}`} className={`admin-timeline-row admin-timeline-${row.kind}`} data-start={row.start}>
@@ -82,14 +82,11 @@ export default function Calendar({ signOut }) {
               <span className="admin-card-postcode">{postcode(row.booking.postcode_snapshot)}</span>
               <span className={`admin-status ${bookingState(row.booking, now).tone}`}>{bookingState(row.booking, now).text}</span>
             </button> : <div className={`admin-timeline-entry ${row.kind}`}>
-              {row.kind === 'boundary' ? <span>{row.title}</span> : <>
                 <span>{row.kind === 'free' ? 'Free' : row.kind === 'buffer' ? 'Travel / buffer' : row.kind === 'hold' ? 'Temporary hold' : row.title}</span>
                 <small>Until {time(row.end)}{row.kind === 'free' ? ` · ${row.end - row.start} min` : ''}</small>
-              </>}
             </div>}
           </li>)}
         </ol>
-        <p className="admin-timeline-note">Free intervals are not bookable-slot suggestions. Travel / buffer is scheduling time, not measured travel.</p>
       </>}
     </section>{booking && <BookingDetails booking={booking} now={now} close={() => setSelected(null)} />}
   </>

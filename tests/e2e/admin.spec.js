@@ -116,8 +116,10 @@ test('agenda integrates holds and blocks; compact controls scroll and account si
   await expect(page.getByText('Temporary hold', { exact: true })).toBeVisible()
   await expect(page.getByText('Lunch break', { exact: true })).toBeVisible()
   await expect(page.getByText('Travel / buffer', { exact: true }).first()).toBeVisible()
-  await expect(page.getByText('Working day starts', { exact: true })).toBeVisible()
-  await expect(page.getByText('Working day ends', { exact: true })).toBeVisible()
+  await expect(page.getByText('Working day starts', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Working day ends', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Working hours 10:00–22:00', { exact: true })).toBeVisible()
+  await expect(page.getByText(/Free intervals are not bookable-slot suggestions/)).toHaveCount(0)
   expect((await page.locator('.admin-card').first().boundingBox()).height).toBeLessThan(160)
   await page.screenshot({ path: 'test-results/admin-agenda-context.png', fullPage: true })
   await page.evaluate(() => { document.activeElement.blur(); window.scrollTo(0, 200) })
@@ -132,6 +134,9 @@ test('agenda integrates holds and blocks; compact controls scroll and account si
 test('desktop uses the same details component as a right-side panel and Escape restores focus', async ({ page }) => {
   await f.authorize(); await page.setViewportSize({ width: 1280, height: 900 }); await login(page)
   await page.getByLabel('Calendar date', { exact: true }).fill(f.date)
+  await expect(page.locator('.admin-card')).toHaveCount(2)
+  expect((await page.locator('.admin-shell').boundingBox()).width).toBe(936)
+  await page.screenshot({ path: 'test-results/admin-agenda-desktop.png', fullPage: true })
   await page.locator('.admin-card').first().click()
   const dialog = page.getByRole('dialog')
   const box = await dialog.boundingBox()
@@ -143,4 +148,44 @@ test('desktop uses the same details component as a right-side panel and Escape r
   await page.keyboard.press('Escape')
   await expect(dialog).toHaveCount(0)
   await expect(page.locator('.admin-card').first()).toBeFocused()
+})
+
+for (const [name, secondStart, expected] of [
+  ['exact duplicate', 1020, [[840, 900], [960, 1020], [1080, 1140]]],
+  ['overlapping', 1050, [[840, 900], [960, 1050], [1110, 1170]]],
+  ['adjacent', 1080, [[840, 900], [960, 1080], [1140, 1200]]],
+]) test(`${name} booking buffers render once without changing free time`, () => {
+  const booking = { id: 'a', booking_status: 'confirmed', start_minutes: 900, treatment_duration_minutes: 60, travel_buffer_minutes: 60 }
+  const data = { bookings: [booking, { ...booking, id: 'b', start_minutes: secondStart }, { ...booking, id: 'cancelled', start_minutes: 720, booking_status: 'cancelled' }], holds: [], blocks: [], hours: [], overrides: [{ date: f.date, available: true, start_minutes: 600, end_minutes: 1320 }] }
+  const snapshot = JSON.stringify(data)
+  const timeline = dayTimeline(data, f.date, Date.now())
+  expect(timeline.rows.filter(row => row.kind === 'buffer').map(row => [row.start, row.end])).toEqual(expected)
+  expect(timeline.gaps).toEqual([[600, 840], [secondStart + 120, 1320]])
+  expect(timeline.rows.filter(row => row.kind === 'booking')).toHaveLength(3)
+  expect(timeline.rows.some(row => row.kind === 'boundary')).toBe(false)
+  expect(JSON.stringify(data)).toBe(snapshot)
+})
+
+test('multi-session headings retain recipients and long details fit mobile', async ({ page }) => {
+  await f.authorize(); await page.setViewportSize({ width: 390, height: 844 })
+  const email = 'longemail'.repeat(16) + '@example.test'
+  const reference = 'REFERENCE'.repeat(24)
+  await page.route('**/rest/v1/bookings?**', async route => {
+    const response = await route.fetch()
+    const rows = await response.json()
+    await route.fulfill({ response, json: rows.map(row => ({ ...row, booking_email_snapshot: email, booking_reference: reference,
+      booking_sessions: [2, 1, 3].map(position => ({ ...row.booking_sessions[0], id: `session-${position}`, position, service_name_snapshot: 'Massage', recipient_name: position === 2 ? 'Sonia' : null, unit_price_gbp: 90 }))
+    })) })
+  })
+  await login(page); await page.getByLabel('Calendar date', { exact: true }).fill(f.date)
+  await page.locator('.admin-card').first().click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.locator('.admin-session-list h4')).toHaveText(['Session 1', 'Session 2 \u00b7 Sonia', 'Session 3'])
+  await expect(dialog.locator('.admin-session-list > li > p')).toHaveText(Array(3).fill('Massage \u00b7 60 minutes \u00b7 \u00a390.00'))
+  await expect(dialog).toContainText(email)
+  await expect(dialog).toContainText(reference)
+  expect(await dialog.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await dialog.locator('.admin-session-list').scrollIntoViewIfNeeded()
+  await page.screenshot({ path: 'test-results/admin-multi-session-390.png' })
 })
