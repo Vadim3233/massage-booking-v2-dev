@@ -1,0 +1,61 @@
+import { test, expect } from '@playwright/test'
+import { adminFixture } from '../adminFixture.js'
+let f
+test.beforeEach(async () => { f = await adminFixture() })
+test.afterEach(async () => { await f?.cleanup() })
+async function login(page) {
+  await page.goto('/admin')
+  await expect(page.getByRole('heading', { name: 'Admin sign in' })).toBeVisible()
+  await expect(page.getByText('Continue as guest')).toHaveCount(0)
+  await page.getByLabel('Email', { exact: true }).fill(f.email)
+  await page.getByLabel('Password', { exact: true }).fill(f.password)
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+}
+test('normal client is denied Admin access', async ({ page }) => {
+  await login(page); await expect(page.getByRole('alert')).toContainText('does not have Admin access')
+  await expect(page.getByLabel('Day appointments')).toHaveCount(0)
+})
+for (const width of [320, 360, 390, 412]) test(`real calendar and exact persisted details fit ${width}px`, async ({ page }) => {
+  const ranges = []
+  page.on('request', request => { const url = new URL(request.url()); if (url.pathname === '/rest/v1/bookings') ranges.push(url.searchParams.getAll('date')) })
+  await f.authorize(); await page.setViewportSize({ width, height: 844 }); await login(page)
+  await page.getByLabel('Calendar date', { exact: true }).fill(f.date)
+  await expect(page.locator('.admin-card')).toHaveCount(2)
+  expect(ranges.some(values => values.includes('gte.' + f.date) && values.some(value => value.startsWith('lt.')))).toBe(true)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.locator('.admin-card').first().click()
+  await expect(page.getByRole('dialog')).toContainText(f.bookings[0].booking_reference)
+  await expect(page.getByRole('dialog')).toContainText('booking@example.test')
+  await expect(page.getByRole('dialog')).toContainText('Exact persisted note')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  expect(await page.getByRole('dialog').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+  if (width === 320) await page.screenshot({ path: 'test-results/admin-details-320.png', fullPage: true })
+  await page.getByRole('button', { name: 'Close details' }).click()
+  await page.locator('.admin-card.cancelled').click()
+  await expect(page.getByRole('dialog')).toContainText(f.bookings[1].booking_reference)
+  await expect(page.getByRole('dialog')).toContainText('Rejected')
+  await page.getByRole('button', { name: 'Close details' }).click()
+  await page.getByRole('button', { name: 'Next day' }).click()
+  await expect(page.locator('.admin-card')).toHaveCount(1)
+  await page.locator('.admin-card').click()
+  await expect(page.getByRole('dialog')).toContainText(f.bookings[2].booking_reference)
+})
+test('calendar error is visible and retry recovers', async ({ page }) => {
+  await f.authorize(); await login(page)
+  await page.route('**/rest/v1/bookings?**', route => route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ message: 'Calendar read denied', code: '42501' }) }))
+  await page.getByLabel('Calendar date', { exact: true }).fill(f.date)
+  await expect(page.getByRole('alert')).toContainText('Could not load calendar')
+  await expect(page.getByText('No appointments for this day.')).toHaveCount(0)
+  await page.unroute('**/rest/v1/bookings?**')
+  await page.getByRole('button', { name: 'Retry calendar' }).click()
+  await expect(page.locator('.admin-card')).toHaveCount(2)
+})
+
+test('authentication errors are visible and signed-out data is absent', async ({ page }) => {
+  await page.goto('/admin')
+  await page.getByLabel('Email', { exact: true }).fill(f.email)
+  await page.getByLabel('Password', { exact: true }).fill('incorrect-password')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('Invalid login credentials')
+  await expect(page.locator('.admin-card')).toHaveCount(0)
+})

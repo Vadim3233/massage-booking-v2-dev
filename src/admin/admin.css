@@ -1,0 +1,19 @@
+.admin-shell { max-width: 760px; margin: auto; overflow-wrap: anywhere; }
+.admin-shell button, .admin-shell input, .admin-details button { min-height: 40px; padding: 6px 10px; border: 1px solid #becbbf; border-radius: 6px; background: white; color: #253b36; min-width: 0; }
+.admin-shell button { cursor: pointer; }
+.admin-header { position: sticky; top: 0; z-index: 1; padding: 8px; background: #f7f6f2; border-bottom: 1px solid #becbbf; }
+.admin-header > div, .admin-header nav { display: flex; align-items: center; gap: 6px; }
+.admin-header > div { justify-content: space-between; margin-bottom: 6px; font-size: 14px; }
+.admin-header input { flex: 1; width: 0; }
+.admin-day, .admin-login { padding: 12px; }
+.admin-day h1 { font-size: 20px; margin: 0; }
+.admin-day h2, .admin-details h2 { font-size: 20px; }
+.admin-card { display: grid; width: 100%; text-align: left; gap: 4px; margin: 12px 0; overflow-wrap: anywhere; }
+.admin-card.cancelled { border-left: 5px solid #98615b; background: #f2e7e3; }
+.admin-login label { display: grid; margin: 12px 0; }
+.admin-details { width: min(600px, calc(100% - 24px)); max-height: calc(100dvh - 24px); padding: 16px; border: 1px solid #becbbf; border-radius: 10px; color: #253b36; background: #fafbf7; overflow-wrap: anywhere; }
+.admin-details::backdrop { background: #19282388; }
+.admin-details p { white-space: pre-wrap; }
+.admin-details dl > div { display: flex; justify-content: space-between; gap: 12px; }
+.admin-details dd { margin: 0; }
+.admin-details ul { padding-left: 20px; }
