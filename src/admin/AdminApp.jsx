@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import Calendar from './Calendar.jsx'
+import PasswordResetRequest from './PasswordResetRequest.jsx'
 import './admin.css'
 
 export default function AdminApp() {
+  const [requestReset, setRequestReset] = useState(new URLSearchParams(window.location.search).get('reset') === 'request')
+  const passwordChanged = new URLSearchParams(window.location.search).get('password') === 'changed'
   const [auth, setAuth] = useState({ state: 'checking' })
   const [attempt, setAttempt] = useState(0)
   const [error, setError] = useState('')
@@ -29,11 +32,13 @@ export default function AdminApp() {
   }
   async function signOut() { const { error } = await supabase.auth.signOut(); if (error) setError(error.message) }
   return <main className="admin-shell">
-    {auth.state === 'admin' ? <Calendar signOut={signOut} /> : <section className="admin-login"><h1>VadMassage Admin</h1>
-      {auth.state === 'checking' && <p role="status">Checking authentication…</p>}
-      {auth.state === 'signed-out' && <form onSubmit={signIn}><h2>Admin sign in</h2><label>Email<input name="email" type="email" autoComplete="username" required /></label><label>Password<input name="password" type="password" autoComplete="current-password" required /></label><button disabled={busy}>Sign in</button></form>}
-      {auth.state === 'denied' && <><p role="alert">This account does not have Admin access.</p><button onClick={signOut}>Sign out</button></>}
-      {auth.state === 'error' && <><p role="alert">{auth.error}</p><button onClick={() => setAttempt(value => value + 1)}>Retry authentication</button></>}
+    {auth.state === 'admin' && !requestReset ? <Calendar signOut={signOut} /> : <section className="admin-login"><h1>VadMassage Admin</h1>
+      {passwordChanged && <p role="status">Password changed. Please sign in with your new password.</p>}
+      {requestReset && <PasswordResetRequest onBack={() => setRequestReset(false)} />}
+      {!requestReset && auth.state === 'checking' && <p role="status">Checking authentication…</p>}
+      {!requestReset && auth.state === 'signed-out' && <form onSubmit={signIn}><h2>Admin sign in</h2><label>Email<input name="email" type="email" autoComplete="username" required /></label><label>Password<input name="password" type="password" autoComplete="current-password" required /></label><button className="admin-forgot" type="button" disabled={busy} onClick={() => setRequestReset(true)}>Forgot password?</button><button disabled={busy}>Sign in</button></form>}
+      {!requestReset && auth.state === 'denied' && <><p role="alert">This account does not have Admin access.</p><button onClick={signOut}>Sign out</button></>}
+      {!requestReset && auth.state === 'error' && <><p role="alert">{auth.error}</p><button onClick={() => setAttempt(value => value + 1)}>Retry authentication</button></>}
     </section>}
     {error && <p role="alert">{error}</p>}
   </main>
