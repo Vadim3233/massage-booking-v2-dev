@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { createCalendarApi } from './calendarApi.js'
-import { clientName, dayContext, expired, label, money, shiftDate, time, today } from './calendarPresentation.js'
+import { bookingState, clientName, dateLabel, dayTimeline, money, postcode, sessionSummary, shiftDate, time, today } from './calendarPresentation.js'
 import BookingDetails from './BookingDetails.jsx'
 const api = createCalendarApi(supabase)
 // One owner for all Calendar reads, including StrictMode's repeated mount effect.
@@ -17,7 +17,22 @@ export default function Calendar({ signOut }) {
   const [attempt, setAttempt] = useState(0)
   const [selected, setSelected] = useState(null)
   const [now, setNow] = useState(Date.now)
+  const [headerHidden, setHeaderHidden] = useState(false)
+  const [accountOpen, setAccountOpen] = useState(false)
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer) }, [])
+  useEffect(() => {
+    let previous = window.scrollY, distance = 0
+    function scroll() {
+      const position = Math.max(0, window.scrollY)
+      const delta = position - previous
+      distance = Math.sign(delta) === Math.sign(distance) ? distance + delta : delta
+      if (position < 80 || distance < -6) setHeaderHidden(false)
+      else if (distance > 32) setHeaderHidden(true)
+      previous = position
+    }
+    window.addEventListener('scroll', scroll, { passive: true })
+    return () => window.removeEventListener('scroll', scroll)
+  }, [])
   useEffect(() => {
     let live = true
     load(date).then(data => { if (live) setResult({ date, attempt, data }) }, error => { if (live) setResult({ date, attempt, error: error.message }) })
@@ -25,20 +40,56 @@ export default function Calendar({ signOut }) {
   }, [date, attempt])
   const current = result?.date === date && result?.attempt === attempt ? result : null
   const data = current?.data
-  const context = data && dayContext(data, date, now)
+  const timeline = data && dayTimeline(data, date, now)
   const booking = data?.bookings.find(row => row.id === selected)
-  function navigate(value) { if (!value) return; setSelected(null); setDate(value) }
+  function navigate(value) { if (!value) return; setSelected(null); setDate(value); setHeaderHidden(false) }
   return <>
-    <header className="admin-header"><div><strong>VadMassage · Calendar</strong><button onClick={signOut}>Sign out</button></div><nav aria-label="Calendar navigation"><button aria-label="Previous day" onClick={() => navigate(shiftDate(date, -1))}>‹</button><input aria-label="Calendar date" type="date" value={date} onChange={event => navigate(event.target.value)} /><button aria-label="Next day" onClick={() => navigate(shiftDate(date, 1))}>›</button><button aria-label="Today" title="Today" onClick={() => navigate(today())}>●</button><button aria-label="Refresh calendar" onClick={() => setAttempt(value => value + 1)}>↻</button></nav></header>
-    <section className="admin-day" aria-label="Day appointments"><h1>{date}</h1><small>London time · Read only</small>
+    <header className={`admin-header ${headerHidden && !accountOpen ? 'is-hidden' : ''}`} onFocusCapture={() => setHeaderHidden(false)}>
+      <div className="admin-toolbar">
+        <label className="admin-date-control"><span>{dateLabel(date)}</span><span aria-hidden="true">⌄</span>
+          <input aria-label="Calendar date" type="date" value={date} onChange={event => navigate(event.target.value)} onClick={event => { try { event.currentTarget.showPicker?.() } catch { /* Native date entry remains available. */ } }} />
+        </label>
+        <button className="admin-today" onClick={() => navigate(today())}>Today</button>
+        <button aria-label="Refresh calendar" title="Refresh calendar" onClick={() => setAttempt(value => value + 1)}>↻</button>
+        <div className="admin-account" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setAccountOpen(false) }} onKeyDown={event => { if (event.key === 'Escape') { setAccountOpen(false); event.currentTarget.querySelector('button').focus() } }}>
+          <button aria-label="Account menu" title="Account" aria-expanded={accountOpen} aria-controls="admin-account-actions" onClick={() => setAccountOpen(value => !value)}>⋯</button>
+          {accountOpen && <div id="admin-account-actions" className="admin-account-actions"><button onClick={signOut}>Sign out</button></div>}
+        </div>
+      </div>
+      <nav className="admin-date-strip" aria-label="Calendar navigation">
+        <button aria-label="Previous day" onClick={() => navigate(shiftDate(date, -1))}>‹</button>
+        {[-2, -1, 0, 1, 2].map(offset => {
+          const day = shiftDate(date, offset)
+          return <button key={day} className="admin-day-choice" aria-label={dateLabel(day, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} aria-current={offset === 0 ? 'date' : undefined} onClick={() => navigate(day)}><span>{dateLabel(day, { weekday: 'short' })}</span><strong>{Number(day.slice(-2))}</strong></button>
+        })}
+        <button aria-label="Next day" onClick={() => navigate(shiftDate(date, 1))}>›</button>
+      </nav>
+    </header>
+    <section className="admin-day" aria-label="Day appointments">
+      <h1 className="admin-sr-only">Appointments for {dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h1>
+      <p className="admin-day-caption">London time <span>Read only</span></p>
       {!current && <p role="status">Loading calendar…</p>}
       {current?.error && <><p role="alert">Could not load calendar: {current.error}</p><button onClick={() => setAttempt(value => value + 1)}>Retry calendar</button></>}
-      {data && <><p>{context.hours?.available ? `Working hours ${time(context.hours.start_minutes)}–${time(context.hours.end_minutes)}` : 'Not a working day'}</p>
-        {!data.bookings.length && <p>No appointments for this day.</p>}
-        {data.bookings.map(b => <button className={`admin-card ${b.booking_status === 'cancelled' ? 'cancelled' : ''}`} key={b.id} onClick={() => setSelected(b.id)}><strong>{time(b.start_minutes)} · {clientName(b)}</strong><span>{b.booking_sessions.map(s => `${s.service_name_snapshot} · ${s.duration_minutes} min`).join('; ')}</span><span>{expired(b, now) ? 'Transfer reservation expired' : label(b.booking_status)} · {label(b.booking_payments?.status)}</span><span>{b.postcode_snapshot} · {money(b.total_gbp)}</span></button>)}
-        <h2>Day context</h2>{data.blocks.map(b => <p key={b.id}>{time(b.start_minutes)}–{time(b.end_minutes)} · {b.title || 'Blocked time'}</p>)}
-        {context.holds.map(h => <p key={h.id}>{time(h.start_minutes)}–{time(h.start_minutes + h.treatment_duration_minutes)} · Active hold</p>)}
-        <h3>Unoccupied intervals</h3><small>Includes travel buffers. These are not bookable-slot suggestions.</small>{context.gaps.length ? context.gaps.map(([start, end]) => <p key={start}>{time(start)}–{time(end)}</p>) : <p>No unoccupied working intervals.</p>}
+      {data && <>
+        {!timeline.hours?.available && <p className="admin-day-note">Not a working day</p>}
+        {!data.bookings.length && <p className="admin-day-note">No appointments for this day.</p>}
+        <ol className="admin-timeline" aria-label="Day timeline">
+          {timeline.rows.map(row => <li key={`${row.kind}-${row.id}`} className={`admin-timeline-row admin-timeline-${row.kind}`} data-start={row.start}>
+            <time className="admin-time">{time(row.start)}</time>
+            {row.kind === 'booking' ? <button className={`admin-card ${row.booking.booking_status === 'cancelled' ? 'cancelled' : ''}`} onClick={() => setSelected(row.booking.id)}>
+              <span className="admin-card-heading"><strong>{clientName(row.booking)}</strong><span className="admin-card-price">{money(row.booking.total_gbp)}</span></span>
+              <span className="admin-card-treatment">{sessionSummary(row.booking)}</span>
+              <span className="admin-card-postcode">{postcode(row.booking.postcode_snapshot)}</span>
+              <span className={`admin-status ${bookingState(row.booking, now).tone}`}>{bookingState(row.booking, now).text}</span>
+            </button> : <div className={`admin-timeline-entry ${row.kind}`}>
+              {row.kind === 'boundary' ? <span>{row.title}</span> : <>
+                <span>{row.kind === 'free' ? 'Free' : row.kind === 'buffer' ? 'Travel / buffer' : row.kind === 'hold' ? 'Temporary hold' : row.title}</span>
+                <small>Until {time(row.end)}{row.kind === 'free' ? ` · ${row.end - row.start} min` : ''}</small>
+              </>}
+            </div>}
+          </li>)}
+        </ol>
+        <p className="admin-timeline-note">Free intervals are not bookable-slot suggestions. Travel / buffer is scheduling time, not measured travel.</p>
       </>}
     </section>{booking && <BookingDetails booking={booking} now={now} close={() => setSelected(null)} />}
   </>

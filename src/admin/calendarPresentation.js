@@ -16,3 +16,55 @@ export function dayContext(data, date, now) {
   if (cursor < hours.end_minutes) gaps.push([cursor, hours.end_minutes])
   return { hours, holds, gaps }
 }
+
+export const dateLabel = (date, options = { weekday: 'short', day: 'numeric', month: 'short' }) => new Intl.DateTimeFormat('en-GB', { ...options, timeZone: 'Europe/London' }).format(new Date(date + 'T12:00:00Z'))
+export function sessionSummary(booking) {
+  const sessions = booking.booking_sessions || []
+  if (sessions.length === 1) return `${sessions[0].service_name_snapshot} · ${sessions[0].duration_minutes} min`
+  return `${sessions.length} sessions · ${booking.treatment_duration_minutes} min`
+}
+export function bookingState(booking, now) {
+  if (booking.booking_status === 'cancelled') return { text: 'Cancelled', tone: 'cancelled' }
+  if (expired(booking, now)) return { text: 'Transfer reservation expired', tone: 'muted' }
+  const payment = booking.booking_payments?.status
+  if (booking.booking_status === 'awaiting_payment_verification' || payment === 'awaiting_verification') return { text: 'Awaiting payment verification', tone: 'pending' }
+  if (booking.booking_status === 'awaiting_cash_approval' || payment === 'awaiting_approval') return { text: 'Awaiting cash approval', tone: 'pending' }
+  if (booking.booking_status === 'awaiting_transfer') return { text: 'Awaiting transfer', tone: 'pending' }
+  const paymentText = payment === 'approved' && booking.booking_payments?.method === 'cash' ? 'Cash approved' : label(payment)
+  return { text: `${label(booking.booking_status)} · ${paymentText}`, tone: ['confirmed', 'completed'].includes(booking.booking_status) ? 'confirmed' : 'muted' }
+}
+
+// Presentation only: use the existing occupied intervals and persisted buffers.
+// Free intervals are context, not available slots or measured journey times.
+export function dayTimeline(data, date, now) {
+  const context = dayContext(data, date, now)
+  const rows = []
+  const add = (kind, id, start, end, extra = {}) => rows.push({ kind, id, start, end, ...extra })
+  function buffers(row, prefix) {
+    const buffer = Number(row.travel_buffer_minutes) || 0
+    if (buffer <= 0) return
+    const end = row.start_minutes + row.treatment_duration_minutes
+    add('buffer', `${prefix}-before`, Math.max(0, row.start_minutes - buffer), row.start_minutes)
+    add('buffer', `${prefix}-after`, end, Math.min(1440, end + buffer))
+  }
+  for (const booking of data.bookings) {
+    add('booking', booking.id, booking.start_minutes, booking.start_minutes + booking.treatment_duration_minutes, { booking })
+    if (['confirmed', 'completed', 'awaiting_payment_verification', 'awaiting_cash_approval', 'awaiting_transfer'].includes(booking.booking_status) && !expired(booking, now)) buffers(booking, booking.id)
+  }
+  for (const block of data.blocks) add('block', block.id, block.start_minutes, block.end_minutes, { title: block.title || 'Blocked time' })
+  for (const hold of context.holds) {
+    add('hold', hold.id, hold.start_minutes, hold.start_minutes + hold.treatment_duration_minutes)
+    buffers(hold, hold.id)
+  }
+  if (context.hours?.available) {
+    add('boundary', 'work-start', context.hours.start_minutes, null, { title: 'Working day starts' })
+    add('boundary', 'work-end', context.hours.end_minutes, null, { title: 'Working day ends' })
+    for (const [start, end] of context.gaps) {
+      // Cancelled bookings stay visible without taking time out of free gaps.
+      const cuts = [...new Set([start, end, ...data.bookings.flatMap(b => [b.start_minutes, b.start_minutes + b.treatment_duration_minutes]).filter(value => value > start && value < end)])].sort((a, b) => a - b)
+      for (let i = 1; i < cuts.length; i++) add('free', `free-${cuts[i - 1]}`, cuts[i - 1], cuts[i])
+    }
+  }
+  const order = { boundary: 0, booking: 1, block: 2, hold: 3, buffer: 4, free: 5 }
+  return { ...context, rows: rows.sort((a, b) => a.start - b.start || order[a.kind] - order[b.kind]) }
+}
