@@ -214,7 +214,7 @@ Preserve the active V1 top-level areas:
 - Clients
 - Pending
 - Waitlist
-- Analytics
+- Analytics — deferred by user on 2026-10-06
 - Settings
 
 #### Admin Calendar
@@ -278,9 +278,9 @@ Preserve:
 
 Booking status and payment status are separate concepts.
 
-#### Analytics
+#### Analytics — deferred, 2026-10-06
 
-Preserve useful V1 analytics concepts:
+Future backlog only; not part of the current integration or release gate. Retain these concepts for later:
 
 - revenue
 - expenses
@@ -680,13 +680,9 @@ Weekly defaults.
 
 Date-specific overrides.
 
-#### `blocked_periods`
+#### `calendar_blocks`
 
-Admin blocked time / unavailable intervals.
-
-#### `personal_events`
-
-Admin personal calendar items that reserve time.
+One canonical model for blocked time and personal events with a kind/type field, per ADR-016 and DATABASE_MODEL.md. Do not introduce separate competing blocking tables.
 
 #### `booking_holds`
 
@@ -988,9 +984,13 @@ Define this once before building UI.
 ### Payment status examples
 
 - awaiting_verification
-- cash_on_arrival
+- awaiting_approval
+- approved (cash agreed, not paid)
 - paid
-- cancelled/refunded where applicable
+- rejected
+- refunded
+
+These are target states documented in DATABASE_MODEL.md; inspect current migrations and transition contracts before implementing controls.
 
 Do not make cancellation automatically erase payment history.
 
@@ -1228,9 +1228,14 @@ Regression requirement:
 - booking limits
 - returning-client rules
 
+### Phase 5a — Mobile UX & Reliability Hardening
+
+Audit then complete P0 navigation/dependency invalidation, async/stale-response safety, idempotent submission, hold recovery and exact authorized deep links. Apply safeguards during earlier slices too. See section 18 for ordering and regression gates. Optional prefetch comes only after P0 passes.
+
 ### Phase 6 — Admin core
 
-- Calendar
+- Operational settings (hours, overrides, catalogue, prices, areas and preferences)
+- Agenda, Day, 3-Day, Week, Month and lightweight Year views
 - Clients
 - Pending
 - appointment creation
@@ -1254,11 +1259,9 @@ Admin UI should be implemented as separate feature modules, not a new `LiveAdmin
 
 Use finalized database events/state for notifications.
 
-### Phase 8 — Settings, analytics, financial, documents
+### Phase 8 — Secondary settings, financial configuration and documents
 
-Move only active V1 functionality.
-
-Do not reintroduce placeholder settings.
+Move only active V1 functionality. Operational settings belong in Phase 6. Financial configuration remains later in scope; Analytics dashboards, forecasts, tax calculations and performance reports are deferred. Do not reintroduce placeholder settings. See section 19 for adaptations.
 
 ### Phase 9 — UI parity and polish
 
@@ -1266,7 +1269,7 @@ Only after core journeys are stable:
 
 - typography
 - final visual styling
-- animations
+- restrained functional feedback respecting reduced motion
 - compact Admin mobile header
 - narrow viewport testing
 - accessibility
@@ -1330,26 +1333,13 @@ A feature is complete only when all relevant items exist:
 
 ---
 
-## 16. Current V2 position
+## 16. Current V2 position — source rechecked 2026-10-06
 
-Already completed:
+Repository main at `14552fa4c7d464c881326289a9bd93fb14862b9e` contains the client booking slice and a read-only Admin day Calendar, authenticated Admin shell, password recovery and bounded calendar adapter. APP_PLAN.md records prior test evidence; it was not rerun for this documentation change. Source presence does not prove deployment or release readiness.
 
-- clean Vite/React repository
-- separate Supabase project
-- Supabase client configuration
-- Vitest
-- first pure Chain Mode scheduling engine
-- 11 passing scheduling tests covering the first chain/hold/blocked-period rules
+Admin settings, full agenda/multi-view support and operational writes remain planned. The earlier 11-test foundation snapshot is historical and must not drive a restart of completed work.
 
-The next development work should follow this plan rather than adding features ad hoc.
-
-Immediate next sequence:
-
-1. finish the scheduling test catalogue
-2. define V2 canonical database schema and state machines
-3. implement database scheduling/hold parity
-4. build the first real client-booking vertical slice
-5. prove the same booking appears correctly in Client and Admin views
+Next: audit existing client safeguards and each retained V1 option against actual V2 contracts, then follow sections 18–19. Record implementation and validation evidence before changing status. Analytics remains deferred.
 
 ---
 
@@ -1360,3 +1350,93 @@ Immediate next sequence:
 V1 tells us what clients and Admin need.
 
 V2 must make each business concept exist once, each state transition explicit, each server contract narrow, and each critical journey provable by real integration tests.
+
+
+## 18. Mobile UX & Reliability Hardening — ordered implementation
+
+This milestone surrounds the existing booking and availability boundaries. Do not change the scheduling algorithm solely to implement UX improvements. Server-side availability, travel rules, holds, quotes and final booking validation remain authoritative. These are planned requirements, not verified repository findings.
+
+| Order | Priority / work | Dependency and acceptance evidence |
+| --- | --- | --- |
+| 0 | Audit and regression baseline | Read repository instructions, current progress, code and migrations. Map existing navigation, async states, holds, submission and deep links; extend existing implementations rather than duplicate them. Establish passing booking/availability tests and add missing regressions alongside each change. |
+| 1 | P0 — Navigation and dependency invalidation | Preserve valid selections through visible Back and browser/system Back. Back means previous step; Close dismisses or exits with unfinished-booking protection where needed. Apply the dependency matrix below before restoring a draft. Test forward/back, edited earlier answers and reload recovery. |
+| 2 | P0 — Async states and stale-request protection | Distinguish loading, refreshing, success, empty and error; show useful feedback and Retry. Latest input wins even when responses arrive out of order. Keep context during refresh, but do not present slots from another query as selectable. Test slow/failing requests, zero slots and rapid date/duration changes. |
+| 3 | P0 — Submission idempotency | Disable Confirm immediately, with progress feedback. Reuse a stable operation key for retries of the same logical submission; scope and validate it server-side. Concurrent requests and reload/retry recovery must create one booking and no duplicate order/payment reservation or orphan holds. Reconcile ambiguous outcomes before allowing a new submission. Test concurrent duplicate calls and a committed request whose response is lost. |
+| 4 | P0 — Hold expiry and recovery | Depends on stages 1–3 and the existing hold API. Use authoritative expiry; revalidate after app resume. Invalidate/release superseded holds safely, ignore late responses for old selections, and recover expired/conflicting holds to refreshed availability while preserving compatible contact data. Test expiry, replacement, delayed responses and submission during expiry. |
+| 5 | P0 — Exact deep links and authentication return | Stable routes for supported booking/client/payment/waitlist records; exact paths adapt to the router. Preserve an internal, allowlisted destination through login. Enforce record authorization; handle missing/deleted/forbidden records clearly. Test logged-in and logged-out links, session expiry and unauthorized access. |
+| 6 | P0 — Integration gate | Run the complete mobile booking journey and stages 1–5 regressions in a safe environment. Existing scheduling/hold tests must still pass. Resolve P0 failures before optimisation or admin enhancements. |
+| 7 | P1 — Conservative availability prefetch, optional | Only after stage 6. Add only if measured waiting justifies it. Key results by every availability-affecting input and identity context; deduplicate requests and discard obsolete results. Prefetch must never create/extend holds. Revalidate when presenting actionable slots and validate atomically when holding/confirming. Test another client taking a prefetched slot, input changes and request failure. |
+| 8 | P2 — Admin position restoration | After P0 and the relevant admin screens exist. Preserve calendar date/view, list filters and scroll position on record return; isolate state by user and reset it on logout. Test Back, deep-link entry without prior context and a record removed while open. |
+| 9 | P2 — Admin bottom-sheet quick actions | After stage 8. Reuse existing authorized payment/cancel/reschedule functions and confirmations; add no duplicate business logic. Provide labelled actions, focus management, keyboard/visible dismissal and accessible modal behaviour. Swipe-down dismissal is optional and must not conflict with scrolling. Test action failures, repeated taps, dismissal and return position. |
+
+### Dependency invalidation matrix
+
+Back alone preserves valid answers. An actual change invalidates only dependent values; no-op changes do not clear state.
+
+| Changed input | Required response |
+| --- | --- |
+| Area | Revalidate retained date and coverage; clear affected slot, quote and hold. |
+| Treatment | Clear incompatible duration; invalidate slot, quote and hold when the booking requirements change. |
+| Duration or session composition | Clear selected time, quote and hold; request availability for the new requirements. |
+| Date | Clear time and hold; invalidate dependent quote/payment preparation. |
+| Time | Safely replace the hold and recompute dependent quote/payment preparation. |
+| Material address change | Revalidate coverage, travel assumptions, slot, quote and hold where affected. |
+| Contact details or non-scheduling notes | Preserve the appointment unless an explicit identity or business rule requires revalidation. |
+
+Invalidating payment preparation must never erase or reverse a completed payment or persisted booking. Recovery must reconcile server state first. Slot preservation on Back remains subject to hold validity.
+
+### PR sequence and completion rules
+
+Use small dependent PRs: `feat/booking-navigation-state` → `feat/async-state-hardening` → `feat/submission-idempotency` → `feat/hold-recovery` → `feat/deep-link-hardening` → P0 integration gate → optional `feat/safe-availability-prefetch` → `feat/admin-position-restoration` → `feat/admin-quick-actions`. Adapt branch names if equivalent work already exists.
+
+For implementation PRs, pass relevant unit/API tests, mobile Playwright journeys, lint and production build. Run Supabase contract/migration tests for database-bound changes; run the full booking/availability and applicable Supabase suite at the integration and release gates. Record commands, results, environment and PR/commit evidence; local tests alone do not prove live deployment status.
+
+Required regression coverage: valid Back preservation; duration/date invalidation; stale async responses; concurrent Confirm; lost-response retry; reload reconciliation; expired/replaced hold; stale prefetched slot if prefetch is added; exact authorized deep link; login return; admin position restoration; bottom-sheet action failure and accessibility. Before release, exercise the real frontend payloads against the actual server contracts.
+
+Deferred: custom horizontal Back gestures, pull-to-refresh, client social-style bottom navigation, admin bottom tabs and tab re-tap gestures. Use familiar labelled controls; request permissions only when the user invokes a feature needing them.
+
+
+## 19. V1 admin integration — approved scope, 2026-10-06
+
+User direction: retain useful V1 features after analysis and adaptation for smooth V2 operation; defer Analytics. Preserve workflows, not V1 components or placeholder settings. Financial configuration remains in scope as a later independent module; revenue dashboards, forecasts, tax calculations and performance analytics are deferred.
+
+Source review: V1 GitHub main at `d93f13cbdcb2129c17b35fa13dcc184502809eaf`, including active `LiveAdminWorkspace`, its routing from `App.jsx`, calendar views and settings navigation/detail panels. V2 main reviewed at `14552fa4c7d464c881326289a9bd93fb14862b9e`, including AdminApp, calendar API, master plan, decisions and target database model. This is source analysis, not a runtime or full mutation-contract audit.
+
+This master plan owns the detailed sequence; APP_PLAN.md summarizes scope and DECISIONS.md records the durable choices. Audit existing coverage before implementing gaps; do not restart completed client booking work.
+
+### Integration sequence
+
+| Stage | Features and adaptations | Completion evidence |
+| --- | --- | --- |
+| A — Contract inventory and admin shell | Inventory each retained action against actual V2 migrations/RPCs. Reuse current admin authentication/password recovery. Define routes for Calendar, Clients, Pending, Waitlist and Settings; hide Analytics while deferred. Lazy-load secondary screens. | Feature-to-contract matrix; authorization and login-return tests; existing client and admin tests pass. |
+| B — Operational settings | Weekly working hours, date overrides, days off, blocks, supported Chain/fixed-start rules, travel buffers, treatments/prices, service areas/fees, enhancements and preference ordering/conflicts. One domain API per settings group. | A setting persists through reload and is used by client availability/quote and Admin consistently. Reject invalid times, negative fees and incompatible configuration; detect conflicting edits. |
+| C — Calendar and agenda | Agenda first, then Day, 3-Day, Week and Month views using shared presentation models and canonical bookings/blocks/holds. Add Year as a lightweight navigation/occupancy summary, without revenue analytics. Preserve Today/date navigation and per-day schedule controls. | Same records/statuses across views; bounded loading, pagination/limit handling, timezone/DST tests, phone/keyboard operation and position restoration. |
+| D — Clients and appointment lifecycle | Canonical client search/filter/profile, saved addresses, private notes, appointment history, contact actions, online-booking blocking. Manual appointment wizard, new/existing client, separate session rows, edit/reschedule/cancel/restore/status, personal events. | Real frontend payloads through authorized contracts; atomic writes, idempotency, concurrent conflicts, history retention and client/admin parity. |
+| E — Pending and payment management | Bank-transfer verification, cash approval/rejection, record actual payment receipt, payment history. Separate booking and payment state; reuse commands in details and quick actions. | Cash approval does not mark paid; transfer reporting does not mark paid; repeated actions are safe; cancellation retains payment history. |
+| F — Waitlist | Date/time preferences and ranges, session requirements, flexibility, notes, manual match/offer, client acceptance and request history. | Offer acceptance atomically rechecks availability; expired/taken offers recover cleanly; joined/offered/accepted/closed state transitions tested. |
+| G — Notifications and channel links | Transactional email, Admin Telegram booking/payment/cancellation/waitlist events, secure client Telegram invitation/linking, exact authorized record links. | Committed-event/outbox delivery; retry/deduplication; delivery status distinct from booking success; expiring single-use invitations; no secrets in browser. |
+| H — Documents and secondary settings | Business identity, receipt layout, invoice configuration, receipt email template, cancellation wording; financial settings stored independently with Analytics deferred. Useful system/integration status and account security controls only. | Documents use canonical payment/booking snapshots; issued copies retain template/version identity; settings persist; public wording is consistent and explicitly reviewed. |
+| I — Parity, polish and release | Check all V1 options against keep/improve/defer/retire decisions; complete admin quick actions and mobile polish after operational paths pass. | Golden client/admin journeys, fresh database rebuild, authorization tests, Android/Safari checks, lint/build and recorded evidence before release. |
+
+Stages B–E belong within the existing Admin-core phase; F–G align with Waitlist/Notifications; H aligns with Settings/Documents. Reliability safeguards apply in every stage; do not postpone error handling or authorization until polish. Analytics is not a release dependency for this scope.
+
+### Settings redesign and risk decisions
+
+- Scheduling edits use durable weekly defaults plus explicit date overrides. Updating a week must not silently erase overrides. Reset-to-weekly removes an override; reset-to-default is a separate labelled action. Existing appointments are never moved/cancelled automatically when hours change; show affected bookings for review.
+- V1's FLEX/CHAIN and anchor-release labels are not proof of supported V2 behaviour. Audit actual scheduling/server parity before exposing these switches. Unsupported modes remain unavailable until implemented and tested; do not alter the scheduling algorithm as an incidental UI change.
+- Use `calendar_blocks` for both blocked time and personal events, per V2 ADR-016; do not add parallel scheduling authorities.
+- Current V2 calendar API accepts ranges of at most 31 days. Do not broaden it to download all bookings for Year view. Use bounded month requests or a purpose-specific lightweight occupancy summary, with separate detail loading.
+- Prices/fees and catalogue visibility affect future quotes; historical booking/session/payment snapshots stay intact. Deactivate referenced catalogue entries rather than deleting history. Requote changed appointments on the server and show any price difference before saving.
+- Settings saves carry revision/updated-at concurrency checks where necessary. Show unsaved changes and real persistence errors. Refresh affected availability/catalogue views after success; no localStorage business-data fallback.
+- Admin overrides must be explicit, narrowly authorized, reasoned and audited; define exactly which rules can be overridden before adding an override button. Do not let generic editing bypass conflicts, payment rules or permissions.
+- Client addresses and client identity are separate from immutable booking snapshots. Profile edits must not silently rewrite past appointments. Notes remain admin-only. Contact links are deliberate user actions, not automatic message sending.
+- Coverage/travel/congestion pages should edit the same area configuration rather than duplicate fees. Durations/buffers/pricing pages should reuse catalogue or scheduling editors.
+- V1 informational pages (Payment Statuses, Pay Later, Waitlist Rules, API Protection, Client Privacy and similar) become concise explanations or links where useful, not fake toggles. Returning-client eligibility follows server rules, not V1's simplistic count of appointments.
+- Bank details require a deliberate public configuration workflow; provider credentials, webhook secrets and integration tokens remain server-side. Security pages cannot grant Admin rights through frontend controls. Calendar connection checkboxes must not imply real Google/Apple synchronization without a supported integration.
+- Financial settings remain later in scope; no analytics queries, revenue widgets, visits/spend dashboard calculations, forecasts or tax estimates are needed now. Operational payment amounts and outstanding-payment records remain visible.
+- Document cancellation text is presentation, not policy authority. Keep it consistent with approved server rules; warn about divergence rather than silently changing policies.
+
+### Required next implementation deliverable
+
+Produce a version-pinned feature/contract matrix covering each retained menu and action: V1 behavior, current V2 implementation, authoritative table/RPC, permission boundary, dependency, required adaptation and regression test. Then implement one stage per small reviewed change. Do not claim the full inventory or integration complete based only on the source review above. No live migration or deployment is part of this planning update.
+
