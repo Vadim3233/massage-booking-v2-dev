@@ -109,3 +109,14 @@ Updated: 2026-09-23. These are design decisions and intended requirements; imple
 **Decision:** Public bank details use explicit `VITE_BANK_*` configuration, matching V1's configuration approach. Finalization supplies the payment reference; the UI does not invent it before booking creation. Bank-transfer submission remains awaiting verification, and cash remains awaiting approval. No notification-delivery claims are made from the browser.
 
 **Reason:** The deployed V2 finalization contract returns the reference only after the atomic transaction. A client-side reference or preliminary order would restore the V1 architecture defect. Missing bank configuration is visible and prevents bank-transfer submission.
+
+
+## ADR-018 — Adapted V1 admin integration and deferred Analytics (2026-10-06)
+
+**Decision:** Integrate useful V1 operational workflows through V2-owned modules and narrow authorized contracts. Operational settings precede dependent Admin writes; secondary document/financial configuration follows. Analytics is deferred by user direction. The detailed scope and sequence live in V2_REBUILD_MASTER_PLAN.md sections 18–19.
+
+**Reason:** Calendar, client management and payments need durable shared configuration. Recreating V1's placeholders, browser business database or large workspace would recreate reliability problems.
+
+**Decision:** One calendar-block authority, revision-aware settings saves, preserved date overrides and historical price/address/payment snapshots. A Year view uses bounded lightweight occupancy data, not all historical bookings or analytics queries. Native browser/system Back owns gestures; P0 safeguards precede optional prefetch and Admin quick actions.
+
+**Reason:** Configuration edits and navigation must not silently invalidate persisted history, lose drafts or bypass server conflict/authorization checks. Optional performance/UI features must not weaken core reliability.
