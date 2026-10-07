@@ -10,5 +10,5 @@ const AdminApp = lazy(() => import('./admin/AdminApp.jsx'))
 
 export default function App() {
   if (supabase && window.location.pathname.replace(/\/$/, '') === '/admin/reset-password') return <ErrorBoundary><Suspense fallback={<p role="status">Loading Admin…</p>}><ResetPassword linkError={recoveryLinkError} /></Suspense></ErrorBoundary>
-  return <ErrorBoundary>{supabase ? (window.location.pathname.replace(/\/$/, '') === '/admin' ? <Suspense fallback={<p role="status">Loading Admin…</p>}><AdminApp /></Suspense> : <BookingFlow />) : <main className="booking-shell"><h1>Online booking is unavailable</h1><p role="alert">Booking configuration is missing. Please contact Vad.</p></main>}</ErrorBoundary>
+  return <ErrorBoundary>{supabase ? (/^\/admin(?:\/|$)/.test(window.location.pathname) ? <Suspense fallback={<p role="status">Loading Admin…</p>}><AdminApp /></Suspense> : <BookingFlow />) : <main className="booking-shell"><h1>Online booking is unavailable</h1><p role="alert">Booking configuration is missing. Please contact Vad.</p></main>}</ErrorBoundary>
 }

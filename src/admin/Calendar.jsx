@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { createCalendarApi } from './calendarApi.js'
 import { bookingState, clientName, dateLabel, dayTimeline, money, postcode, sessionSummary, shiftDate, time, today } from './calendarPresentation.js'
-import BookingDetails from './BookingDetails.jsx'
 const api = createCalendarApi(supabase)
 // One owner for all Calendar reads, including StrictMode's repeated mount effect.
 let inFlight
@@ -11,11 +10,10 @@ function load(date) {
   const promise = api.loadCalendarRange(date, shiftDate(date, 1)).finally(() => { if (inFlight?.promise === promise) inFlight = null })
   inFlight = { date, promise }; return promise
 }
-export default function Calendar({ signOut }) {
+export default function Calendar({ signOut, openBooking, revision }) {
   const [date, setDate] = useState(today)
   const [result, setResult] = useState(null)
   const [attempt, setAttempt] = useState(0)
-  const [selected, setSelected] = useState(null)
   const [now, setNow] = useState(Date.now)
   const [headerHidden, setHeaderHidden] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
@@ -35,14 +33,13 @@ export default function Calendar({ signOut }) {
   }, [])
   useEffect(() => {
     let live = true
-    load(date).then(data => { if (live) setResult({ date, attempt, data }) }, error => { if (live) setResult({ date, attempt, error: error.message }) })
+    load(date).then(data => { if (live) setResult({ date, attempt, revision, data }) }, error => { if (live) setResult({ date, attempt, revision, error: error.message }) })
     return () => { live = false }
-  }, [date, attempt])
-  const current = result?.date === date && result?.attempt === attempt ? result : null
+  }, [date, attempt, revision])
+  const current = result?.date === date && result?.attempt === attempt && result?.revision === revision ? result : null
   const data = current?.data
   const timeline = data && dayTimeline(data, date, now)
-  const booking = data?.bookings.find(row => row.id === selected)
-  function navigate(value) { if (!value) return; setSelected(null); setDate(value); setHeaderHidden(false) }
+  function navigate(value) { if (!value) return; setDate(value); setHeaderHidden(false) }
   return <>
     <header className={`admin-header ${headerHidden && !accountOpen ? 'is-hidden' : ''}`} onFocusCapture={() => setHeaderHidden(false)}>
       <div className="admin-toolbar">
@@ -76,7 +73,7 @@ export default function Calendar({ signOut }) {
         <ol className="admin-timeline" aria-label="Day timeline">
           {timeline.rows.map(row => <li key={`${row.kind}-${row.id}`} className={`admin-timeline-row admin-timeline-${row.kind}`} data-start={row.start}>
             <time className="admin-time">{time(row.start)}</time>
-            {row.kind === 'booking' ? <button className={`admin-card ${row.booking.booking_status === 'cancelled' ? 'cancelled' : ''}`} onClick={() => setSelected(row.booking.id)}>
+            {row.kind === 'booking' ? <button className={`admin-card ${row.booking.booking_status === 'cancelled' ? 'cancelled' : ''}`} onClick={() => openBooking(row.booking.id)}>
               <span className="admin-card-heading"><strong>{clientName(row.booking)}</strong><span className="admin-card-price">{money(row.booking.total_gbp)}</span></span>
               <span className="admin-card-treatment">{sessionSummary(row.booking)}</span>
               <span className="admin-card-postcode">{postcode(row.booking.postcode_snapshot)}</span>
@@ -88,6 +85,6 @@ export default function Calendar({ signOut }) {
           </li>)}
         </ol>
       </>}
-    </section>{booking && <BookingDetails booking={booking} now={now} close={() => setSelected(null)} />}
+    </section>
   </>
 }

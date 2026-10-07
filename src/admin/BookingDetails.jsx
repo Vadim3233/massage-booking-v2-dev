@@ -1,15 +1,15 @@
 import { useEffect, useRef } from 'react'
 import { bookingState, clientName, dateLabel, label, money, postcode, time } from './calendarPresentation.js'
-export default function BookingDetails({ booking: b, close, now }) {
+export default function BookingDetails({ booking: b, close, now, payment, returnFocus }) {
   const ref = useRef(null)
   useEffect(() => {
     const dialog = ref.current
-    const opener = document.activeElement
+    const opener = returnFocus || document.activeElement
     const overflow = document.body.style.overflow
     dialog.showModal()
     document.body.style.overflow = 'hidden'
     return () => { dialog.close(); document.body.style.overflow = overflow; opener?.focus({ preventScroll: true }) }
-  }, [])
+  }, [returnFocus])
   const stamp = value => value ? new Date(value).toLocaleString('en-GB', { timeZone: 'Europe/London' }) : 'Not recorded'
   const state = bookingState(b, now)
   const email = b.booking_email_snapshot || b.clients?.email
@@ -17,6 +17,7 @@ export default function BookingDetails({ booking: b, close, now }) {
     <header className="admin-details-bar"><button onClick={close} aria-label="Close details"><span aria-hidden="true">‹</span> Back</button><div><strong>{dateLabel(b.date)}</strong><span>{time(b.start_minutes)}–{time(b.start_minutes + b.treatment_duration_minutes)}</span></div></header>
     <div className="admin-details-content">
       <section className="admin-details-client"><h2 id="booking-title">{clientName(b)}</h2><p className={`admin-status ${state.tone}`}>{state.text}</p><p>Payment: {label(b.booking_payments?.method)} · {label(b.booking_payments?.status)}</p></section>
+      {payment && <section><h3>Payment</h3>{payment}</section>}
       <section><h3>Contact</h3><p>{email ? <a href={`mailto:${email}`}>{email}</a> : 'Email not recorded'}</p><p>{b.clients?.phone ? <a href={`tel:${b.clients.phone}`}>{b.clients.phone}</a> : 'Phone not recorded'}</p></section>
       <section><h3>Address</h3><address>{[b.address_line_1_snapshot, b.address_line_2_snapshot, b.city_snapshot, postcode(b.postcode_snapshot)].filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</address>{b.entry_instructions_snapshot && <p>{b.entry_instructions_snapshot}</p>}</section>
       <section><h3>Sessions</h3><ol className="admin-session-list">{[...b.booking_sessions].sort((a, b) => a.position - b.position).map((s, index) => <li key={s.id}>

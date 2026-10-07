@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
-import Calendar from './Calendar.jsx'
+import AdminWorkspace from './AdminWorkspace.jsx'
 import PasswordResetRequest from './PasswordResetRequest.jsx'
 import './admin.css'
 
@@ -32,7 +32,7 @@ export default function AdminApp() {
   }
   async function signOut() { const { error } = await supabase.auth.signOut(); if (error) setError(error.message) }
   return <main className="admin-shell">
-    {auth.state === 'admin' && !requestReset ? <Calendar signOut={signOut} /> : <section className="admin-login"><h1>VadMassage Admin</h1>
+    {auth.state === 'admin' && !requestReset ? <AdminWorkspace signOut={signOut} /> : <section className="admin-login"><h1>VadMassage Admin</h1>
       {passwordChanged && <p role="status">Password changed. Please sign in with your new password.</p>}
       {requestReset && <PasswordResetRequest onBack={() => setRequestReset(false)} />}
       {!requestReset && auth.state === 'checking' && <p role="status">Checking authentication…</p>}

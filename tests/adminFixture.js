@@ -1,8 +1,8 @@
 import { localFixture } from './localSupabase.js'
 import { unwrap } from '../src/client/booking/bookingApi.js'
 import { shiftDate } from '../src/admin/calendarPresentation.js'
-export async function adminFixture() {
-  const f = await localFixture(35)
+export async function adminFixture(offset = 35) {
+  const f = await localFixture(offset)
   const user = (await f.client.auth.getUser()).data.user
   const other = await unwrap(f.admin.from('clients').insert({ first_name: 'Alexandra'.repeat(12), last_name: 'Calendar', email: 'canonical@example.test', phone: '+447700900002' }).select().single())
   const base = { client_id: other.id, service_area_id: f.ids.area, date: f.date, start_minutes: 600, treatment_duration_minutes: 60, booking_status: 'confirmed', source_channel: 'web', address_line_1_snapshot: 'VeryLongStreet'.repeat(16), city_snapshot: 'London', postcode_snapshot: 'SW1A1AA', service_area_name_snapshot: 'Test area', service_subtotal_gbp: 85, total_gbp: 85, booking_email_snapshot: 'booking@example.test', client_note: 'Exact persisted note' }
