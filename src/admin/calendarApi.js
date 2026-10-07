@@ -36,5 +36,10 @@ export function createCalendarApi(client) {
       ])
       return { bookings, blocks, overrides, hours, holds }
     },
+    async loadAgendaRange(start, end) {
+      validateRange(start, end)
+      await authorized()
+      return read(client.from('bookings').select(bookingFields, { count: 'exact' }).gte('date', start).lt('date', end).order('date').order('start_minutes'))
+    },
   }
 }
