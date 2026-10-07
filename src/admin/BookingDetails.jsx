@@ -1,14 +1,18 @@
 import { useEffect, useRef } from 'react'
 import { bookingState, clientName, dateLabel, label, money, postcode, time } from './calendarPresentation.js'
+import { acquireBodyScrollLock } from './dialogScrollLock.js'
 export default function BookingDetails({ booking: b, close, now, payment, returnFocus }) {
   const ref = useRef(null)
   useEffect(() => {
     const dialog = ref.current
     const opener = returnFocus || document.activeElement
-    const overflow = document.body.style.overflow
     dialog.showModal()
-    document.body.style.overflow = 'hidden'
-    return () => { dialog.close(); document.body.style.overflow = overflow; opener?.focus({ preventScroll: true }) }
+    const releaseScrollLock = acquireBodyScrollLock()
+    return () => {
+      if (dialog.open) dialog.close()
+      releaseScrollLock()
+      opener?.focus({ preventScroll: true })
+    }
   }, [returnFocus])
   const stamp = value => value ? new Date(value).toLocaleString('en-GB', { timeZone: 'Europe/London' }) : 'Not recorded'
   const state = bookingState(b, now)
