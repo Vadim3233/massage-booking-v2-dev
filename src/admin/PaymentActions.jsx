@@ -1,16 +1,20 @@
 import { useEffect, useRef, useState } from 'react'
 import { actionLabels, paymentActions, paymentReviewApi } from './paymentReviewApi.js'
 import { clientName, dateLabel, money, time } from './calendarPresentation.js'
+import { acquireBodyScrollLock } from './dialogScrollLock.js'
 
 function Confirmation({ action, booking, cancel, confirm, busy }) {
   const ref = useRef(null)
   useEffect(() => {
     const opener = document.activeElement
-    const overflow = document.body.style.overflow
     const dialog = ref.current
     dialog.showModal()
-    document.body.style.overflow = 'hidden'
-    return () => { dialog.close(); document.body.style.overflow = overflow; opener?.focus({ preventScroll: true }) }
+    const releaseScrollLock = acquireBodyScrollLock()
+    return () => {
+      if (dialog.open) dialog.close()
+      releaseScrollLock()
+      opener?.focus({ preventScroll: true })
+    }
   }, [])
   const consequence = { reject: 'Reject this cash request and cancel the appointment. Its time will be released.', approve: 'Approve cash and confirm the appointment. This does not record payment received.', verify: 'Confirm that the bank transfer has actually arrived. This records payment received and confirms the appointment.', receive: 'Confirm that you have actually received this cash payment.' }[action]
   return <dialog ref={ref} className="admin-confirm" aria-labelledby="payment-confirm-title" onCancel={event => { event.preventDefault(); event.stopPropagation(); if (!busy) cancel() }}>
