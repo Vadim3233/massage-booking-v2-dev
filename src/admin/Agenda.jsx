@@ -27,7 +27,7 @@ export default function Agenda({ openBooking, revision }) {
   const [result, setResult] = useState(null)
   const [attempt, setAttempt] = useState(0)
   const [paging, setPaging] = useState(null)
-  const [pagingError, setPagingError] = useState('')
+  const [pagingError, setPagingError] = useState(null)
   const [now, setNow] = useState(Date.now)
   const readVersion = useRef(0)
 
@@ -38,8 +38,6 @@ export default function Agenda({ openBooking, revision }) {
     const version = ++readVersion.current
     const start = today()
     const end = shiftDate(start, CHUNK_DAYS)
-    setResult(null)
-    setPagingError('')
     loadRange(start, end).then(bookings => {
       if (live && version === readVersion.current) setResult({ start, end, attempt, revision, bookings })
     }, error => {
@@ -57,7 +55,7 @@ export default function Agenda({ openBooking, revision }) {
     const start = direction === 'older' ? shiftDate(current.start, -CHUNK_DAYS) : current.end
     const end = direction === 'older' ? current.start : shiftDate(current.end, CHUNK_DAYS)
     setPaging(direction)
-    setPagingError('')
+    setPagingError(null)
     try {
       const bookings = await loadRange(start, end)
       if (version !== readVersion.current) return
@@ -67,8 +65,8 @@ export default function Agenda({ openBooking, revision }) {
           ? { ...previous, start, bookings: [...bookings, ...previous.bookings] }
           : { ...previous, end, bookings: [...previous.bookings, ...bookings] }
       })
-    } catch (error) {
-      if (version === readVersion.current) setPagingError('Could not load more appointments. Please retry.')
+    } catch {
+      if (version === readVersion.current) setPagingError({ key: `${attempt}:${revision}`, message: 'Could not load more appointments. Please retry.' })
     } finally {
       if (version === readVersion.current) setPaging(null)
     }
@@ -105,7 +103,7 @@ export default function Agenda({ openBooking, revision }) {
           </ol>
         </section>)}
       </div>
-      {pagingError && <p role="alert">{pagingError}</p>}
+      {pagingError?.key === `${attempt}:${revision}` && <p role="alert">{pagingError.message}</p>}
       <button className="admin-agenda-load" disabled={Boolean(paging)} onClick={() => extend('newer')}>{paging === 'newer' ? 'Loading more…' : 'Load more upcoming appointments'}</button>
       <p className="admin-agenda-range">Loaded {dateLabel(current.start, { day: 'numeric', month: 'short', year: 'numeric' })} – {dateLabel(shiftDate(current.end, -1), { day: 'numeric', month: 'short', year: 'numeric' })}</p>
     </>}
