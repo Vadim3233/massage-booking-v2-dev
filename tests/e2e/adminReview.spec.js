@@ -59,7 +59,7 @@ test('signed-out exact booking deep link survives login and reload', async ({ pa
   await expect(page.getByRole('dialog')).toContainText(f.bookings[0].booking_reference)
   await page.getByRole('button', { name: 'Close details' }).click()
   await expect(page).toHaveURL(/\/admin$/)
-  await expect(page.getByLabel('Calendar date', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible()
 })
 test('bank verification persists and leaves the queue; cash approval and receipt remain separate', async ({ page }) => {
   await f.authorize(); await login(page)
@@ -154,7 +154,7 @@ test('Review load failure is retryable and More offers safe navigation and sign-
   const nav = page.getByRole('navigation', { name: 'Admin navigation' })
   await expect(nav.getByRole('link', { name: 'Clients', exact: true })).toBeVisible()
   await nav.getByRole('link', { name: 'Calendar', exact: true }).click()
-  await expect(page.getByLabel('Calendar date', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible()
   await nav.getByRole('link', { name: 'More', exact: true }).click()
   await expect(page.getByRole('link', { name: 'Working hours and special days' })).toBeVisible()
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
@@ -193,7 +193,7 @@ test('Calendar, Review and booking support browser Back and Forward', async ({ p
   await page.goForward(); await expect(page.getByRole('dialog')).toContainText(f.bookings[0].booking_reference)
   await page.goBack(); await page.goBack()
   await expect(page).toHaveURL(/\/admin$/)
-  await expect(page.getByLabel('Calendar date', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible()
 })
 
 test('revoked Admin access during confirmation cannot mutate the payment', async ({ page }) => {

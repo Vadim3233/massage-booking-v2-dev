@@ -15,7 +15,7 @@ async function login(page, route = '/admin') {
   await expect(page.getByRole('button', { name: '+ New booking', exact: true })).toBeVisible()
 }
 async function start(page, agenda = false) {
-  await login(page, agenda ? '/admin/agenda' : '/admin')
+  await login(page, agenda ? '/admin/agenda' : '/admin/day')
   if (!agenda) await page.getByLabel('Calendar date', { exact: true }).fill(f.date)
   await page.getByRole('button', { name: '+ New booking', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'New booking', exact: true })).toBeVisible()

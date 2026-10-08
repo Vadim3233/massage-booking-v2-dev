@@ -51,8 +51,10 @@ export default function AdminWorkspace({ signOut, ownerId }) {
   const creating = route.path === '/admin/bookings/new'
   const match = !creating && route.path.match(/^\/admin\/bookings\/([^/]+)$/)
   const context = match ? route.background : route.path + route.search
-  const surface = context?.split('?')[0]
+  const rawSurface = context?.split('?')[0]
   const date = new URLSearchParams(context?.split('?')[1]).get('date') || undefined
+  // Opening the Admin, or pressing Calendar, shows the Agenda. The day view lives at /admin/day (or /admin?date=...).
+  const surface = rawSurface === '/admin/day' ? '/admin' : rawSurface === '/admin' && !date ? '/admin/agenda' : rawSurface
   const clientParam = new URLSearchParams(context?.split('?')[1]).get('client') || undefined
   const profile = context?.split('?')[0].match(/^\/admin\/clients\/([0-9a-f-]{36})$/i)
   const calendarSurface = ['/admin', '/admin/agenda'].includes(surface)
@@ -89,7 +91,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
     <Suspense fallback={<p role="status">Loading Admin…</p>}>
       <div inert={Boolean(match)}>
       {calendarSurface && <nav className="admin-calendar-views" aria-label="Calendar views">
-        <a href="/admin" aria-current={surface === '/admin' ? 'page' : undefined} onClick={event => { event.preventDefault(); navigate('/admin') }}>Day</a>
+        <a href="/admin/day" aria-current={surface === '/admin' ? 'page' : undefined} onClick={event => { event.preventDefault(); navigate('/admin/day') }}>Day</a>
         <a href="/admin/agenda" aria-current={surface === '/admin/agenda' ? 'page' : undefined} onClick={event => { event.preventDefault(); navigate('/admin/agenda') }}>Agenda</a>
       </nav>}
       {surface === '/admin' && <Calendar key={date || 'today'} initialDate={date} signOut={signOut} openBooking={openBooking} revision={revision} newBooking={newBooking} />}

@@ -5,7 +5,7 @@ let f
 test.beforeEach(async () => { f = await adminFixture() })
 test.afterEach(async () => { await f?.cleanup() })
 async function login(page) {
-  await page.goto('/admin')
+  await page.goto('/admin/day')
   await expect(page.getByRole('heading', { name: 'Admin sign in' })).toBeVisible()
   await expect(page.getByText('Continue as guest')).toHaveCount(0)
   await page.getByLabel('Email', { exact: true }).fill(f.email)
