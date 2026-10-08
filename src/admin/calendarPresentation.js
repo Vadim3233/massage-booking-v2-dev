@@ -50,7 +50,7 @@ export function dayTimeline(data, date, now) {
     add('booking', booking.id, booking.start_minutes, booking.start_minutes + booking.treatment_duration_minutes, { booking })
     if (['confirmed', 'completed', 'awaiting_payment_verification', 'awaiting_cash_approval', 'awaiting_transfer'].includes(booking.booking_status)) buffers(booking)
   }
-  for (const block of data.blocks) add('block', block.id, block.start_minutes, block.end_minutes, { title: block.title || 'Blocked time' })
+  for (const block of data.blocks) add('block', block.id, block.start_minutes, block.end_minutes, { title: block.title || (block.kind === 'personal_event' ? 'Personal event' : 'Blocked time'), block })
   for (const hold of context.holds) {
     add('hold', hold.id, hold.start_minutes, hold.start_minutes + hold.treatment_duration_minutes)
     buffers(hold)

@@ -5,6 +5,7 @@ import './agenda.css'
 const Agenda = lazy(() => import('./Agenda.jsx'))
 const PaymentReview = lazy(() => import('./PaymentReview.jsx'))
 const Alerts = lazy(() => import('./Alerts.jsx'))
+const ScheduleSettings = lazy(() => import('./ScheduleSettings.jsx'))
 const BookingDestination = lazy(() => import('./BookingDestination.jsx'))
 const AdminNewBooking = lazy(() => import('./AdminNewBooking.jsx'))
 const readRoute = () => ({ path: window.location.pathname.replace(/\/$/, '') || '/admin', search: window.location.search, background: window.history.state?.adminBackground, returnTo: window.history.state?.adminReturnTo })
@@ -68,7 +69,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       <a href="/admin/review" aria-current={surface === '/admin/review' ? 'page' : undefined} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); navigate('/admin/review') } }}>Review</a>
       <a href="/admin/alerts" aria-current={surface === '/admin/alerts' ? 'page' : undefined} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); navigate('/admin/alerts') } }}>Alerts{unreadAlerts > 0 && <small className="admin-badge" aria-label={`${unreadAlerts} unread`}>{unreadAlerts > 99 ? '99+' : unreadAlerts}</small>}</a>
       <button disabled title="Clients is not built yet">Clients <small>Coming soon</small></button>
-      <a href="/admin/more" aria-current={surface === '/admin/more' ? 'page' : undefined} onClick={event => { event.preventDefault(); navigate('/admin/more') }}>More</a>
+      <a href="/admin/more" aria-current={['/admin/more', '/admin/schedule'].includes(surface) ? 'page' : undefined} onClick={event => { event.preventDefault(); navigate('/admin/more') }}>More</a>
     </nav>}
     <Suspense fallback={<p role="status">Loading Admin…</p>}>
       <div inert={Boolean(match)}>
@@ -81,8 +82,11 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {creating && <AdminNewBooking initialDate={date} ownerId={ownerId} registerGuard={registerGuard} onCancel={() => navigate(route.returnTo || '/admin')} onCreated={created} />}
       {surface === '/admin/review' && <PaymentReview openBooking={openBooking} revision={revision} />}
       {surface === '/admin/alerts' && <Alerts openBooking={openBooking} changed={refreshAlerts} />}
-      {surface === '/admin/more' && <section className="admin-review"><h1>More</h1><p>Settings are not built yet.</p><button onClick={signOut}>Sign out</button></section>}
-      {!creating && !match && !['/admin', '/admin/agenda', '/admin/review', '/admin/alerts', '/admin/more'].includes(surface) && <section className="admin-review"><h1>Admin page not found</h1><a href="/admin">Back to Calendar</a></section>}
+      {surface === '/admin/more' && <section className="admin-review"><h1>More</h1>
+        <ul className="admin-menu"><li><a href="/admin/schedule" onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); navigate('/admin/schedule') } }}>Working hours and special days</a></li></ul>
+        <button onClick={signOut}>Sign out</button></section>}
+      {surface === '/admin/schedule' && <><a className="admin-back-link" href="/admin/more" onClick={event => { event.preventDefault(); navigate('/admin/more') }}>← More</a><ScheduleSettings /></>}
+      {!creating && !match && !['/admin', '/admin/agenda', '/admin/review', '/admin/alerts', '/admin/more', '/admin/schedule'].includes(surface) && <section className="admin-review"><h1>Admin page not found</h1><a href="/admin">Back to Calendar</a></section>}
       </div>
       {match && <BookingDestination key={match[1]} id={match[1]} close={close} returnFocus={opener} changed={() => setRevision(value => value + 1)} />}
     </Suspense>

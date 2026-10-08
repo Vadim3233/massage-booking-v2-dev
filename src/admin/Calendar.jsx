@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { createCalendarApi } from './calendarApi.js'
 import { bookingState, clientName, dateLabel, dayTimeline, money, postcode, sessionSummary, shiftDate, time, today } from './calendarPresentation.js'
+const BlockDialog = lazy(() => import('./BlockDialog.jsx'))
 const api = createCalendarApi(supabase)
 // One owner for all Calendar reads, including StrictMode's repeated mount effect.
 let inFlight
@@ -17,6 +18,7 @@ export default function Calendar({ signOut, openBooking, revision, newBooking, i
   const [now, setNow] = useState(Date.now)
   const [headerHidden, setHeaderHidden] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
+  const [blockDialog, setBlockDialog] = useState(null)
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer) }, [])
   useEffect(() => {
     let previous = window.scrollY, distance = 0
@@ -62,7 +64,7 @@ export default function Calendar({ signOut, openBooking, revision, newBooking, i
         <button aria-label="Next day" onClick={() => navigate(shiftDate(date, 1))}>›</button>
       </nav>
     </header>
-    <div className="admin-create-entry"><button onClick={() => newBooking(date)}>+ New booking</button></div>
+    <div className="admin-create-entry"><button className="admin-secondary-entry" onClick={() => setBlockDialog({ date })}>Block time</button><button onClick={() => newBooking(date)}>+ New booking</button></div>
     <section className="admin-day" aria-label="Day appointments">
       <h1 className="admin-sr-only">Appointments for {dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h1>
       <p className="admin-day-caption">London time</p>
@@ -79,6 +81,9 @@ export default function Calendar({ signOut, openBooking, revision, newBooking, i
               <span className="admin-card-treatment">{sessionSummary(row.booking)}</span>
               <span className="admin-card-postcode">{postcode(row.booking.postcode_snapshot)}</span>
               <span className={`admin-status ${bookingState(row.booking, now).tone}`}>{bookingState(row.booking, now).text}</span>
+            </button> : row.kind === 'block' ? <button className="admin-timeline-entry block admin-block-button" onClick={() => setBlockDialog({ date, block: row.block })}>
+                <span>{row.title}</span>
+                <small>Until {time(row.end)} · tap to change</small>
             </button> : <div className={`admin-timeline-entry ${row.kind}`}>
                 <span>{row.kind === 'free' ? 'Free' : row.kind === 'buffer' ? 'Travel / buffer' : row.kind === 'hold' ? 'Temporary hold' : row.title}</span>
                 <small>Until {time(row.end)}{row.kind === 'free' ? ` · ${row.end - row.start} min` : ''}</small>
@@ -87,5 +92,6 @@ export default function Calendar({ signOut, openBooking, revision, newBooking, i
         </ol>
       </>}
     </section>
+    {blockDialog && <Suspense fallback={null}><BlockDialog date={blockDialog.date} block={blockDialog.block} close={() => setBlockDialog(null)} saved={() => { setBlockDialog(null); setAttempt(value => value + 1) }} /></Suspense>}
   </>
 }
