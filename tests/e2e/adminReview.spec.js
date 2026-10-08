@@ -156,7 +156,7 @@ test('Review load failure is retryable and More offers safe navigation and sign-
   await nav.getByRole('link', { name: 'Calendar', exact: true }).click()
   await expect(page.getByLabel('Calendar date', { exact: true })).toBeVisible()
   await nav.getByRole('link', { name: 'More', exact: true }).click()
-  await expect(page.getByText('Settings are not built yet.')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Working hours and special days' })).toBeVisible()
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Admin sign in' })).toBeVisible()
 })
