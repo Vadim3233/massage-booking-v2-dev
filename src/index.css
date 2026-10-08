@@ -1,6 +1,34 @@
+:root {
+  --ink: #253b36;
+  --ink-soft: #52625c;
+  --muted: #6d7a74;
+  --paper: #f7f6f2;
+  --surface: #ffffff;
+  --line: #d8dfda;
+  --line-strong: #becbbf;
+  --green: #255443;
+  --green-deep: #1e5646;
+  --green-soft: #eef3ec;
+  --gold: #b28342;
+  --gold-soft: #f8f1e4;
+  --danger: #8e3029;
+  --danger-line: #b45644;
+  --danger-soft: #fbece6;
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-ui: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: light;
+}
 * { box-sizing: border-box; }
-body { margin: 0; color: #253b36; background: #f7f6f2; font-family: Inter, system-ui, sans-serif; line-height: 1.55; }
+body { margin: 0; color: var(--ink); background: var(--paper); font-family: var(--font-ui); line-height: 1.55; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 button, input, textarea, select { font: inherit; }
 button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
-:focus-visible { outline: 3px solid #b28342; outline-offset: 3px; }
-a { color: #225c4d; }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+a { color: var(--green-deep); }
+::selection { background: var(--green-soft); }
+/* Small, quiet feedback on anything pressable, switched off for people who ask for less motion. */
+button, a { transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease; }
+button:not(:disabled):active { transform: translateY(1px); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; scroll-behavior: auto !important; }
+  button:not(:disabled):active { transform: none; }
+}

@@ -5,7 +5,7 @@
 .admin-new-booking h3 { font-size: 16px; margin: 0 0 8px; }
 .anb-mobile-progress, .anb-hint { font-size: 13px; color: #596b63; margin: 8px 0; }
 .admin-new-booking label:not(.anb-radio) { display: grid; gap: 4px; font-size: 14px; margin: 12px 0; }
-.admin-new-booking input:not([type=radio]):not([type=checkbox]), .admin-new-booking select, .admin-new-booking textarea { width: 100%; min-width: 0; min-height: 44px; border: 1px solid #86968c; border-radius: 6px; padding: 8px 10px; background: white; color: #253b36; font-size: 16px; }
+.admin-new-booking input:not([type=radio]):not([type=checkbox]), .admin-new-booking select, .admin-new-booking textarea { width: 100%; min-width: 0; min-height: 44px; border: 1px solid #86968c; border-radius: 6px; padding: 8px 10px; background: white; color: var(--ink); font-size: 16px; }
 .admin-new-booking textarea { min-height: 88px; resize: vertical; }
 .admin-new-booking fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 .admin-new-booking legend { font-weight: 650; font-size: 15px; padding: 0; }
@@ -15,33 +15,33 @@
 .anb-client-list li + li { margin-top: 6px; }
 .anb-client-list button { width: 100%; display: grid; text-align: left; gap: 2px; overflow-wrap: anywhere; }
 .anb-client-list button span { font-size: 13px; }
-.admin-new-booking button[aria-pressed=true], .admin-shell .admin-new-booking .anb-primary { background: #253b36; border-color: #253b36; color: white; }
+.admin-new-booking button[aria-pressed=true], .admin-shell .admin-new-booking .anb-primary { background: var(--ink); border-color: var(--ink); color: white; }
 .anb-radio { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 0; font-size: 14px; }
-.admin-new-booking .anb-radio input { flex: 0 0 20px; width: 20px; height: 20px; min-height: 20px; margin: 0; accent-color: #253b36; }
-.anb-section, .anb-inline-client, .admin-new-booking .anb-session { border-top: 1px solid #d8dfda; margin-top: 20px; padding-top: 16px; }
+.admin-new-booking .anb-radio input { flex: 0 0 20px; width: 20px; height: 20px; min-height: 20px; margin: 0; accent-color: var(--ink); }
+.anb-section, .anb-inline-client, .admin-new-booking .anb-session { border-top: 1px solid var(--line); margin-top: 20px; padding-top: 16px; }
 .anb-inline-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0; }
 .anb-inline-actions > span { font-size: 14px; }
 .admin-new-booking address { font-style: normal; font-size: 14px; margin: 8px 0; }
 .anb-preferences { margin: 8px 0; }
-.anb-preferences details { border-bottom: 1px solid #d8dfda; }
+.anb-preferences details { border-bottom: 1px solid var(--line); }
 .anb-preferences summary { cursor: pointer; padding: 12px 0; min-height: 44px; font-size: 14px; }
 .anb-preferences summary span { display: block; margin-left: 16px; color: #596b63; font-size: 13px; }
 .anb-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 0 12px; }
 .anb-chips button { font-size: 14px; }
 .anb-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(66px, 1fr)); gap: 8px; margin: 16px 0; }
-.anb-price { margin: 20px 0; border-top: 1px solid #d8dfda; padding-top: 12px; font-size: 14px; }
+.anb-price { margin: 20px 0; border-top: 1px solid var(--line); padding-top: 12px; font-size: 14px; }
 .anb-price > div { display: flex; justify-content: space-between; gap: 16px; margin: 4px 0; }
 .anb-price dd { margin: 0; font-variant-numeric: tabular-nums; }
-.anb-price > div:last-child { font-size: 18px; font-weight: 650; border-top: 1px solid #d8dfda; margin-top: 10px; padding-top: 10px; }
+.anb-price > div:last-child { font-size: 18px; font-weight: 650; border-top: 1px solid var(--line); margin-top: 10px; padding-top: 10px; }
 .anb-review-summary h3 { font-size: 20px; }
 .anb-review-summary p { margin: 4px 0; }
 .anb-review-session { margin: 12px 0; font-size: 14px; }
 .anb-review-session p { margin: 4px 0; color: #596b63; }
 .anb-note { white-space: pre-wrap; }
-.anb-footer { position: sticky; bottom: 0; z-index: 2; display: grid; grid-template-columns: minmax(70px, 1fr) minmax(0, 2fr); gap: 12px; padding: 12px 0 max(12px, env(safe-area-inset-bottom)); background: #f7f6f2; border-top: 1px solid #d8dfda; margin-top: 20px; }
+.anb-footer { position: sticky; bottom: 0; z-index: 2; display: grid; grid-template-columns: minmax(70px, 1fr) minmax(0, 2fr); gap: 12px; padding: 12px 0 max(12px, env(safe-area-inset-bottom)); background: var(--paper); border-top: 1px solid var(--line); margin-top: 20px; }
 .admin-new-booking :is(input, select, textarea, button, summary) { scroll-margin-block: 80px; }
 .anb-error { color: #842d2d; border-left: 3px solid currentColor; padding: 8px 12px; background: #fff0eb; }
 .anb-progress { display: none; }
 @media (min-width: 600px) { .admin-new-booking { padding: 20px 24px; } .anb-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } .anb-wide { grid-column: 1 / -1; } }
-@media (min-width: 768px) { .anb-mobile-progress { display: none; } .anb-progress { display: flex; list-style: none; padding: 0; margin: 24px 0; gap: 16px; font-size: 13px; } .anb-progress li { display: flex; align-items: baseline; gap: 5px; color: #596b63; } .anb-progress li[aria-current] { color: #253b36; font-weight: 700; } .anb-footer { grid-template-columns: 120px 200px; justify-content: end; } }
+@media (min-width: 768px) { .anb-mobile-progress { display: none; } .anb-progress { display: flex; list-style: none; padding: 0; margin: 24px 0; gap: 16px; font-size: 13px; } .anb-progress li { display: flex; align-items: baseline; gap: 5px; color: #596b63; } .anb-progress li[aria-current] { color: var(--ink); font-weight: 700; } .anb-footer { grid-template-columns: 120px 200px; justify-content: end; } }
 @media (prefers-reduced-motion: reduce) { .admin-new-booking * { scroll-behavior: auto; } }

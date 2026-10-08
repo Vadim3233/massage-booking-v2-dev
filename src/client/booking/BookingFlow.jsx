@@ -88,8 +88,8 @@ export default function BookingFlow() {
     return userId
   }
   return <main className="booking-shell">
-    <header className="brand"><a href="/">VM <span>VadMassage</span></a><span>Massage at your place</span></header>
-    <nav aria-label="Booking progress"><ol className="progress">{STEPS.map((label, index) => <li key={label} aria-current={step === index ? 'step' : undefined}>{label}</li>)}</ol></nav>
+    <header className="brand"><a href="/"><b className="brand-mark" aria-hidden="true">VM</b>VadMassage</a><span>Massage at your place</span></header>
+    <nav aria-label="Booking progress"><p className="progress-summary">Step {Math.min(step + 1, STEPS.length)} of {STEPS.length} · {STEPS[Math.min(step, STEPS.length - 1)]}</p><div className="progress-bar" aria-hidden="true"><span style={{ width: `${(Math.min(step + 1, STEPS.length) / STEPS.length) * 100}%` }} /></div><ol className="progress">{STEPS.map((label, index) => <li key={label} aria-current={step === index ? 'step' : undefined}>{label}</li>)}</ol></nav>
     {!draft.bookingId && <HoldNotice hold={draft.hold} remaining={remaining} busy={busy} pending={draft.pending} error={error} extend={store.extendHold} release={store.releaseHold} />}
     {error && step !== 6 && <p role="alert" className="error">{error}</p>}
     {auth.error && <p role="alert" className="error">{auth.error}</p>}

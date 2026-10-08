@@ -5,6 +5,7 @@ import PasswordResetRequest from './PasswordResetRequest.jsx'
 import './admin.css'
 
 export default function AdminApp() {
+  useEffect(() => { const previous = document.title; document.title = 'Admin · VadMassage'; return () => { document.title = previous } }, [])
   const [requestReset, setRequestReset] = useState(new URLSearchParams(window.location.search).get('reset') === 'request')
   const passwordChanged = new URLSearchParams(window.location.search).get('password') === 'changed'
   const [auth, setAuth] = useState({ state: 'checking' })

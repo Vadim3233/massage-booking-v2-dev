@@ -1,13 +1,13 @@
 .account-list { list-style: none; padding: 0; margin: 12px 0 28px; display: grid; gap: 10px; }
 .booking-shell button.account-booking { display: grid; gap: 2px; width: 100%; text-align: left; padding: 14px 16px; }
 .account-when { font-weight: 650; }
-.account-what { font-size: 14px; color: #52625c; }
-.account-status { font-size: 12px; font-weight: 650; color: #6d7a74; }
-.account-status--confirmed { color: #1e5646; }
-.account-status--cancelled, .account-status--no_show { color: #8e3029; }
-.account-note { padding: 12px 14px; margin: 16px 0; border-left: 3px solid #467660; background: #eef3ec; border-radius: 0 8px 8px 0; }
-.account-note--fee { border-left-color: #b28342; background: #f8f1e4; }
-.booking-shell button.account-danger { border-color: #b45644; color: #8e3029; }
-.booking-shell button.account-danger:hover:not(:disabled) { background: #fbece6; border-color: #8e3029; }
+.account-what { font-size: 14px; color: var(--ink-soft); }
+.account-status { font-size: 12px; font-weight: 650; color: var(--muted); }
+.account-status--confirmed { color: var(--green-deep); }
+.account-status--cancelled, .account-status--no_show { color: var(--danger); }
+.account-note { padding: 12px 14px; margin: 16px 0; border-left: 3px solid #467660; background: var(--green-soft); border-radius: 0 8px 8px 0; }
+.account-note--fee { border-left-color: var(--gold); background: var(--gold-soft); }
+.booking-shell button.account-danger { border-color: var(--danger-line); color: var(--danger); }
+.booking-shell button.account-danger:hover:not(:disabled) { background: var(--danger-soft); border-color: var(--danger); }
 .booking-shell button.account-back { border: 0; background: none; padding: 8px 0; min-height: 44px; }
 .booking-shell button.primary.account-inline { display: inline-block; width: auto; margin-top: 0; }

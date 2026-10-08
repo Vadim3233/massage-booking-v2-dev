@@ -170,6 +170,7 @@ function BookingList({ open }) {
 }
 
 export default function AccountApp() {
+  useEffect(() => { const previous = document.title; document.title = 'Your bookings · VadMassage'; return () => { document.title = previous } }, [])
   const auth = useClientAuth(supabase)
   const [selected, setSelected] = useState(() => new URLSearchParams(window.location.search).get('booking'))
   const [revision, setRevision] = useState(0)
@@ -181,7 +182,7 @@ export default function AccountApp() {
     window.history.replaceState(null, '', url)
   }
   return <main className="booking-shell">
-    <header className="brand"><a href="/">VM <span>VadMassage</span></a><span>Your bookings</span></header>
+    <header className="brand"><a href="/"><b className="brand-mark" aria-hidden="true">VM</b>VadMassage</a><span>Your bookings</span></header>
     {!auth.ready && <p role="status">Checking your account…</p>}
     {auth.ready && !auth.session && <AuthPanel client={supabase} heading="Sign in to see your bookings" redirectTo={`${window.location.origin}/account`} />}
     {auth.ready && auth.session && (selected

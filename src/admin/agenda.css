@@ -1,6 +1,6 @@
-.admin-calendar-views { display: flex; gap: 6px; padding: 8px; background: #f7f6f2; border-bottom: 1px solid #d8dfda; }
-.admin-calendar-views a { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; min-width: 88px; padding: 4px 14px; border: 1px solid #cfd8d1; border-radius: 999px; color: #253b36; text-decoration: none; background: white; font-size: 14px; font-weight: 600; }
-.admin-calendar-views a[aria-current="page"] { background: #253b36; border-color: #253b36; color: white; }
+.admin-calendar-views { display: flex; gap: 6px; padding: 8px; background: var(--paper); border-bottom: 1px solid var(--line); }
+.admin-calendar-views a { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; min-width: 88px; padding: 4px 14px; border: 1px solid #cfd8d1; border-radius: 999px; color: var(--ink); text-decoration: none; background: white; font-size: 14px; font-weight: 600; }
+.admin-calendar-views a[aria-current="page"] { background: var(--ink); border-color: var(--ink); color: white; }
 
 .admin-agenda { padding: 8px 8px 28px; }
 .admin-agenda-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
@@ -11,12 +11,12 @@
 .admin-agenda-heading > div { flex: 1 1 180px; }
 .admin-agenda-heading > .admin-new-booking-entry { width: auto; flex: 0 0 auto; font-size: 14px; }
 .admin-agenda-days { margin: 8px 0; }
-.admin-agenda-day { padding: 14px 0 18px; border-top: 1px solid #d8dfda; }
+.admin-agenda-day { padding: 14px 0 18px; border-top: 1px solid var(--line); }
 .admin-agenda-day-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .admin-agenda-day-heading h2 { margin: 0; font-size: 17px; line-height: 1.3; }
 .admin-agenda-day-heading span { color: #596b63; font-size: 12px; white-space: nowrap; }
 .admin-agenda-load { width: 100%; margin: 8px 0; }
-.admin-agenda-range { margin: 10px 0 0; color: #65746c; text-align: center; font-size: 12px; }
+.admin-agenda-range { margin: 10px 0 0; color: var(--muted); text-align: center; font-size: 12px; }
 
 @media (min-width: 360px) {
   .admin-calendar-views, .admin-agenda { padding-inline: 12px; }
