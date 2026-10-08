@@ -15,11 +15,11 @@ insert into public.clients(id, auth_user_id, first_name, last_name, email) value
   ('00000000-0000-4000-8000-00000000a202', '00000000-0000-0000-0000-00000000a102', 'Self', 'Two', 'self-two@example.test');
 
 create function pg_temp.slot_date(p_offset interval) returns date language sql as $$
-  select ((now() + p_offset) at time zone 'Europe/London')::date;
+  select ((now() at time zone 'Europe/London') + p_offset)::date;
 $$;
 create function pg_temp.slot_start(p_offset interval) returns integer language sql as $$
-  select (floor((extract(hour from (now() + p_offset) at time zone 'Europe/London') * 60
-    + extract(minute from (now() + p_offset) at time zone 'Europe/London')) / 30) * 30)::integer;
+  select (floor((extract(hour from (now() at time zone 'Europe/London') + p_offset) * 60
+    + extract(minute from (now() at time zone 'Europe/London') + p_offset)) / 30) * 30)::integer;
 $$;
 create function pg_temp.new_booking(p_id uuid, p_client uuid, p_status text, p_offset interval, p_method text, p_payment text,
   p_created_ago interval default interval '3 days') returns void language plpgsql as $$
@@ -38,7 +38,11 @@ create function pg_temp.set_claims(p_user text) returns void language sql as $$
 $$;
 
 insert into public.working_hours_overrides(date, available, start_minutes, end_minutes, start_mode)
-select pg_temp.slot_date(interval '1 day' * d), true, 600, 1200, 'flexible' from unnest(array[0, 1, 5, 6, 7, 8, 9, 10, 40, 41]) d;
+select pg_temp.slot_date(interval '1 day' * d), true, 0, 1440, 'flexible' from unnest(array[0, 1, 5, 6, 7, 8, 10, 40, 41]) d;
+-- Whatever time of day the test runs, bookings made "a few hours from now" fall inside working hours. Day 9 keeps
+-- ordinary hours, so a late evening start there is genuinely outside the offered times.
+insert into public.working_hours_overrides(date, available, start_minutes, end_minutes, start_mode)
+values (pg_temp.slot_date(interval '9 days'), true, 600, 1200, 'flexible');
 
 -- ---------------------------------------------------------------------------------------------
 -- Privileges

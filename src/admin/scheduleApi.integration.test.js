@@ -39,13 +39,14 @@ describe('schedule control against local Supabase', () => {
 
   it('manages blocked time and personal events, recording who made them', async () => {
     await f.authorize()
-    await api.createBlock({ kind: 'personal_event', date: DATE, start_minutes: 600, end_minutes: 660, title: 'Dentist', notes: 'Bring forms' })
+    const group = await api.saveBlock(null, { kind: 'personal_event', start_date: DATE, end_date: DATE, start_minutes: 600, end_minutes: 660, title: 'Dentist', notes: 'Bring forms' })
     const row = (await f.admin.from('calendar_blocks').select('*').eq('date', DATE).single()).data
-    expect(row).toMatchObject({ kind: 'personal_event', title: 'Dentist', notes: 'Bring forms', created_by: f.user.id })
-    await api.updateBlock(row.id, { kind: 'blocked', date: DATE, start_minutes: 0, end_minutes: 1440, title: '', notes: '' })
-    expect((await f.admin.from('calendar_blocks').select('*').eq('id', row.id).single()).data).toMatchObject({ kind: 'blocked', start_minutes: 0, end_minutes: 1440, title: null })
-    await api.deleteBlock(row.id)
-    expect((await f.admin.from('calendar_blocks').select('id').eq('id', row.id)).data).toEqual([])
+    expect(row).toMatchObject({ kind: 'personal_event', title: 'Dentist', notes: 'Bring forms', created_by: f.user.id, group_id: group })
+    await api.saveBlock(group, { kind: 'blocked', start_date: DATE, end_date: DATE, start_minutes: 0, end_minutes: 1440, title: '', notes: '' })
+    expect((await f.admin.from('calendar_blocks').select('*').eq('id', row.id).maybeSingle()).data).toBeNull()
+    expect((await f.admin.from('calendar_blocks').select('*').eq('group_id', group).single()).data).toMatchObject({ kind: 'blocked', start_minutes: 0, end_minutes: 1440, title: null })
+    await api.deleteBlock(group)
+    expect((await f.admin.from('calendar_blocks').select('id').eq('group_id', group)).data).toEqual([])
   })
 
   it('warns about live bookings a change would clash with, without moving them', async () => {
@@ -57,7 +58,7 @@ describe('schedule control against local Supabase', () => {
   })
 
   it('refuses everyone who is not an Admin, and never shows raw errors', async () => {
-    await expect(api.createBlock({ kind: 'blocked', date: DATE, start_minutes: 600, end_minutes: 660, title: '', notes: '' })).rejects.toThrow('Could not save. Please check your connection and try again.')
+    await expect(api.saveBlock(null, { kind: 'blocked', start_date: DATE, end_date: DATE, start_minutes: 600, end_minutes: 660, title: '', notes: '' })).rejects.toThrow('Could not save. Please check your connection and try again.')
     await expect(api.conflicts(DATE, 0, 1440)).rejects.toThrow('Could not save')
     expect((await f.admin.from('calendar_blocks').select('id').eq('date', DATE)).data).toEqual([])
   })

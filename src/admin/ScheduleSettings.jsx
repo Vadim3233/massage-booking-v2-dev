@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { clock, scheduleApi, timeOptions, validateHours, WEEKDAYS } from './scheduleApi.js'
+import { clock, groupBlocks, scheduleApi, timeOptions, validateHours, WEEKDAYS } from './scheduleApi.js'
 import { dateLabel, today } from './calendarPresentation.js'
+import BlockDialog from './BlockDialog.jsx'
 
 const START_OPTIONS = timeOptions(false)
 const END_OPTIONS = timeOptions(true).filter(minutes => minutes > 0)
@@ -67,6 +68,40 @@ function WeeklyHours({ api }) {
     {message && <p role="status">{message}</p>}
     <button type="submit" disabled={busy || problems.some(Boolean)}>{busy ? 'Saving…' : 'Save my hours'}</button>
   </form>
+}
+
+const short = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }
+
+// Time blocked for a holiday, an event or a few hours: one block can run over several days.
+function BlockedTime({ api }) {
+  const [blocks, setBlocks] = useState(null)
+  const [error, setError] = useState('')
+  const [attempt, setAttempt] = useState(0)
+  const [dialog, setDialog] = useState(null)
+  useEffect(() => {
+    let live = true
+    api.blocksFrom(today()).then(rows => { if (live) { setBlocks(groupBlocks(rows)); setError('') } }, failure => { if (live) setError(failure.message) })
+    return () => { live = false }
+  }, [api, attempt])
+  const describe = item => {
+    const sameDay = item.start_date === item.end_date
+    const allDay = item.start_minutes === 0 && item.end_minutes === 1440
+    if (sameDay) return `${dateLabel(item.start_date, short)}${allDay ? ', all day' : `, ${clock(item.start_minutes)}–${clock(item.end_minutes)}`}`
+    return `${dateLabel(item.start_date, short)}${item.start_minutes === 0 ? '' : ` ${clock(item.start_minutes)}`} to ${dateLabel(item.end_date, short)}${item.end_minutes === 1440 ? '' : ` ${clock(item.end_minutes)}`}`
+  }
+  return <section className="admin-blocked-time" aria-labelledby="blocked-time-title">
+    <h3 id="blocked-time-title">Time blocked</h3>
+    <p className="admin-detail-hint">Away for a few days, or only some hours? Block that time. Pick a start and an end, like an event in your phone calendar.</p>
+    <button onClick={() => setDialog({ date: today() })}>Block time</button>
+    {error && <p role="alert">{error}</p>}
+    {!blocks && !error && <p role="status">Loading blocked time…</p>}
+    {blocks && !blocks.length && <p>No time is blocked.</p>}
+    {blocks?.length > 0 && <ul className="admin-special-list">{blocks.map(item => <li key={item.group_id}>
+      <div><strong>{item.title || (item.kind === 'personal_event' ? 'Personal event' : 'Not available')}</strong><span>{describe(item)}</span></div>
+      <div className="admin-payment-buttons"><button onClick={() => setDialog({ date: item.start_date, block: { group_id: item.group_id, kind: item.kind, title: item.title, notes: item.notes, date: item.start_date, start_minutes: item.start_minutes, end_minutes: item.end_minutes } })}>Change</button></div>
+    </li>)}</ul>}
+    {dialog && <BlockDialog date={dialog.date} block={dialog.block} api={api} close={() => setDialog(null)} saved={() => { setDialog(null); setAttempt(value => value + 1) }} />}
+  </section>
 }
 
 function SpecialDays({ api }) {
@@ -139,6 +174,7 @@ function SpecialDays({ api }) {
         <span>{item.available ? `${clock(item.start_minutes)}–${clock(item.end_minutes)}` : 'Day off'}{item.note ? ` · ${item.note}` : ''}</span></div>
       <div className="admin-payment-buttons"><button disabled={busy} onClick={() => open({ ...item, note: item.note || '' })}>Change</button><button disabled={busy} onClick={() => remove(item.date)}>Remove</button></div>
     </li>)}</ul>}
+    <BlockedTime api={api} />
   </section>
 }
 

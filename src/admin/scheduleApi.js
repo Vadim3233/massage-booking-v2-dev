@@ -21,11 +21,28 @@ export function validateHours(entry) {
   }
   return ''
 }
+// A block runs from a date and time to a later date and time, like an event in a phone calendar.
 export function validateBlock(block) {
-  if (!block.date) return 'Choose a date.'
+  if (!block.start_date) return 'Choose a date.'
+  if (!block.end_date) return 'Choose an end date.'
   if (block.kind === 'personal_event' && !block.title.trim()) return 'Give the personal event a name.'
-  if (block.start_minutes >= block.end_minutes) return 'The end time must be after the start time.'
+  if (block.end_date < block.start_date) return 'The end date cannot be before the start date.'
+  if (block.end_date === block.start_date && block.start_minutes >= block.end_minutes) return 'The end time must be after the start time.'
+  if (daysBetween(block.start_date, block.end_date) > 366) return 'A block can cover up to a year.'
   return ''
+}
+export const daysBetween = (from, to) => Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000)
+
+// Rows that share a group_id are one block; this describes it from its first start to its last end.
+export function groupBlocks(rows) {
+  const groups = new Map()
+  for (const row of rows) groups.set(row.group_id, [...(groups.get(row.group_id) || []), row])
+  return [...groups.values()].map(days => {
+    const sorted = [...days].sort((a, b) => a.date.localeCompare(b.date) || a.start_minutes - b.start_minutes)
+    const first = sorted[0], last = sorted.at(-1)
+    return { group_id: first.group_id, kind: first.kind, title: first.title || '', notes: first.notes || '',
+      start_date: first.date, start_minutes: first.start_minutes, end_date: last.date, end_minutes: last.end_minutes }
+  })
 }
 
 const failure = () => new Error('Could not save. Please check your connection and try again.')
@@ -53,14 +70,13 @@ export function createScheduleApi(client) {
       const rows = await run(client.rpc('admin_schedule_conflicts', { p_date: date, p_start_minutes: start, p_end_minutes: end }))
       return rows
     },
-    async createBlock(block) {
-      const { data: user } = await client.auth.getUser()
-      return run(client.from('calendar_blocks').insert({ kind: block.kind, date: block.date, start_minutes: block.start_minutes, end_minutes: block.end_minutes,
-        title: block.title.trim() || null, notes: block.notes?.trim() || null, created_by: user?.user?.id || null }))
-    },
-    updateBlock: (id, block) => run(client.from('calendar_blocks').update({ kind: block.kind, date: block.date, start_minutes: block.start_minutes, end_minutes: block.end_minutes,
-      title: block.title.trim() || null, notes: block.notes?.trim() || null }).eq('id', id)),
-    deleteBlock: id => run(client.from('calendar_blocks').delete().eq('id', id)),
+    // One command saves every day of a block together; groupId replaces an existing block.
+    saveBlock: (groupId, block) => run(client.rpc('admin_save_block_range', { p_group_id: groupId || null, p_kind: block.kind, p_title: block.title.trim() || null, p_notes: block.notes?.trim() || null,
+      p_start_date: block.start_date, p_start_minutes: block.start_minutes, p_end_date: block.end_date, p_end_minutes: block.end_minutes })),
+    rangeConflicts: block => run(client.rpc('admin_block_range_conflicts', { p_start_date: block.start_date, p_start_minutes: block.start_minutes, p_end_date: block.end_date, p_end_minutes: block.end_minutes })),
+    blockGroup: groupId => run(client.from('calendar_blocks').select('id,group_id,kind,title,notes,date,start_minutes,end_minutes').eq('group_id', groupId).order('date')),
+    blocksFrom: from => run(client.from('calendar_blocks').select('id,group_id,kind,title,notes,date,start_minutes,end_minutes').gte('date', from).order('date').order('start_minutes').limit(800)),
+    deleteBlock: groupId => run(client.from('calendar_blocks').delete().eq('group_id', groupId)),
   }
 }
 export const scheduleApi = createScheduleApi(supabase)
