@@ -7,7 +7,7 @@ select has_function('public','admin_search_clients',array['text']);
 select has_function('public','admin_client_addresses',array['uuid']);
 select has_function('public','admin_create_client',array['jsonb','uuid']);
 select has_function('public','admin_quote_booking',array['uuid','jsonb','uuid[]']);
-select has_function('public','admin_booking_availability',array['date','integer']);
+select has_function('public','admin_booking_availability',array['date','integer','uuid']);
 select has_function('public','admin_create_booking',array['jsonb','uuid']);
 select has_function('public','admin_record_bank_transfer_received',array['uuid','uuid','timestamp with time zone','timestamp with time zone']);
 select ok(not has_table_privilege('authenticated','public.bookings','INSERT,UPDATE,DELETE,TRUNCATE'),'No browser booking mutation grants');
