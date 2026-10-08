@@ -121,6 +121,7 @@ describe('real local Supabase client adapter', () => {
     await expect(fixture.publicApi.extend(next, ownKey)).rejects.toMatchObject({ code: '23P01' })
   })
   it('can request cash for a returning client without marking it paid', async () => {
+    await unwrap(fixture.admin.from('bookings').update({ booking_status: 'confirmed' }).eq('id', result.booking_id))
     await unwrap(fixture.admin.from('bookings').update({ booking_status: 'completed' }).eq('id', result.booking_id))
     await unwrap(fixture.admin.from('booking_payments').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('booking_id', result.booking_id))
     const cashKey = fixture.key()

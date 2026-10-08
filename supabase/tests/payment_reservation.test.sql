@@ -166,6 +166,7 @@ set local role authenticated;
 select is(public.declare_my_bank_transfer((select id from payment_ids))->'booking_payments'->>'status','awaiting_verification','declaration retry remains valid after original deadline');
 reset role;
 -- Administrator completion permits another booking for this returning client.
+update public.bookings set booking_status='confirmed' where id=(select id from payment_ids);
 update public.bookings set booking_status='completed' where id=(select id from payment_ids);
 update public.booking_payments set status='paid',paid_at=now() where booking_id=(select id from payment_ids);
 -- A fresh date is used so the completed appointment does not conflict.

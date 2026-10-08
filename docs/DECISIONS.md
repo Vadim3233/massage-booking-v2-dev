@@ -109,3 +109,9 @@ Updated: 2026-09-23. These are design decisions and intended requirements; imple
 **Decision:** Public bank details use explicit `VITE_BANK_*` configuration, matching V1's configuration approach. Finalization supplies the payment reference; the UI does not invent it before booking creation. Bank-transfer submission remains awaiting verification, and cash remains awaiting approval. No notification-delivery claims are made from the browser.
 
 **Reason:** The deployed V2 finalization contract returns the reference only after the atomic transaction. A client-side reference or preliminary order would restore the V1 architecture defect. Missing bank configuration is visible and prevents bank-transfer submission.
+
+## ADR-018 — Status changes are guarded and recorded in the database (2026-10-09)
+
+**Decision:** `bookings.booking_status` and `booking_payments.status` may only move along the allowed transitions defined in `20261009100000_booking_status_guard_and_audit.sql` (for example `cancelled`, `completed` and `no_show` are final, and cash must be approved before it is paid). Every booking or payment creation and status change is recorded in the append-only `booking_status_events` table with the acting user, actor type and role. Admins can read the history; nobody can edit or delete it.
+
+**Reason:** Browser roles already cannot write these tables, but SECURITY DEFINER commands, the service role and manual SQL could still make an impossible change with no record. Tests and fixtures must now reach a state by a legal path or by inserting rows in that state. History starts at this migration and is not backfilled.
