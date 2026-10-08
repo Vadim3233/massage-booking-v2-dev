@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { bookingState, clientName, dateLabel, label, money, postcode, time } from './calendarPresentation.js'
 import { acquireBodyScrollLock } from './dialogScrollLock.js'
 import { contactLinks } from './contactLinks.js'
+import ClientNotesSection from './ClientNotesSection.jsx'
 export default function BookingDetails({ booking: b, close, now, payment, lifecycle, returnFocus }) {
   const ref = useRef(null)
   useEffect(() => {
@@ -26,6 +27,7 @@ export default function BookingDetails({ booking: b, close, now, payment, lifecy
       {payment && <section><h3>Payment</h3>{payment}</section>}
       {lifecycle && <section><h3>Appointment</h3>{lifecycle}</section>}
       <section><h3>Contact</h3><p>{email ? <a href={`mailto:${email}`}>{email}</a> : 'Email not recorded'}</p><p>{b.clients?.phone ? <a href={`tel:${b.clients.phone}`}>{b.clients.phone}</a> : 'Phone not recorded'}</p></section>
+      <ClientNotesSection clientId={b.client_id} />
       <section><h3>Address</h3><address>{[b.address_line_1_snapshot, b.address_line_2_snapshot, b.city_snapshot, postcode(b.postcode_snapshot)].filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</address>{b.entry_instructions_snapshot && <p>{b.entry_instructions_snapshot}</p>}</section>
       <section><h3>Sessions</h3><ol className="admin-session-list">{[...b.booking_sessions].sort((a, b) => a.position - b.position).map((s, index) => <li key={s.id}>
         <h4>{b.booking_sessions.length > 1 ? `Session ${index + 1}` : s.service_name_snapshot}{s.recipient_name && ` · ${s.recipient_name}`}</h4><p>{b.booking_sessions.length > 1 && `${s.service_name_snapshot} · `}{s.duration_minutes} minutes · {money(s.unit_price_gbp)}</p>

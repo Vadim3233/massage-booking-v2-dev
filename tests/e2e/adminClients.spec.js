@@ -154,3 +154,15 @@ test('booking history opens the booking and returns to the client, and a new boo
   await expect(page.getByRole('heading', { name: 'New booking', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { pressed: true }).first()).toContainText('Alexandra')
 })
+
+test('private notes about a client show on their booking, newest first', async ({ page }) => {
+  await f.authorize()
+  const clientId = f.bookings[0].client_id
+  const before = (await f.admin.from('client_notes').select('id').eq('client_id', clientId)).data.length
+  await unwrap(f.admin.from('client_notes').insert([{ client_id: clientId, note: 'Ring the bell twice.' }]))
+  await signIn(page, `/admin/bookings/${f.bookings[0].id}`)
+  const notes = page.getByRole('region', { name: 'Your notes about this client' })
+  await expect(notes).toContainText('Ring the bell twice.')
+  expect(await notes.getByRole('listitem').count()).toBe(Math.min(before + 1, 3))
+  await f.admin.from('client_notes').delete().eq('client_id', clientId)
+})

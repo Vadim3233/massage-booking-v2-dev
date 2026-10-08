@@ -1,6 +1,6 @@
 # Going live: what is built, what is left, and what only you can do
 
-Updated 2026-10-11. This is written for the owner, in plain words. Nothing here has been done on the real (hosted) Supabase project or on Vercel. Everything below was built and tested on a local copy.
+Updated 2026-10-09. This is written for the owner, in plain words. Nothing here has been done on the real (hosted) Supabase project or on Vercel. Everything below was built and tested on a local copy.
 
 ## What works now (tested locally)
 
@@ -9,6 +9,7 @@ Updated 2026-10-11. This is written for the owner, in plain words. Nothing here 
 - A booking waiting for payment keeps its time until you confirm or remove it. Nothing is ever cancelled automatically.
 - `/account`: see their bookings, cancel or change the time themselves. Inside the free window they must acknowledge a late fee first. Free for an hour after booking.
 - If a day is full, they can leave their details for the waitlist.
+- The booking page opens with a warm welcome, three plain steps and the free change window. You can write your own welcome and a "A little about me" (training, experience, insurance: only what is true) under More, Welcome message.
 
 **For you** (the Admin)
 - The Admin opens on the Agenda; the Day view is one tap away.
@@ -19,6 +20,7 @@ Updated 2026-10-11. This is written for the owner, in plain words. Nothing here 
 - Working hours, special days, and blocked time or personal events over a range of dates and hours (a holiday, a few days, or a couple of hours), with a warning if a change clashes with a booking.
 - Repeating bookings: tick "Repeat every Thursday" when creating a booking. The weekly slot is held for that client, the next session becomes a booking about a week before the day and they are asked to pay for it, and you can skip a date, pause or stop it from the client's page.
 - Settings: treatments and prices, extras, areas and travel fees, bank details, and the booking rules (days ahead, notice, free window, grace period, booking limits).
+- Your private notes about a client show on their booking, so "ring the bell twice" is in front of you on the day.
 - Waitlist, with the times that could be booked for each person right now.
 - Alerts in the app (red number on Alerts) for new bookings, "I've paid", cash requests, client cancellations and moves, and waitlist activity.
 
