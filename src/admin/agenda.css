@@ -7,6 +7,9 @@
 .admin-agenda-heading h1 { margin: 0 0 4px; font-size: 22px; }
 .admin-agenda-heading p { margin: 0; color: #596b63; font-size: 13px; }
 .admin-agenda-heading > button { width: 44px; flex: 0 0 44px; border-color: transparent; background: transparent; font-size: 22px; }
+.admin-agenda-heading { flex-wrap: wrap; }
+.admin-agenda-heading > div { flex: 1 1 180px; }
+.admin-agenda-heading > .admin-new-booking-entry { width: auto; flex: 0 0 auto; font-size: 14px; }
 .admin-agenda-days { margin: 8px 0; }
 .admin-agenda-day { padding: 14px 0 18px; border-top: 1px solid #d8dfda; }
 .admin-agenda-day-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }

@@ -1,4 +1,6 @@
 .admin-shell { max-width: 760px; margin: auto; overflow-wrap: anywhere; }
+.admin-create-entry { display: flex; justify-content: flex-end; padding: 4px 0; }
+.admin-shell .admin-create-entry button, .admin-shell .admin-new-booking-entry { background: #253b36; color: #fff; font-size: 14px; padding-inline: 14px; }
 .admin-shell button, .admin-shell input, .admin-details button { min-height: 44px; padding: 6px 10px; border: 1px solid #becbbf; border-radius: 6px; background: white; color: #253b36; min-width: 0; }
 .admin-shell button, .admin-details button { cursor: pointer; }
 .admin-shell button:disabled { cursor: wait; opacity: .6; }

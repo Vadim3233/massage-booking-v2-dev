@@ -16,7 +16,7 @@ function Confirmation({ action, booking, cancel, confirm, busy }) {
       opener?.focus({ preventScroll: true })
     }
   }, [])
-  const consequence = { reject: 'Reject this cash request and cancel the appointment. Its time will be released.', approve: 'Approve cash and confirm the appointment. This does not record payment received.', verify: 'Confirm that the bank transfer has actually arrived. This records payment received and confirms the appointment.', receive: 'Confirm that you have actually received this cash payment.' }[action]
+  const consequence = { reject: 'Reject this cash request and cancel the appointment. Its time will be released.', approve: 'Approve cash and confirm the appointment. This does not record payment received.', verify: 'Confirm that the bank transfer has actually arrived. This records payment received and confirms the appointment.', receive: 'Confirm that you have actually received this cash payment.', receiveBank: 'Confirm that the bank transfer has actually arrived. This records the payment as received.' }[action]
   return <dialog ref={ref} className="admin-confirm" aria-labelledby="payment-confirm-title" onCancel={event => { event.preventDefault(); event.stopPropagation(); if (!busy) cancel() }}>
     <h2 id="payment-confirm-title">{actionLabels[action]}?</h2>
     <p><strong>{clientName(booking)}</strong></p><p>{dateLabel(booking.date)} · {time(booking.start_minutes)} · {money(booking.total_gbp)}</p>

@@ -10,8 +10,8 @@ function load(date) {
   const promise = api.loadCalendarRange(date, shiftDate(date, 1)).finally(() => { if (inFlight?.promise === promise) inFlight = null })
   inFlight = { date, promise }; return promise
 }
-export default function Calendar({ signOut, openBooking, revision }) {
-  const [date, setDate] = useState(today)
+export default function Calendar({ signOut, openBooking, revision, newBooking, initialDate }) {
+  const [date, setDate] = useState(() => initialDate || today())
   const [result, setResult] = useState(null)
   const [attempt, setAttempt] = useState(0)
   const [now, setNow] = useState(Date.now)
@@ -61,10 +61,11 @@ export default function Calendar({ signOut, openBooking, revision }) {
         })}
         <button aria-label="Next day" onClick={() => navigate(shiftDate(date, 1))}>›</button>
       </nav>
+      <div className="admin-create-entry"><button onClick={() => newBooking(date)}>+ New booking</button></div>
     </header>
     <section className="admin-day" aria-label="Day appointments">
       <h1 className="admin-sr-only">Appointments for {dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h1>
-      <p className="admin-day-caption">London time <span>Read only</span></p>
+      <p className="admin-day-caption">London time</p>
       {!current && <p role="status">Loading calendar…</p>}
       {current?.error && <><p role="alert">Could not load calendar: {current.error}</p><button onClick={() => setAttempt(value => value + 1)}>Retry calendar</button></>}
       {data && <>
