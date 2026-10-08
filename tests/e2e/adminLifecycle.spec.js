@@ -100,3 +100,14 @@ test('a started, confirmed appointment can be marked completed, but not before i
   await expect(details(page).getByText('Completed', { exact: false }).first()).toBeVisible()
   expect((await f.admin.from('bookings').select('booking_status').eq('id', id).single()).data.booking_status).toBe('completed')
 })
+
+test('booking details offer one-tap call, WhatsApp, directions and email', async ({ page }) => {
+  await f.authorize()
+  await open(page, f.bookings[2].id)
+  const nav = details(page).getByRole('navigation', { name: 'Quick contact' })
+  await expect(nav.getByRole('link', { name: 'Call', exact: true })).toHaveAttribute('href', 'tel:+447700900002')
+  await expect(nav.getByRole('link', { name: 'WhatsApp', exact: true })).toHaveAttribute('href', 'https://wa.me/447700900002')
+  await expect(nav.getByRole('link', { name: 'WhatsApp', exact: true })).toHaveAttribute('rel', /noopener/)
+  await expect(nav.getByRole('link', { name: 'Directions', exact: true })).toHaveAttribute('href', /^https:\/\/www\.google\.com\/maps\/dir\/\?api=1&destination=/)
+  await expect(nav.getByRole('link', { name: 'Email', exact: true })).toHaveAttribute('href', 'mailto:booking@example.test')
+})

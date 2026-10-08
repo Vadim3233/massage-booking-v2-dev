@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { bookingState, clientName, dateLabel, label, money, postcode, time } from './calendarPresentation.js'
 import { acquireBodyScrollLock } from './dialogScrollLock.js'
+import { contactLinks } from './contactLinks.js'
 export default function BookingDetails({ booking: b, close, now, payment, lifecycle, returnFocus }) {
   const ref = useRef(null)
   useEffect(() => {
@@ -20,7 +21,8 @@ export default function BookingDetails({ booking: b, close, now, payment, lifecy
   return <dialog className="admin-details" ref={ref} onCancel={close} aria-labelledby="booking-title">
     <header className="admin-details-bar"><button onClick={close} aria-label="Close details"><span aria-hidden="true">‹</span> Back</button><div><strong>{dateLabel(b.date)}</strong><span>{time(b.start_minutes)}–{time(b.start_minutes + b.treatment_duration_minutes)}</span></div></header>
     <div className="admin-details-content">
-      <section className="admin-details-client"><h2 id="booking-title">{clientName(b)}</h2><p className={`admin-status ${state.tone}`}>{state.text}</p><p>Payment: {label(b.booking_payments?.method)} · {label(b.booking_payments?.status)}</p></section>
+      <section className="admin-details-client"><h2 id="booking-title">{clientName(b)}</h2><p className={`admin-status ${state.tone}`}>{state.text}</p><p>Payment: {label(b.booking_payments?.method)} · {label(b.booking_payments?.status)}</p>
+        <nav className="admin-contact-actions" aria-label="Quick contact">{contactLinks(b).map(link => <a key={link.key} href={link.href} {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>{link.label}</a>)}</nav></section>
       {payment && <section><h3>Payment</h3>{payment}</section>}
       {lifecycle && <section><h3>Appointment</h3>{lifecycle}</section>}
       <section><h3>Contact</h3><p>{email ? <a href={`mailto:${email}`}>{email}</a> : 'Email not recorded'}</p><p>{b.clients?.phone ? <a href={`tel:${b.clients.phone}`}>{b.clients.phone}</a> : 'Phone not recorded'}</p></section>
