@@ -22,3 +22,12 @@ export function contactLinks(booking) {
     email && { key: 'email', label: 'Email', href: `mailto:${email}` },
   ].filter(Boolean)
 }
+
+export function clientContactLinks(client) {
+  const number = whatsappNumber(client.phone)
+  return [
+    client.phone && { key: 'call', label: 'Call', href: `tel:${String(client.phone).replace(/[^0-9+]/g, '')}` },
+    number && { key: 'whatsapp', label: 'WhatsApp', href: `https://wa.me/${number}`, external: true },
+    client.email && { key: 'email', label: 'Email', href: `mailto:${client.email}` },
+  ].filter(Boolean)
+}

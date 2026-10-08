@@ -11,7 +11,7 @@ const STEPS = ['Client', 'Treatment', 'Date & time', 'Payment & notes', 'Review 
 const message = error => error?.message || 'Something went wrong. Please retry.'
 const EMPTY_CATALOGUE = { areas: [], services: [], prices: [], preferences: [], conflicts: [], enhancements: [] }
 
-export default function AdminNewBooking({ initialDate, ownerId, onCancel, onCreated, registerGuard }) {
+export default function AdminNewBooking({ initialDate, initialClientId, ownerId, onCancel, onCreated, registerGuard }) {
   const { draft, patch, step, goStep, clear, meaningful } = useAdminBookingDraft(initialDate, ownerId)
   const [catalogue, setCatalogue] = useState(null)
   const [catalogueError, setCatalogueError] = useState('')
@@ -90,6 +90,14 @@ export default function AdminNewBooking({ initialDate, ownerId, onCancel, onCrea
     return () => { registerGuard?.(null); window.removeEventListener('beforeunload', unload) }
   }, [registerGuard, clear])
   useEffect(() => { heading.current?.focus() }, [step])
+  const startingClient = useRef(false)
+  const choose = useRef(null)
+  useEffect(() => { choose.current = selectClient })
+  useEffect(() => {
+    if (!initialClientId || startingClient.current) return
+    startingClient.current = true
+    api.client(initialClientId).then(found => { if (found && !current.current.draft.client) choose.current(found) }, () => { /* The Admin can still search for the client. */ })
+  }, [initialClientId])
   useEffect(() => { if (error) errorRef.current?.focus() }, [error])
 
   function edit(change) { if (!locked) { patch(change); setError('') } }

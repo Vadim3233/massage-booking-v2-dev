@@ -26,6 +26,7 @@ export function createAdminNewBookingApi(client) {
   return {
     catalogue: createBookingApi(client).catalogue,
     search: query => unwrap(client.rpc('admin_search_clients', { p_query: query })),
+    client: id => unwrap(client.from('clients').select('id,first_name,last_name,email,phone').eq('id', id).maybeSingle()),
     addresses: clientId => unwrap(client.rpc('admin_client_addresses', { p_client_id: clientId })),
     createClient: (details, requestId) => one(client.rpc('admin_create_client', { p_details: details, p_request_id: requestId })),
     quote: draft => one(client.rpc('admin_quote_booking', quoteParams(draft))),

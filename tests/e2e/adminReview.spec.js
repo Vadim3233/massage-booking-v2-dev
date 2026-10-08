@@ -152,7 +152,7 @@ test('Review load failure is retryable and More offers safe navigation and sign-
   await page.getByRole('button', { name: 'Retry reviews' }).click()
   await expect(page.locator('.admin-review-item')).toHaveCount(2)
   const nav = page.getByRole('navigation', { name: 'Admin navigation' })
-  await expect(nav.getByRole('button', { name: /Clients/ })).toBeDisabled()
+  await expect(nav.getByRole('link', { name: 'Clients', exact: true })).toBeVisible()
   await nav.getByRole('link', { name: 'Calendar', exact: true }).click()
   await expect(page.getByLabel('Calendar date', { exact: true })).toBeVisible()
   await nav.getByRole('link', { name: 'More', exact: true }).click()

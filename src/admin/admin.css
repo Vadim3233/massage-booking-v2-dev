@@ -160,3 +160,21 @@
 .admin-special-list { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 10px; }
 .admin-special-list li { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid #d8dfda; border-radius: 8px; background: white; }
 .admin-special-list li span { display: block; font-size: 14px; color: #52625c; }
+.admin-client-list, .admin-client-bookings, .admin-address-list, .admin-note-list { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 8px; }
+.admin-client-list button, .admin-client-bookings button { display: grid; gap: 2px; width: 100%; text-align: left; padding: 10px 12px; }
+.admin-client-list span, .admin-client-bookings span { font-size: 14px; color: #52625c; }
+.admin-client-profile section { margin-top: 20px; }
+.admin-client-profile h2 { font-size: 18px; margin: 0 0 6px; }
+.admin-client-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 16px 0; }
+.admin-client-summary div { padding: 8px 12px; border: 1px solid #d8dfda; border-radius: 8px; background: white; }
+.admin-client-summary .wide { grid-column: 1 / -1; }
+.admin-client-summary .owed { border-color: #b28342; background: #f8f1e4; }
+.admin-client-summary dt { font-size: 12px; color: #65746c; }
+.admin-client-summary dd { margin: 0; font-weight: 700; }
+.admin-address-list li, .admin-note-list li { padding: 10px 12px; border: 1px solid #d8dfda; border-radius: 8px; background: white; display: grid; gap: 6px; }
+.admin-address-list address { font-style: normal; }
+.admin-address-list small, .admin-note-list small { display: block; color: #65746c; }
+.admin-note-list p { margin: 0; white-space: pre-wrap; }
+.admin-client-form { display: grid; gap: 12px; }
+.admin-address-fieldset { border: 1px solid #d8dfda; border-radius: 8px; padding: 8px 12px 12px; display: grid; gap: 12px; }
+.admin-note-form { display: grid; gap: 8px; margin-bottom: 12px; }
