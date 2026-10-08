@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions, pg_temp;
-select plan(99);
+select plan(101);
 
 -- ---------------------------------------------------------------------------------------------
 -- Fixtures
@@ -186,8 +186,8 @@ select is(public.admin_cancel_booking('00000000-0000-4000-8000-00000000f020', (s
   '00000000-0000-4000-8000-00000000f020'::uuid, 'The same cancellation request is safe to retry');
 select throws_ok($$select public.admin_cancel_booking('00000000-0000-4000-8000-00000000f028', (select id from req where name = 'cancel_a'), pg_temp.bv('00000000-0000-4000-8000-00000000f028'), pg_temp.pv('00000000-0000-4000-8000-00000000f028'), 'Different booking, same key', 'client')$$,
   '22023', 'Request key reused', 'A request key cannot be reused for different arguments');
-select throws_ok($$select public.admin_cancel_booking('00000000-0000-4000-8000-00000000f028', gen_random_uuid(), pg_temp.bv('00000000-0000-4000-8000-00000000f028'), pg_temp.pv('00000000-0000-4000-8000-00000000f028'), '   ', 'client')$$,
-  '22023', 'A cancellation reason of up to 500 characters is required', 'A reason is required');
+select throws_ok($$select public.admin_cancel_booking('00000000-0000-4000-8000-00000000f028', gen_random_uuid(), pg_temp.bv('00000000-0000-4000-8000-00000000f028'), pg_temp.pv('00000000-0000-4000-8000-00000000f028'), repeat('x', 501), 'client')$$,
+  '22023', 'A cancellation reason can be up to 500 characters', 'A reason is limited to 500 characters');
 select throws_ok($$select public.admin_cancel_booking('00000000-0000-4000-8000-00000000f028', gen_random_uuid(), pg_temp.bv('00000000-0000-4000-8000-00000000f028'), pg_temp.pv('00000000-0000-4000-8000-00000000f028'), 'Reason', 'somebody')$$,
   '22023', 'Say who asked for the cancellation', 'The requester must be client or admin');
 select throws_ok($$select public.admin_cancel_booking('00000000-0000-4000-8000-00000000f028', gen_random_uuid(), pg_temp.bv('00000000-0000-4000-8000-00000000f028'), pg_temp.pv('00000000-0000-4000-8000-00000000f028'), 'Reason', 'client', 86)$$,
@@ -330,6 +330,12 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000
 select is((select count(*)::integer from public.booking_schedule_changes), 0, 'Other users see no schedule history');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000e001","role":"authenticated"}', true);
 select ok((select count(*) from public.booking_schedule_changes) > 0, 'The Admin can read schedule history');
+-- A cancellation reason is optional
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000e001","role":"authenticated"}', true);
+select lives_ok($$select public.admin_cancel_booking('00000000-0000-4000-8000-00000000f028', gen_random_uuid(), pg_temp.bv('00000000-0000-4000-8000-00000000f028'), pg_temp.pv('00000000-0000-4000-8000-00000000f028'), '   ', 'admin')$$,
+  'A reason is optional');
+select is((select cancellation_reason from public.bookings where id = '00000000-0000-4000-8000-00000000f028'), null::text, 'A blank reason is recorded as none');
 reset role;
 
 select * from finish();

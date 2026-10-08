@@ -55,7 +55,7 @@ test('cancelling inside 24 hours shows the standard fee, records it as due, and 
   await expect(details(page)).toContainText('Booking: Confirmed → Cancelled')
 })
 
-test('an Admin-requested cancellation never suggests a fee, and a reason is required', async ({ page }) => {
+test('an Admin-requested cancellation never suggests a fee, and the reason is optional', async ({ page }) => {
   await f.authorize()
   const id = f.bookings[2].id
   await moveTo(id, 5 * 3600000)
@@ -63,11 +63,11 @@ test('an Admin-requested cancellation never suggests a fee, and a reason is requ
   await details(page).getByRole('button', { name: 'Cancel booking', exact: true }).click()
   await action(page).getByLabel('It is my own decision').check()
   await expect(action(page).getByLabel('Late fee (£)')).toHaveValue('0')
-  await expect(action(page).getByRole('button', { name: 'Cancel booking', exact: true })).toBeDisabled()
-  await action(page).getByLabel('Reason').fill('Unwell')
+  await expect(action(page).getByRole('button', { name: 'Cancel booking', exact: true })).toBeEnabled()
   await action(page).getByRole('button', { name: 'Cancel booking', exact: true }).click()
   await expect(details(page).getByText('Cancelled', { exact: false }).first()).toBeVisible()
-  expect((await f.admin.from('bookings').select('late_fee_status').eq('id', id).single()).data.late_fee_status).toBe('none')
+  const row = (await f.admin.from('bookings').select('late_fee_status,cancellation_reason').eq('id', id).single()).data
+  expect(row).toMatchObject({ late_fee_status: 'none', cancellation_reason: null })
 })
 
 test('rescheduling offers only available times, records the move, and explains a clash kindly', async ({ page }) => {

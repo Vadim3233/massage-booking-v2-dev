@@ -60,13 +60,13 @@ function ActionDialog({ kind, booking, api, close, done }) {
   }, [api, kind, date, booking.id, booking.treatment_duration_minutes])
 
   function input() {
-    if (kind === 'cancel') return { reason, initiatedBy, fee: fee === '' ? null : Number(fee) }
+    if (kind === 'cancel') return { reason: reason.trim() || null, initiatedBy, fee: fee === '' ? null : Number(fee) }
     if (kind === 'noShow') return { fee: fee === '' ? null : Number(fee) }
     if (kind === 'reschedule') return { date, start: Number(start), initiatedBy }
     return {}
   }
   const feeValid = fee === '' || (Number(fee) >= 0 && Number(fee) <= total)
-  const ready = (kind !== 'cancel' || (reason.trim() && feeValid)) && (kind !== 'noShow' || feeValid) && (kind !== 'reschedule' || (date && start !== ''))
+  const ready = (kind !== 'cancel' || feeValid) && (kind !== 'noShow' || feeValid) && (kind !== 'reschedule' || (date && start !== ''))
 
   async function submit(event) {
     event.preventDefault()
@@ -98,7 +98,7 @@ function ActionDialog({ kind, booking, api, close, done }) {
 
       {kind === 'cancel' && <>
         <Who value={initiatedBy} onChange={setInitiatedBy} disabled={busy} />
-        <label className="admin-field">Reason<textarea required maxLength={500} rows={3} value={reason} disabled={busy} onChange={event => setReason(event.target.value)} /></label>
+        <label className="admin-field">Reason (optional, kept in the booking history)<textarea maxLength={500} rows={3} value={reason} disabled={busy} onChange={event => setReason(event.target.value)} /></label>
       </>}
       {kind === 'reschedule' && <>
         <Who value={initiatedBy} onChange={setInitiatedBy} disabled={busy} />

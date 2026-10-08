@@ -8,7 +8,7 @@ const SAFE_MESSAGES = new Set([
   'This time is not available. Choose another time.',
   'The appointment has not started yet',
   'The fee must be between zero and the appointment price',
-  'A cancellation reason of up to 500 characters is required',
+  'A cancellation reason can be up to 500 characters',
   'Choose a date within the next 365 days and a 30-minute start',
 ])
 
