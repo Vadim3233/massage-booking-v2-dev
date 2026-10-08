@@ -145,3 +145,9 @@ Updated: 2026-09-23. These are design decisions and intended requirements; imple
 - The fee rule lives only in the database (`late_fee_standard_gbp`); screens ask `admin_late_fee_preview` and never repeat it.
 
 **Reason:** These are the owner's answers (ADR-020 and follow-up): clients should not have to message her for routine changes, loyal clients are treated kindly, and every money-affecting outcome is visible and reversible by her decision. Client self-service cancel and reschedule will call the same rule and engine.
+
+## ADR-022 — Clients manage their own bookings at /account (2026-10-11)
+
+**Decision:** A signed-in client (including a guest on the same device) sees their bookings at `/account` and can cancel or change the time without messaging the Admin. The page asks the database for everything it shows: the terms (`get_my_change_terms`), the times (`get_my_booking_availability`), and the result (`client_cancel_booking`, `client_reschedule_booking`). Inside 24 hours the change is allowed, but the client must tick that they understand the exact late fee; the command sends that fee back, and if it no longer matches (the 24-hour mark passed while the page was open) it refuses and the client reviews again. Changes use the client booking rules: two hours' notice, 40 days ahead, the same availability engine. Errors shown to clients are a fixed set of kind sentences; technical messages are replaced.
+
+**Reason:** The owner wants routine changes to happen without a message to her, with the fee rule applied consistently and visibly. The Admin is told through the same event stream as other changes (`booking.cancelled` and `booking.rescheduled` carry `initiated_by: client`).

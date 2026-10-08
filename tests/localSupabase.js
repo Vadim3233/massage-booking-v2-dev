@@ -70,7 +70,10 @@ export async function localFixture(offset = 20) {
       await unwrap(admin.from('service_areas').delete().eq('id', ids.area))
       if (overrides.length) await unwrap(admin.from('working_hours_overrides').upsert(overrides))
       else await unwrap(admin.from('working_hours_overrides').delete().eq('date', date))
-      for (const id of users) await unwrap(admin.auth.admin.deleteUser(id))
+      for (const id of users) {
+        await unwrap(admin.from('command_requests').delete().eq('scope', `client-self-service:${id}`))
+        await unwrap(admin.auth.admin.deleteUser(id))
+      }
       await client.auth.signOut()
     },
   }

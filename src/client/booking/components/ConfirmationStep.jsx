@@ -40,6 +40,6 @@ export default function ConfirmationStep({ id, api, bank }) {
       </ol>}
     </section>
     {bankTransfer && <details><summary>Bank transfer details</summary><BankDetails bank={bank} reference={booking.booking_payments.payment_reference} /></details>}
-    <p><a href="https://vadmassage.com">Contact Vad</a></p>
+    <p><a href={`/account?booking=${booking.id}`}>Change or cancel this appointment</a> · <a href="https://vadmassage.com">Contact Vad</a></p>
   </>
 }
