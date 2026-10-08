@@ -61,8 +61,8 @@ export default function Calendar({ signOut, openBooking, revision, newBooking, i
         })}
         <button aria-label="Next day" onClick={() => navigate(shiftDate(date, 1))}>›</button>
       </nav>
-      <div className="admin-create-entry"><button onClick={() => newBooking(date)}>+ New booking</button></div>
     </header>
+    <div className="admin-create-entry"><button onClick={() => newBooking(date)}>+ New booking</button></div>
     <section className="admin-day" aria-label="Day appointments">
       <h1 className="admin-sr-only">Appointments for {dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h1>
       <p className="admin-day-caption">London time</p>

@@ -37,11 +37,11 @@ describe('Admin New Booking adapter against local Supabase', () => {
       address_line_1: '22 Created Road', city: 'London', postcode: 'SW1A 1AA', entry_instructions: 'Ring twice' }
     const id = crypto.randomUUID()
     const created = await api.createClient(details, id)
-    f.trackRecipient(created.client_id)
+    f.trackRecipient(created.id)
     expect(await api.createClient(details, id)).toEqual(created)
-    const client = await unwrap(f.admin.from('clients').select().eq('id', created.client_id).single())
+    const client = await unwrap(f.admin.from('clients').select().eq('id', created.id).single())
     expect(client.auth_user_id).toBeNull()
-    expect(await api.addresses(created.client_id)).toEqual(expect.arrayContaining([expect.objectContaining({ address_line_1: details.address_line_1, is_default: true })]))
+    expect(await api.addresses(created.id)).toEqual(expect.arrayContaining([expect.objectContaining({ address_line_1: details.address_line_1, is_default: true })]))
     await expect(api.createClient({ ...details, email: details.email.toUpperCase() }, crypto.randomUUID())).rejects.toBeDefined()
   })
 

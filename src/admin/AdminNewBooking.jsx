@@ -107,7 +107,10 @@ export default function AdminNewBooking({ initialDate, ownerId, onCancel, onCrea
     if (clientBusy) return false
     setClientBusy(true); setClientError('')
     try {
-      const result = await api.createClient(details, crypto.randomUUID())
+      // savedAddressId is a form-only field; the server accepts only real client and address fields.
+      const payload = { ...details }
+      delete payload.savedAddressId
+      const result = await api.createClient(payload, crypto.randomUUID())
       const client = result.client || result
       selectClient(client)
       setQuery(client.email || client.phone || client.first_name)

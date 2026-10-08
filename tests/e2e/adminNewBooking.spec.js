@@ -24,17 +24,17 @@ async function selectClient(page) {
   await page.getByLabel('Find a client').fill(f.recipient.email)
   await page.getByRole('button', { name: new RegExp(f.recipient.first_name) }).click()
   await expect(page.getByRole('radio', { name: /10 Saved Street/ })).toBeChecked()
-  await page.getByLabel('Service area', { exact: true }).selectOption(f.ids.area)
+  await page.getByRole('combobox', { name: 'Service area', exact: true }).selectOption(f.ids.area)
 }
 async function next(page) { await page.getByRole('button', { name: 'Continue', exact: true }).click() }
 async function treatment(page, sessions = 1) {
   await next(page)
-  await page.getByLabel('Treatment', { exact: true }).selectOption(f.ids.service)
+  await page.getByRole('combobox', { name: 'Treatment', exact: true }).selectOption(f.ids.service)
   for (let i = 1; i <= sessions; i++) {
     if (i > 1) await page.getByRole('button', { name: '+ Add session', exact: true }).click()
     await page.getByLabel(`Recipient name ${i}`, { exact: true }).fill(`Recipient ${i}`)
   }
-  await page.locator('fieldset.anb-session').first().locator('summary').filter({ hasText: /^Focus/ }).click()
+  await page.locator('fieldset.anb-session').first().locator('summary').filter({ hasText: /^Focus(?! on)/ }).click()
   await page.getByRole('button', { name: 'Integration focus', exact: true }).first().click()
   await page.getByRole('checkbox', { name: /Integration enhancement/ }).check()
 }
@@ -88,7 +88,7 @@ test('Agenda entry defaults today, preserves one-off draft through browser histo
   await page.goBack()
   await expect(page.getByLabel('Address line 1', { exact: true })).toHaveValue('99 Temporary Road')
   await page.goForward()
-  await expect(page.getByLabel('Treatment', { exact: true })).toHaveValue(f.ids.service)
+  await expect(page.getByRole('combobox', { name: 'Treatment', exact: true })).toHaveValue(f.ids.service)
   page.once('dialog', dialog => dialog.dismiss())
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'New booking', exact: true })).toBeVisible()
@@ -140,7 +140,7 @@ test('responsive long client/address and four sessions fit all six requested wid
   await start(page)
   await page.getByLabel('Find a client').fill(f.recipient.email)
   await page.getByRole('button', { name: new RegExp(f.recipient.first_name) }).click()
-  await page.getByLabel('Service area', { exact: true }).selectOption(f.ids.area)
+  await page.getByRole('combobox', { name: 'Service area', exact: true }).selectOption(f.ids.area)
   async function capture(step) {
     for (const width of [320, 360, 390, 412, 768, 1280]) {
       await page.setViewportSize({ width, height: 900 })
