@@ -15,10 +15,10 @@ There is no separate cash-request table. `booking_payments` is the payment autho
 
 Existing client transitions:
 - Finalization creates `awaiting_transfer` booking/payment for bank transfer, or `awaiting_cash_approval` / `awaiting_approval` for cash.
-- `declare_my_bank_transfer` delegates to private `complete_client_payment`: unexpired `awaiting_transfer` becomes `awaiting_payment_verification` / `awaiting_verification`. Declaration is not receipt.
-- `confirm_my_cash_booking` delegates to the same private helper: unexpired `awaiting_transfer` becomes `awaiting_cash_approval` / cash `awaiting_approval`.
-- Expiry applies to provisional `awaiting_transfer`; an old reservation timestamp does not expire a declared transfer awaiting verification.
-- Scheduling includes pending verification, pending cash approval, confirmed and completed bookings, plus unexpired provisional transfers. Cancelled records do not occupy time.
+- `declare_my_bank_transfer` delegates to private `complete_client_payment`: `awaiting_transfer` (which no longer expires) becomes `awaiting_payment_verification` / `awaiting_verification`. Declaration is not receipt.
+- `confirm_my_cash_booking` delegates to the same private helper: `awaiting_transfer` becomes `awaiting_cash_approval` / cash `awaiting_approval`.
+- **Superseded by `20261010100000_pending_until_admin_decides.sql` (ADR-019):** nothing expires. A booking waiting for payment keeps its time until the Admin confirms the payment or removes the booking (`admin_remove_pending_booking`). `admin_verify_bank_transfer` also accepts a transfer the client never declared, and the review queue lists those bookings.
+- Scheduling includes pending verification, pending cash approval, confirmed and completed bookings, plus provisional transfers awaiting the client's declaration. Cancelled records do not occupy time.
 
 No Admin payment mutation RPC existed. Existing `is_booking_admin()` checks `admin_users` against `auth.uid()`. RLS prevented non-admin writes, but the original Admin policies and table grants allowed direct Admin writes. The new migration revokes authenticated INSERT/UPDATE/DELETE/TRUNCATE on bookings and payments; SECURITY DEFINER client commands and trusted local fixtures retain their paths. Related read policies are unchanged.
 

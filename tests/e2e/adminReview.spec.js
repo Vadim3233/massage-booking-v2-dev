@@ -27,9 +27,9 @@ for (const width of [320, 360, 390, 412]) test(`Review, confirmation and exact b
   expect(requests.filter(url => url.includes('/admin_payment_review_queue'))).toHaveLength(1)
   await expect(page.getByRole('navigation', { name: 'Admin navigation' })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-  await item(page, 1).getByRole('button', { name: 'Reject', exact: true }).click()
+  await item(page, 1).getByRole('button', { name: 'Remove booking', exact: true }).click()
   const confirmation = page.getByRole('dialog')
-  await expect(confirmation).toContainText('cancel the appointment')
+  await expect(confirmation).toContainText('recorded as cancelled')
   expect(await confirmation.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
   await page.screenshot({ path: `test-results/admin-review-confirm-${width}.png` })
   await confirmation.getByRole('button', { name: 'Go back' }).click()
@@ -78,12 +78,22 @@ test('bank verification persists and leaves the queue; cash approval and receipt
   await page.getByRole('button', { name: 'Close details' }).click()
   await expect(page.locator('.admin-review-item')).toHaveCount(0)
 })
-test('cash rejection requires deliberate confirmation and persists cancellation', async ({ page }) => {
+test('removing a cash request requires deliberate confirmation and persists cancellation', async ({ page }) => {
   await f.authorize(); await login(page)
-  await confirm(page, item(page, 1).getByRole('button', { name: 'Reject', exact: true }))
+  await confirm(page, item(page, 1).getByRole('button', { name: 'Remove booking', exact: true }))
   await expect(item(page, 1)).toHaveCount(0)
   const result = (await f.admin.from('bookings').select('booking_status,cancelled_at').eq('id', f.bookings[1].id).single()).data
   expect(result.booking_status).toBe('cancelled'); expect(result.cancelled_at).toBeTruthy()
+})
+test('a transfer the client never declared stays listed and the Admin can remove it', async ({ page }) => {
+  await f.prepare(0, 'bank_transfer', 'awaiting_transfer', 'awaiting_transfer')
+  await f.authorize(); await login(page)
+  await expect(item(page, 0)).toContainText('Transfer not yet declared by the client')
+  await expect(item(page, 0).getByRole('button', { name: 'Verify payment', exact: true })).toBeVisible()
+  await confirm(page, item(page, 0).getByRole('button', { name: 'Remove booking', exact: true }))
+  await expect(page.locator('.admin-review-item')).toHaveCount(1)
+  const result = (await f.admin.from('bookings').select('booking_status,cancelled_by_actor_type').eq('id', f.bookings[0].id).single()).data
+  expect(result).toMatchObject({ booking_status: 'cancelled', cancelled_by_actor_type: 'admin' })
 })
 test('failed mutation keeps authoritative state, hides internal errors, and prevents duplicate submission', async ({ page }) => {
   await f.authorize(); await login(page, `/admin/bookings/${f.bookings[0].id}`)

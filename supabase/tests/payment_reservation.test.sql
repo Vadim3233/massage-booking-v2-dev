@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions, pg_temp;
 
-select plan(21);
+select plan(19);
 
 select set_config(
   'test.finalize_date1',
@@ -133,19 +133,18 @@ create temp table payment_ids as select pg_temp.reserve('payment-provisional-000
 grant select on payment_ids to authenticated,anon;
 select is((select booking_status from public.bookings where id=(select id from payment_ids)),'awaiting_transfer','initial booking awaits transfer');
 select is((select status from public.booking_payments where booking_id=(select id from payment_ids)),'awaiting_transfer','initial payment awaits transfer');
-select is((select payment_reservation_expires_at-created_at from public.bookings where id=(select id from payment_ids)),interval '60 minutes','reservation lasts sixty minutes');
+select ok((select payment_reservation_expires_at is null from public.bookings where id=(select id from payment_ids)),'pending transfer has no deadline');
 select is((select booking_email_snapshot from public.bookings where id=(select id from payment_ids)),'finalize-client@example.test','canonical client email snapshotted');
 select ok(not exists(select 1 from public.get_booking_availability(current_setting('test.finalize_date1')::date,60) where start_minutes=600),'live provisional reservation blocks slot');
-update public.bookings set payment_reservation_expires_at=now()-interval '1 second' where id=(select id from payment_ids);
-select ok(exists(select 1 from public.get_booking_availability(current_setting('test.finalize_date1')::date,60) where start_minutes=600),'expired reservation frees slot without cleanup');
+select ok(not exists(select 1 from public.compute_booking_availability(current_setting('test.finalize_date1')::date,60,now()+interval '9 days',60,null) where start_minutes=600),'unconfirmed transfer keeps its time long after the old 60-minute deadline');
 set local role authenticated;
-select is(public.get_my_booking((select id from payment_ids))->>'reservation_expired','true','read model reports server expiry');
-select throws_ok($q$select public.declare_my_bank_transfer((select id from payment_ids))$q$,'23P01','Your payment reservation has expired. Please choose another time.','expired reservation cannot be declared');
-select throws_ok($q$select public.confirm_my_cash_booking((select id from payment_ids))$q$,'23P01','Your payment reservation has expired. Please choose another time.','expired reservation cannot convert to cash');
+select ok(not (public.get_my_booking((select id from payment_ids)) ?| array['reservation_expired','payment_reservation_expires_at']),'read model carries no reservation deadline');
 reset role;
-truncate payment_ids;
-insert into payment_ids select pg_temp.reserve('payment-provisional-0002');
-select is((select count(*)::integer from public.bookings where client_id='00000000-0000-0000-0000-000000004501'),2,'expired reservation no longer consumes first-booking limit');
+-- A different day, so the refusal comes from the booking limit rather than the occupied slot.
+select set_config('test.finalize_date0',current_setting('test.finalize_date1'),true);
+select set_config('test.finalize_date1',current_setting('test.finalize_date2'),true);
+select throws_ok($q$select pg_temp.reserve('payment-provisional-0002')$q$,'22023','Your first appointment is already reserved. Once it has been completed and paid, you''ll be able to arrange future appointments more freely.','a pending first booking still counts toward the first-booking limit');
+select set_config('test.finalize_date1',current_setting('test.finalize_date0'),true);
 set local role anon;
 select throws_ok($q$select public.declare_my_bank_transfer((select id from payment_ids))$q$,'42501','permission denied for function declare_my_bank_transfer','anonymous callers cannot declare');
 reset role;
@@ -160,10 +159,9 @@ select is(public.declare_my_bank_transfer((select id from payment_ids))->'bookin
 reset role;
 select ok((select paid_at is null and status<>'paid' from public.booking_payments where booking_id=(select id from payment_ids)),'client declaration never marks paid');
 select is((select count(*)::integer from public.event_outbox where aggregate_id=(select id from payment_ids) and event_type='booking.transfer_declared'),1,'only one declaration event');
-update public.bookings set payment_reservation_expires_at=now()-interval '1 second' where id=(select id from payment_ids);
-select ok(not exists(select 1 from public.get_booking_availability(current_setting('test.finalize_date1')::date,60) where start_minutes=600),'declared transfer remains occupied after original deadline');
+select ok(not exists(select 1 from public.compute_booking_availability(current_setting('test.finalize_date1')::date,60,now()+interval '9 days',60,null) where start_minutes=600),'declared transfer remains occupied indefinitely');
 set local role authenticated;
-select is(public.declare_my_bank_transfer((select id from payment_ids))->'booking_payments'->>'status','awaiting_verification','declaration retry remains valid after original deadline');
+select is(public.declare_my_bank_transfer((select id from payment_ids))->'booking_payments'->>'status','awaiting_verification','declaration retry stays valid');
 reset role;
 -- Administrator completion permits another booking for this returning client.
 update public.bookings set booking_status='confirmed' where id=(select id from payment_ids);

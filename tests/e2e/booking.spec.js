@@ -413,18 +413,15 @@ test('provisional payment shows canonical email/postcode and survives reload bef
   await expect(page.getByText('10 Browser Street, London, SW1A 1AA', { exact: true })).toBeVisible()
 })
 
-test('expired payment reservation releases time and preserves the draft', async ({ page }) => {
+test('a pending reservation has no deadline: it survives a reload and keeps its time', async ({ page }) => {
   await toPayment(page)
   const id = await page.evaluate(() => JSON.parse(sessionStorage.getItem('vad-v2-booking-draft-v1')).draft.bookingId)
-  await unwrap(fixture.admin.from('bookings').update({ payment_reservation_expires_at: new Date(Date.now()-1000).toISOString() }).eq('id',id))
   await page.reload()
-  await expect(page.getByRole('alert')).toContainText('time reserved for this booking has expired')
-  expect((await fixture.publicApi.availability(fixture.date,120)).some((s) => s.start_minutes===600)).toBe(true)
-  await page.getByRole('button', { name: 'Choose another time', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Choose date and time' })).toBeVisible()
-  const draft = await page.evaluate(() => JSON.parse(sessionStorage.getItem('vad-v2-booking-draft-v1')).draft)
-  expect(draft.details.address_line_1).toBe('10 Browser Street')
-  expect(draft.bookingId).toBeNull()
+  await expect(page.getByText('Your appointment time is reserved for you.')).toBeVisible()
+  await expect(page.getByRole('button', { name: "I've made the bank transfer", exact: true })).toBeVisible()
+  expect((await fixture.publicApi.availability(fixture.date,120)).some((s) => s.start_minutes===600)).toBe(false)
+  const row = await unwrap(fixture.admin.from('bookings').select('payment_reservation_expires_at').eq('id',id).single())
+  expect(row.payment_reservation_expires_at).toBeNull()
 })
 
 test('lost transfer response recovers the canonical result on reload without double writes', async ({ page }) => {

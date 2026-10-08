@@ -80,7 +80,8 @@ describe('real local Supabase client adapter', () => {
     expect(booking.booking_sessions.map((session) => session.duration_minutes)).toEqual([60, 60])
     expect(booking.booking_payments.status).toBe('awaiting_transfer')
     expect(booking.booking_email_snapshot).toBe(fixture.email)
-    expect(Date.parse(booking.payment_reservation_expires_at) - Date.now()).toBeGreaterThan(3590000)
+    expect(booking).not.toHaveProperty('payment_reservation_expires_at')
+    expect(booking).not.toHaveProperty('reservation_expired')
     expect((await fixture.api.addresses())[0].postcode).toBe('SW1A 1AA')
   })
   it('retries idempotently without duplicate bookings, enhancements or events', async () => {

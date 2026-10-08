@@ -230,16 +230,3 @@ describe('provisional payment state', () => {
     expect(f.api.declareTransfer).toHaveBeenCalledTimes(2)
   })
 })
-
-
-it('clears only a server-expired payment reservation and preserves client details', async () => {
-  const f=fixture(); f.api.finalize.mockResolvedValue({booking_id:'provisional',booking_reference:'REF',payment_status:'awaiting_transfer'})
-  f.store.edit({details:{...f.draft.details,address_line_1:'Saved address'},note:'Saved note'})
-  await f.store.loadQuote(); await f.store.finalize()
-  f.api.booking=vi.fn().mockResolvedValue({reservation_expired:false})
-  await f.store.restartExpiredPayment()
-  expect(f.store.getSnapshot().draft.bookingId).toBe('provisional')
-  f.api.booking.mockResolvedValue({reservation_expired:true})
-  await f.store.restartExpiredPayment()
-  expect(f.store.getSnapshot()).toMatchObject({step:3,draft:{bookingId:null,note:'Saved note',details:{address_line_1:'Saved address'}}})
-})

@@ -5,5 +5,4 @@ it('uses explicit client-friendly payment wording', () => {
  expect(paymentStatus({booking_payments:{status:'awaiting_transfer'}})).toBe('Awaiting your bank transfer')
  expect(paymentStatus({booking_payments:{status:'awaiting_verification'}})).toBe("Transfer sent — I'll check it shortly")
  expect(paymentStatus({booking_payments:{status:'awaiting_approval'}})).toBe('Cash on arrival')
- expect(paymentStatus({reservation_expired:true,booking_payments:{status:'awaiting_transfer'}})).toBe('Reservation expired')
 })

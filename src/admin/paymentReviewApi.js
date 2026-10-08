@@ -3,18 +3,20 @@ import { supabase } from '../lib/supabase.js'
 const fields = `*,clients!bookings_client_id_fkey(id,first_name,last_name,email,phone),
 booking_sessions(*,booking_session_preferences(*),booking_session_enhancements(*)),
 booking_payments(*),booking_enhancements(*)`
-const queueFields = `id,booking_reference,date,start_minutes,treatment_duration_minutes,total_gbp,booking_status,updated_at,
+const queueFields = `id,booking_reference,date,start_minutes,treatment_duration_minutes,total_gbp,booking_status,created_at,updated_at,
 clients!bookings_client_id_fkey(first_name,last_name),booking_sessions(service_name_snapshot,duration_minutes),
 booking_payments(method,status,updated_at)`
 export const paymentActions = booking => {
   const payment = booking.booking_payments
-  if (booking.booking_status === 'awaiting_payment_verification' && payment?.method === 'bank_transfer' && payment.status === 'awaiting_verification') return ['verify']
-  if (booking.booking_status === 'awaiting_cash_approval' && payment?.method === 'cash' && payment.status === 'awaiting_approval') return ['approve', 'reject']
+  // A booking waiting for payment is never cancelled automatically: the Admin confirms the payment or removes it.
+  if (booking.booking_status === 'awaiting_transfer' && payment?.method === 'bank_transfer' && payment.status === 'awaiting_transfer') return ['verify', 'remove']
+  if (booking.booking_status === 'awaiting_payment_verification' && payment?.method === 'bank_transfer' && payment.status === 'awaiting_verification') return ['verify', 'remove']
+  if (booking.booking_status === 'awaiting_cash_approval' && payment?.method === 'cash' && payment.status === 'awaiting_approval') return ['approve', 'remove']
   if (['confirmed', 'completed'].includes(booking.booking_status) && payment?.method === 'cash' && payment.status === 'approved') return ['receive']
   return []
 }
-export const actionLabels = { verify: 'Verify payment', approve: 'Approve', reject: 'Reject', receive: 'Mark payment received' }
-const operations = { verify: 'admin_verify_bank_transfer', approve: 'admin_approve_cash_request', reject: 'admin_reject_cash_request', receive: 'admin_record_payment_received' }
+export const actionLabels = { verify: 'Verify payment', approve: 'Approve', remove: 'Remove booking', receive: 'Mark payment received' }
+const operations = { verify: 'admin_verify_bank_transfer', approve: 'admin_approve_cash_request', remove: 'admin_remove_pending_booking', receive: 'admin_record_payment_received' }
 export function createPaymentReviewApi(client) {
   async function authorized() {
     const user = await client.auth.getUser()

@@ -21,16 +21,17 @@ export default function PaymentReview({ openBooking, revision }) {
     catch (error) { if (version === readVersion.current) setError(error.message); throw error }
   }
   return <section className="admin-review" aria-labelledby="review-title">
-    <header className="admin-review-heading"><div><h1 id="review-title">Payment review</h1><p>Transfers to verify and cash requests to decide.</p></div><button onClick={() => setAttempt(value => value + 1)} aria-label="Refresh reviews">↻</button></header>
+    <header className="admin-review-heading"><div><h1 id="review-title">Payment review</h1><p>Bookings waiting for you. Confirm a payment, or remove a booking you do not expect to be paid. Nothing is cancelled automatically.</p></div><button onClick={() => setAttempt(value => value + 1)} aria-label="Refresh reviews">↻</button></header>
     {error && <p role="alert">{error} <button onClick={() => setAttempt(value => value + 1)}>Retry reviews</button></p>}
     {!current && !error && <p role="status">Loading payment reviews…</p>}
     {current && <>
       {!current.bookings.length && <p>No payments awaiting review on this page.</p>}
       <ul className="admin-review-list">{current.bookings.map(booking => <li className="admin-review-item" key={booking.id}>
-        <p className="admin-status pending">{booking.booking_payments.method === 'cash' ? 'Cash request to decide' : 'Bank transfer to verify'}</p>
+        <p className="admin-status pending">{booking.booking_payments.method === 'cash' ? 'Cash request to decide' : booking.booking_payments.status === 'awaiting_transfer' ? 'Transfer not yet declared by the client' : 'Bank transfer to verify'}</p>
         <div className="admin-card-heading"><h2>{clientName(booking)}</h2><strong className="admin-card-price">{money(booking.total_gbp)}</strong></div>
         <p>{dateLabel(booking.date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })} · {time(booking.start_minutes)}</p>
         <p>{sessionSummary(booking)}</p><p>{label(booking.booking_payments.method)} · {label(booking.booking_payments.status)}</p>
+        <p>Booked {new Date(booking.created_at).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
         <p className="admin-review-reference">{booking.booking_reference}</p>
         <a href={`/admin/bookings/${booking.id}`} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); openBooking(booking.id) } }}>View booking</a>
         <PaymentActions booking={booking} refresh={refresh} />

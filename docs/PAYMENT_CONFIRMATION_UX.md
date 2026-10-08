@@ -76,3 +76,5 @@ confirmation emails or reminders.
   remain ignored, not part of source changes.
 - After the countdown presentation adjustment, build/lint and the affected
   provisional-payment browser journey passed again (1/1).
+
+> **Update (ADR-019, `20261010100000_pending_until_admin_decides.sql`):** the 60-minute deadline described above was removed. A booking waiting for payment keeps its time until the Admin confirms or removes it, the client no longer sees a countdown or an "expired" screen, and `get_my_booking` no longer returns `reservation_expired`.

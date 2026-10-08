@@ -9,8 +9,7 @@ export async function paymentReviewFixture() {
     const booking = await unwrap(f.admin.from('bookings').select().eq('id', id).single())
     const sessions = await unwrap(f.admin.from('booking_sessions').select().eq('booking_id', id))
     await unwrap(f.admin.from('bookings').delete().eq('id', id))
-    await unwrap(f.admin.from('bookings').insert({ ...booking, booking_status: bookingStatus, cancelled_at: bookingStatus === 'cancelled' ? new Date().toISOString() : null, cancelled_by_actor_type: null, cancelled_by_actor_id: null,
-      payment_reservation_expires_at: bookingStatus === 'awaiting_transfer' ? new Date(Date.now() - 60000).toISOString() : null }))
+    await unwrap(f.admin.from('bookings').insert({ ...booking, booking_status: bookingStatus, cancelled_at: bookingStatus === 'cancelled' ? new Date().toISOString() : null, cancelled_by_actor_type: null, cancelled_by_actor_id: null }))
     await unwrap(f.admin.from('booking_sessions').insert(sessions))
     await unwrap(f.admin.from('booking_payments').insert({ booking_id: id, method, status: paymentStatus, amount_gbp: 85, paid_at: paymentStatus === 'paid' ? new Date().toISOString() : null }))
   }

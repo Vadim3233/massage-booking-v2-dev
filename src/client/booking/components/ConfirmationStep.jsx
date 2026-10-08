@@ -13,7 +13,7 @@ export default function ConfirmationStep({ id, api, bank }) {
   }, [api, id, attempt])
   const booking = view.booking
   if (!booking) return <><h1>Retrieve your booking</h1><p>Loading your saved appointment…</p>{view.error && <><p role="alert">{view.error}</p><button onClick={() => setAttempt(attempt + 1)}>Retry loading booking</button></>}</>
-  if (booking.reservation_expired || booking.booking_payments.status === 'awaiting_transfer') return <><h1>Your transfer has not been declared</h1><p>Please return to Payment to complete your request.</p></>
+  if (booking.booking_payments.status === 'awaiting_transfer') return <><h1>Your transfer has not been declared</h1><p>Please return to Payment to complete your request.</p></>
   // Admin decisions must supersede the original pending-request instructions.
   const status = booking.booking_status
   if (['confirmed', 'completed', 'cancelled'].includes(status)) return <>
