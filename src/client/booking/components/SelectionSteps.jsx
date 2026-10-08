@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import WaitlistPanel from './WaitlistPanel.jsx'
+import Welcome from './Welcome.jsx'
 import { activeHold, dateLabel, durationOf, londonDate, money, newSession, timeLabel } from '../bookingDraft.js'
 
-export function AreaStep({ catalogue, choose }) {
+export function AreaStep({ catalogue, choose, welcome, rules }) {
   const [expanded, setExpanded] = useState(false)
   return <>
-    <h1>Choose your area</h1>
+    <Welcome welcome={welcome} rules={rules} />
+    <h2>Choose your area</h2>
     <div className="choices">{catalogue.areas.slice(0, expanded ? undefined : 6).map((area) => <button key={area.id} onClick={() => choose(area.id)}>
       <strong>{area.name}</strong>
       {Number(area.travel_surcharge_gbp) > 0 && <span>Travel surcharge {money(area.travel_surcharge_gbp)}</span>}

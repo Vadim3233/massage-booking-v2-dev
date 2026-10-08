@@ -73,3 +73,16 @@
 .booking-shell button.primary:hover:not(:disabled) { background: var(--green-deep); border-color: var(--green-deep); }
 .panel { box-shadow: 0 1px 2px rgb(37 59 54 / 5%); }
 .booking-shell footer { color: var(--muted); }
+
+/* The welcome at the top of the first step: warm and brief, with the one thing people ask first. */
+.welcome { margin: 8px 0 12px; }
+.welcome h1 { margin-top: 20px; }
+.welcome p { color: var(--ink-soft); }
+.welcome-steps { display: grid; gap: 10px; margin: 20px 0; padding: 0; list-style: none; counter-reset: welcome; }
+.welcome-steps li { position: relative; padding-left: 38px; counter-increment: welcome; color: var(--ink-soft); }
+.welcome-steps li::before { content: counter(welcome); position: absolute; left: 0; top: 0; display: grid; place-items: center; width: 26px; height: 26px; border: 1.5px solid var(--gold); border-radius: 50%; font-size: 13px; font-weight: 600; color: var(--green-deep); }
+.booking-shell .welcome-note { padding: 12px 14px; margin: 18px 0; border-left: 3px solid var(--gold); background: var(--gold-soft); border-radius: 0 8px 8px 0; color: var(--ink); font-size: 14px; }
+.welcome-about { margin: 8px 0 0; }
+.welcome-about summary { cursor: pointer; color: var(--green-deep); font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+.welcome-about p { margin: 8px 0; }
+.booking-shell .welcome + h2 { margin-top: 28px; }

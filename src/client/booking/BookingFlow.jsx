@@ -14,6 +14,7 @@ import ConfirmationStep from './components/ConfirmationStep.jsx'
 import HoldNotice from './components/HoldNotice.jsx'
 import { bankFromSettings, chooseBank, paymentConfig } from './paymentConfig.js'
 import { useBookingRules } from '../bookingRules.js'
+import { useWelcome } from '../welcome.js'
 import './booking.css'
 
 const api = createBookingApi(supabase)
@@ -29,6 +30,7 @@ export default function BookingFlow() {
   const [clock, setClock] = useState(Date.now)
   const [savedBank, setSavedBank] = useState(null)
   const rules = useBookingRules(supabase)
+  const welcome = useWelcome(supabase)
   const testMode = import.meta.env.DEV || new URLSearchParams(window.location.search).get('test') === '1'
   useEffect(() => {
     let live = true
@@ -93,12 +95,12 @@ export default function BookingFlow() {
     {!draft.bookingId && <HoldNotice hold={draft.hold} remaining={remaining} busy={busy} pending={draft.pending} error={error} extend={store.extendHold} release={store.releaseHold} />}
     {error && step !== 6 && <p role="alert" className="error">{error}</p>}
     {auth.error && <p role="alert" className="error">{auth.error}</p>}
-    {!catalogue ? <><p>Loading booking options…</p><button onClick={() => setCatalogueAttempt(catalogueAttempt + 1)}>Retry</button></> : <>
+    {!catalogue ? <><p>Just getting things ready…</p><button onClick={() => setCatalogueAttempt(catalogueAttempt + 1)}>Retry</button></> : <>
       {step > 0 && step < 7 && !draft.pending && !draft.bookingId && <button disabled={busy} onClick={() => navigate(step - 1)}>Back</button>}
       {!held && step >= 4 && step < 7 && !draft.pending && !draft.bookingId && <button onClick={() => navigate(3)}>Choose a time again</button>}
       {busy && <p role="status">Please wait…</p>}
       <fieldset className="screen" disabled={busy}>
-        {step === 0 && <AreaStep catalogue={catalogue} choose={async (areaId) => { if (areaId === draft.areaId || await store.changeSelection({ areaId })) navigate(1) }} />}
+        {step === 0 && <AreaStep welcome={welcome} rules={rules} catalogue={catalogue} choose={async (areaId) => { if (areaId === draft.areaId || await store.changeSelection({ areaId })) navigate(1) }} />}
         {step === 1 && <TreatmentStep catalogue={catalogue} choose={async (serviceId) => { if (serviceId === draft.serviceId || await store.changeSelection({ serviceId, sessions: [], enhancementIds: [] })) navigate(2) }} />}
         {step === 2 && <DurationStep draft={draft} catalogue={catalogue} change={(sessions) => store.changeSelection({ sessions })} next={async () => { if (!draft.date) await store.changeSelection({ date: londonDate() }); navigate(3) }} />}
         {step === 3 && <TimeStep key={`${draft.date}:${draft.hold?.hold_token}:${held}`} rules={rules} joinWaitlist={api.joinWaitlist} draft={draft} loadAvailability={store.availability} selectDate={(date) => store.changeSelection({ date })} selectSlot={store.selectSlot} next={() => goWithQuote(4)} />}

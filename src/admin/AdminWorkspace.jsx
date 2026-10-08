@@ -12,12 +12,13 @@ const ServicesSettings = lazy(() => import('./SettingsCatalogue.jsx').then(modul
 const AreasSettings = lazy(() => import('./SettingsCatalogue.jsx').then(module => ({ default: module.AreasSettings })))
 const BankSettings = lazy(() => import('./SettingsBank.jsx'))
 const RulesSettings = lazy(() => import('./SettingsRules.jsx'))
+const WelcomeSettings = lazy(() => import('./SettingsWelcome.jsx'))
 const Waitlist = lazy(() => import('./Waitlist.jsx'))
 const ExtrasSettings = lazy(() => import('./SettingsCatalogue.jsx').then(module => ({ default: module.ExtrasSettings })))
 const ClientProfile = lazy(() => import('./ClientProfile.jsx'))
 const BookingDestination = lazy(() => import('./BookingDestination.jsx'))
 const AdminNewBooking = lazy(() => import('./AdminNewBooking.jsx'))
-const MORE_LINKS = [['/admin/waitlist', 'Waitlist'], ['/admin/schedule', 'Working hours and special days'], ['/admin/settings/services', 'Services and prices'], ['/admin/settings/extras', 'Extras'], ['/admin/settings/areas', 'Areas and travel fees'], ['/admin/settings/bank', 'Bank transfer details'], ['/admin/settings/rules', 'Booking rules']]
+const MORE_LINKS = [['/admin/waitlist', 'Waitlist'], ['/admin/schedule', 'Working hours and special days'], ['/admin/settings/services', 'Services and prices'], ['/admin/settings/extras', 'Extras'], ['/admin/settings/areas', 'Areas and travel fees'], ['/admin/settings/bank', 'Bank transfer details'], ['/admin/settings/rules', 'Booking rules'], ['/admin/settings/welcome', 'Welcome message']]
 const SETTINGS_PAGES = MORE_LINKS.map(([path]) => path)
 const readRoute = () => ({ path: window.location.pathname.replace(/\/$/, '') || '/admin', search: window.location.search, background: window.history.state?.adminBackground, returnTo: window.history.state?.adminReturnTo })
 export default function AdminWorkspace({ signOut, ownerId }) {
@@ -111,6 +112,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {surface === '/admin/settings/areas' && <AreasSettings />}
       {surface === '/admin/settings/bank' && <BankSettings />}
       {surface === '/admin/settings/rules' && <RulesSettings />}
+      {surface === '/admin/settings/welcome' && <WelcomeSettings />}
       {surface === '/admin/waitlist' && <Waitlist bookFor={request => newBooking(request.requested_date, request.client_id)} />}
       {!creating && !match && !['/admin', '/admin/agenda', '/admin/review', '/admin/alerts', '/admin/more', '/admin/clients', ...SETTINGS_PAGES].includes(surface) && !profile && <section className="admin-review"><h1>Admin page not found</h1><a href="/admin">Back to Calendar</a></section>}
       </div>
