@@ -23,8 +23,6 @@ jobs:
 
       - run: npm ci
 
-      - run: npm run lint
-
       - run: npm run build
 
       # Local-only stack: applies supabase/migrations from scratch, never a remote project.
@@ -38,6 +36,10 @@ jobs:
       # Vitest integration suites read keys from `supabase status`, so they run against the same local stack.
       - name: Unit and integration tests
         run: npm test
+
+      # Runs last and regardless of earlier steps so a lint failure never hides test results.
+      - if: always()
+        run: npm run lint
 
       - if: always()
         run: npx --no-install supabase stop --no-backup
