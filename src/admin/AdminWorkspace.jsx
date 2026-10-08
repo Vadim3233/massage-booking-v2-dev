@@ -1,8 +1,10 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import Calendar from './Calendar.jsx'
+import { useUnreadAlerts } from './useUnreadAlerts.js'
 import './agenda.css'
 const Agenda = lazy(() => import('./Agenda.jsx'))
 const PaymentReview = lazy(() => import('./PaymentReview.jsx'))
+const Alerts = lazy(() => import('./Alerts.jsx'))
 const BookingDestination = lazy(() => import('./BookingDestination.jsx'))
 const AdminNewBooking = lazy(() => import('./AdminNewBooking.jsx'))
 const readRoute = () => ({ path: window.location.pathname.replace(/\/$/, '') || '/admin', search: window.location.search, background: window.history.state?.adminBackground, returnTo: window.history.state?.adminReturnTo })
@@ -10,6 +12,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
   const [route, setRoute] = useState(readRoute)
   const [revision, setRevision] = useState(0)
   const [opener, setOpener] = useState(null)
+  const [unreadAlerts, refreshAlerts] = useUnreadAlerts()
   const guard = useRef(null)
   const currentRoute = useRef(route)
   useEffect(() => { currentRoute.current = route }, [route])
@@ -63,6 +66,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
     {!creating && <nav inert={Boolean(match)} className="admin-primary-nav" aria-label="Admin navigation">
       <a href="/admin" aria-current={calendarSurface ? 'page' : undefined} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); navigate('/admin') } }}>Calendar</a>
       <a href="/admin/review" aria-current={surface === '/admin/review' ? 'page' : undefined} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); navigate('/admin/review') } }}>Review</a>
+      <a href="/admin/alerts" aria-current={surface === '/admin/alerts' ? 'page' : undefined} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); navigate('/admin/alerts') } }}>Alerts{unreadAlerts > 0 && <small className="admin-badge" aria-label={`${unreadAlerts} unread`}>{unreadAlerts > 99 ? '99+' : unreadAlerts}</small>}</a>
       <button disabled title="Clients is not built yet">Clients <small>Coming soon</small></button>
       <a href="/admin/more" aria-current={surface === '/admin/more' ? 'page' : undefined} onClick={event => { event.preventDefault(); navigate('/admin/more') }}>More</a>
     </nav>}
@@ -76,8 +80,9 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {surface === '/admin/agenda' && <Agenda openBooking={openBooking} revision={revision} newBooking={newBooking} />}
       {creating && <AdminNewBooking initialDate={date} ownerId={ownerId} registerGuard={registerGuard} onCancel={() => navigate(route.returnTo || '/admin')} onCreated={created} />}
       {surface === '/admin/review' && <PaymentReview openBooking={openBooking} revision={revision} />}
+      {surface === '/admin/alerts' && <Alerts openBooking={openBooking} changed={refreshAlerts} />}
       {surface === '/admin/more' && <section className="admin-review"><h1>More</h1><p>Settings are not built yet.</p><button onClick={signOut}>Sign out</button></section>}
-      {!creating && !match && !['/admin', '/admin/agenda', '/admin/review', '/admin/more'].includes(surface) && <section className="admin-review"><h1>Admin page not found</h1><a href="/admin">Back to Calendar</a></section>}
+      {!creating && !match && !['/admin', '/admin/agenda', '/admin/review', '/admin/alerts', '/admin/more'].includes(surface) && <section className="admin-review"><h1>Admin page not found</h1><a href="/admin">Back to Calendar</a></section>}
       </div>
       {match && <BookingDestination key={match[1]} id={match[1]} close={close} returnFocus={opener} changed={() => setRevision(value => value + 1)} />}
     </Suspense>

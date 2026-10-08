@@ -5,5 +5,5 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react()],
   // Integration suites share local Supabase; its Windows CLI telemetry file is not concurrency-safe.
-  test: { include: ['src/**/*.test.{js,jsx}'], fileParallelism: false },
+  test: { include: ['src/**/*.test.{js,jsx}', 'server/**/*.test.js'], fileParallelism: false },
 })

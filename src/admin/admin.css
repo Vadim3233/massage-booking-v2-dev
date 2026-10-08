@@ -96,7 +96,7 @@
 }
 /* Operational navigation shares the Calendar palette and spacing. */
 .admin-shell:has(.admin-primary-nav) { padding-bottom: 76px; }
-.admin-primary-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 3; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 4px 8px max(4px, env(safe-area-inset-bottom)); background: #f7f6f2; border-top: 1px solid #d8dfda; }
+.admin-primary-nav { position: fixed; bottom: 0; left: 0; right: 0; z-index: 3; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 4px 8px max(4px, env(safe-area-inset-bottom)); background: #f7f6f2; border-top: 1px solid #d8dfda; }
 .admin-primary-nav a, .admin-primary-nav button { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 48px; padding: 4px; border: 0; border-radius: 6px; font-size: 14px; color: #253b36; text-decoration: none; background: transparent; }
 .admin-primary-nav a[aria-current="page"] { background: #253b36; color: white; }
 .admin-primary-nav button:disabled { cursor: default; opacity: 1; color: #65746c; }
@@ -119,7 +119,7 @@
 .admin-confirm button { min-height: 44px; }
 @media (min-width: 768px) {
   .admin-shell:has(.admin-primary-nav) { padding-bottom: 0; }
-  .admin-primary-nav { position: static; grid-template-columns: repeat(4, minmax(0, 120px)); justify-content: end; border-top: 0; border-bottom: 1px solid #d8dfda; }
+  .admin-primary-nav { position: static; grid-template-columns: repeat(5, minmax(0, 120px)); justify-content: end; border-top: 0; border-bottom: 1px solid #d8dfda; }
   .admin-review { padding: 16px; }
 }
 .admin-action form { display: grid; gap: 10px; }
@@ -132,3 +132,11 @@
 .admin-history ol { padding-left: 18px; display: grid; gap: 6px; }
 .admin-contact-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .admin-contact-actions a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 6px 14px; border: 1px solid #becbbf; border-radius: 6px; background: white; color: #253b36; text-decoration: none; font-weight: 600; }
+.admin-primary-nav a { position: relative; }
+.admin-badge { position: absolute; top: 2px; right: 6px; min-width: 18px; padding: 1px 5px; border-radius: 999px; background: #b45644; color: white; font-size: 11px !important; font-weight: 700; text-align: center; line-height: 1.4; }
+.admin-primary-nav a[aria-current="page"] .admin-badge { background: white; color: #253b36; }
+.admin-alerts { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 8px; }
+.admin-alerts button { display: grid; gap: 2px; width: 100%; text-align: left; padding: 10px 12px; }
+.admin-alerts .is-unread button { border-left: 4px solid #b45644; background: #fffaf6; }
+.admin-alerts span { font-size: 14px; }
+.admin-alerts small { color: #65746c; }
