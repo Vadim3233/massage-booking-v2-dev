@@ -477,3 +477,18 @@ for (const decision of ['approve', 'reject', 'receive']) test(`saved client conf
     await unwrap(fixture.admin.from('command_requests').delete().eq('scope', `admin-payment:${user.id}`))
   }
 })
+
+test('bank details saved by the Admin appear at payment, in place of the build-time fallback', async ({ page }) => {
+  const original = (await fixture.admin.from('business_settings').select('*').eq('key', 'bank_details')).data
+  await unwrap(fixture.admin.from('business_settings').upsert({ key: 'bank_details', value: { account_name: 'Saved In App', sort_code: '11-22-33', account_number: '44556677', note: 'Please use the reference exactly' } }))
+  try {
+    await toPayment(page)
+    await expect(page.getByText('Saved In App', { exact: true })).toBeVisible()
+    await expect(page.getByText('11-22-33', { exact: true })).toBeVisible()
+    await expect(page.getByText('Please use the reference exactly')).toBeVisible()
+    await expect(page.getByText('LOCAL TEST ONLY')).toHaveCount(0)
+  } finally {
+    if (original.length) await fixture.admin.from('business_settings').upsert(original)
+    else await fixture.admin.from('business_settings').delete().eq('key', 'bank_details')
+  }
+})

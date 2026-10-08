@@ -8,9 +8,15 @@ const PaymentReview = lazy(() => import('./PaymentReview.jsx'))
 const Alerts = lazy(() => import('./Alerts.jsx'))
 const ScheduleSettings = lazy(() => import('./ScheduleSettings.jsx'))
 const Clients = lazy(() => import('./Clients.jsx'))
+const ServicesSettings = lazy(() => import('./SettingsCatalogue.jsx').then(module => ({ default: module.ServicesSettings })))
+const AreasSettings = lazy(() => import('./SettingsCatalogue.jsx').then(module => ({ default: module.AreasSettings })))
+const BankSettings = lazy(() => import('./SettingsBank.jsx'))
+const ExtrasSettings = lazy(() => import('./SettingsCatalogue.jsx').then(module => ({ default: module.ExtrasSettings })))
 const ClientProfile = lazy(() => import('./ClientProfile.jsx'))
 const BookingDestination = lazy(() => import('./BookingDestination.jsx'))
 const AdminNewBooking = lazy(() => import('./AdminNewBooking.jsx'))
+const MORE_LINKS = [['/admin/schedule', 'Working hours and special days'], ['/admin/settings/services', 'Services and prices'], ['/admin/settings/extras', 'Extras'], ['/admin/settings/areas', 'Areas and travel fees'], ['/admin/settings/bank', 'Bank transfer details']]
+const SETTINGS_PAGES = MORE_LINKS.map(([path]) => path)
 const readRoute = () => ({ path: window.location.pathname.replace(/\/$/, '') || '/admin', search: window.location.search, background: window.history.state?.adminBackground, returnTo: window.history.state?.adminReturnTo })
 export default function AdminWorkspace({ signOut, ownerId }) {
   const [route, setRoute] = useState(readRoute)
@@ -76,7 +82,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       <a href="/admin/review" aria-current={surface === '/admin/review' ? 'page' : undefined} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); navigate('/admin/review') } }}>Review</a>
       <a href="/admin/alerts" aria-current={surface === '/admin/alerts' ? 'page' : undefined} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); navigate('/admin/alerts') } }}>Alerts{unreadAlerts > 0 && <small className="admin-badge" aria-label={`${unreadAlerts} unread`}>{unreadAlerts > 99 ? '99+' : unreadAlerts}</small>}</a>
       <a href="/admin/clients" aria-current={clientsSurface ? 'page' : undefined} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); navigate('/admin/clients') } }}>Clients</a>
-      <a href="/admin/more" aria-current={['/admin/more', '/admin/schedule'].includes(surface) ? 'page' : undefined} onClick={event => { event.preventDefault(); navigate('/admin/more') }}>More</a>
+      <a href="/admin/more" aria-current={['/admin/more', ...SETTINGS_PAGES].includes(surface) ? 'page' : undefined} onClick={event => { event.preventDefault(); navigate('/admin/more') }}>More</a>
     </nav>}
     <Suspense fallback={<p role="status">Loading Admin…</p>}>
       <div inert={Boolean(match)}>
@@ -92,10 +98,15 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {profile && <ClientProfile key={profile[1]} id={profile[1]} back={() => navigate('/admin/clients')} openBooking={openBooking} newBooking={clientId => newBooking(today(), clientId)} />}
       {surface === '/admin/alerts' && <Alerts openBooking={openBooking} changed={refreshAlerts} />}
       {surface === '/admin/more' && <section className="admin-review"><h1>More</h1>
-        <ul className="admin-menu"><li><a href="/admin/schedule" onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); navigate('/admin/schedule') } }}>Working hours and special days</a></li></ul>
+        <ul className="admin-menu">{MORE_LINKS.map(([path, text]) => <li key={path}><a href={path} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); navigate(path) } }}>{text}</a></li>)}</ul>
         <button onClick={signOut}>Sign out</button></section>}
-      {surface === '/admin/schedule' && <><a className="admin-back-link" href="/admin/more" onClick={event => { event.preventDefault(); navigate('/admin/more') }}>← More</a><ScheduleSettings /></>}
-      {!creating && !match && !['/admin', '/admin/agenda', '/admin/review', '/admin/alerts', '/admin/more', '/admin/schedule', '/admin/clients'].includes(surface) && !profile && <section className="admin-review"><h1>Admin page not found</h1><a href="/admin">Back to Calendar</a></section>}
+      {SETTINGS_PAGES.includes(surface) && <a className="admin-back-link" href="/admin/more" onClick={event => { event.preventDefault(); navigate('/admin/more') }}>← More</a>}
+      {surface === '/admin/schedule' && <ScheduleSettings />}
+      {surface === '/admin/settings/services' && <ServicesSettings />}
+      {surface === '/admin/settings/extras' && <ExtrasSettings />}
+      {surface === '/admin/settings/areas' && <AreasSettings />}
+      {surface === '/admin/settings/bank' && <BankSettings />}
+      {!creating && !match && !['/admin', '/admin/agenda', '/admin/review', '/admin/alerts', '/admin/more', '/admin/clients', ...SETTINGS_PAGES].includes(surface) && !profile && <section className="admin-review"><h1>Admin page not found</h1><a href="/admin">Back to Calendar</a></section>}
       </div>
       {match && <BookingDestination key={match[1]} id={match[1]} close={close} returnFocus={opener} changed={() => setRevision(value => value + 1)} />}
     </Suspense>

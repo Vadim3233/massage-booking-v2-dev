@@ -12,11 +12,11 @@ import DetailsStep from './components/DetailsStep.jsx'
 import PaymentStep from './components/PaymentStep.jsx'
 import ConfirmationStep from './components/ConfirmationStep.jsx'
 import HoldNotice from './components/HoldNotice.jsx'
-import { paymentConfig } from './paymentConfig.js'
+import { bankFromSettings, chooseBank, paymentConfig } from './paymentConfig.js'
 import './booking.css'
 
 const api = createBookingApi(supabase)
-const bank = paymentConfig(import.meta.env)
+const fallbackBank = paymentConfig(import.meta.env)
 
 export default function BookingFlow() {
   const [store] = useState(() => createBookingStore({ api, storage: sessionStorage, clientKey: browserClientKey(localStorage) }))
@@ -26,6 +26,7 @@ export default function BookingFlow() {
   const [catalogue, setCatalogue] = useState(null)
   const [catalogueAttempt, setCatalogueAttempt] = useState(0)
   const [clock, setClock] = useState(Date.now)
+  const [savedBank, setSavedBank] = useState(null)
   const testMode = import.meta.env.DEV || new URLSearchParams(window.location.search).get('test') === '1'
   useEffect(() => {
     let live = true
@@ -47,6 +48,14 @@ export default function BookingFlow() {
       document.removeEventListener('visibilitychange', refresh)
     }
   }, [store])
+  const signedInUser = auth.session?.user?.id
+  useEffect(() => {
+    if (!signedInUser || step < 6) return undefined
+    let live = true
+    api.bankDetails().then(row => { if (live) setSavedBank(bankFromSettings(row)) }, () => { /* The build-time details remain the fallback. */ })
+    return () => { live = false }
+  }, [signedInUser, step])
+  const bank = chooseBank(savedBank, fallbackBank)
   const held = activeHold(draft, clock)
   const remaining = draft.hold ? Math.max(0, Math.ceil((Date.parse(draft.hold.expires_at) - clock) / 1000)) : 0
   useEffect(() => { store.expireHold() }, [store, clock, busy])

@@ -88,5 +88,6 @@ export function createBookingApi(client) {
     booking: (id) => unwrap(client.rpc('get_my_booking', { p_booking_id: id })),
     declareTransfer: (id) => unwrap(client.rpc('declare_my_bank_transfer', { p_booking_id: id })),
     confirmCash: (id) => unwrap(client.rpc('confirm_my_cash_booking', { p_booking_id: id })),
+    bankDetails: () => unwrap(client.rpc('get_bank_details')),
   }
 }
