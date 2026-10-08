@@ -93,3 +93,20 @@ test('the account page fits a small phone without sideways scrolling', async ({ 
   await page.screenshot({ path: 'test-results/client-account-320.png', fullPage: true })
   expect(b.id).toBeTruthy()
 })
+
+test('the date limit and fee wording follow the Admin\'s booking rules', async ({ page }) => {
+  const saved = (await f.admin.from('business_settings').select('*').in('key', ['booking_horizon_days', 'free_cancellation_hours'])).data
+  try {
+    await unwrap(f.admin.from('business_settings').upsert([{ key: 'booking_horizon_days', value: 12 }, { key: 'free_cancellation_hours', value: 48 }]))
+    const slot = londonSlot(30 * 3600000)
+    const b = await booking({ date: slot.date, start_minutes: slot.start, created_at: new Date(Date.now() - 3 * 86400000).toISOString() })
+    await signIn(page, `/account?booking=${b.id}`)
+    await expect(page.getByText('inside 48 hours of your appointment, so a late fee of £85.00 applies')).toBeVisible()
+    await page.getByRole('button', { name: 'Change the time', exact: true }).click()
+    const expected = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(Date.now() + 12 * 86400000))
+    await expect(page.getByLabel('New date')).toHaveAttribute('max', expected)
+  } finally {
+    await f.admin.from('business_settings').delete().in('key', ['booking_horizon_days', 'free_cancellation_hours'])
+    if (saved.length) await f.admin.from('business_settings').upsert(saved)
+  }
+})

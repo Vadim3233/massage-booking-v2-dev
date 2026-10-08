@@ -45,7 +45,7 @@ export function DurationStep({ draft, catalogue, change, next }) {
   </>
 }
 
-export function TimeStep({ draft, loadAvailability, selectDate, selectSlot, next }) {
+export function TimeStep({ rules, draft, loadAvailability, selectDate, selectSlot, next }) {
   const [availability, setAvailability] = useState({ slots: [], loading: true, error: '' })
   const duration = durationOf(draft)
   useEffect(() => {
@@ -58,7 +58,7 @@ export function TimeStep({ draft, loadAvailability, selectDate, selectSlot, next
   }, [loadAvailability, draft.date, draft.hold?.hold_id, draft.hold?.hold_token, duration])
   const slots = availability.slots.map((slot) => slot.start_minutes)
   return <><h1>Choose date and time</h1><p>All appointment times are London time.</p>
-    <label>Appointment date<input type="date" value={draft.date} min={londonDate()} max={londonDate(40)} onClick={(event) => {
+    <label>Appointment date<input type="date" value={draft.date} min={londonDate()} max={londonDate(rules.horizonDays)} onClick={(event) => {
       try {
         event.currentTarget.showPicker?.()
       } catch {

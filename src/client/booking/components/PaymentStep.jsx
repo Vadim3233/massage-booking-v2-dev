@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { money } from '../bookingDraft.js'
+import { cancellationNote } from '../../bookingRules.js'
 import { PriceSummary } from './ReviewStep.jsx'
 import BankDetails from './BankDetails.jsx'
 import BookingSummary from './BookingSummary.jsx'
 
-export default function PaymentStep({ draft, quote, bank, api, store, finalize, held, error, chooseTimeAgain }) {
+export default function PaymentStep({ rules, draft, quote, bank, api, store, finalize, held, error, chooseTimeAgain }) {
   const [acknowledged, setAcknowledged] = useState(false)
   const [view, setView] = useState({ booking: null, error: '' })
   const [attempt, setAttempt] = useState(0)
@@ -50,7 +51,7 @@ export default function PaymentStep({ draft, quote, bank, api, store, finalize, 
       </ol>
     </section>}
     <>
-      <p>{cash ? 'Just a quick reminder: the full appointment fee applies to cancellations made within 24 hours of your appointment.' : 'Free cancellation up to 24 hours before your appointment. Cancellations within 24 hours are subject to the full appointment fee.'}</p>
+      <p>{cancellationNote(rules, cash)}</p>
       <label className="check"><input type="checkbox" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} />I understand the payment and cancellation terms.</label>
     </>
     {error && <p role="alert" className="error">{error}</p>}

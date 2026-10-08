@@ -5,6 +5,7 @@ import AuthPanel from '../auth/AuthPanel.jsx'
 import { dateLabel, londonDate, money, timeLabel } from '../booking/bookingDraft.js'
 import BookingSummary from '../booking/components/BookingSummary.jsx'
 import { accountApi } from './accountApi.js'
+import { useBookingRules } from '../bookingRules.js'
 import '../booking/booking.css'
 import './account.css'
 
@@ -20,7 +21,7 @@ function Terms({ terms, action }) {
   if (!terms.can_change) return <p>This appointment can no longer be changed online. Please contact Vad.</p>
   const fee = Number(action === 'cancel' ? terms.cancel_fee_gbp : terms.reschedule_fee_gbp)
   return fee > 0
-    ? <p className="account-note account-note--fee" role="status">This is inside 24 hours of your appointment, so a late fee of <strong>{money(fee)}</strong> applies. I can still make this change for you now.</p>
+    ? <p className="account-note account-note--fee" role="status">This is inside {terms.free_cancellation_hours ?? 24} hours of your appointment, so a late fee of <strong>{money(fee)}</strong> applies. I can still make this change for you now.</p>
     : <p className="account-note" role="status">No charge. Changes are free until {londonStamp(terms.free_until)}.</p>
 }
 
@@ -54,7 +55,7 @@ function CancelPanel({ booking, terms, done, back, refresh }) {
   </form>
 }
 
-function ReschedulePanel({ booking, terms, done, back, refresh }) {
+function ReschedulePanel({ booking, terms, rules, done, back, refresh }) {
   const [date, setDate] = useState('')
   const [times, setTimes] = useState(null)
   const [start, setStart] = useState(null)
@@ -82,7 +83,7 @@ function ReschedulePanel({ booking, terms, done, back, refresh }) {
   return <form className="panel" onSubmit={submit}>
     <h2>Choose a new time</h2>
     <Terms terms={terms} action="reschedule" />
-    <label>New date<input type="date" required min={londonDate()} max={londonDate(40)} value={date} disabled={busy} onChange={event => setDate(event.target.value)} /></label>
+    <label>New date<input type="date" required min={londonDate()} max={londonDate(rules.horizonDays)} value={date} disabled={busy} onChange={event => setDate(event.target.value)} /></label>
     {date && times === null && <p role="status">Looking for times…</p>}
     {times && !times.length && !error && <p>There are no times on that day. Please try another date.</p>}
     {times?.length > 0 && <div className="slots" role="group" aria-label="Available times">
@@ -97,7 +98,7 @@ function ReschedulePanel({ booking, terms, done, back, refresh }) {
   </form>
 }
 
-function Manage({ id, close, changed }) {
+function Manage({ id, rules, close, changed }) {
   const [booking, setBooking] = useState(null)
   const [terms, setTerms] = useState(null)
   const [mode, setMode] = useState('view')
@@ -135,7 +136,7 @@ function Manage({ id, close, changed }) {
       {open && terms && !terms.can_change && <p>This appointment can no longer be changed online. Please contact Vad.</p>}
     </>}
     {mode === 'cancel' && terms && <CancelPanel booking={booking} terms={terms} back={() => setMode('view')} refresh={load} done={result => done(result, 'Your appointment is cancelled.')} />}
-    {mode === 'reschedule' && terms && <ReschedulePanel booking={booking} terms={terms} back={() => setMode('view')} refresh={load} done={result => done(result, 'Your appointment has been moved.')} />}
+    {mode === 'reschedule' && terms && <ReschedulePanel booking={booking} terms={terms} rules={rules} back={() => setMode('view')} refresh={load} done={result => done(result, 'Your appointment has been moved.')} />}
     <p><a href="https://vadmassage.com">Contact Vad</a></p>
   </section>
 }
@@ -172,6 +173,7 @@ export default function AccountApp() {
   const auth = useClientAuth(supabase)
   const [selected, setSelected] = useState(() => new URLSearchParams(window.location.search).get('booking'))
   const [revision, setRevision] = useState(0)
+  const rules = useBookingRules(supabase)
   function select(id) {
     setSelected(id)
     const url = new URL(window.location.href)
@@ -183,7 +185,7 @@ export default function AccountApp() {
     {!auth.ready && <p role="status">Checking your account…</p>}
     {auth.ready && !auth.session && <AuthPanel client={supabase} heading="Sign in to see your bookings" redirectTo={`${window.location.origin}/account`} />}
     {auth.ready && auth.session && (selected
-      ? <Manage key={selected} id={selected} close={() => select(null)} changed={() => setRevision(value => value + 1)} />
+      ? <Manage key={selected} id={selected} rules={rules} close={() => select(null)} changed={() => setRevision(value => value + 1)} />
       : <><h1>Your bookings</h1><BookingList key={revision} open={select} /></>)}
     <footer>Personal treatments, thoughtfully arranged. <a href="https://vadmassage.com">Contact Vad</a></footer>
   </main>

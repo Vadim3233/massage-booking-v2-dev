@@ -13,6 +13,7 @@ import PaymentStep from './components/PaymentStep.jsx'
 import ConfirmationStep from './components/ConfirmationStep.jsx'
 import HoldNotice from './components/HoldNotice.jsx'
 import { bankFromSettings, chooseBank, paymentConfig } from './paymentConfig.js'
+import { useBookingRules } from '../bookingRules.js'
 import './booking.css'
 
 const api = createBookingApi(supabase)
@@ -27,6 +28,7 @@ export default function BookingFlow() {
   const [catalogueAttempt, setCatalogueAttempt] = useState(0)
   const [clock, setClock] = useState(Date.now)
   const [savedBank, setSavedBank] = useState(null)
+  const rules = useBookingRules(supabase)
   const testMode = import.meta.env.DEV || new URLSearchParams(window.location.search).get('test') === '1'
   useEffect(() => {
     let live = true
@@ -99,12 +101,12 @@ export default function BookingFlow() {
         {step === 0 && <AreaStep catalogue={catalogue} choose={async (areaId) => { if (areaId === draft.areaId || await store.changeSelection({ areaId })) navigate(1) }} />}
         {step === 1 && <TreatmentStep catalogue={catalogue} choose={async (serviceId) => { if (serviceId === draft.serviceId || await store.changeSelection({ serviceId, sessions: [], enhancementIds: [] })) navigate(2) }} />}
         {step === 2 && <DurationStep draft={draft} catalogue={catalogue} change={(sessions) => store.changeSelection({ sessions })} next={async () => { if (!draft.date) await store.changeSelection({ date: londonDate() }); navigate(3) }} />}
-        {step === 3 && <TimeStep key={`${draft.date}:${draft.hold?.hold_token}:${held}`} draft={draft} loadAvailability={store.availability} selectDate={(date) => store.changeSelection({ date })} selectSlot={store.selectSlot} next={() => goWithQuote(4)} />}
+        {step === 3 && <TimeStep key={`${draft.date}:${draft.hold?.hold_token}:${held}`} rules={rules} draft={draft} loadAvailability={store.availability} selectDate={(date) => store.changeSelection({ date })} selectSlot={store.selectSlot} next={() => goWithQuote(4)} />}
         {step === 4 && <ReviewStep draft={draft} catalogue={catalogue} quote={quote} edit={store.edit} navigate={navigate} refresh={store.loadQuote} next={() => goWithQuote(5)} />}
         {!auth.ready && step >= 5 && <p role="status">Checking your account…</p>}
         {auth.ready && (needsAuth || auth.recovery) && <AuthPanel client={supabase} recovery={auth.recovery} onRecovered={auth.finishRecovery} onGuest={startGuest} />}
         {step === 5 && auth.session && !auth.recovery && <DetailsStep key={auth.session.user.id} draft={draft} user={auth.session.user} api={api} edit={store.edit} report={store.setError} guest={isGuest} newTestGuest={startNewTestGuest} next={() => goWithQuote(6)} />}
-        {step === 6 && auth.session && !auth.recovery && <PaymentStep draft={draft} quote={quote} bank={bank} api={api} store={store} finalize={() => store.finalize(auth.session.user.id)} held={held} error={error} chooseTimeAgain={() => navigate(3)} />}
+        {step === 6 && auth.session && !auth.recovery && <PaymentStep rules={rules} draft={draft} quote={quote} bank={bank} api={api} store={store} finalize={() => store.finalize(auth.session.user.id)} held={held} error={error} chooseTimeAgain={() => navigate(3)} />}
         {step === 7 && auth.session && !auth.recovery && <ConfirmationStep id={draft.bookingId} result={result} api={api} bank={bank} />}
       </fieldset>
     </>}

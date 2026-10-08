@@ -7,13 +7,16 @@ const SAFE_MESSAGES = new Set([
   'This appointment has already started. Please contact Vad.',
   'This time is not available. Please choose another time.',
   'Please choose a start time on the hour or half hour.',
-  'Online appointments can currently be arranged up to 40 days ahead. Please choose another date.',
   'Please keep the reason under 500 characters',
 ])
 const GENERIC = 'Something went wrong. Please try again, or contact Vad if it keeps happening.'
 
+// Messages with a number in them, because the number comes from the Admin's settings.
+const SAFE_PATTERNS = [/^Online appointments can currently be arranged up to \d+ days ahead\. Please choose (another|an earlier) date\.$/]
+
 export function friendlyError(error) {
-  const failure = new Error(SAFE_MESSAGES.has(error?.message) ? error.message : GENERIC)
+  const known = SAFE_MESSAGES.has(error?.message) || SAFE_PATTERNS.some(pattern => pattern.test(error?.message || ''))
+  const failure = new Error(known ? error.message : GENERIC)
   failure.refresh = error?.code === 'PT409'
   return failure
 }

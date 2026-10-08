@@ -9,6 +9,10 @@ describe('what a client is told when something goes wrong', () => {
     const started = friendlyError({ code: '22023', message: 'This appointment has already started. Please contact Vad.' })
     expect(started.refresh).toBe(false)
   })
+  it('keeps the date-limit message whatever number of days the Admin has set', () => {
+    for (const days of [10, 40, 90]) expect(friendlyError({ code: '22023', message: `Online appointments can currently be arranged up to ${days} days ahead. Please choose another date.` }).message).toContain(`${days} days`)
+    expect(friendlyError({ code: '22023', message: 'Online appointments can currently be arranged up to x days ahead.' }).message).toContain('Something went wrong')
+  })
   it('hides anything technical', () => {
     const leaked = friendlyError({ code: 'XX000', message: 'duplicate key value violates unique constraint "bookings_pkey"' })
     expect(leaked.message).toBe('Something went wrong. Please try again, or contact Vad if it keeps happening.')

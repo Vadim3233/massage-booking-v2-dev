@@ -129,3 +129,29 @@ test('bank details are checked, saved, and shown back to the Admin', async ({ pa
     else await f.admin.from('business_settings').delete().eq('key', 'bank_details')
   }
 })
+
+test('booking rules are checked, saved and put to work for clients', async ({ page }) => {
+  const keys = ['booking_horizon_days', 'minimum_notice_minutes', 'free_cancellation_hours', 'grace_minutes', 'new_client_booking_limit', 'returning_client_booking_limit']
+  const original = (await f.admin.from('business_settings').select('*').in('key', keys)).data
+  try {
+    await f.authorize()
+    await signIn(page, '/admin/settings/rules')
+    await expect(page.getByRole('heading', { name: 'Booking rules', level: 1 })).toBeVisible()
+    await expect(page.getByLabel('How many days ahead clients can book')).toHaveValue('40')
+    await page.getByLabel('How many days ahead clients can book').fill('0')
+    await expect(page.getByRole('alert')).toContainText('choose a number from 1 to 365')
+    await expect(page.getByRole('button', { name: 'Save rules' })).toBeDisabled()
+    await page.getByLabel('How many days ahead clients can book').fill('21')
+    await page.getByLabel('Hours of notice clients need').fill('3')
+    await page.getByLabel('Free to cancel or change up to this many hours before').fill('36')
+    await page.getByRole('button', { name: 'Save rules' }).click()
+    await expect(page.getByText('Saved. These apply from now on.')).toBeVisible()
+    const rows = Object.fromEntries((await f.admin.from('business_settings').select('key,value').in('key', keys)).data.map(row => [row.key, row.value]))
+    expect(rows).toMatchObject({ booking_horizon_days: 21, minimum_notice_minutes: 180, free_cancellation_hours: 36 })
+    const publicRules = (await f.publicClient.rpc('get_booking_rules')).data
+    expect(publicRules).toMatchObject({ booking_horizon_days: 21, minimum_notice_hours: 3, free_cancellation_hours: 36 })
+  } finally {
+    await f.admin.from('business_settings').delete().in('key', keys)
+    if (original.length) await f.admin.from('business_settings').upsert(original)
+  }
+})

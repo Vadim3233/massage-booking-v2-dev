@@ -87,7 +87,7 @@ function ActionDialog({ kind, booking, api, close, done }) {
   const refundNote = kind === 'cancel' && booking.booking_payments?.status === 'paid' && feeValid
     ? `Payment of ${money(booking.booking_payments.amount_gbp)} has been received. ${money(Math.max(Number(booking.booking_payments.amount_gbp) - Number(fee || 0), 0))} will be recorded as a refund due.` : ''
   const lateFeeNote = kind === 'reschedule' && initiatedBy === 'client' && booking.late_fee_status === 'none' && standardFee > 0
-    ? `A late fee of ${money(standardFee)} will be recorded as due, because this change is inside 24 hours.` : ''
+    ? `A late fee of ${money(standardFee)} will be recorded as due, because this change is inside the free cancellation window.` : ''
 
   return <dialog ref={ref} className="admin-confirm admin-action" aria-labelledby="booking-action-title" onCancel={event => { event.preventDefault(); event.stopPropagation(); if (!busy) close() }}>
     <form onSubmit={submit}>
