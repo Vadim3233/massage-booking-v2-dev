@@ -6,11 +6,12 @@ const env = { APP_BASE_URL: 'https://booking.example.com/', TELEGRAM_BOT_TOKEN: 
   EMAIL_FROM: 'Vad <hello@example.com>', ADMIN_ALERT_EMAIL: 'vad@example.com', EMAIL_REPLY_TO: 'vad@example.com' }
 const row = (overrides = {}) => ({ id: 'd1', channel: 'telegram', audience: 'admin', recipient: 'admin', title: 'New booking request', body: 'Nadia: Mon 5 May at 14:30.', link_path: '/admin/bookings/b1', ...overrides })
 
-function fakeClient(rows) {
+function fakeClient(rows, failRepeats = false) {
   const completed = []
   return { completed, async rpc(name, args) {
     if (name === 'claim_notification_deliveries') { this.claimArgs = args; return { data: rows.filter(r => args.p_channels.includes(r.channel)), error: null } }
     if (name === 'complete_notification_delivery') { completed.push(args); return { error: null } }
+    if (name === 'run_series_maintenance') return failRepeats ? { data: null, error: { message: 'boom' } } : { data: { made: 2, clashes: 0, ended: 0 }, error: null }
     throw new Error(`unexpected ${name}`)
   } }
 }
@@ -128,8 +129,14 @@ describe('the endpoint', () => {
   it('runs for the right caller and returns only counts', async () => {
     const response = reply(); await handle(request(), response, deps)
     expect(response.out.statusCode).toBe(200)
-    expect(JSON.parse(response.out.body)).toEqual({ claimed: 1, sent: 1, failed: 0, channels: ['telegram', 'email'] })
+    expect(JSON.parse(response.out.body)).toEqual({ claimed: 1, sent: 1, failed: 0, channels: ['telegram', 'email'], repeats: { made: 2, clashes: 0, ended: 0 } })
     expect(response.out.body).not.toMatch(/SECRET|service-key/)
+  })
+  it('still sends messages when the repeating-bookings job fails, without saying why', async () => {
+    const response = reply(); await handle(request(), response, { ...deps, createServiceClient: () => fakeClient([row()], true) })
+    expect(response.out.statusCode).toBe(200)
+    expect(JSON.parse(response.out.body)).toMatchObject({ sent: 1, repeats: { failed: true } })
+    expect(response.out.body).not.toMatch(/boom/)
   })
   it('does not reveal why it could not run', async () => {
     const response = reply()

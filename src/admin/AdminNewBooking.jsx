@@ -146,10 +146,10 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
       if (!quote) { setError('Wait for the current price, or retry loading it.'); return }
     }
     busyRef.current = true; setBusy(true); setError('')
-    const submission = draft.submission || { id: crypto.randomUUID(), payload: bookingRequest(draft) }
+    const submission = draft.submission || { id: crypto.randomUUID(), payload: bookingRequest(draft), repeat: draft.repeat?.on ? { endDate: draft.repeat.endDate || null } : null }
     patch({ submission })
     try {
-      const result = await api.create(submission.payload, submission.id)
+      const result = submission.repeat ? await api.createSeries(submission.payload, submission.repeat.endDate, submission.id) : await api.create(submission.payload, submission.id)
       completed.current = true; clear()
       onCreated({ ...result, date: submission.payload.date })
     } catch (failure) {

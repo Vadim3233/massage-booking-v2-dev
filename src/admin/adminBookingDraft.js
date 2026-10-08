@@ -6,7 +6,7 @@ export function emptyAdminDraft(initialDate) {
     client: null,
     details: { savedAddressId: '', address_line_1: '', address_line_2: '', city: '', postcode: '', entry_instructions: '' },
     areaId: '', serviceId: '', sessions: [{ duration_minutes: 60, recipient_name: '', preference_ids: [] }],
-    enhancementIds: [], date: initialDate || today(), start: null, payment: 'bank_pending', note: '', submission: null,
+    enhancementIds: [], date: initialDate || today(), start: null, payment: 'bank_pending', note: '', repeat: { on: false, endDate: '' }, submission: null,
   }
 }
 export function meaningfulDraft(draft) {

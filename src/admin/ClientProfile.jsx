@@ -3,6 +3,7 @@ import { clientsApi, fullName } from './clientsApi.js'
 import { AddressForm, ClientForm } from './ClientForms.jsx'
 import { clientContactLinks } from './contactLinks.js'
 import { dateLabel, label, money, time } from './calendarPresentation.js'
+import ClientRepeats from './ClientRepeats.jsx'
 
 const PAGE = 15
 const stamp = value => new Date(value).toLocaleDateString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', year: 'numeric' })
@@ -150,6 +151,7 @@ export default function ClientProfile({ id, back, openBooking, newBooking, api =
     {editing && <section aria-label="Edit details"><ClientForm initial={client} submitLabel="Save details" onCancel={() => setEditing(false)} onSubmit={async details => { await api.update(id, details); setEditing(false); changed() }} /></section>}
     {error && <p role="alert">{error}</p>}
     <Summary clientId={id} api={api} version={version} />
+    <ClientRepeats clientId={id} openBooking={openBooking} />
     <section aria-labelledby="online-title"><h2 id="online-title">Online booking</h2>
       <p>{client.online_booking_enabled ? 'This client can book online.' : 'Online booking is switched off for this client. They cannot book on the website.'}</p>
       <button disabled={busy} onClick={toggleOnline}>{client.online_booking_enabled ? 'Switch off online booking' : 'Switch on online booking'}</button>

@@ -32,6 +32,7 @@ export function createAdminNewBookingApi(client) {
     quote: draft => one(client.rpc('admin_quote_booking', quoteParams(draft))),
     availability: (date, duration) => unwrap(client.rpc('admin_booking_availability', { p_date: date, p_treatment_duration_minutes: duration })),
     create: (request, requestId) => one(client.rpc('admin_create_booking', { p_request: request, p_request_id: requestId })),
+    createSeries: (request, endDate, requestId) => one(client.rpc('admin_create_series', { p_request: request, p_end_date: endDate || null, p_request_id: requestId })),
   }
 }
 

@@ -19,7 +19,9 @@ export async function handle(request, response, { env = process.env, createServi
   if (!url || !key) { response.statusCode = 500; response.end(JSON.stringify({ error: 'The sender is not configured' })); return }
   try {
     const client = createServiceClient ? createServiceClient(url, key) : createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
-    const summary = await createDispatcher({ client, config: readConfig(env), fetchImpl }).dispatch()
+    // Repeating bookings first, so the messages they create go out in the same run. A problem here never stops the sender.
+    const repeats = await client.rpc('run_series_maintenance').then(({ data, error }) => (error ? { failed: true } : data), () => ({ failed: true }))
+    const summary = { ...(await createDispatcher({ client, config: readConfig(env), fetchImpl }).dispatch()), repeats }
     response.statusCode = 200
     response.setHeader('content-type', 'application/json')
     response.end(JSON.stringify(summary))

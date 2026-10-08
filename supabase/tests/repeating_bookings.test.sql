@@ -86,7 +86,8 @@ select is((select count(*)::integer from public.notification_deliveries d join p
 select ok((select d.body like '%bank transfer%' and d.body like '%booking page%' and d.body like '%more than 24 hours%' from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id
     where e.event_type = 'booking.series_due' and d.audience = 'client'), 'The message explains how to pay and the free cancellation window');
 select is((select count(*)::integer from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id
-    where e.event_type = 'booking.series_due' and d.audience = 'admin' and d.recipient = 'admin-series'), 3, 'The Admin hears about it in the app, Telegram and email');
+    where e.event_type = 'booking.series_due' and d.audience = 'admin' and d.recipient = 'admin-series'
+      and e.aggregate_id in (select id from public.bookings where series_id = (select series_id from made))), 3, 'The Admin hears about it in the app, Telegram and email');
 select is((select count(*)::integer from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id
     join public.bookings b on b.id = e.aggregate_id where e.event_type = 'booking.created' and b.series_id = (select series_id from made) and b.date = pg_temp.today_plus(17)), 0, 'The session is not also announced as an ordinary new booking');
 
@@ -134,8 +135,8 @@ select is((select count(*)::integer from public.bookings where series_id = (sele
 select is((select reason from public.booking_series_skips where series_id = (select series_id from made) and date = pg_temp.today_plus(31)), 'clash', 'The date that clashed is skipped');
 select is((select count(*)::integer from public.calendar_blocks where series_id = (select series_id from made) and date = pg_temp.today_plus(31)), 0, 'It is no longer held');
 select is((select count(*)::integer from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id
-    where e.event_type = 'series.clash' and d.recipient = 'admin-series'), 3, 'The Admin is told about the clash');
-select is((select d.link_path from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id where e.event_type = 'series.clash' and d.channel = 'in_app'), '/admin/clients/00000000-0000-4000-8000-00000000f611', 'The alert opens the client');
+    where e.event_type = 'series.clash' and d.recipient = 'admin-series' and e.payload->>'client_id' = '00000000-0000-4000-8000-00000000f611'), 3, 'The Admin is told about the clash');
+select is((select d.link_path from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id where e.event_type = 'series.clash' and d.channel = 'in_app' and e.payload->>'client_id' = '00000000-0000-4000-8000-00000000f611'), '/admin/clients/00000000-0000-4000-8000-00000000f611', 'The alert opens the client');
 select is((select public.run_series_maintenance()), '{"made": 0, "clashes": 0, "ended": 0}'::jsonb, 'A clash is reported once');
 
 -- Moving a session releases its original date.
@@ -172,6 +173,20 @@ select is((select public.run_series_maintenance()), '{"made": 2, "clashes": 0, "
 select is((select count(*)::integer from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id
     where e.event_type = 'booking.series_due' and d.audience = 'client' and d.recipient = 'dana.dated@example.test' and d.title = 'Your next regular appointment' and d.body like '%paid in cash%'), 2, 'A cash repeat is not asked for a transfer');
 select is((select count(*)::integer from public.calendar_blocks where series_id = (select series_id from made2)), 0, 'Nothing is held once every session up to the end date is booked');
+
+-- The reminder window is a setting the Admin can read and change.
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000f602","role":"authenticated"}', true);
+set local role authenticated;
+select throws_ok($$select public.admin_set_series_reminder_days(5)$$, '42501', 'Admin authorization required', 'A client cannot change the window');
+reset role;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000f601","role":"authenticated"}', true);
+set local role authenticated;
+select lives_ok($$select public.admin_set_series_reminder_days(5)$$, 'The Admin can change the window');
+select is(public.admin_series_reminder_days(), 5, 'The new window is read back');
+select throws_ok($$select public.admin_set_series_reminder_days(0)$$, '22023', 'Choose between 1 and 30 days', 'Zero days is refused');
+select throws_ok($$select public.admin_set_series_reminder_days(31)$$, '22023', 'Choose between 1 and 30 days', 'More than 30 days is refused');
+reset role;
+select ok(not has_function_privilege('anon', 'public.admin_set_series_reminder_days(integer)', 'EXECUTE'), 'Anonymous callers cannot change the window');
 
 select * from finish();
 rollback;

@@ -75,7 +75,7 @@ export function createScheduleApi(client) {
       p_start_date: block.start_date, p_start_minutes: block.start_minutes, p_end_date: block.end_date, p_end_minutes: block.end_minutes })),
     rangeConflicts: block => run(client.rpc('admin_block_range_conflicts', { p_start_date: block.start_date, p_start_minutes: block.start_minutes, p_end_date: block.end_date, p_end_minutes: block.end_minutes })),
     blockGroup: groupId => run(client.from('calendar_blocks').select('id,group_id,kind,title,notes,date,start_minutes,end_minutes').eq('group_id', groupId).order('date')),
-    blocksFrom: from => run(client.from('calendar_blocks').select('id,group_id,kind,title,notes,date,start_minutes,end_minutes').gte('date', from).order('date').order('start_minutes').limit(800)),
+    blocksFrom: from => run(client.from('calendar_blocks').select('id,group_id,kind,title,notes,date,start_minutes,end_minutes').in('kind', ['blocked', 'personal_event']).gte('date', from).order('date').order('start_minutes').limit(800)),
     deleteBlock: groupId => run(client.from('calendar_blocks').delete().eq('group_id', groupId)),
   }
 }

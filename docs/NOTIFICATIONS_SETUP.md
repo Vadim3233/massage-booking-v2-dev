@@ -44,7 +44,7 @@ In the Vercel project, Settings, Environment Variables (Production), add:
 A channel is only used when its settings are all present, so you can start with Telegram alone and add email later.
 
 ### 4. Make the sender run
-The sender does nothing until something calls it. Pick one:
+The sender does nothing until something calls it. The same call also runs the daily job for repeating bookings (it makes the next session's booking when it is due and asks the client to pay), so it should run at least once a day even if you only use in-app alerts. Pick one:
 
 - **Vercel Cron (simplest):** add a `crons` entry to `vercel.json`, for example `{ "path": "/api/dispatch-notifications", "schedule": "* * * * *" }`. Vercel sends your `CRON_SECRET` automatically. **Free (Hobby) Vercel plans only allow a daily schedule**, so a one-minute schedule needs a paid plan. Ask before adding it, because an unsupported schedule fails the deploy.
 - **Supabase scheduler (works on any plan):** in the Supabase SQL editor, enable the `pg_cron` and `pg_net` extensions and run the statement below once, replacing the two values. It asks the sender to run every minute.

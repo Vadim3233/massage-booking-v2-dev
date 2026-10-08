@@ -45,3 +45,4 @@
 @media (min-width: 600px) { .admin-new-booking { padding: 20px 24px; } .anb-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } .anb-wide { grid-column: 1 / -1; } }
 @media (min-width: 768px) { .anb-mobile-progress { display: none; } .anb-progress { display: flex; list-style: none; padding: 0; margin: 24px 0; gap: 16px; font-size: 13px; } .anb-progress li { display: flex; align-items: baseline; gap: 5px; color: #596b63; } .anb-progress li[aria-current] { color: var(--ink); font-weight: 700; } .anb-footer { grid-template-columns: 120px 200px; justify-content: end; } }
 @media (prefers-reduced-motion: reduce) { .admin-new-booking * { scroll-behavior: auto; } }
+.anb-repeat { margin-top: 16px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; }

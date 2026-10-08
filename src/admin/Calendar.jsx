@@ -81,7 +81,7 @@ export default function Calendar({ signOut, openBooking, revision, newBooking, i
               <span className="admin-card-treatment">{sessionSummary(row.booking)}</span>
               <span className="admin-card-postcode">{postcode(row.booking.postcode_snapshot)}</span>
               <span className={`admin-status ${bookingState(row.booking, now).tone}`}>{bookingState(row.booking, now).text}</span>
-            </button> : row.kind === 'block' ? <button className="admin-timeline-entry block admin-block-button" onClick={() => setBlockDialog({ date, block: row.block })}>
+            </button> : row.kind === 'block' && row.block.kind !== 'series_hold' ? <button className="admin-timeline-entry block admin-block-button" onClick={() => setBlockDialog({ date, block: row.block })}>
                 <span>{row.title}</span>
                 <small>Until {time(row.end)} · tap to change</small>
             </button> : <div className={`admin-timeline-entry ${row.kind}`}>
