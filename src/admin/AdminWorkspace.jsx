@@ -12,11 +12,12 @@ const ServicesSettings = lazy(() => import('./SettingsCatalogue.jsx').then(modul
 const AreasSettings = lazy(() => import('./SettingsCatalogue.jsx').then(module => ({ default: module.AreasSettings })))
 const BankSettings = lazy(() => import('./SettingsBank.jsx'))
 const RulesSettings = lazy(() => import('./SettingsRules.jsx'))
+const Waitlist = lazy(() => import('./Waitlist.jsx'))
 const ExtrasSettings = lazy(() => import('./SettingsCatalogue.jsx').then(module => ({ default: module.ExtrasSettings })))
 const ClientProfile = lazy(() => import('./ClientProfile.jsx'))
 const BookingDestination = lazy(() => import('./BookingDestination.jsx'))
 const AdminNewBooking = lazy(() => import('./AdminNewBooking.jsx'))
-const MORE_LINKS = [['/admin/schedule', 'Working hours and special days'], ['/admin/settings/services', 'Services and prices'], ['/admin/settings/extras', 'Extras'], ['/admin/settings/areas', 'Areas and travel fees'], ['/admin/settings/bank', 'Bank transfer details'], ['/admin/settings/rules', 'Booking rules']]
+const MORE_LINKS = [['/admin/waitlist', 'Waitlist'], ['/admin/schedule', 'Working hours and special days'], ['/admin/settings/services', 'Services and prices'], ['/admin/settings/extras', 'Extras'], ['/admin/settings/areas', 'Areas and travel fees'], ['/admin/settings/bank', 'Bank transfer details'], ['/admin/settings/rules', 'Booking rules']]
 const SETTINGS_PAGES = MORE_LINKS.map(([path]) => path)
 const readRoute = () => ({ path: window.location.pathname.replace(/\/$/, '') || '/admin', search: window.location.search, background: window.history.state?.adminBackground, returnTo: window.history.state?.adminReturnTo })
 export default function AdminWorkspace({ signOut, ownerId }) {
@@ -97,7 +98,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {surface === '/admin/review' && <PaymentReview openBooking={openBooking} revision={revision} />}
       {surface === '/admin/clients' && <Clients openClient={id => navigate(`/admin/clients/${id}`)} />}
       {profile && <ClientProfile key={profile[1]} id={profile[1]} back={() => navigate('/admin/clients')} openBooking={openBooking} newBooking={clientId => newBooking(today(), clientId)} />}
-      {surface === '/admin/alerts' && <Alerts openBooking={openBooking} changed={refreshAlerts} />}
+      {surface === '/admin/alerts' && <Alerts openBooking={openBooking} openPage={path => navigate(path)} changed={refreshAlerts} />}
       {surface === '/admin/more' && <section className="admin-review"><h1>More</h1>
         <ul className="admin-menu">{MORE_LINKS.map(([path, text]) => <li key={path}><a href={path} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); navigate(path) } }}>{text}</a></li>)}</ul>
         <button onClick={signOut}>Sign out</button></section>}
@@ -108,6 +109,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {surface === '/admin/settings/areas' && <AreasSettings />}
       {surface === '/admin/settings/bank' && <BankSettings />}
       {surface === '/admin/settings/rules' && <RulesSettings />}
+      {surface === '/admin/waitlist' && <Waitlist bookFor={request => newBooking(request.requested_date, request.client_id)} />}
       {!creating && !match && !['/admin', '/admin/agenda', '/admin/review', '/admin/alerts', '/admin/more', '/admin/clients', ...SETTINGS_PAGES].includes(surface) && !profile && <section className="admin-review"><h1>Admin page not found</h1><a href="/admin">Back to Calendar</a></section>}
       </div>
       {match && <BookingDestination key={match[1]} id={match[1]} close={close} returnFocus={opener} changed={() => setRevision(value => value + 1)} />}

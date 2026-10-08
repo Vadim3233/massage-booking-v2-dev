@@ -3,7 +3,7 @@ import { alertsApi, bookingIdFromLink } from './alertsApi.js'
 
 const when = value => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
 
-export default function Alerts({ openBooking, changed, api = alertsApi }) {
+export default function Alerts({ openBooking, openPage, changed, api = alertsApi }) {
   const [alerts, setAlerts] = useState(null)
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
@@ -19,6 +19,7 @@ export default function Alerts({ openBooking, changed, api = alertsApi }) {
     const id = bookingIdFromLink(alert.link_path)
     if (!alert.read_at) { try { await api.markRead([alert.id]); changed() } catch { /* Opening the booking still works. */ } }
     if (id) openBooking(id)
+    else if (/^\/admin\/[a-z/-]+$/.test(alert.link_path || '')) openPage?.(alert.link_path)
   }
   const unread = (alerts || []).filter(alert => !alert.read_at).length
   return <section className="admin-review" aria-labelledby="alerts-title">

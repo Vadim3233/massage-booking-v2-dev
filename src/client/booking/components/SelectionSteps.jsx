@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import WaitlistPanel from './WaitlistPanel.jsx'
 import { activeHold, dateLabel, durationOf, londonDate, money, newSession, timeLabel } from '../bookingDraft.js'
 
 export function AreaStep({ catalogue, choose }) {
@@ -45,7 +46,7 @@ export function DurationStep({ draft, catalogue, change, next }) {
   </>
 }
 
-export function TimeStep({ rules, draft, loadAvailability, selectDate, selectSlot, next }) {
+export function TimeStep({ rules, draft, loadAvailability, selectDate, selectSlot, next, joinWaitlist }) {
   const [availability, setAvailability] = useState({ slots: [], loading: true, error: '' })
   const duration = durationOf(draft)
   useEffect(() => {
@@ -69,7 +70,10 @@ export function TimeStep({ rules, draft, loadAvailability, selectDate, selectSlo
     {availability.loading && draft.date && <p role="status">Loading available times…</p>}
     {availability.error && <p className="error" role="alert">{availability.error}</p>}
     <div className="slots" aria-label="Available times">{slots.sort((a, b) => a - b).map((start) => <button key={start} aria-pressed={draft.start === start && activeHold(draft)} onClick={() => selectSlot(start)}>{timeLabel(start)}</button>)}</div>
-    {!availability.loading && !slots.length && <p>No suitable times on this day. Choose another date or <a href="https://vadmassage.com">contact Vad</a>.</p>}
+    {!availability.loading && !availability.error && !slots.length && draft.date && <>
+      <p>No suitable times on this day. Choose another date or <a href="https://vadmassage.com">contact Vad</a>.</p>
+      {joinWaitlist && <WaitlistPanel key={`${draft.date}:${duration}`} date={draft.date} duration={duration} join={joinWaitlist} />}
+    </>}
     <button className="primary" disabled={!activeHold(draft)} onClick={next}>Review booking</button>
   </>
 }

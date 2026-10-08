@@ -101,7 +101,7 @@ export default function BookingFlow() {
         {step === 0 && <AreaStep catalogue={catalogue} choose={async (areaId) => { if (areaId === draft.areaId || await store.changeSelection({ areaId })) navigate(1) }} />}
         {step === 1 && <TreatmentStep catalogue={catalogue} choose={async (serviceId) => { if (serviceId === draft.serviceId || await store.changeSelection({ serviceId, sessions: [], enhancementIds: [] })) navigate(2) }} />}
         {step === 2 && <DurationStep draft={draft} catalogue={catalogue} change={(sessions) => store.changeSelection({ sessions })} next={async () => { if (!draft.date) await store.changeSelection({ date: londonDate() }); navigate(3) }} />}
-        {step === 3 && <TimeStep key={`${draft.date}:${draft.hold?.hold_token}:${held}`} rules={rules} draft={draft} loadAvailability={store.availability} selectDate={(date) => store.changeSelection({ date })} selectSlot={store.selectSlot} next={() => goWithQuote(4)} />}
+        {step === 3 && <TimeStep key={`${draft.date}:${draft.hold?.hold_token}:${held}`} rules={rules} joinWaitlist={api.joinWaitlist} draft={draft} loadAvailability={store.availability} selectDate={(date) => store.changeSelection({ date })} selectSlot={store.selectSlot} next={() => goWithQuote(4)} />}
         {step === 4 && <ReviewStep draft={draft} catalogue={catalogue} quote={quote} edit={store.edit} navigate={navigate} refresh={store.loadQuote} next={() => goWithQuote(5)} />}
         {!auth.ready && step >= 5 && <p role="status">Checking your account…</p>}
         {auth.ready && (needsAuth || auth.recovery) && <AuthPanel client={supabase} recovery={auth.recovery} onRecovered={auth.finishRecovery} onGuest={startGuest} />}

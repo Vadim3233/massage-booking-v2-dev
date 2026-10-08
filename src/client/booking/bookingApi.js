@@ -89,5 +89,12 @@ export function createBookingApi(client) {
     declareTransfer: (id) => unwrap(client.rpc('declare_my_bank_transfer', { p_booking_id: id })),
     confirmCash: (id) => unwrap(client.rpc('confirm_my_cash_booking', { p_booking_id: id })),
     bankDetails: () => unwrap(client.rpc('get_bank_details')),
+    async joinWaitlist(details) {
+      const { data, error } = await client.rpc('join_waitlist', { p_date: details.date, p_from_minutes: details.from, p_to_minutes: details.to, p_duration_minutes: details.duration,
+        p_name: details.name, p_phone: details.phone?.trim() || null, p_email: details.email?.trim() || null, p_note: details.note?.trim() || null })
+      // The server's sentences are written for clients (code 22023); anything else stays out of sight.
+      if (error) throw new Error(error.code === '22023' ? error.message : 'Sorry, that did not work. Please try again, or contact Vad.')
+      return data
+    },
   }
 }

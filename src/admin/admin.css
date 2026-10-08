@@ -185,3 +185,8 @@
 .admin-setting-head { display: grid; gap: 2px; }
 .admin-setting p { margin: 0; font-size: 14px; }
 .admin-price-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: end; }
+.admin-waitlist { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 10px; }
+.admin-waitlist-item { padding: 10px 12px; border: 1px solid #d8dfda; border-radius: 8px; background: white; display: grid; gap: 8px; }
+.admin-waitlist-item.is-closed { background: #f3f1ec; }
+.admin-waitlist-item p { margin: 0; }
+.admin-waitlist-match { padding: 8px 10px; border-left: 4px solid #467660; background: #eef3ec; border-radius: 0 6px 6px 0; }
