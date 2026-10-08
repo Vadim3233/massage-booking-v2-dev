@@ -730,3 +730,33 @@ grant execute on function public.admin_cancel_booking(uuid, uuid, timestamptz, t
 grant execute on function public.admin_reschedule_booking(uuid, uuid, timestamptz, date, integer, text) to authenticated;
 grant execute on function public.admin_settle_late_fee(uuid, uuid, timestamptz, text) to authenticated;
 grant execute on function public.admin_record_refund(uuid, uuid, timestamptz, timestamptz) to authenticated;
+
+-- ---------------------------------------------------------------------------------------------
+-- admin_late_fee_preview: what the standard late fee would be if the booking were cancelled or moved
+-- right now, so screens show the figure without repeating the rule. Admin only; changes nothing.
+-- ---------------------------------------------------------------------------------------------
+create function public.admin_late_fee_preview(p_booking_id uuid, p_initiated_by text)
+returns numeric
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  b public.bookings%rowtype;
+begin
+  if auth.uid() is null or coalesce((auth.jwt()->>'is_anonymous')::boolean, false)
+     or not public.is_booking_admin() then
+    raise exception 'Admin authorization required' using errcode = '42501';
+  end if;
+  if p_initiated_by is null or p_initiated_by not in ('client', 'admin') then
+    raise exception 'Say who asked for the change' using errcode = '22023';
+  end if;
+  select * into b from public.bookings where id = p_booking_id;
+  if not found then raise exception 'Booking unavailable' using errcode = 'P0002'; end if;
+  if p_initiated_by = 'admin' then return 0; end if;
+  return public.late_fee_standard_gbp(b.total_gbp, b.date, b.start_minutes, b.created_at, clock_timestamp());
+end;
+$$;
+revoke all on function public.admin_late_fee_preview(uuid, text) from public, anon;
+grant execute on function public.admin_late_fee_preview(uuid, text) to authenticated;

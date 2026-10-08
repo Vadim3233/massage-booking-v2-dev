@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions, pg_temp;
-select plan(95);
+select plan(99);
 
 -- ---------------------------------------------------------------------------------------------
 -- Fixtures
@@ -307,6 +307,18 @@ select results_eq($$select late_fee_status, late_fee_due_gbp, late_fee_standard_
   $$values ('waived'::text, 0.00::numeric, 85.00::numeric)$$, 'Waived clears the amount and keeps the standard fee');
 select results_eq($$select p.status, b.refund_due_gbp from public.bookings b join public.booking_payments p on p.booking_id = b.id where b.id = '00000000-0000-4000-8000-00000000f025'$$,
   $$values ('refunded'::text, 0.00::numeric)$$, 'The payment is refunded and nothing remains owed');
+
+-- ---------------------------------------------------------------------------------------------
+-- Fee preview
+-- ---------------------------------------------------------------------------------------------
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000e001","role":"authenticated"}', true);
+select is(public.admin_late_fee_preview('00000000-0000-4000-8000-00000000f028', 'client'), 85::numeric, 'The preview shows the standard fee for a client-requested change inside 24 hours');
+select is(public.admin_late_fee_preview('00000000-0000-4000-8000-00000000f028', 'admin'), 0::numeric, 'The preview is zero when the Admin is the one asking');
+select is(public.admin_late_fee_preview('00000000-0000-4000-8000-00000000f040', 'client'), 0::numeric, 'The preview is zero well in advance');
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000e002","role":"authenticated"}', true);
+select throws_ok($$select public.admin_late_fee_preview('00000000-0000-4000-8000-00000000f028', 'client')$$, '42501', 'Admin authorization required', 'Only the Admin can preview fees');
+reset role;
 
 -- ---------------------------------------------------------------------------------------------
 -- Schedule history is append-only and Admin-readable only

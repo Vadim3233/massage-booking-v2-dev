@@ -133,3 +133,15 @@ Updated: 2026-09-23. These are design decisions and intended requirements; imple
 - **Hosting and data:** booking.vadmassage.com on Vercel; start fresh with no import from V1. Test mostly on iPhone Safari, then Android Chrome.
 
 **Reason:** Keeps the launch to what is needed to run the diary, in an order that lets real use find problems early. Supersedes the open question in ADR-019 about reminders: alerts are in scope, automatic cancellation is not.
+
+## ADR-021 — Booking lifecycle: late fees, refunds and how changes are made (2026-10-10)
+
+**Decision:** The Admin completes, no-shows, cancels and reschedules bookings only through retry-safe commands (`admin_complete_booking`, `admin_mark_no_show`, `admin_cancel_booking`, `admin_reschedule_booking`, `admin_settle_late_fee`, `admin_record_refund`), each recorded in the status or schedule history.
+- A cancellation or change is free more than 24 hours before the appointment and free for one hour after the booking was made, even for a same-day appointment. Exactly 24 hours before is not "more than 24 hours", so it is charged.
+- Inside 24 hours a client-requested cancellation or change is still allowed. The full appointment price is recorded as a late fee due; the Admin may set any amount from zero to the full price (zero waives it, and the standard amount stays on record). A change the Admin makes on her own account never charges the client. A second late change does not add a second fee.
+- A no-show records the full price as due unless the Admin chooses a lower amount.
+- Money is collected outside the app. If a paid booking is cancelled, the fee is kept from the payment and the balance is recorded as a refund due until the Admin records it as sent.
+- Rescheduling uses the same availability engine as booking, ignoring the booking being moved; the Admin cannot place a booking in a time the engine would refuse. Admin booking has no 40-day horizon (a 365-day sanity limit remains).
+- The fee rule lives only in the database (`late_fee_standard_gbp`); screens ask `admin_late_fee_preview` and never repeat it.
+
+**Reason:** These are the owner's answers (ADR-020 and follow-up): clients should not have to message her for routine changes, loyal clients are treated kindly, and every money-affecting outcome is visible and reversible by her decision. Client self-service cancel and reschedule will call the same rule and engine.

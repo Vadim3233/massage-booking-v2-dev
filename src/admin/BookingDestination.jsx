@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import BookingDetails from './BookingDetails.jsx'
+import BookingActions from './BookingActions.jsx'
 import PaymentActions from './PaymentActions.jsx'
 import { label } from './calendarPresentation.js'
 import { loadReviewResource, paymentReviewApi } from './paymentReviewApi.js'
@@ -27,5 +28,5 @@ export default function BookingDestination({ id, close, changed, returnFocus }) 
     <p>{label(booking.booking_payments?.method)} · {label(booking.booking_payments?.status)}</p>
     {error ? <p role="alert">{error}</p> : <PaymentActions booking={booking} refresh={refresh} />}
     <button onClick={() => setAttempt(value => value + 1)}>Refresh booking</button>
-  </>} />
+  </>} lifecycle={error ? null : <BookingActions booking={booking} refresh={refresh} />} />
 }
