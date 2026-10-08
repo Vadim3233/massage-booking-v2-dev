@@ -23,7 +23,7 @@ function groupByDate(bookings) {
   return groups
 }
 
-export default function Agenda({ openBooking, revision }) {
+export default function Agenda({ openBooking, revision, newBooking }) {
   const [result, setResult] = useState(null)
   const [attempt, setAttempt] = useState(0)
   const [paging, setPaging] = useState(null)
@@ -75,6 +75,7 @@ export default function Agenda({ openBooking, revision }) {
   return <section className="admin-agenda" aria-labelledby="agenda-title">
     <header className="admin-agenda-heading">
       <div><h1 id="agenda-title">Agenda</h1><p>Appointments in chronological order · London time</p></div>
+      <button className="admin-new-booking-entry" onClick={() => newBooking(today())}>+ New booking</button>
       <button aria-label="Refresh agenda" title="Refresh agenda" onClick={() => setAttempt(value => value + 1)}>↻</button>
     </header>
 

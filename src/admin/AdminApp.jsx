@@ -18,7 +18,7 @@ export default function AdminApp() {
       if (!session || session.user.is_anonymous) { if (live) setAuth({ state: 'signed-out' }); return }
       if (live) setAuth({ state: 'checking' })
       const { data, error } = await supabase.rpc('is_booking_admin')
-      if (live && ticket === revision) setAuth(error ? { state: 'error', error: error.message } : { state: data ? 'admin' : 'denied' })
+      if (live && ticket === revision) setAuth(error ? { state: 'error', error: error.message } : { state: data ? 'admin' : 'denied', userId: session.user.id })
     }
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => { void check(session) })
     return () => { live = false; listener.subscription.unsubscribe() }
@@ -32,7 +32,7 @@ export default function AdminApp() {
   }
   async function signOut() { const { error } = await supabase.auth.signOut(); if (error) setError(error.message) }
   return <main className="admin-shell">
-    {auth.state === 'admin' && !requestReset ? <AdminWorkspace signOut={signOut} /> : <section className="admin-login"><h1>VadMassage Admin</h1>
+    {auth.state === 'admin' && !requestReset ? <AdminWorkspace key={auth.userId} ownerId={auth.userId} signOut={signOut} /> : <section className="admin-login"><h1>VadMassage Admin</h1>
       {passwordChanged && <p role="status">Password changed. Please sign in with your new password.</p>}
       {requestReset && <PasswordResetRequest onBack={() => setRequestReset(false)} />}
       {!requestReset && auth.state === 'checking' && <p role="status">Checking authentication…</p>}
