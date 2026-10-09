@@ -413,18 +413,15 @@ test('provisional payment shows canonical email/postcode and survives reload bef
   await expect(page.getByText('10 Browser Street, London, SW1A 1AA', { exact: true })).toBeVisible()
 })
 
-test('expired payment reservation releases time and preserves the draft', async ({ page }) => {
+test('a pending reservation has no deadline: it survives a reload and keeps its time', async ({ page }) => {
   await toPayment(page)
   const id = await page.evaluate(() => JSON.parse(sessionStorage.getItem('vad-v2-booking-draft-v1')).draft.bookingId)
-  await unwrap(fixture.admin.from('bookings').update({ payment_reservation_expires_at: new Date(Date.now()-1000).toISOString() }).eq('id',id))
   await page.reload()
-  await expect(page.getByRole('alert')).toContainText('time reserved for this booking has expired')
-  expect((await fixture.publicApi.availability(fixture.date,120)).some((s) => s.start_minutes===600)).toBe(true)
-  await page.getByRole('button', { name: 'Choose another time', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Choose date and time' })).toBeVisible()
-  const draft = await page.evaluate(() => JSON.parse(sessionStorage.getItem('vad-v2-booking-draft-v1')).draft)
-  expect(draft.details.address_line_1).toBe('10 Browser Street')
-  expect(draft.bookingId).toBeNull()
+  await expect(page.getByText('Your appointment time is reserved for you.')).toBeVisible()
+  await expect(page.getByRole('button', { name: "I've made the bank transfer", exact: true })).toBeVisible()
+  expect((await fixture.publicApi.availability(fixture.date,120)).some((s) => s.start_minutes===600)).toBe(false)
+  const row = await unwrap(fixture.admin.from('bookings').select('payment_reservation_expires_at').eq('id',id).single())
+  expect(row.payment_reservation_expires_at).toBeNull()
 })
 
 test('lost transfer response recovers the canonical result on reload without double writes', async ({ page }) => {
@@ -451,4 +448,47 @@ test('lost reservation response retries the same booking before any transfer', a
   await expect(page.getByRole('button', { name: 'Copy payment reference' })).toBeVisible()
   await expect(page.getByText('Payment: Awaiting your bank transfer', { exact: true })).toBeVisible()
   expect(await unwrap(fixture.admin.from('bookings').select('id').eq('client_id',fixture.profile.client_id))).toHaveLength(1)
+})
+
+
+for (const decision of ['approve', 'reject', 'receive']) test(`saved client confirmation reflects Admin cash ${decision}`, async ({ page }) => {
+  await toPayment(page)
+  await page.getByRole('button', { name: "I'd like to pay cash" }).click()
+  await page.getByRole('button', { name: 'Confirm cash booking', exact: true }).click()
+  await expect(page.getByRole('heading', { name: "I've received your booking" })).toBeVisible()
+  const user = (await fixture.client.auth.getUser()).data.user
+  await unwrap(fixture.admin.from('admin_users').insert({ user_id: user.id }))
+  const booking = await unwrap(fixture.admin.from('bookings').select('id').eq('client_id', fixture.profile.client_id).single())
+  async function act(name) {
+    const row = await unwrap(fixture.admin.from('bookings').select('updated_at,booking_payments(updated_at)').eq('id', booking.id).single())
+    await unwrap(fixture.client.rpc(name, { p_booking_id: booking.id, p_request_id: crypto.randomUUID(), p_booking_updated_at: row.updated_at, p_payment_updated_at: row.booking_payments.updated_at }))
+  }
+  try {
+    await act(decision === 'reject' ? 'admin_reject_cash_request' : 'admin_approve_cash_request')
+    if (decision === 'receive') await act('admin_record_payment_received')
+    await page.reload()
+    await expect(page.getByRole('heading', { name: decision === 'reject' ? 'Your appointment is cancelled' : 'Your appointment is confirmed' })).toBeVisible()
+    await expect(page.getByText("I'll confirm your appointment as soon as possible.", { exact: true })).toHaveCount(0)
+    if (decision === 'receive') await expect(page.getByText('Payment: Payment received', { exact: true })).toBeVisible()
+    if (decision === 'reject') await expect(page.getByText('This appointment will not go ahead.', { exact: false })).toBeVisible()
+    if (decision === 'approve') await expect(page.getByText('Please pay the full amount in cash at your appointment.')).toBeVisible()
+  } finally {
+    await unwrap(fixture.admin.from('event_outbox').delete().eq('aggregate_id', booking.id))
+    await unwrap(fixture.admin.from('command_requests').delete().eq('scope', `admin-payment:${user.id}`))
+  }
+})
+
+test('bank details saved by the Admin appear at payment, in place of the build-time fallback', async ({ page }) => {
+  const original = (await fixture.admin.from('business_settings').select('*').eq('key', 'bank_details')).data
+  await unwrap(fixture.admin.from('business_settings').upsert({ key: 'bank_details', value: { account_name: 'Saved In App', sort_code: '11-22-33', account_number: '44556677', note: 'Please use the reference exactly' } }))
+  try {
+    await toPayment(page)
+    await expect(page.getByText('Saved In App', { exact: true })).toBeVisible()
+    await expect(page.getByText('11-22-33', { exact: true })).toBeVisible()
+    await expect(page.getByText('Please use the reference exactly')).toBeVisible()
+    await expect(page.getByText('LOCAL TEST ONLY')).toHaveCount(0)
+  } finally {
+    if (original.length) await fixture.admin.from('business_settings').upsert(original)
+    else await fixture.admin.from('business_settings').delete().eq('key', 'bank_details')
+  }
 })

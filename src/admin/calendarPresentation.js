@@ -5,12 +5,11 @@ export const money = (value) => new Intl.NumberFormat('en-GB', { style: 'currenc
 export const label = (value) => ({ awaiting_transfer: 'Awaiting transfer', awaiting_payment_verification: 'Awaiting payment verification', awaiting_cash_approval: 'Awaiting cash approval', awaiting_verification: 'Awaiting verification', awaiting_approval: 'Awaiting approval', bank_transfer: 'Bank transfer', no_show: 'No show' }[value] || (value ? value[0].toUpperCase() + value.slice(1).replaceAll('_', ' ') : 'Not recorded'))
 export const postcode = (value) => (value || '').replace(/\s/g, '').toUpperCase().replace(/(.+)(.{3})$/, '$1 $2')
 export const clientName = (booking) => [booking.clients?.first_name, booking.clients?.last_name].filter(Boolean).join(' ') || 'Client unavailable'
-export const expired = (booking, now) => booking.booking_status === 'awaiting_transfer' && Date.parse(booking.payment_reservation_expires_at) <= now
 export function dayContext(data, date, now) {
   const hours = data.overrides.find(row => row.date === date) || data.hours.find(row => row.weekday === (new Date(date + 'T12:00:00Z').getUTCDay() || 7))
   const holds = data.holds.filter(row => Date.parse(row.expires_at) > now)
   if (!hours?.available) return { hours, holds, gaps: [] }
-  const occupied = [...data.blocks.map(row => [row.start_minutes, row.end_minutes]), ...data.bookings.filter(row => ['confirmed', 'completed', 'awaiting_payment_verification', 'awaiting_cash_approval', 'awaiting_transfer'].includes(row.booking_status) && !expired(row, now)).map(row => [row.start_minutes - row.travel_buffer_minutes, row.start_minutes + row.treatment_duration_minutes + row.travel_buffer_minutes]), ...holds.map(row => [row.start_minutes - row.travel_buffer_minutes, row.start_minutes + row.treatment_duration_minutes + row.travel_buffer_minutes])].sort((a, b) => a[0] - b[0])
+  const occupied = [...data.blocks.map(row => [row.start_minutes, row.end_minutes]), ...data.bookings.filter(row => ['confirmed', 'completed', 'awaiting_payment_verification', 'awaiting_cash_approval', 'awaiting_transfer'].includes(row.booking_status)).map(row => [row.start_minutes - row.travel_buffer_minutes, row.start_minutes + row.treatment_duration_minutes + row.travel_buffer_minutes]), ...holds.map(row => [row.start_minutes - row.travel_buffer_minutes, row.start_minutes + row.treatment_duration_minutes + row.travel_buffer_minutes])].sort((a, b) => a[0] - b[0])
   const gaps = []; let cursor = hours.start_minutes
   for (const [start, end] of occupied) { if (start > cursor) gaps.push([cursor, Math.min(start, hours.end_minutes)]); cursor = Math.max(cursor, end); if (cursor >= hours.end_minutes) break }
   if (cursor < hours.end_minutes) gaps.push([cursor, hours.end_minutes])
@@ -23,9 +22,8 @@ export function sessionSummary(booking) {
   if (sessions.length === 1) return `${sessions[0].service_name_snapshot} · ${sessions[0].duration_minutes} min`
   return `${sessions.length} sessions · ${booking.treatment_duration_minutes} min`
 }
-export function bookingState(booking, now) {
+export function bookingState(booking) {
   if (booking.booking_status === 'cancelled') return { text: 'Cancelled', tone: 'cancelled' }
-  if (expired(booking, now)) return { text: 'Transfer reservation expired', tone: 'muted' }
   const payment = booking.booking_payments?.status
   if (booking.booking_status === 'awaiting_payment_verification' || payment === 'awaiting_verification') return { text: 'Awaiting payment verification', tone: 'pending' }
   if (booking.booking_status === 'awaiting_cash_approval' || payment === 'awaiting_approval') return { text: 'Awaiting cash approval', tone: 'pending' }
@@ -50,9 +48,9 @@ export function dayTimeline(data, date, now) {
   }
   for (const booking of data.bookings) {
     add('booking', booking.id, booking.start_minutes, booking.start_minutes + booking.treatment_duration_minutes, { booking })
-    if (['confirmed', 'completed', 'awaiting_payment_verification', 'awaiting_cash_approval', 'awaiting_transfer'].includes(booking.booking_status) && !expired(booking, now)) buffers(booking)
+    if (['confirmed', 'completed', 'awaiting_payment_verification', 'awaiting_cash_approval', 'awaiting_transfer'].includes(booking.booking_status)) buffers(booking)
   }
-  for (const block of data.blocks) add('block', block.id, block.start_minutes, block.end_minutes, { title: block.title || 'Blocked time' })
+  for (const block of data.blocks) add('block', block.id, block.start_minutes, block.end_minutes, { title: block.title || (block.kind === 'personal_event' ? 'Personal event' : 'Blocked time'), block })
   for (const hold of context.holds) {
     add('hold', hold.id, hold.start_minutes, hold.start_minutes + hold.treatment_duration_minutes)
     buffers(hold)

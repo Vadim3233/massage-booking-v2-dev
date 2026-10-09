@@ -16,6 +16,7 @@ export default function BankDetails({ bank, reference }) {
       <CopyValue label="Sort code" value={bank.sortCode} />
       <CopyValue label="Account number" value={bank.accountNumber} />
     </dl> : <p role="status">Bank-transfer details are currently unavailable. Please contact Vad before making a transfer.</p>}
+    {bank.configured && bank.note && <p>{bank.note}</p>}
     {reference && <dl className="prices"><CopyValue label="Payment reference" value={reference} /></dl>}
   </>
 }

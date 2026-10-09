@@ -100,13 +100,17 @@ The WhatsApp agent is another interface, not another booking system. It may coll
 | V2 foundation | Core verified | Vite/React, linked Supabase project and Vitest/local Supabase test runners are working; fresh local database resets reproduce committed migrations. |
 | Scheduling engine | Core verified | JavaScript Chain Mode tests and database availability/hold/public-discovery contract tests pass locally; public availability and holds use the shared server scheduling implementation. |
 | Data model and secure API | Core verified | Canonical identity, public discovery, pre-auth holds, client activation, quote and atomic finalization are deployed through migration `20260927193000`; read-only migration status verified 2026-09-27. No remote changes made during the UI slice. |
-| Client booking | First slice implemented locally | Area through server-backed Confirmation, email/Google authentication, saved addresses, distinct sessions, preferences, enhancements, authoritative quotes and retry-safe finalization. See `CLIENT_BOOKING_SLICE.md` for verification and release gaps. |
-| Admin | Read-only Calendar slice verified locally | `/admin` lazy-loaded shell, email/password authentication with existing Admin authorization, bounded day Calendar and persisted booking details. Client management, manual bookings, editing, payment/cancellation actions and settings remain planned. |
+| Client booking | Implemented and tested locally | Area through server-backed Confirmation, email or guest sign-in, saved addresses, distinct sessions, preferences, extras, authoritative quotes and retry-safe finalization; a booking waiting for payment holds its time until the Admin decides (ADR-019); `/account` to see, cancel and change bookings with the late-fee rules (ADR-022); waitlist when a day is full (ADR-028). Needs real-phone testing. |
+| Admin | Daily operations implemented and tested locally | Calendar and Agenda, New Booking, complete, no-show, cancel and reschedule with late fees and refunds (ADR-021), Payment Review, clients (ADR-025), working hours, special days and blocked time (ADR-024), settings for services, prices, areas, bank details and booking rules (ADR-026, ADR-027), alerts (ADR-023), waitlist. Not built: analytics, receipts, financial reporting, diagnostics. |
 | Reliability release gate | Planned | Exercise real booking, change, cancellation, duplicate request and failed-payment paths against a safe environment; inspect network/database errors. |
 | Agent-ready integration boundary | Planned with V2 core | Channel-neutral API, canonical client/channel links, idempotency, actor/source audit, event outbox and separate client/admin scopes. No Meta dependency yet. |
 | WhatsApp receptionist | Deferred | Verify Meta integration path, then answer FAQs using approved business content. |
 | WhatsApp booking actions | Deferred | Read live availability and create bookings only after confirmed details; audit actions and hand off exceptions. |
 | Private assistant | Deferred | Admin-scoped summaries first; changes require explicit authorization and audit trail. |
+
+## Status on 2026-10-11
+
+The owner's first-use scope (ADR-020) is built and verified on a local database: pgTAP, Vitest and browser tests all pass. Not yet done, and needing the owner: switching on Telegram and email delivery, the Vercel and DNS set-up, applying the migrations to the hosted Supabase project (rehearse on a branch first), and testing on a real iPhone. See `GO_LIVE_CHECKLIST.md`.
 
 ## Maintenance
 
@@ -123,3 +127,9 @@ The compact two-row header supports previous/next day, date selection, Today and
 Data refreshes on date changes or explicit refresh; realtime updates are deferred. Details use the exact record in the loaded range snapshot, not an optimistic or fabricated record. The compact header remains sticky so date controls stay immediately accessible. Physical phone/Safari testing and Admin account provisioning are not included. No Admin write controls, analytics, settings, Telegram or client directory were added.
 
 Validation (2026-10-05), run sequentially: `npm test` 91/91 across 7 files (including real local Supabase Admin RLS/range/relationship tests); `npm run lint` passed; `npm run build` passed; `npx playwright test` 30/30 (7 Admin cases plus all 23 existing client journeys); `npx supabase test db` 147/147 across 10 files; `git diff --check` passed. Browser tests cover 320/360/390/412px, persisted exact-record details, cancellation, bounded date navigation, denied access, login failure and query error/retry. A 320px details screenshot was inspected. Work is isolated on `codex/admin-calendar-foundation`, based on `733072e`; original uncommitted date-field edits and installed skills remain untouched in the original worktree. No deployment or remote database operation was performed.
+
+## Admin shell and payment review — local slice, 2026-10-07
+
+The next slice adds compact Admin navigation, an independently bounded `/admin/review` queue and authenticated `/admin/bookings/:bookingId` deep links. Four narrow Admin payment commands preserve separate approval and receipt semantics and write command/outbox records atomically. See [ADMIN_PAYMENT_REVIEW.md](ADMIN_PAYMENT_REVIEW.md) for the audited state machine, security changes, retry contracts and release boundaries. This is a local implementation with a draft migration, not a hosted/production release.
+
+Release-readiness audit (2026-10-07): corrected retained TRUNCATE privileges, client confirmation messages after Admin decisions, and stale read ordering after payment actions. Added local security, transition, concurrency and browser compatibility coverage. Hosted migration remains pending explicit approval and verification of the actual deployed frontend/schema baseline. Physical-device/Safari validation remains outstanding. No release action was taken.

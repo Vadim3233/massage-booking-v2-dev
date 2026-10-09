@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { unwrap } from '../booking/bookingApi.js'
 
-export default function AuthPanel({ client, recovery = false, onRecovered, onGuest }) {
+export default function AuthPanel({ client, recovery = false, onRecovered, onGuest, heading: headingOverride, redirectTo: redirectOverride }) {
   const [mode, setMode] = useState('login')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
-  const redirectTo = `${window.location.origin}${window.location.pathname}?step=5`
+  const redirectTo = redirectOverride || `${window.location.origin}${window.location.pathname}?step=5`
   async function act(action) {
     setBusy(true); setError(''); setMessage('')
     try { await action() } catch (err) { setError(err.message || 'Sign-in failed. Please retry.') }
@@ -29,13 +29,13 @@ export default function AuthPanel({ client, recovery = false, onRecovered, onGue
       } else await unwrap(client.auth.signInWithPassword({ email: fields.email, password: fields.password }))
     })
   }
-  const heading = recovery ? 'Choose a new password' : mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Complete your booking'
+  const heading = headingOverride && mode === 'login' && !recovery ? headingOverride : recovery ? 'Choose a new password' : mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Complete your booking'
   return <section className="panel">
     <h2>{heading}</h2>
     {mode === 'login' && !recovery
-      ? <p>Continue as a guest, or sign in if you already have an account.</p>
+      ? <p>{onGuest ? 'Continue as a guest, or sign in if you already have an account.' : 'Sign in with the email you used to book.'}</p>
       : <p>Your selections will stay here while you continue.</p>}
-    {mode === 'login' && !recovery && <button className="primary" type="button" disabled={busy} onClick={() => act(onGuest)}>
+    {mode === 'login' && !recovery && onGuest && <button className="primary" type="button" disabled={busy} onClick={() => act(onGuest)}>
       {busy ? 'Please wait…' : 'Continue as guest'}
     </button>}
     {mode === 'login' && !recovery && <p><strong>Returning client?</strong> Sign in below.</p>}

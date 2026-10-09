@@ -5,6 +5,9 @@ set local search_path = public, extensions, pg_temp;
 
 select plan(10);
 
+-- Inside the 40-day client booking horizon, so the test does not rot as the calendar moves.
+select set_config('test.horizon_date',((now() at time zone 'Europe/London')::date + 31)::text,true);
+
 delete from public.booking_holds
 where client_key in (
   'hold-client-key-000000000001',
@@ -12,10 +15,10 @@ where client_key in (
 );
 
 delete from public.calendar_blocks
-where date = '2031-02-03';
+where date = current_setting('test.horizon_date')::date;
 
 delete from public.working_hours_overrides
-where date = '2031-02-03';
+where date = current_setting('test.horizon_date')::date;
 
 insert into public.working_hours_overrides (
   date,
@@ -26,7 +29,7 @@ insert into public.working_hours_overrides (
   fixed_start_minutes
 )
 values (
-  '2031-02-03',
+  current_setting('test.horizon_date')::date,
   true,
   600,
   1200,
@@ -38,7 +41,7 @@ values (
 set local role anon;
 select lives_ok(
   $$select * from public.create_booking_hold(
-    '2031-02-03',
+    current_setting('test.horizon_date')::date,
     600,
     60,
     'hold-client-key-000000000001'
@@ -54,7 +57,7 @@ select is(
     from public.booking_holds
     where client_key = 'hold-client-key-000000000001'
       and client_id is null
-      and date = '2031-02-03'
+      and date = current_setting('test.horizon_date')::date
       and start_minutes = 600
       and treatment_duration_minutes = 60
       and travel_buffer_minutes = 60
@@ -93,7 +96,7 @@ select is(
       array[]::integer[]
     )
     from public.compute_booking_availability(
-      '2031-02-03',
+      current_setting('test.horizon_date')::date,
       60,
       now(),
       60
@@ -107,7 +110,7 @@ select is(
 set local role anon;
 select lives_ok(
   $$select * from public.create_booking_hold(
-    '2031-02-03',
+    current_setting('test.horizon_date')::date,
     600,
     60,
     'hold-client-key-000000000001'
@@ -130,7 +133,7 @@ select is(
 set local role anon;
 select throws_ok(
   $$select * from public.create_booking_hold(
-    '2031-02-03',
+    current_setting('test.horizon_date')::date,
     600,
     60,
     'hold-client-key-000000000002'
@@ -204,7 +207,7 @@ select ok(
   exists (
     select 1
     from public.compute_booking_availability(
-      '2031-02-03',
+      current_setting('test.horizon_date')::date,
       60,
       now(),
       60

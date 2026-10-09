@@ -72,7 +72,7 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
     } catch (error) { report(error.message) }
     finally { setSaving(false) }
   }
-  return <><h1>Your details</h1><p>{guest ? 'No account is required. Share the details I need for your visit.' : 'Share the details I need for your visit.'}</p>
+  return <><h1>Your details</h1><p>{guest ? 'No account is required. Share the details I need for your visit.' : 'Share the details I need for your visit.'} I only use them to arrange your appointment and to get in touch about it.</p>
     {loading && <p role="status">Loading your saved details…</p>}
     <form onSubmit={submit}><fieldset disabled={loading || saving || testing}>
       {showTestTools && guest && newTestGuest && <button type="button" onClick={startNewTestClient}>{testing ? 'Creating test client…' : 'New test client'}</button>}

@@ -1,0 +1,28 @@
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase.js'
+import AdminWorkspace from './AdminWorkspace.jsx'
+import PasswordResetRequest from './PasswordResetRequest.jsx'
+import './admin.css'
+
+export default function AdminApp() {
+  const [requestReset, setRequestReset] = useState(new URLSearchParams(window.location.search).get('reset') === 'request')
+  const passwordChanged = new URLSearchParams(window.location.search).get('password') === 'changed'
+  const [auth, setAuth] = useState({ state: 'checking' })
+  const [attempt, setAttempt] = useState(0)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    let live = true, revision = 0
+    async function check(session) {
+      const ticket = ++revision
+      if (!session || session.user.is_anonymous) { if (live) setAuth({ state: 'signed-out' }); return }
+      if (live) setAuth({ state: 'checking' })
+      const { data, error } = await supabase.rpc('is_booking_admin')
+      if (live && ticket === revision) setAuth(error ? { state: 'error', error: error.message } : { state: data ? 'admin' : 'denied', userId: session.user.id })
+    }
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => { void check(session) })
+    return () => { live = false; listener.subscription.unsubscribe() }
+  }, [attempt])
+  async function signIn(event) {
+    event.preventDefault(); setBusy(true); setError('')
+    const form = new FormData(event.c

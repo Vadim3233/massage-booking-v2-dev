@@ -80,7 +80,8 @@ describe('real local Supabase client adapter', () => {
     expect(booking.booking_sessions.map((session) => session.duration_minutes)).toEqual([60, 60])
     expect(booking.booking_payments.status).toBe('awaiting_transfer')
     expect(booking.booking_email_snapshot).toBe(fixture.email)
-    expect(Date.parse(booking.payment_reservation_expires_at) - Date.now()).toBeGreaterThan(3590000)
+    expect(booking).not.toHaveProperty('payment_reservation_expires_at')
+    expect(booking).not.toHaveProperty('reservation_expired')
     expect((await fixture.api.addresses())[0].postcode).toBe('SW1A 1AA')
   })
   it('retries idempotently without duplicate bookings, enhancements or events', async () => {
@@ -121,6 +122,7 @@ describe('real local Supabase client adapter', () => {
     await expect(fixture.publicApi.extend(next, ownKey)).rejects.toMatchObject({ code: '23P01' })
   })
   it('can request cash for a returning client without marking it paid', async () => {
+    await unwrap(fixture.admin.from('bookings').update({ booking_status: 'confirmed' }).eq('id', result.booking_id))
     await unwrap(fixture.admin.from('bookings').update({ booking_status: 'completed' }).eq('id', result.booking_id))
     await unwrap(fixture.admin.from('booking_payments').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('booking_id', result.booking_id))
     const cashKey = fixture.key()

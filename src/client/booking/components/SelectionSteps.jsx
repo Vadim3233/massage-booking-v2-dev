@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
+import WaitlistPanel from './WaitlistPanel.jsx'
+import Welcome from './Welcome.jsx'
 import { activeHold, dateLabel, durationOf, londonDate, money, newSession, timeLabel } from '../bookingDraft.js'
 
-export function AreaStep({ catalogue, choose }) {
+export function AreaStep({ catalogue, choose, welcome, rules }) {
   const [expanded, setExpanded] = useState(false)
   return <>
-    <h1>Choose your area</h1>
+    <Welcome welcome={welcome} rules={rules} />
+    <h2>Choose your area</h2>
     <div className="choices">{catalogue.areas.slice(0, expanded ? undefined : 6).map((area) => <button key={area.id} onClick={() => choose(area.id)}>
       <strong>{area.name}</strong>
       {Number(area.travel_surcharge_gbp) > 0 && <span>Travel surcharge {money(area.travel_surcharge_gbp)}</span>}
@@ -45,7 +48,7 @@ export function DurationStep({ draft, catalogue, change, next }) {
   </>
 }
 
-export function TimeStep({ draft, loadAvailability, selectDate, selectSlot, next }) {
+export function TimeStep({ rules, draft, loadAvailability, selectDate, selectSlot, next, joinWaitlist }) {
   const [availability, setAvailability] = useState({ slots: [], loading: true, error: '' })
   const duration = durationOf(draft)
   useEffect(() => {
@@ -58,7 +61,7 @@ export function TimeStep({ draft, loadAvailability, selectDate, selectSlot, next
   }, [loadAvailability, draft.date, draft.hold?.hold_id, draft.hold?.hold_token, duration])
   const slots = availability.slots.map((slot) => slot.start_minutes)
   return <><h1>Choose date and time</h1><p>All appointment times are London time.</p>
-    <label>Appointment date<input type="date" value={draft.date} min={londonDate()} max={londonDate(40)} onClick={(event) => {
+    <label>Appointment date<input type="date" value={draft.date} min={londonDate()} max={londonDate(rules.horizonDays)} onClick={(event) => {
       try {
         event.currentTarget.showPicker?.()
       } catch {
@@ -69,7 +72,10 @@ export function TimeStep({ draft, loadAvailability, selectDate, selectSlot, next
     {availability.loading && draft.date && <p role="status">Loading available times…</p>}
     {availability.error && <p className="error" role="alert">{availability.error}</p>}
     <div className="slots" aria-label="Available times">{slots.sort((a, b) => a - b).map((start) => <button key={start} aria-pressed={draft.start === start && activeHold(draft)} onClick={() => selectSlot(start)}>{timeLabel(start)}</button>)}</div>
-    {!availability.loading && !slots.length && <p>No suitable times on this day. Choose another date or <a href="https://vadmassage.com">contact Vad</a>.</p>}
+    {!availability.loading && !availability.error && !slots.length && draft.date && <>
+      <p>No suitable times on this day. Choose another date or <a href="https://vadmassage.com">contact Vad</a>.</p>
+      {joinWaitlist && <WaitlistPanel key={`${draft.date}:${duration}`} date={draft.date} duration={duration} join={joinWaitlist} />}
+    </>}
     <button className="primary" disabled={!activeHold(draft)} onClick={next}>Review booking</button>
   </>
 }

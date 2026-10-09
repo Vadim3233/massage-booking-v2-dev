@@ -5,6 +5,9 @@ set local search_path = public, extensions, pg_temp;
 
 select plan(8);
 
+-- Inside the 40-day client booking horizon, so the test does not rot as the calendar moves.
+select set_config('test.horizon_date',((now() at time zone 'Europe/London')::date + 34)::text,true);
+
 insert into public.services (
   id, slug, name, active, display_order
 )
@@ -101,16 +104,16 @@ values
   );
 
 delete from public.booking_holds
-where date = '2031-02-04';
+where date = current_setting('test.horizon_date')::date;
 
 delete from public.bookings
-where date = '2031-02-04';
+where date = current_setting('test.horizon_date')::date;
 
 delete from public.calendar_blocks
-where date = '2031-02-04';
+where date = current_setting('test.horizon_date')::date;
 
 delete from public.working_hours_overrides
-where date = '2031-02-04';
+where date = current_setting('test.horizon_date')::date;
 
 insert into public.working_hours_overrides (
   date,
@@ -121,7 +124,7 @@ insert into public.working_hours_overrides (
   fixed_start_minutes
 )
 values (
-  '2031-02-04',
+  current_setting('test.horizon_date')::date,
   true,
   600,
   840,
@@ -189,7 +192,7 @@ select is(
       array[]::integer[]
     )
     from public.get_booking_availability(
-      '2031-02-04',
+      current_setting('test.horizon_date')::date,
       60
     ) a
   ),

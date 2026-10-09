@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run build
+
+      # Local-only stack: applies supabase/migrations from scratch, never a remote project.
+      # Services the tests do not use are excluded to keep startup short.
+      - name: Start local Supabase
+        run: npx --no-install supabase start -x studio,imgproxy,logflare,vector,mailpit,edge-runtime
+
+      - name: Database tests (pgTAP)
+        run: npx --no-install supabase test db
+
+      # Vitest integration suites read keys from `supabase status`, so they run against the same local stack.
+      - name: Unit and integration tests
+        run: npm test
+
+      # Runs last and regardless of earlier steps so a lint failure never hides test results.
+      - if: always()
+        run: npm run lint
+
+      - if: always()
+        run: npx --no-install supabase stop --no-backup
