@@ -56,7 +56,7 @@ function WeeklyHours({ api }) {
     finally { setBusy(false) }
   }
   return <form onSubmit={save} className="admin-week">
-    <p className="admin-detail-hint">Your usual week. Use Special days for holidays or a one-off change.</p>
+    <p className="admin-detail-hint">Your usual week. For a holiday, a few days away, or a few hours busy, use Block time under Special days.</p>
     {rows.map((row, index) => <fieldset key={row.weekday} className="admin-weekday" disabled={busy}>
       <legend>{WEEKDAYS[row.weekday - 1]}</legend>
       <label className="admin-who-row"><input type="checkbox" checked={row.available}
@@ -90,12 +90,12 @@ function BlockedTime({ api }) {
     return `${dateLabel(item.start_date, short)}${item.start_minutes === 0 ? '' : ` ${clock(item.start_minutes)}`} to ${dateLabel(item.end_date, short)}${item.end_minutes === 1440 ? '' : ` ${clock(item.end_minutes)}`}`
   }
   return <section className="admin-blocked-time" aria-labelledby="blocked-time-title">
-    <h3 id="blocked-time-title">Time blocked</h3>
-    <p className="admin-detail-hint">Away for a few days, or only some hours? Block that time. Pick a start and an end, like an event in your phone calendar.</p>
+    <h3 id="blocked-time-title">Block time</h3>
+    <p className="admin-detail-hint">Away for a few days, or busy for a few hours? Pick a start date and time and an end date and time, like an event in your phone calendar. Clients can't book that time.</p>
     <button onClick={() => setDialog({ date: today() })}>Block time</button>
     {error && <p role="alert">{error}</p>}
     {!blocks && !error && <p role="status">Loading blocked time…</p>}
-    {blocks && !blocks.length && <p>No time is blocked.</p>}
+    {blocks && !blocks.length && <p>No time is blocked right now.</p>}
     {blocks?.length > 0 && <ul className="admin-special-list">{blocks.map(item => <li key={item.group_id}>
       <div><strong>{item.title || (item.kind === 'personal_event' ? 'Personal event' : 'Not available')}</strong><span>{describe(item)}</span></div>
       <div className="admin-payment-buttons"><button onClick={() => setDialog({ date: item.start_date, block: { group_id: item.group_id, kind: item.kind, title: item.title, notes: item.notes, date: item.start_date, start_minutes: item.start_minutes, end_minutes: item.end_minutes } })}>Change</button></div>
@@ -145,7 +145,9 @@ function SpecialDays({ api }) {
     finally { setBusy(false) }
   }
   return <section>
-    <p className="admin-detail-hint">Days off, holidays and days with different hours. These replace your usual week for that date.</p>
+    <BlockedTime api={api} />
+    <h3>Special days</h3>
+    <p className="admin-detail-hint">A day off, or different opening hours, for one date. These replace your usual week for that date. For a holiday over several days, or just a few hours, use Block time above.</p>
     {message && <p role="status">{message}</p>}
     {error && <p role="alert">{error}</p>}
     {!form && <button onClick={() => open({ date: '', available: false, start_minutes: null, end_minutes: null, start_mode: 'flexible', fixed_start_minutes: null, note: '' })}>Add a special day</button>}
@@ -174,7 +176,6 @@ function SpecialDays({ api }) {
         <span>{item.available ? `${clock(item.start_minutes)}–${clock(item.end_minutes)}` : 'Day off'}{item.note ? ` · ${item.note}` : ''}</span></div>
       <div className="admin-payment-buttons"><button disabled={busy} onClick={() => open({ ...item, note: item.note || '' })}>Change</button><button disabled={busy} onClick={() => remove(item.date)}>Remove</button></div>
     </li>)}</ul>}
-    <BlockedTime api={api} />
   </section>
 }
 
