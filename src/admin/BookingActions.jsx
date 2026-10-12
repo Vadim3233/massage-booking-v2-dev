@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { lifecycleActions, lifecycleApi, lifecycleLabels } from './bookingLifecycleApi.js'
 import { clientName, dateLabel, label, money, time, today } from './calendarPresentation.js'
 import { acquireBodyScrollLock } from './dialogScrollLock.js'
+import { toast } from '../ui/toast.js'
+
+const ACTION_STYLE = { complete: 'btn--primary', feeReceived: 'btn--primary', refund: 'btn--primary', cancel: 'btn--danger', feeWaive: 'btn--quiet', noShow: '', reschedule: '' }
 
 const WHO = [['client', 'The client asked'], ['admin', 'It is my own decision']]
 const explanations = {
@@ -92,8 +95,7 @@ function ActionDialog({ kind, booking, api, close, done }) {
   return <dialog ref={ref} className="admin-confirm admin-action" aria-labelledby="booking-action-title" onCancel={event => { event.preventDefault(); event.stopPropagation(); if (!busy) close() }}>
     <form onSubmit={submit}>
       <h2 id="booking-action-title">{lifecycleLabels[kind]}?</h2>
-      <p><strong>{clientName(booking)}</strong></p>
-      <p>{dateLabel(booking.date)} · {time(booking.start_minutes)} · {money(booking.total_gbp)}</p>
+      <div className="admin-confirm-summary"><strong>{clientName(booking)}</strong><span>{dateLabel(booking.date)} · {time(booking.start_minutes)}</span><b className="figure">{money(booking.total_gbp)}</b></div>
       {explanations[kind] && <p>{explanations[kind]}</p>}
 
       {kind === 'cancel' && <>
@@ -119,8 +121,8 @@ function ActionDialog({ kind, booking, api, close, done }) {
 
       {error && <p role="alert">{error}</p>}
       <div className="admin-payment-buttons">
-        <button type="button" disabled={busy} onClick={close}>Go back</button>
-        <button type="submit" disabled={busy || !ready}>{busy ? 'Saving…' : lifecycleLabels[kind]}</button>
+        <button type="submit" className={kind === 'cancel' ? 'btn--danger-solid' : 'btn--primary'} disabled={busy || !ready}>{busy ? 'Saving…' : kind === 'cancel' && Number(fee) > 0 ? `${lifecycleLabels[kind]} · £${Number(fee).toFixed(2)} fee due` : lifecycleLabels[kind]}</button>
+        <button type="button" className="btn--quiet" disabled={busy} onClick={close}>Go back</button>
       </div>
     </form>
   </dialog>
@@ -153,6 +155,7 @@ export default function BookingActions({ booking, refresh, api = lifecycleApi })
   async function done(text, isError = false) {
     setKind(null)
     setMessage({ text, error: isError })
+    if (!isError) toast(`${lifecycleLabels[kind] || 'Saved'} · ${clientName(booking)}`)
     try { await refresh() } catch { setMessage({ error: true, text: 'The booking changed. Could not refresh its status; please refresh before another action.' }) }
   }
   const owed = []
@@ -160,7 +163,7 @@ export default function BookingActions({ booking, refresh, api = lifecycleApi })
   if (Number(booking.refund_due_gbp) > 0) owed.push(`Refund due: ${money(booking.refund_due_gbp)}`)
   return <div className="admin-booking-actions">
     {owed.length > 0 && <ul className="admin-owed">{owed.map(line => <li key={line}>{line}</li>)}</ul>}
-    {actions.length > 0 && <div className="admin-payment-buttons">{actions.map(action => <button key={action} onClick={() => { setMessage(null); setKind(action) }}>{lifecycleLabels[action]}</button>)}</div>}
+    {actions.length > 0 && <div className="admin-payment-buttons">{actions.map(action => <button key={action} className={ACTION_STYLE[action]} onClick={() => { setMessage(null); setKind(action) }}>{lifecycleLabels[action]}</button>)}</div>}
     {message && <p role={message.error ? 'alert' : 'status'}>{message.text}</p>}
     {kind && <ActionDialog key={kind} kind={kind} booking={booking} api={api} close={() => setKind(null)} done={done} />}
     <History booking={booking} api={api} />

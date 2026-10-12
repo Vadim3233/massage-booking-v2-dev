@@ -1,5 +1,7 @@
 export const emptyAddress = { savedAddressId: '', address_line_1: '', address_line_2: '', city: 'London', postcode: '', entry_instructions: '' }
 export const clientLabel = client => [client?.first_name, client?.last_name].filter(Boolean).join(' ') || 'Client'
+// Two letters to tell clients apart at a glance.
+export const initials = client => ([client?.first_name, client?.last_name].filter(Boolean).map(part => part.trim()[0]).join('').slice(0, 2) || '?').toUpperCase()
 export const PAYMENT_OPTIONS = [['bank_pending', 'Bank transfer — payment pending'], ['bank_received', 'Bank transfer — already received'], ['cash_appointment', 'Cash — at appointment'], ['cash_received', 'Cash — already received']]
 
 // What a client usually books, taken from their last booking, so a regular needs only a time. Fills only what is still empty.

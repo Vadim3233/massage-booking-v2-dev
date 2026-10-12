@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Icon from '../../../ui/icons.jsx'
+import './dayTimePicker.css'
 import { londonDate, timeLabel } from '../bookingDraft.js'
 import { addDays, clampStrip, dayParts, STRIP_DAYS, stripFrom } from '../dateStrip.js'
 import { groupSlots } from '../timeOfDay.js'
@@ -70,19 +71,19 @@ export default function DayTimePicker({ horizonDays, dateLabel = 'Appointment da
   const months = [...new Set(dates.map((date) => monthWord(date, { month: 'long', year: 'numeric' })))].join(' – ')
   function pick(date) { if (date) { setViewDate(date); setStripStart(clampStrip(date, today, last)) } }
 
-  return <>
+  return <div className="dtp">
     <div className="daystrip" role="group" aria-label="Choose a day">
-      <button className="daystrip-arrow" aria-label="Earlier days" disabled={stripStart <= today} onClick={() => setStripStart(clampStrip(addDays(stripStart, -STRIP_DAYS), today, last))}><Icon name="left" size={22} /></button>
+      <button type="button" className="daystrip-arrow" aria-label="Earlier days" disabled={stripStart <= today} onClick={() => setStripStart(clampStrip(addDays(stripStart, -STRIP_DAYS), today, last))}><Icon name="left" size={22} /></button>
       {dates.map((date) => {
         const parts = dayParts(date)
         const known = days[date]
         const free = known?.slots?.length || 0
-        return <button className="daychip" key={date} aria-pressed={date === viewDate} data-free={known ? (free ? 'yes' : 'no') : 'unknown'}
+        return <button type="button" className="daychip" key={date} aria-pressed={date === viewDate} data-free={known ? (free ? 'yes' : 'no') : 'unknown'}
           aria-label={`${parts.long}, ${known ? (free ? `${free} ${free === 1 ? 'time' : 'times'} free` : 'no times free') : 'checking'}`} onClick={() => pick(date)}>
           <span className="daychip-dow">{parts.weekday}</span><span className="figure daychip-day">{parts.day}</span><span className="daychip-dot" aria-hidden="true" />
         </button>
       })}
-      <button className="daystrip-arrow" aria-label="Later days" disabled={addDays(stripStart, STRIP_DAYS - 1) >= last} onClick={() => setStripStart(clampStrip(addDays(stripStart, STRIP_DAYS), today, last))}><Icon name="right" size={22} /></button>
+      <button type="button" className="daystrip-arrow" aria-label="Later days" disabled={addDays(stripStart, STRIP_DAYS - 1) >= last} onClick={() => setStripStart(clampStrip(addDays(stripStart, STRIP_DAYS), today, last))}><Icon name="right" size={22} /></button>
     </div>
     <p className="strip-month">{months}</p>
     <label className="date-field">{dateLabel}<input type="date" value={viewDate} min={today} max={last} onClick={(event) => {
@@ -99,13 +100,13 @@ export default function DayTimePicker({ horizonDays, dateLabel = 'Appointment da
       <p className="day-name">{dayParts(viewDate).long}</p>
       {groups.map((group) => <div key={group.key}>
         {groups.length > 1 && <h2 className="slot-group">{group.label}</h2>}
-        <div className="slots">{group.slots.map((start) => <button key={start} aria-pressed={selected?.date === viewDate && selected?.start === start} onClick={() => onPick(viewDate, start)}>{timeLabel(start)}</button>)}</div>
+        <div className="slots">{group.slots.map((start) => <button type="button" key={start} aria-pressed={selected?.date === viewDate && selected?.start === start} onClick={() => onPick(viewDate, start)}>{timeLabel(start)}</button>)}</div>
       </div>)}
     </div>}
     {view && !view.error && !view.slots.length && <>
       <p className="empty-day">{emptyMessage}</p>
-      {nextFree && <button className="btn--tonal btn--block" onClick={() => pick(nextFree)}>Next free day: {dayParts(nextFree).long}</button>}
+      {nextFree && <button type="button" className="btn--tonal btn--block" onClick={() => pick(nextFree)}>Next free day: {dayParts(nextFree).long}</button>}
       {renderEmpty?.(viewDate)}
     </>}
-  </>
+  </div>
 }

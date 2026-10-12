@@ -36,7 +36,7 @@ export default function SettingsWelcome({ api = welcomeApi }) {
       {problem && <p role="alert" className="admin-field-error">{problem}</p>}
       {error && <p role="alert" className="admin-field-error">{error}</p>}
       {message && <p role="status">{message}</p>}
-      <button type="submit" disabled={busy || Boolean(problem)}>{busy ? 'Saving…' : 'Save'}</button>
+      <button type="submit" className="btn--primary btn--block" disabled={busy || Boolean(problem)}>{busy ? 'Saving…' : 'Save'}</button>
     </form>
   </section>
 }

@@ -38,6 +38,23 @@ test('a new booking shows as an unread badge and an alert that opens the exact b
   await expect(page.locator('.admin-alerts li.is-unread')).toHaveCount(0)
 })
 
+test('several alerts about one booking are one card, and opening it reads them all', async ({ page }) => {
+  await f.authorize()
+  await emit('booking.created', f.bookings[0].id, { booking_status: 'awaiting_transfer' })
+  await emit('booking.transfer_declared', f.bookings[0].id, { method: 'bank_transfer' })
+  await signIn(page)
+  const list = page.locator('.admin-alerts li')
+  await expect(list).toHaveCount(1)
+  await expect(list).toContainText('says the transfer is made')
+  await expect(list).toContainText('Also: New booking request')
+  await expect(nav(page).getByLabel('2 unread')).toBeVisible()
+  await list.getByRole('button').click()
+  await expect(page.locator('dialog.admin-details')).toBeVisible()
+  await page.getByRole('button', { name: 'Close details' }).click()
+  await expect(nav(page).getByLabel(/unread/)).toHaveCount(0)
+  await expect(page.locator('.admin-alerts li.is-unread')).toHaveCount(0)
+})
+
 test('with nothing to report the page says so kindly, and the navigation fits a small phone', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 })
   await f.authorize()

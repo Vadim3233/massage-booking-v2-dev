@@ -1,3 +1,4 @@
+import { createAdminGate } from './adminGate.js'
 // All requests use the signed-in user's JWT; table RLS remains authoritative.
 const bookingFields = `*,clients!bookings_client_id_fkey(id,first_name,last_name,email,phone),
 booking_sessions(*,booking_session_preferences(*),booking_session_enhancements(*)),
@@ -13,12 +14,7 @@ export function validateRange(start, end) {
   if (!valid(start) || !valid(end) || end <= start || (Date.parse(end) - Date.parse(start)) / 86400000 > 31) throw new Error('Choose a valid calendar range of up to 31 days.')
 }
 export function createCalendarApi(client) {
-  async function authorized() {
-    const { data, error } = await client.auth.getUser()
-    if (error) throw error
-    if (!data.user || data.user.is_anonymous) throw new Error('Admin sign-in required.')
-    if (!await read(client.rpc('is_booking_admin'))) throw new Error('This account does not have Admin access.')
-  }
+  const authorized = createAdminGate(client, { signedOut: 'Admin sign-in required.', denied: 'This account does not have Admin access.' })
   return {
     async loadCalendarRange(start, end) {
       validateRange(start, end)

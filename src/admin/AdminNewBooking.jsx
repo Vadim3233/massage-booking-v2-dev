@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { adminNewBookingApi as api, bookingRequest } from './newBookingApi.js'
 import { useAdminBookingDraft } from './useAdminBookingDraft.js'
 import ClientStep from './newBooking/ClientStep.jsx'
@@ -171,10 +171,11 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
       } else setError('The result could not be confirmed. Retry creation to safely check the same request. Your draft is kept and editing is paused.')
     } finally { busyRef.current = false; setBusy(false) }
   }
+  const loadDay = useCallback(date => api.availability(date, duration).then(slots => slots.map(slot => slot.start_minutes)), [duration])
   const data = catalogue || EMPTY_CATALOGUE
   const addressCurrent = addressState.clientId === draft.client?.id
   return <section className="admin-new-booking" aria-labelledby="new-booking-title">
-    <header className="anb-header"><h1 id="new-booking-title">New booking</h1><button type="button" disabled={busy} onClick={onCancel}>Cancel</button></header>
+    <header className="anb-header"><h1 id="new-booking-title">New booking</h1><button type="button" className="btn--quiet" disabled={busy} onClick={onCancel}>Cancel</button></header>
     {error && <p className="anb-error" role="alert" ref={errorRef} tabIndex={-1}>{error}</p>}
     {!catalogue && !catalogueError && <p role="status">Loading booking options…</p>}
     {catalogueError && <><p role="alert">{catalogueError}</p><button onClick={() => setAttempt(value => value + 1)}>Retry booking options</button></>}
@@ -184,14 +185,14 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
       <section className="anb-block" aria-labelledby="anb-treatment-title"><h2 id="anb-treatment-title">Treatment</h2>
         <TreatmentStep draft={draft} patch={edit} catalogue={data} /></section>
       <section className="anb-block" aria-labelledby="anb-time-title"><h2 id="anb-time-title">Date and time</h2>
-        <DateTimeStep draft={draft} patch={edit} availability={availability?.slots || []} loading={!availability} error={availability?.error} retry={() => setAvailabilityAttempt(value => value + 1)} /></section>
+        <DateTimeStep draft={draft} patch={edit} duration={duration} loadDay={loadDay} /></section>
       <section className="anb-block" aria-labelledby="anb-payment-title"><h2 id="anb-payment-title">Payment, note and repeat</h2>
         <PaymentStep draft={draft} patch={edit} /></section>
     </fieldset>
     <Summary draft={draft} catalogue={data} quote={quote} />
     {!quote && !quoteError && draft.serviceId && draft.areaId && <p role="status">Updating price…</p>}
     {quoteError && <><p role="alert">{quoteError}</p><button type="button" disabled={locked} onClick={() => setAttempt(value => value + 1)}>Retry price</button></>}
-    <footer className="anb-footer"><span className="anb-footer-total">{quote ? `Total ${money(quote.total_gbp)}` : 'Total to come'}</span>
-      <button type="button" className="anb-primary" disabled={busy || clientBusy} onClick={create}>{busy ? 'Creating booking…' : draft.submission ? 'Retry creation' : 'Create booking'}</button></footer></>}
+    <footer className="anb-footer"><span className="anb-footer-total">{quote ? <><span>Total</span> <b className="figure">{money(quote.total_gbp)}</b></> : 'Total to come'}</span>
+      <button type="button" className="btn--primary btn--lg" disabled={busy || clientBusy} onClick={create}>{busy ? 'Creating booking…' : draft.submission ? 'Retry creation' : 'Create booking'}</button></footer></>}
   </section>
 }

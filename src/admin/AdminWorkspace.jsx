@@ -1,7 +1,10 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import Calendar from './Calendar.jsx'
 import { useUnreadAlerts } from './useUnreadAlerts.js'
+import { useToCheck } from './useToCheck.js'
 import { today } from './calendarPresentation.js'
+import Icon from '../ui/icons.jsx'
+import ToastHost from '../ui/ToastHost.jsx'
 import './agenda.css'
 const Agenda = lazy(() => import('./Agenda.jsx'))
 const PaymentReview = lazy(() => import('./PaymentReview.jsx'))
@@ -18,18 +21,39 @@ const ExtrasSettings = lazy(() => import('./SettingsCatalogue.jsx').then(module 
 const ClientProfile = lazy(() => import('./ClientProfile.jsx'))
 const BookingDestination = lazy(() => import('./BookingDestination.jsx'))
 const AdminNewBooking = lazy(() => import('./AdminNewBooking.jsx'))
-const MORE_LINKS = [['/admin/waitlist', 'Waitlist'], ['/admin/schedule', 'Working hours and special days'], ['/admin/settings/services', 'Services and prices'], ['/admin/settings/extras', 'Extras'], ['/admin/settings/areas', 'Areas and travel fees'], ['/admin/settings/bank', 'Bank transfer details'], ['/admin/settings/rules', 'Booking rules'], ['/admin/settings/welcome', 'Welcome message']]
-const SETTINGS_PAGES = MORE_LINKS.map(([path]) => path)
+
+// The More menu, grouped by what she is doing. Each pair is a route and the words on the link.
+const MORE_GROUPS = [
+  ['Every day', [['/admin/waitlist', 'Waitlist'], ['/admin/schedule', 'Working hours and special days']]],
+  ['What you offer', [['/admin/settings/services', 'Services and prices'], ['/admin/settings/extras', 'Extras'], ['/admin/settings/areas', 'Areas and travel fees']]],
+  ['Payments and rules', [['/admin/settings/bank', 'Bank transfer details'], ['/admin/settings/rules', 'Booking rules']]],
+  ['What clients read', [['/admin/settings/welcome', 'Welcome message']]],
+]
+const SETTINGS_PAGES = MORE_GROUPS.flatMap(([, links]) => links.map(([path]) => path))
+const plainClick = event => !event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0
+function AdminLink({ href, navigate, children, ...rest }) {
+  return <a href={href} onClick={event => { if (plainClick(event)) { event.preventDefault(); navigate(href) } }} {...rest}>{children}</a>
+}
 const readRoute = () => ({ path: window.location.pathname.replace(/\/$/, '') || '/admin', search: window.location.search, background: window.history.state?.adminBackground, returnTo: window.history.state?.adminReturnTo })
 export default function AdminWorkspace({ signOut, ownerId }) {
   const [route, setRoute] = useState(readRoute)
   const [revision, setRevision] = useState(0)
   const [opener, setOpener] = useState(null)
   const [unreadAlerts, refreshAlerts] = useUnreadAlerts()
+  const [toCheck, refreshToCheck] = useToCheck(revision)
+  const [fabCompact, setFabCompact] = useState(false)
   const guard = useRef(null)
+  const viewedDay = useRef(undefined)
+  const rememberDay = useCallback(day => { viewedDay.current = day }, [])
   const currentRoute = useRef(route)
   useEffect(() => { currentRoute.current = route }, [route])
   const registerGuard = useCallback(fn => { guard.current = fn }, [])
+  // The New booking button shrinks to a plus while she scrolls, and opens out again at the top.
+  useEffect(() => {
+    const scroll = () => setFabCompact(window.scrollY > 120)
+    window.addEventListener('scroll', scroll, { passive: true })
+    return () => window.removeEventListener('scroll', scroll)
+  }, [])
   useEffect(() => {
     const pop = () => {
       const next = readRoute()
@@ -81,31 +105,34 @@ export default function AdminWorkspace({ signOut, ownerId }) {
     setRoute(readRoute())
     window.scrollTo(0, 0)
   }
+  const moreSurface = ['/admin/more', ...SETTINGS_PAGES].includes(surface)
+  const needsYou = toCheck.needs.length
   return <>
     {!creating && <nav inert={Boolean(match)} className="admin-primary-nav" aria-label="Admin navigation">
-      <a href="/admin" aria-current={calendarSurface ? 'page' : undefined} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); navigate('/admin') } }}>Calendar</a>
-      <a href="/admin/review" aria-current={surface === '/admin/review' ? 'page' : undefined} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); navigate('/admin/review') } }}>Review</a>
-      <a href="/admin/alerts" aria-current={surface === '/admin/alerts' ? 'page' : undefined} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); navigate('/admin/alerts') } }}>Alerts{unreadAlerts > 0 && <small className="admin-badge" aria-label={`${unreadAlerts} unread`}>{unreadAlerts > 99 ? '99+' : unreadAlerts}</small>}</a>
-      <a href="/admin/clients" aria-current={clientsSurface ? 'page' : undefined} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); navigate('/admin/clients') } }}>Clients</a>
-      <a href="/admin/more" aria-current={['/admin/more', ...SETTINGS_PAGES].includes(surface) ? 'page' : undefined} onClick={event => { event.preventDefault(); navigate('/admin/more') }}>More</a>
+      <AdminLink href="/admin" navigate={navigate} aria-current={calendarSurface ? 'page' : undefined}><Icon name="calendar" /><span>Calendar</span></AdminLink>
+      <AdminLink href="/admin/review" navigate={navigate} aria-current={surface === '/admin/review' ? 'page' : undefined}><Icon name="check" /><span>To check</span>{needsYou > 0 && <small className="admin-badge admin-badge--needs" aria-label={`${needsYou} to check`}>{needsYou > 99 ? '99+' : needsYou}</small>}</AdminLink>
+      <AdminLink href="/admin/alerts" navigate={navigate} aria-current={surface === '/admin/alerts' ? 'page' : undefined}><Icon name="bell" /><span>Alerts</span>{unreadAlerts > 0 && <small className="admin-badge" aria-label={`${unreadAlerts} unread`}>{unreadAlerts > 99 ? '99+' : unreadAlerts}</small>}</AdminLink>
+      <AdminLink href="/admin/clients" navigate={navigate} aria-current={clientsSurface ? 'page' : undefined}><Icon name="users" /><span>Clients</span></AdminLink>
+      <AdminLink href="/admin/more" navigate={navigate} aria-current={moreSurface ? 'page' : undefined}><Icon name="more" filled /><span>More</span></AdminLink>
     </nav>}
-    <Suspense fallback={<p role="status">Loading Admin…</p>}>
-      <div inert={Boolean(match)}>
+    <Suspense fallback={<div className="skeleton-rows" role="status" aria-label="Loading Admin"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>}>
+      <div className="admin-content" inert={Boolean(match)}>
       {calendarSurface && <nav className="admin-calendar-views" aria-label="Calendar views">
-        <a href="/admin/day" aria-current={surface === '/admin' ? 'page' : undefined} onClick={event => { event.preventDefault(); navigate('/admin/day') }}>Day</a>
-        <a href="/admin/agenda" aria-current={surface === '/admin/agenda' ? 'page' : undefined} onClick={event => { event.preventDefault(); navigate('/admin/agenda') }}>Agenda</a>
+        <AdminLink href="/admin/day" navigate={navigate} aria-current={surface === '/admin' ? 'page' : undefined}>Day</AdminLink>
+        <AdminLink href="/admin/agenda" navigate={navigate} aria-current={surface === '/admin/agenda' ? 'page' : undefined}>Agenda</AdminLink>
       </nav>}
-      {surface === '/admin' && <Calendar key={date || 'today'} initialDate={date} signOut={signOut} openBooking={openBooking} revision={revision} newBooking={newBooking} />}
-      {surface === '/admin/agenda' && <Agenda openBooking={openBooking} revision={revision} newBooking={newBooking} />}
+      {surface === '/admin' && <Calendar key={date || 'today'} initialDate={date} signOut={signOut} openBooking={openBooking} revision={revision} onDate={rememberDay} />}
+      {surface === '/admin/agenda' && <Agenda openBooking={openBooking} revision={revision} toCheck={toCheck} checked={() => { setRevision(value => value + 1); refreshToCheck() }} seeAll={() => navigate('/admin/review')} />}
       {creating && <AdminNewBooking initialDate={date} initialClientId={clientParam} ownerId={ownerId} registerGuard={registerGuard} onCancel={() => navigate(route.returnTo || '/admin')} onCreated={created} />}
       {surface === '/admin/review' && <PaymentReview openBooking={openBooking} revision={revision} />}
       {surface === '/admin/clients' && <Clients openClient={id => navigate(`/admin/clients/${id}`)} />}
       {profile && <ClientProfile key={profile[1]} id={profile[1]} back={() => navigate('/admin/clients')} openBooking={openBooking} newBooking={clientId => newBooking(today(), clientId)} />}
       {surface === '/admin/alerts' && <Alerts openBooking={openBooking} openPage={path => navigate(path)} changed={refreshAlerts} />}
       {surface === '/admin/more' && <section className="admin-review"><h1>More</h1>
-        <ul className="admin-menu">{MORE_LINKS.map(([path, text]) => <li key={path}><a href={path} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); navigate(path) } }}>{text}</a></li>)}</ul>
-        <button onClick={signOut}>Sign out</button></section>}
-      {SETTINGS_PAGES.includes(surface) && <a className="admin-back-link" href="/admin/more" onClick={event => { event.preventDefault(); navigate('/admin/more') }}>← More</a>}
+        {MORE_GROUPS.map(([title, links]) => <section key={title} aria-label={title}><h2 className="admin-group-title">{title}</h2>
+          <ul role="list" className="admin-menu">{links.map(([path, text]) => <li key={path}><AdminLink href={path} navigate={navigate}>{text}</AdminLink></li>)}</ul></section>)}
+        <button className="btn--quiet" onClick={signOut}>Sign out</button></section>}
+      {SETTINGS_PAGES.includes(surface) && <AdminLink className="admin-back-link" href="/admin/more" navigate={navigate}>← More</AdminLink>}
       {surface === '/admin/schedule' && <ScheduleSettings />}
       {surface === '/admin/settings/services' && <ServicesSettings />}
       {surface === '/admin/settings/extras' && <ExtrasSettings />}
@@ -118,5 +145,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       </div>
       {match && <BookingDestination key={match[1]} id={match[1]} close={close} returnFocus={opener} changed={() => setRevision(value => value + 1)} />}
     </Suspense>
+    {calendarSurface && !match && <button className={`btn btn--primary btn--lg admin-fab ${fabCompact ? 'is-compact' : ''}`} onClick={() => newBooking((surface === '/admin' && viewedDay.current) || date || today())}><span className="fab-plus">+</span><span className="fab-label"> New booking</span></button>}
+    <ToastHost />
   </>
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { alertsApi, bookingIdFromLink } from './alertsApi.js'
+import { alertsApi, bookingIdFromLink, groupAlerts } from './alertsApi.js'
 
 const when = value => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
 
@@ -15,9 +15,10 @@ export default function Alerts({ openBooking, openPage, changed, api = alertsApi
   async function markAll() {
     try { await api.markRead(null); setAttempt(value => value + 1); changed() } catch (failure) { setError(failure.message) }
   }
-  async function open(alert) {
+  async function open(group) {
+    const alert = group.head
     const id = bookingIdFromLink(alert.link_path)
-    if (!alert.read_at) { try { await api.markRead([alert.id]); changed() } catch { /* Opening the booking still works. */ } }
+    if (group.unreadIds.length) { try { await api.markRead(group.unreadIds); changed() } catch { /* Opening the booking still works. */ } }
     if (id) openBooking(id)
     else if (/^\/admin\/[a-z/-]+$/.test(alert.link_path || '')) openPage?.(alert.link_path)
   }
@@ -29,10 +30,12 @@ export default function Alerts({ openBooking, openPage, changed, api = alertsApi
     {!alerts && !error && <p role="status">Loading alerts…</p>}
     {alerts && !alerts.length && <p>Nothing yet. New bookings and client changes will appear here.</p>}
     {alerts?.length > 0 && <>
-      <div className="admin-payment-buttons"><button disabled={!unread} onClick={markAll}>Mark all as read</button></div>
-      <ul className="admin-alerts">{alerts.map(alert => <li key={alert.id} className={alert.read_at ? 'is-read' : 'is-unread'}>
-        <button onClick={() => open(alert)}>
-          <strong>{alert.title}</strong><span>{alert.body}</span><small>{when(alert.created_at)}{alert.read_at ? '' : ' · New'}</small>
+      <div className="admin-payment-buttons"><button className="btn--tonal btn--small" disabled={!unread} onClick={markAll}>Mark all as read</button></div>
+      <ul className="admin-alerts">{groupAlerts(alerts).map(group => <li key={group.id} className={group.unreadIds.length ? 'is-unread' : 'is-read'}>
+        <button onClick={() => open(group)}>
+          <strong>{group.head.title}</strong><span>{group.head.body}</span>
+          {group.older.length > 0 && <span className="admin-alert-also">Also: {group.older.map(alert => alert.title).join(' · ')}</span>}
+          <small>{when(group.head.created_at)}{group.unreadIds.length ? ' · New' : ''}</small>
         </button>
       </li>)}</ul>
     </>}

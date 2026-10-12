@@ -34,19 +34,19 @@ export default function ClientRepeats({ clientId, openBooking, api = seriesApi }
       {!series.next_booking && series.next_held_date && <p>Next session: {day(series.next_held_date)} (booked closer to the day, when payment is asked for)</p>}
       {series.skipped.length > 0 && <ul className="admin-special-list" aria-label="Dates not booked">{series.skipped.map(item => <li key={item.date}>
         <div><strong>{day(item.date)}</strong><span>{SKIP_LABELS[item.reason]}</span></div>
-        {canPutBack(item.reason) && series.status === 'active' && <div className="admin-payment-buttons"><button disabled={busy} onClick={() => act(() => api.unskip(series.id, item.date))}>Put back</button></div>}
+        {canPutBack(item.reason) && series.status === 'active' && <div className="admin-payment-buttons"><button className="btn--small" disabled={busy} onClick={() => act(() => api.unskip(series.id, item.date))}>Put back</button></div>}
       </li>)}</ul>}
       {series.status !== 'ended' && <>
         <form className="admin-repeat-skip" onSubmit={event => { event.preventDefault(); if (skipDate[series.id]) act(() => api.skip(series.id, skipDate[series.id]).then(() => setSkipDate({ ...skipDate, [series.id]: '' }))) }}>
           <label className="admin-field">Skip a date<input type="date" min={today()} value={skipDate[series.id] || ''} disabled={busy} onChange={event => setSkipDate({ ...skipDate, [series.id]: event.target.value })} /></label>
-          <button type="submit" disabled={busy || !skipDate[series.id]}>Skip this date</button>
+          <button type="submit" className="btn--tonal btn--small" disabled={busy || !skipDate[series.id]}>Skip this date</button>
         </form>
         {stopping === series.id
           ? <div role="alert" className="admin-conflicts"><p>Stop this repeat? The weekly slot is released. Bookings already made stay until you cancel them.</p>
-              <div className="admin-payment-buttons"><button disabled={busy} onClick={() => setStopping(null)}>Keep it</button><button disabled={busy} onClick={() => act(() => api.setStatus(series.id, 'ended'))}>Yes, stop repeating</button></div></div>
+              <div className="admin-payment-buttons"><button disabled={busy} onClick={() => setStopping(null)}>Keep it</button><button className="btn--danger-solid" disabled={busy} onClick={() => act(() => api.setStatus(series.id, 'ended'))}>Yes, stop repeating</button></div></div>
           : <div className="admin-payment-buttons">
-              <button disabled={busy} onClick={() => act(() => api.setStatus(series.id, series.status === 'active' ? 'paused' : 'active'))}>{series.status === 'active' ? 'Pause' : 'Resume'}</button>
-              <button disabled={busy} onClick={() => setStopping(series.id)}>Stop repeating</button>
+              <button className="btn--small" disabled={busy} onClick={() => act(() => api.setStatus(series.id, series.status === 'active' ? 'paused' : 'active'))}>{series.status === 'active' ? 'Pause' : 'Resume'}</button>
+              <button className="btn--small btn--danger" disabled={busy} onClick={() => setStopping(series.id)}>Stop repeating</button>
             </div>}
       </>}
     </article>)}

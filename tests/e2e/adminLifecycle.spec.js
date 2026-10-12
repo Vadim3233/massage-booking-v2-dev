@@ -40,7 +40,7 @@ test('cancelling inside 24 hours shows the standard fee, records it as due, and 
   await action(page).getByLabel('Reason').fill('Client has a family emergency')
   expect(await action(page).evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
   await page.screenshot({ path: 'test-results/admin-cancel-dialog-390.png' })
-  await action(page).getByRole('button', { name: 'Cancel booking', exact: true }).click()
+  await action(page).getByRole('button', { name: /^Cancel booking/ }).click()
   await expect(details(page).getByText('Late fee: Due · £85.00')).toBeVisible()
   await expect(details(page)).toContainText('Reason: Client has a family emergency')
   const row = (await f.admin.from('bookings').select('booking_status,late_fee_due_gbp,late_fee_status,cancellation_initiated_by').eq('id', id).single()).data
@@ -63,8 +63,8 @@ test('an Admin-requested cancellation never suggests a fee, and the reason is op
   await details(page).getByRole('button', { name: 'Cancel booking', exact: true }).click()
   await action(page).getByLabel('It is my own decision').check()
   await expect(action(page).getByLabel('Late fee (£)')).toHaveValue('0')
-  await expect(action(page).getByRole('button', { name: 'Cancel booking', exact: true })).toBeEnabled()
-  await action(page).getByRole('button', { name: 'Cancel booking', exact: true }).click()
+  await expect(action(page).getByRole('button', { name: /^Cancel booking/ })).toBeEnabled()
+  await action(page).getByRole('button', { name: /^Cancel booking/ }).click()
   await expect(details(page).getByText('Cancelled', { exact: false }).first()).toBeVisible()
   const row = (await f.admin.from('bookings').select('late_fee_status,cancellation_reason').eq('id', id).single()).data
   expect(row).toMatchObject({ late_fee_status: 'none', cancellation_reason: null })

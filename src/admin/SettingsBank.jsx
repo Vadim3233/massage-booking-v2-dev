@@ -40,7 +40,7 @@ export default function SettingsBank({ api = settingsApi }) {
       {problem && (details.account_name || details.sort_code || details.account_number) && <p role="alert" className="admin-field-error">{problem}</p>}
       {error && <p role="alert" className="admin-field-error">{error}</p>}
       {message && <p role="status">{message}</p>}
-      <button type="submit" disabled={busy || Boolean(problem)}>{busy ? 'Saving…' : 'Save bank details'}</button>
+      <button type="submit" className="btn--primary btn--lg btn--block" disabled={busy || Boolean(problem)}>{busy ? 'Saving…' : 'Save bank details'}</button>
     </form>
   </section>
 }

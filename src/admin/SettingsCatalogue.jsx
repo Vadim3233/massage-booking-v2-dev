@@ -22,7 +22,7 @@ function Frame({ title, intro, list, children, adding, onAdd, addLabel }) {
     {list.error && <p role="alert">{list.error} <button onClick={list.reload}>Try again</button></p>}
     {!list.items && !list.error && <p role="status">Loading…</p>}
     {list.items && <>
-      {!adding && <div className="admin-payment-buttons"><button onClick={onAdd}>{addLabel}</button></div>}
+      {!adding && <div className="admin-payment-buttons"><button className="btn--tonal" onClick={onAdd}>{addLabel}</button></div>}
       {children}
     </>}
   </section>
@@ -34,10 +34,10 @@ function Row({ item, index, items, summary, onMove, onToggle, editing, onEdit, c
       <div className="admin-setting-head"><strong>{item.name}</strong><span className="admin-detail-hint">{item.active ? 'Shown to clients' : `${hiddenWord} from clients`}</span></div>
       <p>{summary}</p>
       <div className="admin-payment-buttons">
-        <button disabled={busy} onClick={onEdit}>Change</button>
-        <button disabled={busy} onClick={onToggle}>{item.active ? 'Hide' : 'Show'}</button>
-        <button disabled={busy || index === 0} aria-label={`Move ${item.name} up`} onClick={() => onMove(items[index - 1], item)}>↑</button>
-        <button disabled={busy || index === items.length - 1} aria-label={`Move ${item.name} down`} onClick={() => onMove(item, items[index + 1])}>↓</button>
+        <button className="btn--small" disabled={busy} onClick={onEdit}>Change</button>
+        <button className="btn--small btn--quiet" disabled={busy} onClick={onToggle}>{item.active ? 'Hide' : 'Show'}</button>
+        <button className="btn--small btn--icon" disabled={busy || index === 0} aria-label={`Move ${item.name} up`} onClick={() => onMove(items[index - 1], item)}>↑</button>
+        <button className="btn--small btn--icon" disabled={busy || index === items.length - 1} aria-label={`Move ${item.name} down`} onClick={() => onMove(item, items[index + 1])}>↓</button>
       </div>
     </>}
   </li>
@@ -56,7 +56,7 @@ function useSaver(list) {
 function FormButtons({ busy, problem, onCancel, label }) {
   return <>
     {problem && <p role="alert" className="admin-field-error">{problem}</p>}
-    <div className="admin-payment-buttons"><button type="button" disabled={busy} onClick={onCancel}>Cancel</button><button type="submit" disabled={busy || Boolean(problem)}>{busy ? 'Saving…' : label}</button></div>
+    <div className="admin-payment-buttons"><button type="button" className="btn--quiet" disabled={busy} onClick={onCancel}>Cancel</button><button type="submit" className="btn--primary" disabled={busy || Boolean(problem)}>{busy ? 'Saving…' : label}</button></div>
   </>
 }
 

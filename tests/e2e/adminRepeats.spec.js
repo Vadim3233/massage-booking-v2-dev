@@ -31,7 +31,7 @@ test('a booking can be made to repeat weekly, the slot is held, and the repeat i
   await page.getByLabel('Find a client').fill(f.recipient.email)
   await page.getByRole('button', { name: new RegExp(f.recipient.first_name) }).click()
   await page.getByRole('combobox', { name: 'Service area', exact: true }).selectOption(f.ids.area)
-  await page.getByRole('combobox', { name: 'Treatment', exact: true }).selectOption(f.ids.service)
+  await page.getByRole('radio', { name: 'Integration massage', exact: true }).check()
   await page.getByRole('group', { name: 'Available times' }).getByRole('button').first().click()
 
   const repeat = page.getByRole('checkbox', { name: /Repeat every/ })

@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase.js'
+import { createAdminGate } from './adminGate.js'
 
 const fields = `*,clients!bookings_client_id_fkey(id,first_name,last_name,email,phone),
 booking_sessions(*,booking_session_preferences(*),booking_session_enhancements(*)),
@@ -19,12 +20,7 @@ export const paymentActions = booking => {
 export const actionLabels = { verify: 'Verify payment', approve: 'Approve', remove: 'Remove booking', receive: 'Mark payment received', receiveBank: 'Mark bank transfer received' }
 const operations = { verify: 'admin_verify_bank_transfer', approve: 'admin_approve_cash_request', remove: 'admin_remove_pending_booking', receive: 'admin_record_payment_received', receiveBank: 'admin_record_bank_transfer_received' }
 export function createPaymentReviewApi(client) {
-  async function authorized() {
-    const user = await client.auth.getUser()
-    if (user.error || !user.data.user || user.data.user.is_anonymous) throw new Error('Admin sign-in required.')
-    const result = await client.rpc('is_booking_admin')
-    if (result.error || !result.data) throw new Error('Admin access required.')
-  }
+  const authorized = createAdminGate(client, { signedOut: 'Admin sign-in required.', denied: 'Admin access required.' })
   return {
     async queue(offset = 0) {
       await authorized()
@@ -53,9 +49,14 @@ export function createPaymentReviewApi(client) {
   }
 }
 export const paymentReviewApi = createPaymentReviewApi(supabase)
-// Deduplicate StrictMode's initial reads; entries exist only while a request is pending.
+// Identical reads share one answer: StrictMode's repeated effects, and the To check count and the Payment review page asking for
+// the same list as the page opens. An answer is kept for `keepMs` after it arrives; a failure is never kept.
 const pending = new Map()
-export function loadReviewResource(key, read) {
-  if (!pending.has(key)) pending.set(key, read().finally(() => pending.delete(key)))
-  return pending.get(key)
+export function loadReviewResource(key, read, keepMs = 0) {
+  if (pending.has(key)) return pending.get(key)
+  const promise = read()
+  const forget = () => { if (pending.get(key) === promise) pending.delete(key) }
+  promise.then(() => setTimeout(forget, keepMs), forget)
+  pending.set(key, promise)
+  return promise
 }

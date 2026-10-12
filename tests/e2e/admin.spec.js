@@ -135,7 +135,9 @@ test('desktop uses the same details component as a right-side panel and Escape r
   await f.authorize(); await page.setViewportSize({ width: 1280, height: 900 }); await login(page)
   await page.getByLabel('Calendar date', { exact: true }).fill(f.date)
   await expect(page.locator('.admin-card')).toHaveCount(2)
-  expect((await page.locator('.admin-shell').boundingBox()).width).toBe(936)
+  // A wide screen has the navigation as a rail on the left and the content in a readable column.
+  expect(await page.getByRole('navigation', { name: 'Admin navigation' }).boundingBox()).toMatchObject({ x: 0, width: 92 })
+  expect((await page.locator('.admin-content').boundingBox()).width).toBeLessThanOrEqual(800)
   await page.screenshot({ path: 'test-results/admin-agenda-desktop.png', fullPage: true })
   await page.locator('.admin-card').first().click()
   const dialog = page.getByRole('dialog')

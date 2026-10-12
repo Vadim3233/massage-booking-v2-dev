@@ -48,6 +48,10 @@ test('changing the time well in advance is free and the new time is shown', asyn
   await expect(slots.first()).toBeVisible()
   const label = (await slots.nth(1).textContent()).trim()
   await slots.nth(1).click()
+  // Tapping a time only chooses it: nothing moves until the button is pressed.
+  await expect(page.getByRole('button', { name: 'Move my appointment', exact: true })).toBeEnabled()
+  await expect(page.getByText('Your appointment has been moved.')).toHaveCount(0)
+  expect((await f.admin.from('bookings').select('start_minutes').eq('id', b.id).single()).data.start_minutes).toBe(600)
   await page.getByRole('button', { name: 'Move my appointment', exact: true }).click()
   await expect(page.getByText('Your appointment has been moved.')).toBeVisible()
   await expect(page.getByRole('region', { name: 'Appointment summary' })).toContainText(label)

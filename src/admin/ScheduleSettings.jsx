@@ -66,7 +66,7 @@ function WeeklyHours({ api }) {
     </fieldset>)}
     {error && <p role="alert">{error}</p>}
     {message && <p role="status">{message}</p>}
-    <button type="submit" disabled={busy || problems.some(Boolean)}>{busy ? 'Saving…' : 'Save my hours'}</button>
+    <button type="submit" className="btn--primary btn--lg btn--block" disabled={busy || problems.some(Boolean)}>{busy ? 'Saving…' : 'Save my hours'}</button>
   </form>
 }
 
@@ -92,13 +92,13 @@ function BlockedTime({ api }) {
   return <section className="admin-blocked-time" aria-labelledby="blocked-time-title">
     <h3 id="blocked-time-title">Block time</h3>
     <p className="admin-detail-hint">Away for a few days, or busy for a few hours? Pick a start date and time and an end date and time, like an event in your phone calendar. Clients can't book that time.</p>
-    <button onClick={() => setDialog({ date: today() })}>Block time</button>
+    <button className="btn--primary" onClick={() => setDialog({ date: today() })}>Block time</button>
     {error && <p role="alert">{error}</p>}
     {!blocks && !error && <p role="status">Loading blocked time…</p>}
     {blocks && !blocks.length && <p>No time is blocked right now.</p>}
     {blocks?.length > 0 && <ul className="admin-special-list">{blocks.map(item => <li key={item.group_id}>
       <div><strong>{item.title || (item.kind === 'personal_event' ? 'Personal event' : 'Not available')}</strong><span>{describe(item)}</span></div>
-      <div className="admin-payment-buttons"><button onClick={() => setDialog({ date: item.start_date, block: { group_id: item.group_id, kind: item.kind, title: item.title, notes: item.notes, date: item.start_date, start_minutes: item.start_minutes, end_minutes: item.end_minutes } })}>Change</button></div>
+      <div className="admin-payment-buttons"><button className="btn--small" onClick={() => setDialog({ date: item.start_date, block: { group_id: item.group_id, kind: item.kind, title: item.title, notes: item.notes, date: item.start_date, start_minutes: item.start_minutes, end_minutes: item.end_minutes } })}>Change</button></div>
     </li>)}</ul>}
     {dialog && <BlockDialog date={dialog.date} block={dialog.block} api={api} close={() => setDialog(null)} saved={() => { setDialog(null); setAttempt(value => value + 1) }} />}
   </section>
@@ -150,7 +150,7 @@ function SpecialDays({ api }) {
     <p className="admin-detail-hint">A day off, or different opening hours, for one date. These replace your usual week for that date. For a holiday over several days, or just a few hours, use Block time above.</p>
     {message && <p role="status">{message}</p>}
     {error && <p role="alert">{error}</p>}
-    {!form && <button onClick={() => open({ date: '', available: false, start_minutes: null, end_minutes: null, start_mode: 'flexible', fixed_start_minutes: null, note: '' })}>Add a special day</button>}
+    {!form && <button className="btn--tonal" onClick={() => open({ date: '', available: false, start_minutes: null, end_minutes: null, start_mode: 'flexible', fixed_start_minutes: null, note: '' })}>Add a special day</button>}
     {form && <form className="admin-special-form" onSubmit={save}>
       <h3>{list?.some(item => item.date === form.date) ? 'Change a special day' : 'Add a special day'}</h3>
       <label className="admin-field">Date<input type="date" required min={today()} value={form.date} disabled={busy} onChange={event => edit({ date: event.target.value })} /></label>
@@ -165,8 +165,8 @@ function SpecialDays({ api }) {
         <ul>{conflicts.map(item => <li key={item.booking_id}>{item.client_name}, {clock(item.start_minutes)} ({item.booking_status.replaceAll('_', ' ')})</li>)}</ul>
         <p>Those appointments will not be moved or cancelled for you. Save again if you still want to make this change.</p></div>}
       <div className="admin-payment-buttons">
-        <button type="button" disabled={busy} onClick={() => setForm(null)}>Cancel</button>
-        <button type="submit" disabled={busy || Boolean(problem)}>{busy ? 'Saving…' : conflicts ? 'Save anyway' : 'Save'}</button>
+        <button type="button" className="btn--quiet" disabled={busy} onClick={() => setForm(null)}>Cancel</button>
+        <button type="submit" className="btn--primary" disabled={busy || Boolean(problem)}>{busy ? 'Saving…' : conflicts ? 'Save anyway' : 'Save'}</button>
       </div>
     </form>}
     {!list && !error && <p role="status">Loading special days…</p>}
@@ -174,7 +174,7 @@ function SpecialDays({ api }) {
     {list?.length > 0 && <ul className="admin-special-list">{list.map(item => <li key={item.date}>
       <div><strong>{dateLabel(item.date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</strong>
         <span>{item.available ? `${clock(item.start_minutes)}–${clock(item.end_minutes)}` : 'Day off'}{item.note ? ` · ${item.note}` : ''}</span></div>
-      <div className="admin-payment-buttons"><button disabled={busy} onClick={() => open({ ...item, note: item.note || '' })}>Change</button><button disabled={busy} onClick={() => remove(item.date)}>Remove</button></div>
+      <div className="admin-payment-buttons"><button className="btn--small" disabled={busy} onClick={() => open({ ...item, note: item.note || '' })}>Change</button><button className="btn--small btn--danger" disabled={busy} onClick={() => remove(item.date)}>Remove</button></div>
     </li>)}</ul>}
   </section>
 }

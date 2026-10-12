@@ -22,7 +22,9 @@ test('Agenda lists bookings across days and returns to the same view after detai
   await expect(page.getByRole('navigation', { name: 'Calendar views' }).getByRole('link', { name: 'Agenda', exact: true })).toHaveAttribute('aria-current', 'page')
   await expect(page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('link', { name: 'Calendar', exact: true })).toHaveAttribute('aria-current', 'page')
 
-  await expect(page.locator('.admin-agenda-day')).toHaveCount(2)
+  // Today is always on the page as a fixed point, even when nothing is booked; the other days are the ones with bookings.
+  await expect(page.locator('.admin-agenda-day.is-today')).toHaveCount(1)
+  await expect(page.locator('.admin-agenda-day:has(.admin-card)')).toHaveCount(2)
   await expect(page.locator('.admin-card')).toHaveCount(3)
   await expect(page.locator('.admin-card.cancelled')).toHaveCount(1)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
@@ -50,7 +52,7 @@ test('opening the Admin and pressing Calendar both show the Agenda, and Day is o
   await views.getByRole('link', { name: 'Day', exact: true }).click()
   await expect(page).toHaveURL(/\/admin\/day$/)
   await expect(page.getByLabel('Calendar date', { exact: true })).toBeVisible()
-  await page.getByRole('link', { name: 'Review', exact: true }).click()
+  await page.getByRole('link', { name: /^To check/ }).click()
   await page.getByRole('navigation', { name: 'Admin navigation' }).getByRole('link', { name: 'Calendar', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible()
 })

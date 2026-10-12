@@ -2,8 +2,9 @@ import { useEffect, useRef } from 'react'
 import { bookingState, clientName, dateLabel, label, money, postcode, time } from './calendarPresentation.js'
 import { acquireBodyScrollLock } from './dialogScrollLock.js'
 import { contactLinks } from './contactLinks.js'
+import Icon from '../ui/icons.jsx'
 import ClientNotesSection from './ClientNotesSection.jsx'
-export default function BookingDetails({ booking: b, close, now, payment, lifecycle, returnFocus }) {
+export default function BookingDetails({ booking: b, close, payment, lifecycle, returnFocus }) {
   const ref = useRef(null)
   useEffect(() => {
     const dialog = ref.current
@@ -17,15 +18,18 @@ export default function BookingDetails({ booking: b, close, now, payment, lifecy
     }
   }, [returnFocus])
   const stamp = value => value ? new Date(value).toLocaleString('en-GB', { timeZone: 'Europe/London' }) : 'Not recorded'
-  const state = bookingState(b, now)
+  const state = bookingState(b)
   const email = b.booking_email_snapshot || b.clients?.email
   return <dialog className="admin-details" ref={ref} onCancel={close} aria-labelledby="booking-title">
-    <header className="admin-details-bar"><button onClick={close} aria-label="Close details"><span aria-hidden="true">‹</span> Back</button><div><strong>{dateLabel(b.date)}</strong><span>{time(b.start_minutes)}–{time(b.start_minutes + b.treatment_duration_minutes)}</span></div></header>
+    <header className="admin-details-bar"><button onClick={close} aria-label="Close details"><span aria-hidden="true" className="close-x">×</span> Close</button><div><strong>{dateLabel(b.date)}</strong><span>{time(b.start_minutes)}–{time(b.start_minutes + b.treatment_duration_minutes)}</span></div></header>
     <div className="admin-details-content">
-      <section className="admin-details-client"><h2 id="booking-title">{clientName(b)}</h2><p className={`admin-status ${state.tone}`}>{state.text}</p><p>Payment: {label(b.booking_payments?.method)} · {label(b.booking_payments?.status)}</p>
-        <nav className="admin-contact-actions" aria-label="Quick contact">{contactLinks(b).map(link => <a key={link.key} href={link.href} {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>{link.label}</a>)}</nav></section>
-      {payment && <section><h3>Payment</h3>{payment}</section>}
-      {lifecycle && <section><h3>Appointment</h3>{lifecycle}</section>}
+      <section className="admin-details-client"><h2 id="booking-title">{clientName(b)}</h2>
+        <p className="admin-when">{dateLabel(b.date, { weekday: 'short', day: 'numeric', month: 'short' })} · {time(b.start_minutes)}–{time(b.start_minutes + b.treatment_duration_minutes)}</p>
+        <p><span className={`chip chip--${state.chip} admin-status ${state.tone}`}>{state.text}</span></p>
+        <address className="admin-where">{[b.address_line_1_snapshot, b.address_line_2_snapshot, b.city_snapshot, postcode(b.postcode_snapshot)].filter(Boolean).join(', ')}</address>
+        <nav className="admin-contact-actions" aria-label="Quick contact">{contactLinks(b).map(link => <a key={link.key} href={link.href} {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}><Icon name={link.icon} />{link.label}</a>)}</nav></section>
+      {payment && <section className="admin-next"><h3>Payment</h3>{payment}</section>}
+      {lifecycle && <section className="admin-next"><h3>Appointment</h3>{lifecycle}</section>}
       <section><h3>Contact</h3><p>{email ? <a href={`mailto:${email}`}>{email}</a> : 'Email not recorded'}</p><p>{b.clients?.phone ? <a href={`tel:${b.clients.phone}`}>{b.clients.phone}</a> : 'Phone not recorded'}</p></section>
       <ClientNotesSection clientId={b.client_id} />
       <section><h3>Address</h3><address>{[b.address_line_1_snapshot, b.address_line_2_snapshot, b.city_snapshot, postcode(b.postcode_snapshot)].filter(Boolean).map((line, index) => <div key={index}>{line}</div>)}</address>{b.entry_instructions_snapshot && <p>{b.entry_instructions_snapshot}</p>}</section>

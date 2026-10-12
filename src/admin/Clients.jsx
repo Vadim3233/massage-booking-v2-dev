@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { clientsApi, fullName } from './clientsApi.js'
+import { initials } from './newBooking/presentation.js'
 import { ClientForm } from './ClientForms.jsx'
 
 export default function Clients({ openClient, api = clientsApi }) {
@@ -24,12 +25,12 @@ export default function Clients({ openClient, api = clientsApi }) {
     <header className="admin-review-heading"><div><h1 id="clients-title">Clients</h1><p>Find a client, or add someone new.</p></div></header>
     {adding ? <section aria-label="Add a client"><h2>Add a client</h2><ClientForm withAddress submitLabel="Add client" onSubmit={create} onCancel={() => setAdding(false)} /></section> : <>
       <label className="admin-field">Search by name, phone or email<input type="search" value={query} maxLength={100} onChange={event => setQuery(event.target.value)} /></label>
-      <div className="admin-payment-buttons"><button onClick={() => setAdding(true)}>+ Add client</button></div>
+      <div className="admin-payment-buttons"><button className="btn--tonal" onClick={() => setAdding(true)}>+ Add client</button></div>
       {error && <p role="alert">{error} <button onClick={() => setAttempt(value => value + 1)}>Try again</button></p>}
       {!rows && !error && <p role="status">Loading clients…</p>}
       {rows && !rows.length && <p>{term ? 'No one matches that search.' : 'No clients yet.'}</p>}
       {rows?.length > 0 && <ul className="admin-client-list">{rows.map(row => <li key={row.id}>
-        <button onClick={() => openClient(row.id)}><strong>{fullName(row)}</strong><span>{[row.phone, row.email].filter(Boolean).join(' · ') || 'No contact details'}</span></button>
+        <button onClick={() => openClient(row.id)}><span className="monogram" aria-hidden="true">{initials(row)}</span><span className="admin-client-text"><strong>{fullName(row)}</strong><span>{[row.phone, row.email].filter(Boolean).join(' · ') || 'No contact details'}</span></span></button>
       </li>)}</ul>}
       {rows?.length === 20 && <p className="admin-detail-hint">Showing the 20 best matches. Type more of the name, phone or email to narrow it down.</p>}
     </>}

@@ -13,13 +13,19 @@ export default function AdminApp() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   useEffect(() => {
-    let live = true, revision = 0
+    let live = true, revision = 0, checkedUser = null
     async function check(session) {
       const ticket = ++revision
-      if (!session || session.user.is_anonymous) { if (live) setAuth({ state: 'signed-out' }); return }
+      if (!session || session.user.is_anonymous) { checkedUser = null; if (live) setAuth({ state: 'signed-out' }); return }
+      // Coming back to the tab (from the bank, say) makes the sign-in library announce the same person again.
+      // That must not rebuild the screen: an open confirmation and the scroll position would be lost.
+      if (checkedUser === session.user.id) return
       if (live) setAuth({ state: 'checking' })
       const { data, error } = await supabase.rpc('is_booking_admin')
-      if (live && ticket === revision) setAuth(error ? { state: 'error', error: error.message } : { state: data ? 'admin' : 'denied', userId: session.user.id })
+      if (live && ticket === revision) {
+        checkedUser = error ? null : session.user.id
+        setAuth(error ? { state: 'error', error: error.message } : { state: data ? 'admin' : 'denied', userId: session.user.id })
+      }
     }
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => { void check(session) })
     return () => { live = false; listener.subscription.unsubscribe() }
@@ -33,7 +39,7 @@ export default function AdminApp() {
   }
   async function signOut() { const { error } = await supabase.auth.signOut(); if (error) setError(error.message) }
   return <main className="admin-shell">
-    {auth.state === 'admin' && !requestReset ? <AdminWorkspace key={auth.userId} ownerId={auth.userId} signOut={signOut} /> : <section className="admin-login"><h1>VadMassage Admin</h1>
+    {auth.state === 'admin' && !requestReset ? <AdminWorkspace key={auth.userId} ownerId={auth.userId} signOut={signOut} /> : <section className="admin-login"><div className="admin-login-brand"><b className="brand-mark" aria-hidden="true">VM</b><h1>VadMassage Admin</h1></div>
       {passwordChanged && <p role="status">Password changed. Please sign in with your new password.</p>}
       {requestReset && <PasswordResetRequest onBack={() => setRequestReset(false)} />}
       {!requestReset && auth.state === 'checking' && <p role="status">Checking authentication…</p>}

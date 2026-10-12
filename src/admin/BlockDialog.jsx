@@ -96,11 +96,11 @@ export default function BlockDialog({ date, block, close, saved, api = scheduleA
         <p>Those appointments will not be moved or cancelled for you. Save again if you still want to block this time.</p></div>}
       {error && <p role="alert">{error}</p>}
       {removing && <div role="alert" className="admin-conflicts"><p>Remove this {form.kind === 'personal_event' ? 'event' : 'blocked time'}{days > 1 ? ` (all ${days} days)` : ''}? The time becomes available again.</p>
-        <div className="admin-payment-buttons"><button type="button" disabled={busy} onClick={() => setRemoving(false)}>Keep it</button><button type="button" disabled={busy} onClick={remove}>{busy ? 'Removing…' : 'Yes, remove'}</button></div></div>}
+        <div className="admin-payment-buttons"><button type="button" disabled={busy} onClick={() => setRemoving(false)}>Keep it</button><button type="button" className="btn--danger-solid" disabled={busy} onClick={remove}>{busy ? 'Removing…' : 'Yes, remove'}</button></div></div>}
       <div className="admin-payment-buttons">
-        <button type="button" disabled={busy} onClick={close}>Go back</button>
-        {block && !removing && <button type="button" disabled={busy} onClick={() => setRemoving(true)}>Remove</button>}
-        <button type="submit" disabled={busy || loading || Boolean(problem)}>{busy ? 'Saving…' : conflicts ? 'Save anyway' : block ? 'Save changes' : 'Block this time'}</button>
+        <button type="button" className="btn--quiet" disabled={busy} onClick={close}>Go back</button>
+        {block && !removing && <button type="button" className="btn--danger" disabled={busy} onClick={() => setRemoving(true)}>Remove</button>}
+        <button type="submit" className="btn--primary" disabled={busy || loading || Boolean(problem)}>{busy ? 'Saving…' : conflicts ? 'Save anyway' : block ? 'Save changes' : 'Block this time'}</button>
       </div>
     </form>
   </dialog>
