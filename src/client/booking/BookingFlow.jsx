@@ -43,7 +43,8 @@ export default function BookingFlow() {
   const [savedBank, setSavedBank] = useState(null)
   const rules = useBookingRules(supabase)
   const welcome = useWelcome(supabase)
-  const testMode = import.meta.env.DEV || new URLSearchParams(window.location.search).get('test') === '1'
+  // The test-client helper exists only in development builds: the live page and its previews never offer it.
+  const testMode = import.meta.env.DEV
   useEffect(() => {
     let live = true
     api.catalogue().then((data) => { if (live) { setCatalogue(data); setCatalogueFailed(false) } }).catch((err) => { if (live) { setCatalogueFailed(true); store.setError(friendlyError(err)) } })

@@ -27,7 +27,7 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
   const [problems, setProblems] = useState({})
-  const showTestTools = import.meta.env.DEV || new URLSearchParams(window.location.search).get('test') === '1'
+  const showTestTools = import.meta.env.DEV
   useEffect(() => {
     let live = true
     if (guest) {

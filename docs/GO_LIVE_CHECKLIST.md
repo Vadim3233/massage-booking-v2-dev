@@ -50,7 +50,7 @@ Both sides were redesigned as one product; the rules (availability, travel buffe
 
 - A guest who books twice as a guest appears twice under Clients. This is on purpose: an email typed by a guest cannot be trusted, so it is never used to link them to an existing client. If it becomes annoying, a "merge clients" button can be added.
 - Text left over from setting up still shows to clients until you write your own: the extra "Aftercare advice" says "Describe this enhancement." (More, Extras). Check the treatments, extras and areas once as a client would see them.
-- The "New test client" helper on the details page is reachable on the live site with `?test=1` at the end of the address. It only fills in made-up details, but if you do not need it on the live site it can be limited to development builds.
+- The "New test client" helper (it fills in made-up details) exists only in development builds: the live booking page and its preview links never show it, whatever is added to the address.
 - A client's page shows "Upcoming" and "Next appointment" for an appointment earlier today until the day is over.
 
 - Not tried on a real iPhone: the Add to Home Screen icons, adding an appointment to the calendar (the `.ics` file) and how it reads with VoiceOver. All of it was checked in a desktop browser and with automated tests. Please try each once on your phone before telling clients.
