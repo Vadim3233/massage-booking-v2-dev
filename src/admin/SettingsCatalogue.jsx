@@ -96,7 +96,7 @@ export function ServicesSettings({ api = catalogueApi }) {
     {saver.message && <p role="status">{saver.message}</p>}
     {editing === 'new' && <section aria-label="Add a treatment"><h2>Add a treatment</h2>
       <ServiceForm busy={saver.busy} label="Add treatment" onCancel={done} onSave={async (service, prices) => { if (await saver.run(() => api.createService(service, prices, nextOrder(list.items)), 'Added.')) done() }} /></section>}
-    <ul className="admin-setting-list">{(list.items || []).map((item, index, items) => <Row key={item.id} item={item} index={index} items={items} busy={saver.busy} summary={priceSummary(item)}
+    <ul role="list" className="admin-setting-list">{(list.items || []).map((item, index, items) => <Row key={item.id} item={item} index={index} items={items} busy={saver.busy} summary={priceSummary(item)}
       editing={editing === item.id} onEdit={() => setEditing(item.id)} onMove={(a, b) => saver.run(() => api.swapServices(a, b), 'Order changed.')}
       onToggle={() => saver.run(() => api.saveService({ ...item, active: !item.active }, DURATIONS.map(duration => { const found = item.service_duration_prices.find(price => price.duration_minutes === duration); return { duration_minutes: duration, offered: Boolean(found?.active), price: found ? priceText(found.price_gbp) : '0' } })), item.active ? 'Hidden from clients.' : 'Shown to clients.')}>
       <ServiceForm initial={item} busy={saver.busy} label="Save changes" onCancel={done} onSave={async (service, prices) => { if (await saver.run(() => api.saveService({ ...service, id: item.id }, prices))) done() }} />
@@ -130,7 +130,7 @@ export function AreasSettings({ api = catalogueApi }) {
     {saver.message && <p role="status">{saver.message}</p>}
     {editing === 'new' && <section aria-label="Add an area"><h2>Add an area</h2>
       <AreaForm busy={saver.busy} label="Add area" onCancel={done} onSave={async area => { if (await saver.run(() => api.createArea(area, nextOrder(list.items)), 'Added.')) done() }} /></section>}
-    <ul className="admin-setting-list">{(list.items || []).map((item, index, items) => <Row key={item.id} item={item} index={index} items={items} busy={saver.busy} summary={summary(item)} hiddenWord="Not bookable"
+    <ul role="list" className="admin-setting-list">{(list.items || []).map((item, index, items) => <Row key={item.id} item={item} index={index} items={items} busy={saver.busy} summary={summary(item)} hiddenWord="Not bookable"
       editing={editing === item.id} onEdit={() => setEditing(item.id)} onMove={(a, b) => saver.run(() => api.swapAreas(a, b), 'Order changed.')}
       onToggle={() => saver.run(() => api.saveArea({ ...item, active: !item.active, travel_surcharge_gbp: priceText(item.travel_surcharge_gbp), congestion_fee_gbp: priceText(item.congestion_fee_gbp) }), item.active ? 'Clients can no longer book this area.' : 'Clients can book this area.')}>
       <AreaForm initial={item} busy={saver.busy} label="Save changes" onCancel={done} onSave={async area => { if (await saver.run(() => api.saveArea({ ...area, id: item.id }))) done() }} />
@@ -165,7 +165,7 @@ export function ExtrasSettings({ api = catalogueApi }) {
     {saver.message && <p role="status">{saver.message}</p>}
     {editing === 'new' && <section aria-label="Add an extra"><h2>Add an extra</h2>
       <ExtraForm busy={saver.busy} label="Add extra" onCancel={done} onSave={async extra => { if (await saver.run(() => api.createExtra(extra, nextOrder(list.items)), 'Added.')) done() }} /></section>}
-    <ul className="admin-setting-list">{(list.items || []).map((item, index, items) => <Row key={item.id} item={item} index={index} items={items} busy={saver.busy} summary={summary(item)}
+    <ul role="list" className="admin-setting-list">{(list.items || []).map((item, index, items) => <Row key={item.id} item={item} index={index} items={items} busy={saver.busy} summary={summary(item)}
       editing={editing === item.id} onEdit={() => setEditing(item.id)} onMove={(a, b) => saver.run(() => api.swapExtras(a, b), 'Order changed.')}
       onToggle={() => saver.run(() => api.saveExtra({ ...item, active: !item.active, price_gbp: priceText(item.price_gbp) }), item.active ? 'Hidden from clients.' : 'Shown to clients.')}>
       <ExtraForm initial={item} busy={saver.busy} label="Save changes" onCancel={done} onSave={async extra => { if (await saver.run(() => api.saveExtra({ ...extra, id: item.id }))) done() }} />

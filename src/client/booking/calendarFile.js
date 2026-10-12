@@ -1,7 +1,18 @@
 // An appointment as a calendar file (.ics), so it can go straight into the client's own calendar.
 const pad = number => String(number).padStart(2, '0')
-const clock = (date, minutes) => `${date.replaceAll('-', '')}T${pad(Math.floor(minutes / 60))}${pad(minutes % 60)}00`
 const escapeText = text => String(text).replaceAll('\\', '\\\\').replaceAll(';', '\\;').replaceAll(',', '\\,').replace(/\r?\n/g, '\\n')
+
+function addDay(date) {
+  const moved = new Date(`${date}T12:00:00Z`)
+  moved.setUTCDate(moved.getUTCDate() + 1)
+  return moved.toISOString().slice(0, 10)
+}
+// A time as the calendar writes it. An appointment can end at midnight, which is 00:00 on the next day, never 24:00.
+function clock(date, minutes) {
+  const day = minutes >= 1440 ? addDay(date) : date
+  const within = minutes % 1440
+  return `${day.replaceAll('-', '')}T${pad(Math.floor(within / 60))}${pad(within % 60)}00`
+}
 
 // Calendar files break lines at 75 bytes; the rest carries on after a leading space.
 function fold(line) {
@@ -26,8 +37,10 @@ const LONDON = [
   'END:VTIMEZONE',
 ]
 
-export function buildCalendarFile(booking, now = new Date()) {
+// `origin` is the address of this site (https://booking.example.com), so the event can point back to the booking.
+export function buildCalendarFile(booking, now = new Date(), origin = '') {
   const where = [booking.address_line_1_snapshot, booking.address_line_2_snapshot, booking.city_snapshot, booking.postcode_snapshot].filter(Boolean).join(', ')
+  const manage = origin ? `${origin}/account?booking=${booking.id}` : ''
   const lines = [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//VadMassage//Booking//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
     ...LONDON,
@@ -38,7 +51,8 @@ export function buildCalendarFile(booking, now = new Date()) {
     `DTEND;TZID=Europe/London:${clock(booking.date, booking.start_minutes + booking.treatment_duration_minutes)}`,
     'SUMMARY:Massage with Vad',
     ...(where ? [`LOCATION:${escapeText(where)}`] : []),
-    `DESCRIPTION:${escapeText(`Booking reference: ${booking.booking_reference}\nTo change or cancel, open your booking on vadmassage.com.`)}`,
+    `DESCRIPTION:${escapeText(`Booking reference: ${booking.booking_reference}${manage ? `\nTo change or cancel: ${manage}` : ''}`)}`,
+    ...(manage ? [`URL:${manage}`] : []),
     'END:VEVENT', 'END:VCALENDAR',
   ]
   return `${lines.map(fold).join('\r\n')}\r\n`

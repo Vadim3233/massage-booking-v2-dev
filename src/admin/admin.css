@@ -249,6 +249,7 @@
 .admin-shell .admin-client-list button { display: flex; align-items: center; justify-content: flex-start; gap: 12px; }
 .admin-shell .admin-client-list .monogram { flex: 0 0 44px; width: 44px; height: 44px; }
 .admin-client-text { display: grid; gap: 1px; min-width: 0; overflow-wrap: anywhere; text-align: left; }
+.admin-client-text strong { color: var(--ink); }
 .admin-alert-also { font-size: 13px; }
 .admin-client-list strong, .admin-client-bookings strong { font-size: 17px; font-weight: 650; }
 .admin-client-list span, .admin-client-bookings span { font-size: 14px; color: var(--ink-soft); }

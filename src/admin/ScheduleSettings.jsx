@@ -96,7 +96,7 @@ function BlockedTime({ api }) {
     {error && <p role="alert">{error}</p>}
     {!blocks && !error && <p role="status">Loading blocked time…</p>}
     {blocks && !blocks.length && <p>No time is blocked right now.</p>}
-    {blocks?.length > 0 && <ul className="admin-special-list">{blocks.map(item => <li key={item.group_id}>
+    {blocks?.length > 0 && <ul role="list" className="admin-special-list">{blocks.map(item => <li key={item.group_id}>
       <div><strong>{item.title || (item.kind === 'personal_event' ? 'Personal event' : 'Not available')}</strong><span>{describe(item)}</span></div>
       <div className="admin-payment-buttons"><button className="btn--small" onClick={() => setDialog({ date: item.start_date, block: { group_id: item.group_id, kind: item.kind, title: item.title, notes: item.notes, date: item.start_date, start_minutes: item.start_minutes, end_minutes: item.end_minutes } })}>Change</button></div>
     </li>)}</ul>}
@@ -171,7 +171,7 @@ function SpecialDays({ api }) {
     </form>}
     {!list && !error && <p role="status">Loading special days…</p>}
     {list && !list.length && !form && <p>No special days coming up.</p>}
-    {list?.length > 0 && <ul className="admin-special-list">{list.map(item => <li key={item.date}>
+    {list?.length > 0 && <ul role="list" className="admin-special-list">{list.map(item => <li key={item.date}>
       <div><strong>{dateLabel(item.date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</strong>
         <span>{item.available ? `${clock(item.start_minutes)}–${clock(item.end_minutes)}` : 'Day off'}{item.note ? ` · ${item.note}` : ''}</span></div>
       <div className="admin-payment-buttons"><button className="btn--small" disabled={busy} onClick={() => open({ ...item, note: item.note || '' })}>Change</button><button className="btn--small btn--danger" disabled={busy} onClick={() => remove(item.date)}>Remove</button></div>
@@ -179,14 +179,23 @@ function SpecialDays({ api }) {
   </section>
 }
 
+const TABS = [['weekly', 'Usual week'], ['days', 'Special days']]
+
 export default function ScheduleSettings({ api = scheduleApi }) {
   const [tab, setTab] = useState('weekly')
+  function move(event) {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+    event.preventDefault()
+    const index = TABS.findIndex(([id]) => id === tab)
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? TABS.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + TABS.length) % TABS.length
+    setTab(TABS[next][0])
+    requestAnimationFrame(() => document.getElementById(`tab-${TABS[next][0]}`)?.focus())
+  }
   return <section className="admin-review" aria-labelledby="schedule-title">
     <header className="admin-review-heading"><div><h1 id="schedule-title">Working hours</h1></div></header>
-    <div className="admin-tabs" role="tablist" aria-label="Working hours sections">
-      <button role="tab" aria-selected={tab === 'weekly'} onClick={() => setTab('weekly')}>Usual week</button>
-      <button role="tab" aria-selected={tab === 'days'} onClick={() => setTab('days')}>Special days</button>
+    <div className="admin-tabs" role="tablist" aria-label="Working hours sections" onKeyDown={move}>
+      {TABS.map(([id, text]) => <button key={id} id={`tab-${id}`} role="tab" aria-selected={tab === id} aria-controls="schedule-panel" tabIndex={tab === id ? 0 : -1} onClick={() => setTab(id)}>{text}</button>)}
     </div>
-    {tab === 'weekly' ? <WeeklyHours api={api} /> : <SpecialDays api={api} />}
+    <div id="schedule-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>{tab === 'weekly' ? <WeeklyHours api={api} /> : <SpecialDays api={api} />}</div>
   </section>
 }

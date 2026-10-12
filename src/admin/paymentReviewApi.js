@@ -17,7 +17,7 @@ export const paymentActions = booking => {
   if (['confirmed', 'completed'].includes(booking.booking_status) && payment?.method === 'bank_transfer' && payment.status === 'awaiting_transfer') return ['receiveBank']
   return []
 }
-export const actionLabels = { verify: 'Verify payment', approve: 'Approve', remove: 'Remove booking', receive: 'Mark payment received', receiveBank: 'Mark bank transfer received' }
+export const actionLabels = { verify: 'Verify payment', approve: 'Approve', remove: 'Cancel unpaid booking', receive: 'Mark payment received', receiveBank: 'Mark bank transfer received' }
 const operations = { verify: 'admin_verify_bank_transfer', approve: 'admin_approve_cash_request', remove: 'admin_remove_pending_booking', receive: 'admin_record_payment_received', receiveBank: 'admin_record_bank_transfer_received' }
 export function createPaymentReviewApi(client) {
   const authorized = createAdminGate(client, { signedOut: 'Admin sign-in required.', denied: 'Admin access required.' })
@@ -41,7 +41,7 @@ export function createPaymentReviewApi(client) {
       const { error } = await client.rpc(operations[action], { p_booking_id: booking.id, p_request_id: requestId,
         p_booking_updated_at: booking.updated_at, p_payment_updated_at: booking.booking_payments.updated_at })
       if (error) {
-        const failure = new Error(['PT409', '40001'].includes(error.code) ? 'This booking changed before the action was completed. Refreshing its current status.' : 'Could not complete the payment action. Refresh the booking before trying again.')
+        const failure = new Error(['PT409', '40001'].includes(error.code) ? 'This booking changed before you could finish, so it has been reloaded. Please check it and try again.' : 'Could not complete the payment action. Refresh the booking before trying again.')
         failure.conflict = ['PT409', '40001'].includes(error.code)
         throw failure
       }

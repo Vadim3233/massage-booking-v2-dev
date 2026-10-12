@@ -65,7 +65,7 @@ test('looking at another day does not let go of the time already held', async ({
   await expect(page.getByRole('button', { name: '11:00', exact: true })).toHaveAttribute('aria-pressed', 'true')
   const held = (await readDraft(page)).hold
   // Another day, only looked at: the summary and the held time stay as they were.
-  await page.getByRole('button', { name: new RegExp(`^${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(`${second}T12:00:00Z`))}`) }).click()
+  await page.getByRole('button', { name: new RegExp(`^${new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(`${second}T12:00:00Z`)).replace(',', '')}`) }).click()
   await expect(page.getByLabel('Appointment date')).toHaveValue(second)
   await expect(page.getByRole('button', { name: 'Review booking', exact: true })).toBeEnabled()
   await expect(page.getByRole('button', { name: '11:00', exact: true })).toHaveAttribute('aria-pressed', 'false')
@@ -90,10 +90,10 @@ test('the price follows the choices by itself, with no button to press', async (
   await expect(page.getByRole('button', { name: 'Refresh price' })).toHaveCount(0)
   await page.getByLabel(/Integration enhancement/).check()
   await expect(page.locator('.prices-total dd')).toHaveText('£115.00')
-  await expect(page.getByText('Add-ons', { exact: true })).toBeVisible()
+  await expect(page.getByText('Extras', { exact: true })).toBeVisible()
   await page.getByLabel(/Integration enhancement/).uncheck()
   await expect(page.locator('.prices-total dd')).toHaveText('£105.00')
-  await expect(page.getByText('Add-ons', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Extras', { exact: true })).toHaveCount(0)
   expect(await noSideways(page)).toBe(true)
 })
 
@@ -180,4 +180,56 @@ test('a link with the area, treatment and length in it opens the booking part-wa
   await third.goto('/?area=nowhere')
   await expect(third.getByRole('heading', { name: 'Choose your area', level: 2 })).toBeVisible()
   await second.close(); await third.close()
+})
+
+test('a time someone else has just taken says so kindly and leaves the list', async ({ page }) => {
+  await toDuration(page)
+  await page.getByRole('button', { name: /^60 minutes/ }).click()
+  await page.getByLabel('Appointment date').fill(fixture.date)
+  await expect(page.getByRole('button', { name: '10:00', exact: true })).toBeVisible()
+  // Another visitor takes 10:00 while this one is looking at the list.
+  await fixture.publicApi.hold(fixture.date, 600, 60, fixture.key())
+  await page.getByRole('button', { name: '10:00', exact: true }).click()
+  await expect(page.getByRole('alert').filter({ hasText: 'that time has just been taken' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '10:00', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Review booking', exact: true })).toBeDisabled()
+})
+
+test('the details button is never greyed out: what is missing is said in words', async ({ page }) => {
+  await toDuration(page)
+  await page.getByRole('button', { name: /^60 minutes/ }).click()
+  await page.getByLabel('Appointment date').fill(fixture.date)
+  await page.getByRole('button', { name: '10:00', exact: true }).click()
+  await page.getByRole('button', { name: 'Review booking', exact: true }).click()
+  await page.getByRole('button', { name: 'Continue to your details' }).click()
+  await page.getByRole('button', { name: 'Continue as guest' }).click()
+  const next = page.getByRole('button', { name: 'Continue to payment' })
+  await expect(next).toBeEnabled()
+  // Empty: the phone's own prompt points at the first thing missing, and nothing moves on.
+  await next.click()
+  await expect(page.getByLabel('First name', { exact: true })).toBeFocused()
+  await expect(page.getByRole('heading', { name: 'Your details', exact: true })).toBeVisible()
+  // Only spaces satisfy the phone's check but not ours, so the page says what is needed in words.
+  for (const label of ['First name', 'Last name', 'Contact number', 'Street address', 'Postcode']) await page.getByLabel(label, { exact: true }).fill(' ')
+  await page.getByLabel('Email address', { exact: true }).fill('spaces@example.test')
+  await next.click()
+  await expect(page.getByRole('alert').filter({ hasText: 'Please fill in everything that is not marked optional.' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Your details', exact: true })).toBeVisible()
+  const draft = await readDraft(page)
+  await fixture.trackUser(draft.ownerUserId)
+})
+
+test('the payment button explains why it is waiting, and a technical error never reaches the screen', async ({ page }) => {
+  await toDuration(page)
+  await page.getByRole('button', { name: /^60 minutes/ }).click()
+  await page.getByLabel('Appointment date').fill(fixture.date)
+  await page.getByRole('button', { name: '10:00', exact: true }).click()
+  await page.getByRole('button', { name: 'Review booking', exact: true }).click()
+  await page.route('**/rpc/quote_client_booking', route => route.fulfill({ status: 500, json: { code: 'XX000', message: 'connection to server at "10.1.2.3" failed' } }))
+  await page.getByLabel(/Integration enhancement/).check()
+  await expect(page.getByText("I couldn't update the price just now.")).toBeVisible()
+  await expect(page.getByText('10.1.2.3')).toHaveCount(0)
+  await page.unroute('**/rpc/quote_client_booking')
+  await page.getByRole('button', { name: 'Try again' }).click()
+  await expect(page.locator('.prices-total dd')).toHaveText('£115.00')
 })

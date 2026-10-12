@@ -14,7 +14,7 @@ export default function Welcome({ welcome, rules, usual, bookUsual }) {
       <span className="usual-text"><span className="eyebrow">Book your usual</span><strong>{usualLabel(usual)}</strong></span>
       <span className="usual-go">Choose a time<Icon name="right" size={18} /></span>
     </button>}
-    <ol className="welcome-steps" aria-label="How booking works">
+    <ol role="list" className="welcome-steps" aria-label="How booking works">
       <li>Choose your area, treatment and how long you would like.</li>
       <li>Pick a time that suits you.</li>
       <li>Pay by bank transfer, or ask to pay in cash. I confirm your appointment myself.</li>

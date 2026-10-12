@@ -46,7 +46,7 @@ function Addresses({ clientId, api, changed }) {
     {error && <p role="alert">{error}</p>}
     {!list && !error && <p role="status">Loading addresses…</p>}
     {list && !list.length && editing !== 'new' && <p>No saved addresses yet.</p>}
-    {list?.length > 0 && <ul className="admin-address-list">{list.map(item => <li key={item.id}>
+    {list?.length > 0 && <ul role="list" className="admin-address-list">{list.map(item => <li key={item.id}>
       {editing === item.id
         ? <AddressForm initial={item} submitLabel="Save address" onSubmit={address => api.updateAddress(item.id, address).then(refresh)} onCancel={() => setEditing(null)} />
         : <>
@@ -96,7 +96,7 @@ function Notes({ clientId, api }) {
     </form>
     {error && <p role="alert">{error}</p>}
     {notes && !notes.length && <p>No notes yet.</p>}
-    {notes?.length > 0 && <ul className="admin-note-list">{notes.map(note => <li key={note.id}><p>{note.note}</p><small>{stamp(note.created_at)}</small><button aria-label={`Delete the note from ${stamp(note.created_at)}`} className="btn--small btn--danger" onClick={() => remove(note.id)}>Delete</button></li>)}</ul>}
+    {notes?.length > 0 && <ul role="list" className="admin-note-list">{notes.map(note => <li key={note.id}><p>{note.note}</p><small>{stamp(note.created_at)}</small><button aria-label={`Delete the note from ${stamp(note.created_at)}`} className="btn--small btn--danger" onClick={() => remove(note.id)}>Delete</button></li>)}</ul>}
   </section>
 }
 
@@ -114,7 +114,7 @@ function History({ clientId, api, openBooking, version }) {
     {error && <p role="alert">{error}</p>}
     {!rows && !error && <p role="status">Loading bookings…</p>}
     {rows && !rows.length && <p>No bookings yet.</p>}
-    {rows?.length > 0 && <ul className="admin-client-bookings">{rows.map(row => <li key={row.id}><button onClick={() => openBooking(row.id)}>
+    {rows?.length > 0 && <ul role="list" className="admin-client-bookings">{rows.map(row => <li key={row.id}><button onClick={() => openBooking(row.id)}>
       <strong>{dateLabel(row.date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })} · {time(row.start_minutes)}</strong>
       <span>{[...(row.booking_sessions || [])].sort((a, b) => a.position - b.position).map(item => item.service_name_snapshot).join(', ') || 'Massage'} · {row.treatment_duration_minutes} min · {money(row.total_gbp)}</span>
       <span className="admin-detail-hint">{label(row.booking_status)}{row.booking_payments ? ` · ${label(row.booking_payments.status)}` : ''}{row.late_fee_status === 'due' ? ` · Late fee ${money(row.late_fee_due_gbp)} due` : ''}{Number(row.refund_due_gbp) > 0 ? ` · Refund ${money(row.refund_due_gbp)} to send` : ''}</span>

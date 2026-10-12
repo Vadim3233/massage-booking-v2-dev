@@ -71,11 +71,11 @@ export default function Calendar({ signOut, openBooking, revision, initialDate, 
       <h1 className="admin-sr-only">Appointments for {dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h1>
       <p className="admin-day-caption">London time</p>
       {!current && <div className="skeleton-rows" role="status" aria-label="Loading calendar"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>}
-      {current?.error && <><p role="alert">Could not load calendar: {current.error}</p><button onClick={() => setAttempt(value => value + 1)}>Retry calendar</button></>}
+      {current?.error && <><p role="alert">Could not load calendar. Please check your connection and try again.</p><button onClick={() => setAttempt(value => value + 1)}>Retry calendar</button></>}
       {data && <>
         <p className="admin-working-hours">{timeline.hours?.available ? `Working hours ${time(timeline.hours.start_minutes)}–${time(timeline.hours.end_minutes)}` : 'Not a working day'}</p>
         {!data.bookings.length && <p className="admin-day-note">No appointments for this day.</p>}
-        <ol className="admin-timeline" aria-label="Day timeline">
+        <ol role="list" className="admin-timeline" aria-label="Day timeline">
           {timeline.rows.map(row => <li key={`${row.kind}-${row.id}`} className={`admin-timeline-row admin-timeline-${row.kind}`} data-start={row.start}>
             <time className="admin-time">{row.kind === 'booking' ? <><span className="figure">{time(row.start)}</span><small>{row.booking.treatment_duration_minutes} min</small></> : time(row.start)}</time>
             {row.kind === 'booking' ? <button className={`admin-card ${row.booking.booking_status === 'cancelled' ? 'cancelled' : ''}`} data-chip={bookingState(row.booking).chip} onClick={() => openBooking(row.booking.id)}>

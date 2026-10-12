@@ -43,7 +43,7 @@ export default function PaymentReview({ openBooking, revision }) {
   // The list keeps the order the server gives, with the bookings that need the Admin first.
   const ordered = [...needs, ...waiting]
   return <section className="admin-review" aria-labelledby="review-title">
-    <header className="admin-review-heading"><div><h1 id="review-title">Payment review</h1><p>Bookings waiting for you. Confirm a payment, or remove a booking you do not expect to be paid. Nothing is cancelled automatically.</p></div><button className="btn--quiet btn--icon" onClick={() => setAttempt(value => value + 1)} aria-label="Refresh reviews"><Icon name="refresh" size={22} /></button></header>
+    <header className="admin-review-heading"><div><h1 id="review-title">To check</h1><p>Payments waiting for you. Confirm a payment, or cancel a booking you do not expect to be paid. Nothing is cancelled automatically.</p></div><button className="btn--quiet btn--icon" onClick={() => setAttempt(value => value + 1)} aria-label="Refresh reviews"><Icon name="refresh" size={22} /></button></header>
     {error && <p role="alert">{error} <button onClick={() => setAttempt(value => value + 1)}>Retry reviews</button></p>}
     {!current && !error && <div className="skeleton-rows" role="status"><span className="admin-sr-only">Loading payment reviews…</span><span className="skeleton" /><span className="skeleton" /></div>}
     {current && <>

@@ -94,7 +94,7 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
     function guard() {
       if (completed.current || !current.current.meaningful) return true
       if (busyRef.current) return false
-      if (current.current.draft.submission) return window.confirm('Creation has not been confirmed. Your draft and retry request will be kept. Leave this screen?')
+      if (current.current.draft.submission) return window.confirm('It is not clear yet whether this booking was saved. Your details are kept. Leave this screen?')
       if (!window.confirm('Discard this unsaved booking?')) return false
       clear()
       return true
@@ -168,7 +168,7 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
         patch({ submission: null })
         if (/slot|available|occupied|past|hold|schedule|blocked/i.test(message(failure))) { patch({ start: null, submission: null }); setAvailabilityAttempt(value => value + 1) }
         setError(message(failure))
-      } else setError('The result could not be confirmed. Retry creation to safely check the same request. Your draft is kept and editing is paused.')
+      } else setError('The connection dropped, so it is not clear whether this booking was saved. Press Retry creation to check: it will not book twice. Nothing you entered is lost.')
     } finally { busyRef.current = false; setBusy(false) }
   }
   const loadDay = useCallback(date => api.availability(date, duration).then(slots => slots.map(slot => slot.start_minutes)), [duration])

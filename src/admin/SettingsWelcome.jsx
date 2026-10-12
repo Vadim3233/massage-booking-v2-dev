@@ -31,7 +31,7 @@ export default function SettingsWelcome({ api = welcomeApi }) {
       </label>
       <label className="admin-field">A little about me (optional)
         <textarea rows={8} maxLength={ABOUT_LIMIT + 50} value={values.about} disabled={busy} onChange={event => change({ about: event.target.value })} />
-        <span className="admin-detail-hint">{values.about.trim().length} of {ABOUT_LIMIT}. Shown under "A little about me". People looking for a therapist they can trust like to know your training, how long you have practised, and anything such as insurance or membership. Write only what is true; leave it empty to hide it.</span>
+        <span className="admin-detail-hint">{values.about.trim().length} of {ABOUT_LIMIT}. Shown under "A little about me". People looking for a therapist they can trust like to know your training, how long you have practised, and anything such as insurance or membership. Leave it empty to hide it.</span>
       </label>
       {problem && <p role="alert" className="admin-field-error">{problem}</p>}
       {error && <p role="alert" className="admin-field-error">{error}</p>}

@@ -6,6 +6,7 @@ import Icon from '../../ui/icons.jsx'
 import { activeHold, browserClientKey, draftKey, newSession, STEPS } from './bookingDraft.js'
 import { presetFromSearch, stepForPreset } from './deepLink.js'
 import { readUsual, rememberUsual } from './usualBooking.js'
+import { friendlyError } from './friendlyError.js'
 import { useBookingHistory } from './useBookingHistory.js'
 import { useClientAuth } from '../auth/useClientAuth.js'
 import AuthPanel from '../auth/AuthPanel.jsx'
@@ -37,7 +38,7 @@ export default function BookingFlow() {
   const testMode = import.meta.env.DEV || new URLSearchParams(window.location.search).get('test') === '1'
   useEffect(() => {
     let live = true
-    api.catalogue().then((data) => { if (live) setCatalogue(data) }).catch((err) => { if (live) store.setError(err.message) })
+    api.catalogue().then((data) => { if (live) setCatalogue(data) }).catch((err) => { if (live) store.setError(friendlyError(err)) })
     return () => { live = false }
   }, [store, catalogueAttempt])
   useEffect(() => {
@@ -67,12 +68,21 @@ export default function BookingFlow() {
   const remaining = draft.hold ? Math.max(0, Math.ceil((Date.parse(draft.hold.expires_at) - clock) / 1000)) : 0
   useEffect(() => { store.expireHold() }, [store, clock, busy])
   // A new screen starts at its heading: named in the tab, read out first by a screen reader, and the page back at the top.
-  const arrived = useRef(false)
+  // Signing in or carrying on as a guest swaps the content inside a step, so that counts as a new screen too.
+  const needsAuth = step >= 5 && !auth.session
+  const screen = `${step}:${needsAuth ? 'sign-in' : auth.recovery ? 'recovery' : 'main'}`
+  const lastScreen = useRef(null)
   useEffect(() => {
     document.title = `${STEPS[Math.min(step, STEPS.length - 1)]} · Book a massage · VadMassage`
-    if (!arrived.current) { arrived.current = true; return }
+    if (lastScreen.current === null) { lastScreen.current = screen; return }
+    if (lastScreen.current === screen) return
+    lastScreen.current = screen
+    window.scrollTo(0, 0)
     document.querySelector('.booking-main h1')?.focus({ preventScroll: true })
-  }, [step])
+  }, [screen, step])
+  // A message about what just went wrong is brought into view: the button that caused it may be far below.
+  const alertBox = useRef(null)
+  useEffect(() => { if (error && step !== 6) alertBox.current?.scrollIntoView({ block: 'center' }) }, [error, step])
   // A link with the area, treatment and length in it (see deepLink.js) opens the booking part-way through, unless a booking is already under way.
   const presetChecked = useRef(false)
   useEffect(() => {
@@ -100,7 +110,6 @@ export default function BookingFlow() {
       if (target === 6) await store.finalize(auth.session?.user.id)
     }
   }
-  const needsAuth = step >= 5 && !auth.session
   const isGuest = Boolean(auth.session?.user?.is_anonymous)
   async function startGuest() {
     const { error: guestError } = await supabase.auth.signInAnonymously()
@@ -123,7 +132,7 @@ export default function BookingFlow() {
   const canGoBack = step > 0 && step < 7 && !draft.pending && !draft.bookingId
   const shown = Math.min(step, STEPS.length - 1)
   return <div className="booking-shell">
-    <header className="brand"><a className="brand-link" href="/"><b className="brand-mark" aria-hidden="true">VM</b>VadMassage</a><a className="brand-aside" href="/account">My bookings</a></header>
+    <header className="brand"><a className="brand-link" href="/"><b className="brand-mark" aria-hidden="true">VM</b>VadMassage</a><a className="brand-aside" href="/account">Your bookings</a></header>
     <main className="booking-main">
       <nav className="stepper" aria-label="Booking progress">
         <div className="stepper-row">
@@ -131,21 +140,22 @@ export default function BookingFlow() {
           <p className="progress-summary">Step {shown + 1} of {STEPS.length} · {STEPS[shown]}</p>
         </div>
         <div className="progress-bar" aria-hidden="true">{STEPS.map((label, index) => <span key={label} className={index < shown ? 'done' : index === shown ? 'current' : ''} />)}</div>
-        <ol className="progress">{STEPS.map((label, index) => <li key={label} aria-current={step === index ? 'step' : undefined}>{label}</li>)}</ol>
+        <ol role="list" className="progress">{STEPS.map((label, index) => <li key={label} aria-current={step === index ? 'step' : undefined}>{label}</li>)}</ol>
       </nav>
-      {busy && <div className="busy-bar" role="status"><span className="sr-only">Please wait…</span></div>}
+      <p className="sr-only" role="status">{busy ? 'Please wait…' : ''}</p>
+      <div className={`busy-bar ${busy ? 'is-on' : ''}`} aria-hidden="true" />
       {!draft.bookingId && <HoldNotice hold={draft.hold} remaining={remaining} busy={busy} pending={draft.pending} error={error} extend={store.extendHold} release={store.releaseHold} />}
-      {error && step !== 6 && <p role="alert" className="error">{error}</p>}
+      {error && step !== 6 && <p role="alert" className="error" ref={alertBox}>{error}</p>}
       {auth.error && <p role="alert" className="error">{auth.error}</p>}
       {!catalogue ? <><p role="status">Just getting things ready…</p><button onClick={() => setCatalogueAttempt(catalogueAttempt + 1)}>Retry</button></> : <>
         {!held && step >= 4 && step < 7 && !draft.pending && !draft.bookingId && <button className="btn--tonal" onClick={() => navigate(3)}>Choose a time again</button>}
-        <fieldset className="screen enter" key={step} disabled={busy}>
+        <fieldset className={`screen enter ${busy ? 'is-busy' : ''}`} key={step}>
           {step === 0 && <AreaStep welcome={welcome} rules={rules} catalogue={catalogue} usual={usual} bookUsual={bookUsual} choose={async (areaId) => { if (areaId === draft.areaId || await store.changeSelection({ areaId })) navigate(1) }} />}
           {step === 1 && <TreatmentStep catalogue={catalogue} choose={async (serviceId) => { if (serviceId === draft.serviceId || await store.changeSelection({ serviceId, sessions: [], enhancementIds: [] })) navigate(2) }} />}
           {step === 2 && <DurationStep draft={draft} catalogue={catalogue} change={(sessions) => store.changeSelection({ sessions })}
             choose={async (minutes) => { if ((draft.sessions.length === 1 && draft.sessions[0].duration_minutes === minutes) || await store.changeSelection({ sessions: [newSession(minutes)] })) navigate(3) }} next={() => navigate(3)} />}
           {step === 3 && <TimeStep rules={rules} joinWaitlist={api.joinWaitlist} draft={draft} loadAvailability={store.availability} selectSlot={store.selectSlot} next={() => goWithQuote(4)} />}
-          {step === 4 && <ReviewStep draft={draft} catalogue={catalogue} quote={quote} quoteError={quoteError} edit={store.edit} navigate={navigate} refreshQuote={store.refreshQuote} retryQuote={store.loadQuote} next={() => goWithQuote(5)} />}
+          {step === 4 && <ReviewStep draft={draft} catalogue={catalogue} quote={quote} quoteError={quoteError} edit={store.edit} navigate={navigate} refreshQuote={store.refreshQuote} retryQuote={store.retryQuote} next={() => goWithQuote(5)} />}
           {!auth.ready && step >= 5 && <p role="status">Checking your account…</p>}
           {auth.ready && (needsAuth || auth.recovery) && <AuthPanel client={supabase} recovery={auth.recovery} onRecovered={auth.finishRecovery} onGuest={startGuest} />}
           {step === 5 && auth.session && !auth.recovery && <DetailsStep key={auth.session.user.id} draft={draft} user={auth.session.user} api={api} edit={store.edit} report={store.setError} guest={isGuest} newTestGuest={startNewTestGuest} next={() => goWithQuote(6)} />}

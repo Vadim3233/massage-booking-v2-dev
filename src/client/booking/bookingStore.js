@@ -1,7 +1,11 @@
 import { activeHold, allowedStep, draftKey, durationOf, restoreDraft } from './bookingDraft.js'
 import { finalizeParams, quoteParams } from './bookingApi.js'
+import { friendlyError } from './friendlyError.js'
 
 const holdReleasedMessage = 'Your selected time was released. Please choose an available time to continue.'
+
+// Only what changes the price: the area, the treatment, the lengths and the extras. A name or a preference does not.
+const priceInputs = (draft) => JSON.stringify([draft.areaId, draft.serviceId, draft.sessions.map((session) => session.duration_minutes), [...draft.enhancementIds].sort()])
 
 // One owner for draft mutations and writes; synchronous busy guard prevents double clicks.
 export function createBookingStore({ api, storage, clientKey, uuid = () => crypto.randomUUID(), now = () => Date.now() }) {
@@ -19,7 +23,7 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
     if (state.busy) return
     publish({ busy: true, error: '' })
     try { return await action() } catch (error) {
-      publish({ error: error.message || 'Unable to complete this request. Please retry.' })
+      publish({ error: friendlyError(error) })
     } finally { publish({ busy: false }) }
   }
   function clearHold(message) {
@@ -30,7 +34,23 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
     // An ambiguous finalization must first be retried with its original key.
     if (state.busy || state.draft.pending || state.draft.bookingId || !state.draft.hold || activeHold(state.draft, now())) return false
     try { clearHold(holdReleasedMessage); return true }
-    catch (error) { publish({ error: error.message }); return false }
+    catch (error) { publish({ error: friendlyError(error) }); return false }
+  }
+  // Keeps the price on the review page up to date without locking the screen. A price for choices that have since changed is dropped.
+  function refreshQuote() {
+    const key = JSON.stringify(quoteParams(state.draft))
+    if (quoting?.key === key) return quoting.promise
+    const current = () => JSON.stringify(quoteParams(state.draft)) === key
+    const promise = api.quote(state.draft).then(
+      (quote) => { if (current()) publish({ quote, quoteError: '' }); return quote },
+      () => { if (current()) publish({ quoteError: "I couldn't update the price just now." }) },
+    ).finally(() => { if (quoting?.promise === promise) quoting = null })
+    quoting = { key, promise }
+    return promise
+  }
+  function retryQuote() {
+    publish({ quote: null, quoteError: '' })
+    return refreshQuote()
   }
   expireHold()
   return {
@@ -52,7 +72,7 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
       try {
         const extension = await api.extend(state.draft.hold, clientKey)
         if (extension.hold_id !== state.draft.hold.hold_id || !Number.isFinite(Date.parse(extension.expires_at)) || extension.extension_used !== true) {
-          throw new Error('Unable to verify the hold extension. Please retry.')
+          throw new Error("I couldn't keep your time just now. Please try again.")
         }
         save({ ...state.draft, hold: { ...state.draft.hold, ...extension } })
         return true
@@ -63,13 +83,13 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
     }) },
     setPaymentMethod(paymentMethod) {
       if (state.busy || state.draft.paymentPending || state.draft.paymentComplete || !['cash', 'bank_transfer'].includes(paymentMethod)) return
-      try { save({ ...state.draft, paymentMethod }) } catch (error) { publish({ error: error.message }) }
+      try { save({ ...state.draft, paymentMethod }) } catch (error) { publish({ error: friendlyError(error) }) }
     },
     resumePayment(booking) {
       if (booking.id !== state.draft.bookingId) return
       if (booking.booking_payments.status !== 'awaiting_transfer') {
         try { save({ ...state.draft, paymentComplete: true, paymentPending: null }); publish({ step: 7 }) }
-        catch (error) { publish({ error: error.message }) }
+        catch (error) { publish({ error: friendlyError(error) }) }
       }
     },
     completePayment() { return run(async () => {
@@ -78,7 +98,7 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
       save({ ...state.draft, paymentPending: action })
       const booking = await (action === 'cash' ? api.confirmCash(state.draft.bookingId) : api.declareTransfer(state.draft.bookingId))
       if (booking.id !== state.draft.bookingId || booking.booking_payments.status === 'awaiting_transfer') {
-        throw new Error('Unable to verify your payment request. Please retry.')
+        throw new Error("I couldn't check that your request went through. Please try again; nothing will be recorded twice.")
       }
       save({ ...state.draft, paymentComplete: true, paymentPending: null })
       publish({ step: 7 })
@@ -91,10 +111,10 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
       if (state.busy || state.draft.pending || state.draft.bookingId) return
       try {
         const draft = { ...state.draft, ...patch }
-        const changed = JSON.stringify(quoteParams(draft)) !== JSON.stringify(quoteParams(state.draft))
-        save(draft); publish({ quote: changed ? null : state.quote, quoteError: changed ? '' : state.quoteError, error: '' })
+        const priceChanged = priceInputs(draft) !== priceInputs(state.draft)
+        save(draft); publish({ quote: priceChanged ? null : state.quote, quoteError: priceChanged ? '' : state.quoteError, error: '' })
       }
-      catch (error) { publish({ error: error.message }) }
+      catch (error) { publish({ error: friendlyError(error) }) }
     },
     changeSelection(patch) { return run(async () => {
       if (state.draft.pending || state.draft.bookingId) return
@@ -117,28 +137,18 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
       publish({ quote })
       return quote
     }) },
-    // Keeps the price on the review page up to date without locking the screen. A price for choices that have since changed is dropped.
-    refreshQuote() {
-      const key = JSON.stringify(quoteParams(state.draft))
-      if (quoting?.key === key) return quoting.promise
-      const current = () => JSON.stringify(quoteParams(state.draft)) === key
-      const promise = api.quote(state.draft).then(
-        (quote) => { if (current()) publish({ quote, quoteError: '' }); return quote },
-        () => { if (current()) publish({ quoteError: 'We could not update the price just now.' }) },
-      ).finally(() => { if (quoting?.promise === promise) quoting = null })
-      quoting = { key, promise }
-      return promise
-    },
+    refreshQuote,
+    retryQuote,
     finalize(userId) { return run(async () => {
       if (state.draft.bookingId) return
-      if (state.draft.ownerUserId && state.draft.ownerUserId !== userId) throw new Error('Sign in with the account used for this booking request.')
+      if (state.draft.ownerUserId && state.draft.ownerUserId !== userId) throw new Error('Please sign in with the account used for this booking request.')
       if (!state.draft.pending) {
-        if (!activeHold(state.draft, now())) throw new Error('Your time hold has expired. Please choose a time again.')
+        if (!activeHold(state.draft, now())) throw new Error(holdReleasedMessage)
         const quote = await api.quote(state.draft)
         const previous = state.quote
         publish({ quote })
         if (!previous || ['total_gbp', 'service_subtotal_gbp', 'enhancements_total_gbp', 'travel_fee_gbp', 'congestion_fee_gbp'].some((key) => Number(previous[key]) !== Number(quote[key]))) {
-          throw new Error('Please review the refreshed price and confirm again.')
+          throw new Error('The price has changed. Please check the total, then press Reserve appointment again.')
         }
         save({ ...state.draft, pending: finalizeParams(state.draft, clientKey, uuid()) })
       }
@@ -152,7 +162,7 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
         }
         throw error
       }
-      if (!result.booking_id || !result.booking_reference) throw new Error('Unable to verify the booking result. Please retry the same request.')
+      if (!result.booking_id || !result.booking_reference) throw new Error("I couldn't check that your booking was saved. Please try again; you won't be booked twice.")
       const paymentComplete = result.payment_status !== 'awaiting_transfer'
       save({ ...state.draft, bookingId: result.booking_id, pending: null, hold: null, paymentComplete })
       publish({ result, step: paymentComplete ? 7 : 6 })

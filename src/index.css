@@ -33,6 +33,7 @@
   --accent-soft: #f8f1e4;
   --accent-strong: #8a5f1f; /* gold that reads on the page at any size (5.2:1) */
   --tile-border: #c3d0c7;
+  --control-border: #7d8e84; /* the border of anything you tap that has no other outline: 3.2:1 on the page */
 
   /* Colour says whose turn it is: amber = you act, dashed = the client acts, green = settled. */
   --needs-ink: #6b4200; --needs-bg: #fdebc8; --needs-rail: #b26b00;
@@ -52,6 +53,8 @@
   --tap: 44px;
 }
 * { box-sizing: border-box; }
+/* Something focused or jumped to is never hidden behind a sticky bar. */
+html { scroll-padding-top: 76px; scroll-padding-bottom: 110px; }
 body { margin: 0; color: var(--ink); background: var(--paper); font-family: var(--font-ui); line-height: 1.55; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 button, input, textarea, select { font: inherit; }
 button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }

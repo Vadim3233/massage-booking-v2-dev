@@ -5,7 +5,7 @@ import { dayName } from '../seriesApi.js'
 
 export function Quote({ quote }) {
   // A fee of £0.00 is not worth a row; the service and the total are always shown.
-  return quote ? <dl className="anb-price">{[['Service', quote.service_subtotal_gbp, true], ['Enhancements', quote.enhancements_total_gbp], ['Travel fee', quote.travel_fee_gbp], ['Congestion fee', quote.congestion_fee_gbp], ['Total', quote.total_gbp, true]].filter(([, amount, always]) => always || Number(amount) > 0).map(([label, amount]) => <div key={label}><dt>{label}</dt><dd>{money(amount)}</dd></div>)}</dl> : null
+  return quote ? <dl className="anb-price">{[['Service', quote.service_subtotal_gbp, true], ['Extras', quote.enhancements_total_gbp], ['Travel fee', quote.travel_fee_gbp], ['Congestion fee', quote.congestion_fee_gbp], ['Total', quote.total_gbp, true]].filter(([, amount, always]) => always || Number(amount) > 0).map(([label, amount]) => <div key={label}><dt>{label}</dt><dd>{money(amount)}</dd></div>)}</dl> : null
 }
 
 export function DateTimeStep({ draft, patch, duration, loadDay }) {

@@ -32,7 +32,7 @@ export default function ClientRepeats({ clientId, openBooking, api = seriesApi }
       <p className="admin-detail-hint">{STATUS_TEXT[series.status]}{series.end_date ? ` · until ${day(series.end_date)}` : ' · no end date'} · {series.payment_arrangement === 'cash_appointment' ? 'cash' : 'bank transfer'}</p>
       {series.next_booking && <p>Next booking: <button className="admin-link-button" onClick={() => openBooking(series.next_booking.id)}>{day(series.next_booking.date)} · {label(series.next_booking.booking_status)}</button></p>}
       {!series.next_booking && series.next_held_date && <p>Next session: {day(series.next_held_date)} (booked closer to the day, when payment is asked for)</p>}
-      {series.skipped.length > 0 && <ul className="admin-special-list" aria-label="Dates not booked">{series.skipped.map(item => <li key={item.date}>
+      {series.skipped.length > 0 && <ul role="list" className="admin-special-list" aria-label="Dates not booked">{series.skipped.map(item => <li key={item.date}>
         <div><strong>{day(item.date)}</strong><span>{SKIP_LABELS[item.reason]}</span></div>
         {canPutBack(item.reason) && series.status === 'active' && <div className="admin-payment-buttons"><button className="btn--small" disabled={busy} onClick={() => act(() => api.unskip(series.id, item.date))}>Put back</button></div>}
       </li>)}</ul>}

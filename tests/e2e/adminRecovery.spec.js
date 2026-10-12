@@ -101,7 +101,7 @@ test('real recovery survives reload, blocks mismatch, changes password, signs ou
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.getByRole('alert')).toContainText('does not have Admin access')
   await page.goto('/admin/reset-password')
-  await expect(page.getByRole('alert')).toContainText('recovery session is missing')
+  await expect(page.getByRole('alert')).toContainText('invalid or expired')
 })
 
 test('update error preserves retry and never exposes backend details', async ({ page }) => {

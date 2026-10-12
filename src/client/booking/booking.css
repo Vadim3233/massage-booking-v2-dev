@@ -20,8 +20,9 @@
 .progress-bar .done { background: var(--primary); }
 .progress-bar .current { background: var(--accent); }
 .progress { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; list-style: none; }
-.busy-bar { position: relative; height: 3px; margin: 10px 0 0; overflow: hidden; border-radius: 3px; background: var(--hairline); }
-.busy-bar::after { content: ''; position: absolute; inset: 0 auto 0 -40%; width: 40%; border-radius: 3px; background: var(--primary); animation: busy 1s var(--ease) infinite; }
+.busy-bar { position: relative; height: 3px; margin: 10px 0 0; overflow: hidden; border-radius: 3px; background: transparent; }
+.busy-bar.is-on { background: var(--hairline); }
+.busy-bar.is-on::after { content: ''; position: absolute; inset: 0 auto 0 -40%; width: 40%; border-radius: 3px; background: var(--primary); animation: busy 1s var(--ease) infinite; }
 @keyframes busy { to { left: 100%; } }
 
 /* ---------- Type: one expressive question per screen, plain words beneath it ---------- */
@@ -37,8 +38,8 @@
 .booking-shell .section-title { margin-top: 24px; }
 .optional { margin-left: 6px; color: var(--muted); font: 500 13px var(--font-ui); letter-spacing: 0; }
 .screen { border: 0; padding: 0; margin: 0; min-width: 0; }
-.screen:disabled { opacity: .8; transition: opacity var(--dur) var(--ease); }
-.screen:disabled :is(button, input, select, textarea) { opacity: 1; }
+.screen { transition: opacity var(--dur) var(--ease); }
+.screen.is-busy { opacity: .8; pointer-events: none; }
 .panel { margin: 16px 0; padding: 18px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); }
 .panel > h2:first-child { margin-top: 0; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
@@ -53,7 +54,7 @@
 /* ---------- Choices: whole-row tiles that go straight on when tapped ---------- */
 .tiles { display: grid; gap: 10px; margin: 16px 0; }
 .tiles--areas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.tile { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 2px 12px; width: 100%; min-height: 64px; padding: 14px 16px; border: 1.5px solid var(--tile-border); border-radius: var(--radius); background: var(--surface); color: var(--ink); text-align: left; box-shadow: var(--shadow-1); }
+.tile { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 2px 12px; width: 100%; min-height: 64px; padding: 14px 16px; border: 1.5px solid var(--control-border); border-radius: var(--radius); background: var(--surface); color: var(--ink); text-align: left; box-shadow: var(--shadow-1); }
 @media (hover: hover) { .tile:hover { border-color: var(--primary); background: var(--surface); box-shadow: var(--shadow-2); transform: translateY(-1px); } }
 .tile:active { background: var(--primary-soft); }
 .tile[aria-pressed=true] { border-color: var(--primary); background: var(--primary-soft); }
@@ -98,9 +99,12 @@
 .usual-go { display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; color: var(--primary); font-size: 14px; font-weight: 700; }
 
 /* The bar that stays in reach while you scroll: what is chosen on the left, the next step on the right. */
-.action-bar { position: sticky; bottom: 0; z-index: 4; display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 20px -16px 0; padding: 14px 16px calc(14px + env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--paper) 74%, rgb(247 246 242 / 0)); }
+.action-bar { position: sticky; bottom: 0; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 14px; margin: 20px -16px 0; padding: 14px 16px calc(14px + env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--paper) 74%, rgb(247 246 242 / 0)); }
 .action-bar > .btn--block { flex: 1; }
-.action-bar .btn--lg { white-space: nowrap; }
+.action-bar .btn--lg { flex: 0 1 auto; }
+.action-summary { flex: 1 1 110px; }
+/* On a short screen (a phone on its side, or zoomed right in) a stuck bar would cover the page, so it stays where it is. */
+@media (max-height: 520px) { .action-bar { position: static; } }
 .action-summary { display: grid; gap: 1px; min-width: 0; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.3; }
 .action-summary b { color: var(--ink); font-size: 15px; }
 .action-summary b.figure { color: var(--primary); font-size: 24px; line-height: 1.1; }
@@ -112,11 +116,11 @@
 .ticket-time { margin: 4px 0 0; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .ticket-time span { margin-left: 4px; color: var(--muted); font-size: 13px; font-weight: 400; }
 .ticket-rows { margin: 0; border-top: 1px dashed var(--tile-border); }
-.ticket-rows > div { display: grid; grid-template-columns: 76px 1fr auto; align-items: center; gap: 8px; padding: 8px 8px 8px 16px; }
+.ticket-rows > div { display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: center; gap: 8px; padding: 6px 8px 6px 16px; }
 .ticket-rows > div + div { border-top: 1px solid var(--hairline); }
 .ticket-rows dt { color: var(--muted); font-size: 13px; font-weight: 600; }
-.ticket-rows dd { margin: 0; font-weight: 600; }
-.ticket-rows dd small { display: block; color: var(--muted); font-size: 14px; font-weight: 400; }
+.ticket-rows dd { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0; }
+.row-text { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
 .ticket--summary { padding: 16px 18px; border-left-width: 4px; }
 .summary-when { margin: 12px 0 4px; font: 600 20px/1.3 var(--font-display); font-variant-numeric: lining-nums; }
 .summary-line { margin: 4px 0; color: var(--ink-soft); font-size: 15px; }
@@ -140,7 +144,7 @@
 .booking-shell .person-title { margin: 14px 0 0; font: 600 17px/1.3 var(--font-display); }
 .preference-title { margin: 14px 0 8px; color: var(--accent-ink); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .preference-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.preference-chip { min-height: 44px; padding: 0 16px; border-radius: var(--radius-pill); border-color: var(--primary-line); font-weight: 500; }
+.preference-chip { min-height: 44px; padding: 0 16px; border-radius: var(--radius-pill); border-color: var(--control-border); font-weight: 500; }
 .preference-chip[aria-pressed=true] { border-color: var(--primary); background: var(--primary); color: #fff; }
 .preference-chip[aria-pressed=true]::before { content: ''; width: 5px; height: 9px; margin: -2px 2px 0 -2px; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg); }
 .addons { margin: 20px 0 8px; }
@@ -178,7 +182,7 @@
 .bank-list dt { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .bank-list dd { text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0; }
 .copy-value { font: 600 17px/1.3 var(--font-ui); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.copy-button { min-height: 36px; padding: 0 12px; border-radius: 10px; font-size: 14px; }
+.copy-button { min-height: 44px; padding: 0 14px; border-radius: 10px; font-size: 14px; }
 .copy-failed { flex-basis: 100%; color: var(--danger); }
 .bank-reference { margin: 12px 0 4px; padding: 4px 14px; border-left: 4px solid var(--accent); border-radius: 12px; background: var(--accent-soft); }
 .bank-reference > div { border-bottom: 0; }
@@ -215,10 +219,9 @@
 @media (max-width: 359px) {
   .two-columns { grid-template-columns: 1fr; gap: 0; }
   .tiles--areas { grid-template-columns: 1fr; }
-  .ticket-rows > div { grid-template-columns: 1fr auto; }
-  .ticket-rows dt { grid-column: 1 / -1; }
+  .ticket-rows > div { grid-template-columns: minmax(0, 1fr); gap: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .busy-bar::after { animation: none; left: 0; width: 100%; opacity: .5; }
+  .busy-bar.is-on::after { animation: none; left: 0; width: 100%; opacity: .5; }
   .success-mark { animation: none; }
 }

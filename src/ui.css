@@ -56,6 +56,13 @@
 .field-hint, .admin-detail-hint { font-size: 13px; font-weight: 400; color: var(--muted); line-height: 1.45; }
 .admin-field-error { color: var(--danger); font-size: 14px; font-weight: 500; margin: 0; }
 
+/* A heading that was moved to on purpose (a new screen) is not a control, so it needs no ring. */
+:where(.booking-shell, .admin-shell) :is(h1, h2)[tabindex="-1"]:focus { outline: none; }
+
+/* A link that jumps past the navigation, for keyboard users: it appears when it has focus. */
+.skip-link { position: absolute; left: 12px; top: -60px; z-index: 100; padding: 12px 16px; border-radius: 12px; background: var(--primary); color: #fff; font-weight: 600; text-decoration: none; }
+.skip-link:focus { top: 12px; }
+
 /* Text for screen readers only. */
 .sr-only, .admin-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
@@ -83,10 +90,12 @@
 .toast--error { background: var(--danger); }
 .toast button { min-height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: rgb(255 255 255 / .16); color: #fff; font: 600 14px/1 var(--font-ui); }
 .toast button:not(:disabled):hover { background: rgb(255 255 255 / .28); }
+.toast .toast-close { min-height: 32px; width: 32px; padding: 0; font-size: 22px; line-height: 1; background: transparent; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
 
 /* ---------- Loading: a calm shimmer in the shape of what is coming, instead of the word "Loading". ---------- */
 .skeleton { display: block; border-radius: 10px; background: linear-gradient(90deg, #ecefe9 25%, #f6f7f3 45%, #ecefe9 65%); background-size: 220% 100%; animation: shimmer 1.4s linear infinite; }
+.skeleton { animation-iteration-count: 3; }
 @keyframes shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
 .skeleton-rows { display: grid; gap: 10px; margin: 12px 0; }
 .skeleton-rows .skeleton { height: 76px; }

@@ -121,7 +121,7 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
     </header>
 
     {!current && <div className="skeleton-rows" role="status"><span className="admin-sr-only">Loading agenda…</span><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>}
-    {current?.error && <><p role="alert">Could not load agenda: {current.error}</p><button onClick={() => setAttempt(value => value + 1)}>Retry agenda</button></>}
+    {current?.error && <><p role="alert">Could not load the agenda. Please check your connection and try again.</p><button onClick={() => setAttempt(value => value + 1)}>Retry agenda</button></>}
 
     {current && !current.error && <>
       <ToCheck toCheck={toCheck} checked={checked} seeAll={seeAll} />

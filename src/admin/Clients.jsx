@@ -29,7 +29,7 @@ export default function Clients({ openClient, api = clientsApi }) {
       {error && <p role="alert">{error} <button onClick={() => setAttempt(value => value + 1)}>Try again</button></p>}
       {!rows && !error && <p role="status">Loading clients…</p>}
       {rows && !rows.length && <p>{term ? 'No one matches that search.' : 'No clients yet.'}</p>}
-      {rows?.length > 0 && <ul className="admin-client-list">{rows.map(row => <li key={row.id}>
+      {rows?.length > 0 && <ul role="list" className="admin-client-list">{rows.map(row => <li key={row.id}>
         <button onClick={() => openClient(row.id)}><span className="monogram" aria-hidden="true">{initials(row)}</span><span className="admin-client-text"><strong>{fullName(row)}</strong><span>{[row.phone, row.email].filter(Boolean).join(' · ') || 'No contact details'}</span></span></button>
       </li>)}</ul>}
       {rows?.length === 20 && <p className="admin-detail-hint">Showing the 20 best matches. Type more of the name, phone or email to narrow it down.</p>}

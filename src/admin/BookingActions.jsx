@@ -80,7 +80,7 @@ function ActionDialog({ kind, booking, api, close, done }) {
     if (request.current?.key !== key) request.current = { key, id: crypto.randomUUID() }
     try {
       await api.act(kind, booking, request.current.id, payload)
-      await done('Saved. Refreshing current status.')
+      await done('Saved.')
     } catch (failure) {
       setError(failure.message)
       if (failure.conflict) await done(failure.message, true)
@@ -148,6 +148,9 @@ function History({ booking, api }) {
   </details>
 }
 
+// What the toast says once it is done: the outcome, not the name of the button that was pressed.
+const DONE = { complete: 'Marked completed', noShow: 'Marked no-show', reschedule: 'Booking moved', cancel: 'Booking cancelled', refund: 'Refund recorded', feeReceived: 'Fee recorded as received', feeWaive: 'Fee waived' }
+
 export default function BookingActions({ booking, refresh, api = lifecycleApi }) {
   const [kind, setKind] = useState(null)
   const [message, setMessage] = useState(null)
@@ -155,14 +158,14 @@ export default function BookingActions({ booking, refresh, api = lifecycleApi })
   async function done(text, isError = false) {
     setKind(null)
     setMessage({ text, error: isError })
-    if (!isError) toast(`${lifecycleLabels[kind] || 'Saved'} · ${clientName(booking)}`)
+    if (!isError) toast(`${DONE[kind] || 'Saved'} · ${clientName(booking)}`)
     try { await refresh() } catch { setMessage({ error: true, text: 'The booking changed. Could not refresh its status; please refresh before another action.' }) }
   }
   const owed = []
   if (Number(booking.late_fee_due_gbp) > 0 || booking.late_fee_status === 'waived') owed.push(`Late fee: ${label(booking.late_fee_status)}${Number(booking.late_fee_due_gbp) > 0 ? ` · ${money(booking.late_fee_due_gbp)}` : ''}`)
   if (Number(booking.refund_due_gbp) > 0) owed.push(`Refund due: ${money(booking.refund_due_gbp)}`)
   return <div className="admin-booking-actions">
-    {owed.length > 0 && <ul className="admin-owed">{owed.map(line => <li key={line}>{line}</li>)}</ul>}
+    {owed.length > 0 && <ul role="list" className="admin-owed">{owed.map(line => <li key={line}>{line}</li>)}</ul>}
     {actions.length > 0 && <div className="admin-payment-buttons">{actions.map(action => <button key={action} className={ACTION_STYLE[action]} onClick={() => { setMessage(null); setKind(action) }}>{lifecycleLabels[action]}</button>)}</div>}
     {message && <p role={message.error ? 'alert' : 'status'}>{message.text}</p>}
     {kind && <ActionDialog key={kind} kind={kind} booking={booking} api={api} close={() => setKind(null)} done={done} />}

@@ -143,7 +143,7 @@ test('booking rules are checked, saved and put to work for clients', async ({ pa
     await expect(page.getByRole('button', { name: 'Save rules' })).toBeDisabled()
     await page.getByLabel('How many days ahead clients can book').fill('21')
     await page.getByLabel('Hours of notice clients need').fill('3')
-    await page.getByLabel('Free to cancel or change up to this many hours before').fill('36')
+    await page.getByLabel('Free to cancel or change more than this many hours before').fill('36')
     await page.getByRole('button', { name: 'Save rules' }).click()
     await expect(page.getByText('Saved. These apply from now on.')).toBeVisible()
     const rows = Object.fromEntries((await f.admin.from('business_settings').select('key,value').in('key', keys)).data.map(row => [row.key, row.value]))

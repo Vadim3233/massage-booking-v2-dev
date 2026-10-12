@@ -15,7 +15,7 @@ export default function ClientNotesSection({ clientId, api = clientsApi }) {
   }, [api, clientId])
   if (!notes?.length) return null
   return <section aria-labelledby="private-notes-title"><h3 id="private-notes-title">Your notes about this client</h3>
-    <ul className="admin-note-list">{notes.slice(0, SHOWN).map(note => <li key={note.id}><p>{note.note}</p><small>{stamp(note.created_at)}</small></li>)}</ul>
+    <ul role="list" className="admin-note-list">{notes.slice(0, SHOWN).map(note => <li key={note.id}><p>{note.note}</p><small>{stamp(note.created_at)}</small></li>)}</ul>
     {notes.length > SHOWN && <p className="admin-detail-hint">{notes.length - SHOWN} older {notes.length - SHOWN === 1 ? 'note is' : 'notes are'} on the client's page.</p>}
   </section>
 }

@@ -20,7 +20,7 @@ export function AreaStep({ catalogue, choose, welcome, rules, usual, bookUsual }
       {surcharges(area).map(note => <span className="tile-note" key={note}>{note}</span>)}
     </button>)}</div>
     {!catalogue.areas.length && <p>Online booking areas are being updated.</p>}
-    <p className="fine">I visit selected parts of these areas. Outside my usual route? <a href="https://vadmassage.com">Contact Vad</a> to arrange your visit.</p>
+    <p className="fine">I visit selected parts of these areas. Outside my usual route? <a href="https://vadmassage.com">Get in touch</a> and I'll see what I can arrange.</p>
   </>
 }
 
@@ -47,7 +47,7 @@ export function DurationStep({ draft, catalogue, change, choose, next }) {
   const treatments = draft.sessions.reduce((sum, session) => sum + Number(prices.find((price) => price.duration_minutes === session.duration_minutes)?.price_gbp || 0), 0)
   return <><h1 tabIndex={-1}>How much time would <em>you like?</em></h1>
     {!group && <>
-      <p className="lede">Choose a length and we go straight on to the time.</p>
+      <p className="lede">Choose a length and you'll go straight on to picking a time.</p>
       <div className="tiles tiles--durations">{prices.map((price) => <button className="tile tile--duration" key={price.duration_minutes} aria-label={`${price.duration_minutes} minutes, ${money(price.price_gbp)} per person`}
         aria-pressed={draft.sessions.length === 1 && draft.sessions[0].duration_minutes === price.duration_minutes} onClick={() => choose(price.duration_minutes)}>
         <span className="figure tile-figure">{price.duration_minutes}</span><span className="tile-unit">minutes</span><span className="tile-price">{money(price.price_gbp)}</span>
@@ -61,12 +61,13 @@ export function DurationStep({ draft, catalogue, change, choose, next }) {
         return <div className="quantity" key={price.duration_minutes}>
           <div><strong>{price.duration_minutes} minutes</strong><span>{money(price.price_gbp)} per person</span></div>
           <div className="stepper-control">
-            <button aria-label={`Remove ${price.duration_minutes} minutes`} disabled={!count} onClick={() => {
+            <button type="button" aria-label={`Remove ${price.duration_minutes} minutes`} aria-disabled={!count} onClick={() => {
+              if (!count) return
               const index = draft.sessions.findLastIndex((session) => session.duration_minutes === price.duration_minutes)
               change(draft.sessions.filter((_, i) => i !== index))
             }}><Icon name="minus" size={20} /></button>
             <output aria-label={`${price.duration_minutes} minute sessions`}>{count}</output>
-            <button aria-label={`Add ${price.duration_minutes} minutes`} disabled={total + price.duration_minutes > 240} onClick={() => change([...draft.sessions, newSession(price.duration_minutes)])}><Icon name="plus" size={20} /></button>
+            <button type="button" aria-label={`Add ${price.duration_minutes} minutes`} aria-disabled={total + price.duration_minutes > 240} onClick={() => { if (total + price.duration_minutes <= 240) change([...draft.sessions, newSession(price.duration_minutes)]) }}><Icon name="plus" size={20} /></button>
           </div>
         </div>
       })}
@@ -74,7 +75,7 @@ export function DurationStep({ draft, catalogue, change, choose, next }) {
       <div className="action-bar"><button className="btn--primary btn--lg btn--block" disabled={!total} onClick={next}>Choose date &amp; time</button></div>
       <button className="btn--quiet group-toggle" onClick={() => setGroup(false)}>Just me</button>
     </>}
-    {!prices.length && <p>This treatment currently has no bookable durations. Please select another treatment.</p>}
+    {!prices.length && <p>There are no lengths available for this treatment right now. Please choose another treatment.</p>}
   </>
 }
 

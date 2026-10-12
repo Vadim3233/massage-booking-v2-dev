@@ -18,7 +18,7 @@ export function validateBank(details) {
 export const RULE_FIELDS = [
   { key: 'booking_horizon_days', label: 'How many days ahead clients can book', hint: 'From 1 to 365 days. Your own bookings in Admin are not limited by this.', min: 1, max: 365 },
   { key: 'minimum_notice_hours', label: 'Hours of notice clients need', hint: 'From 0 to 72 hours. A booking cannot start sooner than this.', min: 0, max: 72 },
-  { key: 'free_cancellation_hours', label: 'Free to cancel or change up to this many hours before', hint: 'From 0 to 168 hours. Inside this the full price is recorded as a late fee, which you can reduce or waive.', min: 0, max: 168 },
+  { key: 'free_cancellation_hours', label: 'Free to cancel or change more than this many hours before', hint: 'From 0 to 168 hours. Inside this the full price is recorded as a late fee, which you can reduce or waive.', min: 0, max: 168 },
   { key: 'grace_minutes', label: 'Minutes after booking when changes are always free', hint: 'From 0 to 240 minutes. For a booking made by mistake, whatever the appointment time.', min: 0, max: 240 },
   { key: 'new_client_booking_limit', label: 'Upcoming bookings a new client may hold', hint: 'From 1 to 10. A client is new until they have a completed, paid appointment.', min: 1, max: 10 },
   { key: 'returning_client_booking_limit', label: 'Upcoming bookings a returning client may hold', hint: 'At least as many as a new client, up to 20.', min: 1, max: 20 },

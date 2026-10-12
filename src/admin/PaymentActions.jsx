@@ -6,26 +6,26 @@ import { toast } from '../ui/toast.js'
 
 // The confirmation says what will be recorded, and its button says what happens: "Yes, £90.00 has arrived".
 const CONSEQUENCES = {
-  remove: 'Remove this booking. Its time is released and it is recorded as cancelled. No charge is made and nothing is deleted.',
+  remove: 'Cancel this booking. Its time is released and it is recorded as cancelled. No charge is made and nothing is deleted.',
   approve: 'Approve cash and confirm the appointment. This does not record payment received.',
-  verify: 'Confirm that the bank transfer has actually arrived. This records payment received and confirms the appointment.',
+  verify: 'Check that the transfer has reached your bank. This records the payment as received and confirms the appointment.',
   receive: 'Confirm that you have actually received this cash payment.',
-  receiveBank: 'Confirm that the bank transfer has actually arrived. This records the payment as received.',
+  receiveBank: 'Check that the transfer has reached your bank. This records the payment as received.',
 }
-const SHORT = { verify: 'Verify', approve: 'Approve', remove: 'Remove', receive: 'Received', receiveBank: 'Received' }
+const SHORT = { verify: 'Verify', approve: 'Approve', remove: 'Cancel', receive: 'Received', receiveBank: 'Received' }
 const confirmLabel = (action, booking) => ({
-  remove: 'Yes, remove booking',
+  remove: 'Yes, cancel this booking',
   approve: 'Yes, approve cash',
   verify: `Yes, ${money(booking.total_gbp)} has arrived`,
   receive: `Yes, ${money(booking.total_gbp)} cash received`,
   receiveBank: `Yes, ${money(booking.total_gbp)} has arrived`,
 }[action])
 const doneMessage = (action, booking) => ({
-  remove: `Booking removed · ${clientName(booking)}`,
+  remove: `Booking cancelled · ${clientName(booking)}`,
   approve: `Cash approved · ${clientName(booking)}`,
-  verify: `Payment confirmed · ${clientName(booking)} ${money(booking.total_gbp)}`,
-  receive: `Cash recorded · ${clientName(booking)} ${money(booking.total_gbp)}`,
-  receiveBank: `Payment recorded · ${clientName(booking)} ${money(booking.total_gbp)}`,
+  verify: `Transfer verified · ${clientName(booking)} ${money(booking.total_gbp)}`,
+  receive: `Cash received · ${clientName(booking)} ${money(booking.total_gbp)}`,
+  receiveBank: `Transfer received · ${clientName(booking)} ${money(booking.total_gbp)}`,
 }[action])
 
 function Confirmation({ action, booking, cancel, confirm, busy }) {
@@ -75,7 +75,7 @@ export default function PaymentActions({ booking, refresh, only, compact = false
     try {
       await paymentReviewApi.act(action, booking, request.current.id)
       setConfirmation(null)
-      setMessage({ text: 'Payment action saved. Refreshing current status.' })
+      setMessage({ text: 'Saved.' })
       toast(doneMessage(action, booking))
       await refresh()
     } catch (error) {

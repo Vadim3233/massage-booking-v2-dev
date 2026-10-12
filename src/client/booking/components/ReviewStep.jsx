@@ -16,7 +16,7 @@ export function PriceSummary({ quote, quoteError, retry }) {
   if (!quote && quoteError) return <div className="price-state" role="alert"><p>{quoteError}</p><button className="btn--small" onClick={retry}>Try again</button></div>
   if (!quote) return <div className="skeleton-rows price-skeleton" role="status"><span className="sr-only">Updating the price…</span><span className="skeleton" /></div>
   const rows = [
-    ['Treatments', quote.service_subtotal_gbp, true], ['Add-ons', quote.enhancements_total_gbp], ['Travel fee', quote.travel_fee_gbp], ['Congestion fee', quote.congestion_fee_gbp],
+    ['Treatments', quote.service_subtotal_gbp, true], ['Extras', quote.enhancements_total_gbp], ['Travel fee', quote.travel_fee_gbp], ['Congestion fee', quote.congestion_fee_gbp],
   ].filter(([, amount, always]) => always || Number(amount) > 0)
   return <dl className="prices">
     {rows.map(([label, amount]) => <div key={label}><dt>{label}</dt><dd>{money(amount)}</dd></div>)}
@@ -74,7 +74,8 @@ export default function ReviewStep({ draft, catalogue, quote, quoteError, edit, 
   const area = catalogue.areas.find((item) => item.id === draft.areaId)?.name
   const service = catalogue.services.find((item) => item.id === draft.serviceId)?.name
   const many = draft.sessions.length > 1
-  return <><h1 tabIndex={-1}>Review your <em>booking</em></h1><p className="lede">You can still change anything before confirming.</p>
+  const row = (label, text, step) => <div><dt>{label}</dt><dd><span className="row-text">{text}</span><button className="btn--quiet btn--small" aria-label={`Change ${label.toLowerCase()}`} onClick={() => navigate(step)}>Change</button></dd></div>
+  return <><h1 tabIndex={-1}>Review your <em>booking</em></h1><p className="lede">Nothing is booked yet, so you can still change anything here.</p>
     <section className="ticket" aria-label="Your appointment">
       <div className="ticket-head">
         <div>
@@ -85,8 +86,9 @@ export default function ReviewStep({ draft, catalogue, quote, quoteError, edit, 
         <button className="btn--quiet btn--small" aria-label="Change date and time" onClick={() => navigate(3)}>Change</button>
       </div>
       <dl className="ticket-rows">
-        <div><dt>Treatment</dt><dd>{service}<small>{draft.sessions.map((session) => `${session.duration_minutes} min`).join(' + ')}</small></dd><button className="btn--quiet btn--small" aria-label="Change treatment or length" onClick={() => navigate(2)}>Change</button></div>
-        <div><dt>Area</dt><dd>{area}</dd><button className="btn--quiet btn--small" aria-label="Change area" onClick={() => navigate(0)}>Change</button></div>
+        {row('Treatment', service, 1)}
+        {row('Length', draft.sessions.map((session) => `${session.duration_minutes} min`).join(' + '), 2)}
+        {row('Area', area, 0)}
       </dl>
     </section>
     <details className="more">
@@ -99,15 +101,17 @@ export default function ReviewStep({ draft, catalogue, quote, quoteError, edit, 
         </div>)}
       </div>
     </details>
-    {catalogue.enhancements.length > 0 && <section className="addons" aria-labelledby="addons-title"><h2 id="addons-title" className="section-title">Add-ons <span className="optional">optional</span></h2>
+    {catalogue.enhancements.length > 0 && <section className="addons" aria-labelledby="addons-title"><h2 id="addons-title" className="section-title">Extras <span className="optional">optional</span></h2>
       {catalogue.enhancements.map((enhancement) => <label key={enhancement.id} className="check addon">
         <input type="checkbox" checked={draft.enhancementIds.includes(enhancement.id)} onChange={() => edit({ enhancementIds: draft.enhancementIds.includes(enhancement.id) ? draft.enhancementIds.filter((id) => id !== enhancement.id) : [...draft.enhancementIds, enhancement.id] })} />
         <span className="addon-text"><b>{enhancement.name}</b>{enhancement.description && <small>{enhancement.description}</small>}</span>
         <span className="addon-price">{Number(enhancement.price_gbp) > 0 ? `+${money(enhancement.price_gbp)}` : 'Free'}</span>
       </label>)}
     </section>}
-    <label className="field-note">Session notes (optional)<textarea maxLength={4000} rows={3} value={draft.note} onChange={(event) => edit({ note: event.target.value })} /></label>
+    <label className="field-note">Anything I should know? (optional)<textarea maxLength={4000} rows={3} value={draft.note} onChange={(event) => edit({ note: event.target.value })} /></label>
+    <p className="fine">If anything medical affects your treatment, it's best to tell me directly rather than write it here.</p>
     <PriceSummary quote={quote} quoteError={quoteError} retry={retryQuote} />
+    <p className="sr-only" role="status">{quote ? `Total ${money(quote.total_gbp)}` : ''}</p>
     <div className="action-bar">
       <p className="action-summary"><span>Total</span><b className="figure">{quote ? money(quote.total_gbp) : '–'}</b></p>
       <button className="btn--primary btn--lg" onClick={next}>Continue to your details</button>

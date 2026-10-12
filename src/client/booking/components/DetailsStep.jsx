@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { validDetails } from '../bookingDraft.js'
+import { friendlyError } from '../friendlyError.js'
 
 function buildTestClient() {
   const id = crypto.randomUUID().replaceAll('-', '').slice(0, 12)
@@ -17,6 +18,8 @@ function buildTestClient() {
     savedAddressId: '',
   }
 }
+
+const UNAVAILABLE = "Online booking isn't available on this account just now. Please get in touch and I'll arrange your appointment."
 
 export default function DetailsStep({ draft, user, api, edit, next, report, newTestGuest, guest = false }) {
   const [addresses, setAddresses] = useState([])
@@ -40,11 +43,11 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
         const rows = await api.addresses()
         if (!live) return
         setAddresses(rows)
-        if (!profile.online_booking_enabled) { report('Online booking is disabled for this account. Please contact Vad.'); return }
+        if (!profile.online_booking_enabled) { report(UNAVAILABLE); return }
         const details = { ...draft.details, email: user.email || draft.details.email || '' }
         for (const key of ['first_name', 'last_name', 'phone']) if (!details[key]) details[key] = profile[key] || ''
         edit({ details, ownerUserId: user.id })
-      }).catch((error) => { if (live) report(error.message) })
+      }).catch((error) => { if (live) report(friendlyError(error)) })
       .finally(() => { if (live) setLoading(false) })
     return () => { live = false }
     // Activation runs once per account; typing must not reactivate it.
@@ -59,22 +62,27 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
       await newTestGuest(buildTestClient())
     } catch (error) {
       setTesting(false)
-      report(error.message || 'Unable to create a fresh test client. Please retry.')
+      report(friendlyError(error))
     }
   }
   async function submit(event) {
-    event.preventDefault(); setSaving(true)
+    event.preventDefault()
+    if (saving) return
+    // The button is never greyed out; what is missing is said in words instead.
+    if (!validDetails(details)) { report('Please fill in everything that is not marked optional.'); return }
+    setSaving(true)
     try {
       const profile = guest ? await api.activateGuest(details) : await api.activate(details)
-      if (!profile.online_booking_enabled) throw new Error('Online booking is disabled for this account. Please contact Vad.')
+      if (!profile.online_booking_enabled) throw new Error(UNAVAILABLE)
       edit({ ownerUserId: user.id })
       await next()
-    } catch (error) { report(error.message) }
+    } catch (error) { report(friendlyError(error)) }
     finally { setSaving(false) }
   }
   return <><h1 tabIndex={-1}>Your <em>details</em></h1><p className="lede">{guest ? 'No account is required. Share the details I need for your visit.' : 'Share the details I need for your visit.'} I only use them to arrange your appointment and to get in touch about it.</p>
     {loading && <p role="status">Loading your saved details…</p>}
-    <form onSubmit={submit}><fieldset disabled={loading || saving || testing}>
+    <p className="fine">Everything that is not marked optional is needed so I can find you.</p>
+    <form onSubmit={submit}><fieldset disabled={loading || testing}>
       {showTestTools && guest && newTestGuest && <button type="button" className="btn--tonal btn--small" onClick={startNewTestClient}>{testing ? 'Creating test client…' : 'New test client'}</button>}
       <div className="two-columns">
         <label>First name<input autoComplete="given-name" value={details.first_name} required onChange={(event) => field('first_name', event.target.value)} /></label>
@@ -88,19 +96,17 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
       }}><option value="">Enter an address</option>{addresses.map((address) => <option key={address.id} value={address.id}>{address.label} · {address.address_line_1}, {address.postcode}</option>)}</select></label>}
       <fieldset disabled={!guest && Boolean(details.savedAddressId)}>
         <label>Street address<input autoComplete="address-line1" value={details.address_line_1} required onChange={(event) => field('address_line_1', event.target.value)} /></label>
-        <label>Apartment, suite, unit (optional)<input autoComplete="address-line2" value={details.address_line_2} onChange={(event) => field('address_line_2', event.target.value)} /></label>
+        <label>Flat or building (optional)<input autoComplete="address-line2" value={details.address_line_2} onChange={(event) => field('address_line_2', event.target.value)} /></label>
         <div className="two-columns"><label>City<input autoComplete="address-level2" value={details.city} required onChange={(event) => field('city', event.target.value)} /></label>
           <label>Postcode<input autoComplete="postal-code" autoCapitalize="characters" value={details.postcode} required onChange={(event) => field('postcode', event.target.value)} /></label></div>
       </fieldset>
       <details className="more more--flat">
-        <summary><span className="more-title">Getting in and anything else</span><span className="more-hint">Optional</span></summary>
+        <summary><span className="more-title">How to get in</span><span className="more-hint">Optional</span></summary>
         <div className="more-body">
           <fieldset disabled={!guest && Boolean(details.savedAddressId)}><label>Entry instructions (optional)<input value={details.entry_instructions} onChange={(event) => field('entry_instructions', event.target.value)} /></label></fieldset>
-          <label>Additional notes (optional)<textarea maxLength={4000} rows={3} value={draft.note} onChange={(event) => edit({ note: event.target.value })} /></label>
-          <p className="fine">Please do not include medical or health information here. Contact Vad directly if needed.</p>
         </div>
       </details>
-      <div className="action-bar"><button className="btn--primary btn--lg btn--block" disabled={!validDetails(details)}>{saving ? 'Saving details…' : 'Continue to payment'}</button></div>
+      <div className="action-bar"><button className="btn--primary btn--lg btn--block">{saving ? 'Saving details…' : 'Continue to payment'}</button></div>
     </fieldset></form>
   </>
 }

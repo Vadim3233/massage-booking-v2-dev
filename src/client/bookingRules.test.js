@@ -9,13 +9,12 @@ describe('booking rules shown to clients', () => {
     expect(rulesFromRow({ booking_horizon_days: 'x', free_cancellation_hours: -3 })).toMatchObject({ horizonDays: 40, freeHours: 24 })
     expect(rulesFromRow({ booking_horizon_days: 0 }).horizonDays).toBe(40)
   })
-  it('keeps the payment reminder wording at the usual settings', () => {
-    expect(cancellationNote(DEFAULT_RULES, false)).toBe('Free cancellation up to 24 hours before your appointment. Cancellations within 24 hours are subject to the full appointment fee.')
-    expect(cancellationNote(DEFAULT_RULES, true)).toBe('Just a quick reminder: the full appointment fee applies to cancellations made within 24 hours of your appointment.')
+  it('says the same thing for bank transfer and cash: free while there is time, then a late fee of up to the full price', () => {
+    expect(cancellationNote(DEFAULT_RULES)).toBe('Free to change or cancel more than 24 hours before your appointment. After that, a late fee of up to the full appointment price may apply.')
   })
   it('follows the Admin\'s own window', () => {
-    expect(cancellationNote({ ...DEFAULT_RULES, freeHours: 48 }, false)).toContain('up to 48 hours before')
-    expect(cancellationNote({ ...DEFAULT_RULES, freeHours: 1 }, true)).toContain('within 1 hour of')
-    expect(cancellationNote({ ...DEFAULT_RULES, freeHours: 0 }, false)).toBe('You can cancel or change your appointment at any time before it begins.')
+    expect(cancellationNote({ ...DEFAULT_RULES, freeHours: 48 })).toContain('more than 48 hours before')
+    expect(cancellationNote({ ...DEFAULT_RULES, freeHours: 1 })).toContain('more than 1 hour before')
+    expect(cancellationNote({ ...DEFAULT_RULES, freeHours: 0 })).toBe('You can cancel or change your appointment at any time before it begins.')
   })
 })

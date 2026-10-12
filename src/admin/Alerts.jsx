@@ -31,7 +31,7 @@ export default function Alerts({ openBooking, openPage, changed, api = alertsApi
     {alerts && !alerts.length && <p>Nothing yet. New bookings and client changes will appear here.</p>}
     {alerts?.length > 0 && <>
       <div className="admin-payment-buttons"><button className="btn--tonal btn--small" disabled={!unread} onClick={markAll}>Mark all as read</button></div>
-      <ul className="admin-alerts">{groupAlerts(alerts).map(group => <li key={group.id} className={group.unreadIds.length ? 'is-unread' : 'is-read'}>
+      <ul role="list" className="admin-alerts">{groupAlerts(alerts).map(group => <li key={group.id} className={group.unreadIds.length ? 'is-unread' : 'is-read'}>
         <button onClick={() => open(group)}>
           <strong>{group.head.title}</strong><span>{group.head.body}</span>
           {group.older.length > 0 && <span className="admin-alert-also">Also: {group.older.map(alert => alert.title).join(' · ')}</span>}

@@ -57,7 +57,7 @@ export default function ResetPassword({ linkError }) {
   }
   return <main className="admin-shell"><section className="admin-login"><h1>Reset Admin password</h1>
     {state === 'checking' && <p role="status">Checking recovery link…</p>}
-    {state === 'invalid' && <p role="alert">This recovery link is invalid or expired, or the recovery session is missing. Request a new reset link.</p>}
+    {state === 'invalid' && <p role="alert">This reset link is invalid or expired. Please request a new one.</p>}
     {state === 'ready' && <form onSubmit={submit}>
       <label>New password<input name="password" type="password" autoComplete="new-password" minLength={6} required disabled={busy} /></label>
       <label>Confirm new password<input name="confirm" type="password" autoComplete="new-password" minLength={6} required disabled={busy} /></label>

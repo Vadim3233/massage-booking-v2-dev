@@ -24,7 +24,7 @@ export default function TreatmentStep({ draft, catalogue, patch }) {
     <details className="anb-more" open={draft.sessions.length > 1 || draft.enhancementIds.length > 0 || undefined}><summary>More options: another person, extras</summary>
     <p className="anb-hint">One visit, up to four consecutive sessions. Maximum 240 minutes.</p>
     <div className="anb-inline-actions"><button type="button" disabled={draft.sessions.length >= 4 || duration + 60 > 240} onClick={() => sessionsChange([...draft.sessions, { duration_minutes: 60, recipient_name: '', preference_ids: [] }])}>+ Add session</button><span>{duration} minutes total</span></div>
-    {!!catalogue.enhancements.length && <fieldset className="anb-section"><legend>Enhancements</legend><p className="anb-hint">Applied once to the visit.</p>{catalogue.enhancements.map(item => <label className="anb-radio" key={item.id}><input type="checkbox" checked={draft.enhancementIds.includes(item.id)} onChange={() => patch({ enhancementIds: draft.enhancementIds.includes(item.id) ? draft.enhancementIds.filter(id => id !== item.id) : [...draft.enhancementIds, item.id] })} /><span>{item.name} · {money(item.price_gbp)}</span></label>)}</fieldset>}
+    {!!catalogue.enhancements.length && <fieldset className="anb-section"><legend>Extras</legend><p className="anb-hint">Applied once to the visit.</p>{catalogue.enhancements.map(item => <label className="anb-radio" key={item.id}><input type="checkbox" checked={draft.enhancementIds.includes(item.id)} onChange={() => patch({ enhancementIds: draft.enhancementIds.includes(item.id) ? draft.enhancementIds.filter(id => id !== item.id) : [...draft.enhancementIds, item.id] })} /><span>{item.name} · {money(item.price_gbp)}</span></label>)}</fieldset>}
     </details>
   </>
 }

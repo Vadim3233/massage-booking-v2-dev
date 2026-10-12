@@ -13,7 +13,7 @@ export function CopyValue({ label, value }) {
     catch { setMessage('Unable to copy. Please copy the displayed value manually.') }
   }
   const copied = message === 'Copied'
-  return <div className="copy-row"><dt>{label}</dt><dd><span className="copy-value">{value}</span> <button type="button" className="btn--small copy-button" aria-label={`Copy ${label.toLowerCase()}`} onClick={copy}><Icon name={copied ? 'tick' : 'copy'} size={16} />{copied ? 'Copied' : 'Copy'}</button><small role="status" className={message && !copied ? 'copy-failed' : 'sr-only'}>{message}</small></dd></div>
+  return <div className="copy-row"><dt>{label}</dt><dd><span className="copy-value">{value}</span> <button type="button" className="btn--small copy-button" aria-label={`${copied ? 'Copied' : 'Copy'} ${label.toLowerCase()}`} onClick={copy}><Icon name={copied ? 'tick' : 'copy'} size={16} />{copied ? 'Copied' : 'Copy'}</button><small role="status" className={message && !copied ? 'copy-failed' : 'sr-only'}>{message}</small></dd></div>
 }
 export default function BankDetails({ bank, reference }) {
   return <>

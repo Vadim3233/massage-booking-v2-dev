@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { dayParts } from '../booking/dateStrip.js'
 import Icon from '../../ui/icons.jsx'
 import { supabase } from '../../lib/supabase.js'
 import { useClientAuth } from '../auth/useClientAuth.js'
@@ -18,6 +19,7 @@ const STATUS_TEXT = {
 const CHIP = {
   awaiting_transfer: 'needs', awaiting_payment_verification: 'wait', awaiting_cash_approval: 'wait', confirmed: 'ok', completed: 'done', cancelled: 'cancel', no_show: 'noshow',
 }
+const HEADING = { ...STATUS_TEXT, confirmed: 'Your appointment is confirmed', completed: 'Your appointment is complete', cancelled: 'Your appointment is cancelled', no_show: 'This appointment was missed' }
 const OPEN = ['awaiting_transfer', 'awaiting_payment_verification', 'awaiting_cash_approval', 'confirmed']
 const londonStamp = value => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
 
@@ -55,7 +57,7 @@ function CancelPanel({ booking, terms, done, back, refresh }) {
     finally { setBusy(false) }
   }
   return <form className="panel" onSubmit={submit}>
-    <h2>Cancel this appointment?</h2>
+    <h2 tabIndex={-1}>Cancel this appointment?</h2>
     <Terms terms={terms} action="cancel" />
     <label>Anything you would like me to know? (optional)<textarea maxLength={500} value={reason} disabled={busy} onChange={event => setReason(event.target.value)} /></label>
     {fee > 0 && <label className="check"><input type="checkbox" checked={agreed} disabled={busy} onChange={event => setAgreed(event.target.checked)} />I understand a late fee of {money(fee)} will apply.</label>}
@@ -76,7 +78,7 @@ function ReschedulePanel({ booking, terms, rules, done, back, refresh }) {
   const fee = Number(terms.reschedule_fee_gbp)
   async function submit(event) {
     event.preventDefault()
-    if (busy || !chosen) return
+    if (busy || !chosen || (fee > 0 && !agreed)) return
     setBusy(true); setError('')
     const key = JSON.stringify([booking.id, chosen.date, chosen.start, fee])
     if (request.current?.key !== key) request.current = { key, id: crypto.randomUUID() }
@@ -85,10 +87,11 @@ function ReschedulePanel({ booking, terms, rules, done, back, refresh }) {
     finally { setBusy(false) }
   }
   return <form className="panel" onSubmit={submit}>
-    <h2>Choose a new time</h2>
+    <h2 tabIndex={-1}>Choose a new time</h2>
     <Terms terms={terms} action="reschedule" />
     <DayTimePicker key={booking.id} horizonDays={rules.horizonDays} dateLabel="New date" loadDay={(date) => accountApi.availability(booking.id, date)}
       selected={chosen} onPick={(date, start) => { setChosen({ date, start }); setError('') }} emptyMessage="There are no times on that day. Please try another date." />
+    {chosen && <p className="account-note" role="status">New time: <strong>{dayParts(chosen.date).long}, {timeLabel(chosen.start)}–{timeLabel(chosen.start + booking.treatment_duration_minutes)}</strong></p>}
     {fee > 0 && <label className="check"><input type="checkbox" checked={agreed} disabled={busy} onChange={event => setAgreed(event.target.checked)} />I understand a late fee of {money(fee)} will apply.</label>}
     {error && <p role="alert" className="error">{error}</p>}
     <div className="actions">
@@ -105,6 +108,12 @@ function Manage({ id, rules, close, changed }) {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [reload, setReload] = useState(0)
+  // Opening the cancel or change form, and coming back from it, moves the reader to what is now on screen.
+  const shown = useRef(false)
+  useEffect(() => {
+    if (shown.current) setTimeout(() => document.querySelector(mode === 'view' ? '.booking-main h1' : '.booking-main form h2')?.focus({ preventScroll: true }), 0)
+    shown.current = true
+  }, [mode])
   const load = useCallback(() => setReload(value => value + 1), [])
   useEffect(() => {
     let live = true
@@ -123,12 +132,12 @@ function Manage({ id, rules, close, changed }) {
   const owes = Number(booking.late_fee_due_gbp) > 0 && booking.late_fee_status === 'due'
   return <section>
     <button className="btn--quiet btn--small account-back" onClick={close}><Icon name="left" size={20} />Your bookings</button>
-    <h1 tabIndex={-1}>{STATUS_TEXT[booking.booking_status]}</h1>
-    {message && <p role="status" className="account-note">{message}</p>}
+    <h1 tabIndex={-1}>{HEADING[booking.booking_status]}</h1>
+    {message && <p role="alert" className="account-note">{message}</p>}
     {mode === 'view' && <>
       <BookingSummary booking={booking} />
       {owes && <p className="account-note account-note--fee">A late fee of {money(booking.late_fee_due_gbp)} is due for this appointment. I will be in touch about it.</p>}
-      {booking.booking_status === 'cancelled' && Number(booking.refund_due_gbp) > 0 && <p className="account-note">A refund of {money(booking.refund_due_gbp)} is on its way to you.</p>}
+      {booking.booking_status === 'cancelled' && Number(booking.refund_due_gbp) > 0 && <p className="account-note">A refund of {money(booking.refund_due_gbp)} is due to you. I'll send it soon.</p>}
       {open && terms?.can_change && <>
         <Terms terms={terms} action="reschedule" />
         <div className="actions"><button className="btn--primary" onClick={() => setMode('reschedule')}>Change the time</button><button className="btn--danger" onClick={() => setMode('cancel')}>Cancel appointment</button></div>
@@ -164,15 +173,22 @@ function BookingList({ open }) {
   </li>
   return <>
     <h2 className="section-title">Coming up</h2>
-    {upcoming.length ? <ul className="account-list">{upcoming.map(item)}</ul> : <p>You have no upcoming appointments. <a href="/">Book a treatment</a></p>}
-    {earlier.length > 0 && <><h2 className="section-title">Earlier</h2><ul className="account-list">{earlier.map(item)}</ul></>}
+    {upcoming.length ? <ul role="list" className="account-list">{upcoming.map(item)}</ul> : <p>You have no upcoming appointments. <a href="/">Book a treatment</a></p>}
+    {earlier.length > 0 && <><h2 className="section-title">Earlier</h2><ul role="list" className="account-list">{earlier.map(item)}</ul></>}
   </>
 }
 
 export default function AccountApp() {
-  useEffect(() => { const previous = document.title; document.title = 'Your bookings · VadMassage'; return () => { document.title = previous } }, [])
   const auth = useClientAuth(supabase)
   const [selected, setSelected] = useState(() => new URLSearchParams(window.location.search).get('booking'))
+  const opened = useRef(false)
+  useEffect(() => {
+    const before = document.title
+    document.title = `${selected ? 'Your appointment' : 'Your bookings'} · VadMassage`
+    if (opened.current) setTimeout(() => document.querySelector('.booking-main h1')?.focus({ preventScroll: true }), 0)
+    opened.current = true
+    return () => { document.title = before }
+  }, [selected])
   const [revision, setRevision] = useState(0)
   const rules = useBookingRules(supabase)
   function select(id) {

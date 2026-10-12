@@ -3,7 +3,7 @@ const listeners = new Set()
 let next = 1
 
 export function toast(text, options = {}) {
-  const item = { id: next++, text, tone: options.tone || 'ok', action: options.action || null, ms: options.ms ?? (options.tone === 'error' ? 8000 : 4000) }
+  const item = { id: next++, text, tone: options.tone || 'ok', action: options.action || null, ms: options.ms ?? (options.tone === 'error' ? 8000 : options.action ? 10000 : 4000) }
   listeners.forEach(listener => listener(item))
   return item.id
 }

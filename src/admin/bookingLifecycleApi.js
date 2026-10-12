@@ -31,7 +31,7 @@ function failure(error) {
   const known = SAFE_MESSAGES.has(error.message)
   const conflict = CONFLICT_CODES.includes(error.code) && !known
   const result = new Error(known ? error.message
-    : conflict ? 'This booking changed before the action was completed. Refreshing its current status.'
+    : conflict ? 'This booking changed before you could finish, so it has been reloaded. Please check it and try again.'
       : 'Could not complete the action. Refresh the booking before trying again.')
   result.conflict = conflict
   return result

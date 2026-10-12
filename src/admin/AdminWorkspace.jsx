@@ -106,8 +106,23 @@ export default function AdminWorkspace({ signOut, ownerId }) {
     window.scrollTo(0, 0)
   }
   const moreSurface = ['/admin/more', ...SETTINGS_PAGES].includes(surface)
+  const screen = creating ? 'New booking' : match ? 'Booking' : profile ? 'Client' : ({ '/admin': 'Day', '/admin/agenda': 'Agenda', '/admin/review': 'To check', '/admin/alerts': 'Alerts', '/admin/clients': 'Clients', '/admin/more': 'More', '/admin/waitlist': 'Waitlist', '/admin/schedule': 'Working hours' }[surface] || (SETTINGS_PAGES.includes(surface) ? 'Settings' : 'Admin'))
+  const previousScreen = useRef(null)
+  useEffect(() => {
+    document.title = `${screen} \u00b7 Admin \u00b7 VadMassage`
+    const before = previousScreen.current
+    previousScreen.current = screen
+    if (before === null || before === screen || before === 'Booking' || screen === 'Booking') return
+    const focusHeading = (tries = 0) => {
+      const heading = document.querySelector('#admin-main h1')
+      if (heading) { heading.setAttribute('tabindex', '-1'); heading.focus({ preventScroll: true }) }
+      else if (tries < 30) requestAnimationFrame(() => focusHeading(tries + 1))
+    }
+    focusHeading()
+  }, [screen])
   const needsYou = toCheck.needs.length
   return <>
+    <a className="skip-link" href="#admin-main">Skip to the page</a>
     {!creating && <nav inert={Boolean(match)} className="admin-primary-nav" aria-label="Admin navigation">
       <AdminLink href="/admin" navigate={navigate} aria-current={calendarSurface ? 'page' : undefined}><Icon name="calendar" /><span>Calendar</span></AdminLink>
       <AdminLink href="/admin/review" navigate={navigate} aria-current={surface === '/admin/review' ? 'page' : undefined}><Icon name="check" /><span>To check</span>{needsYou > 0 && <small className="admin-badge admin-badge--needs" aria-label={`${needsYou} to check`}>{needsYou > 99 ? '99+' : needsYou}</small>}</AdminLink>
@@ -116,7 +131,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       <AdminLink href="/admin/more" navigate={navigate} aria-current={moreSurface ? 'page' : undefined}><Icon name="more" filled /><span>More</span></AdminLink>
     </nav>}
     <Suspense fallback={<div className="skeleton-rows" role="status" aria-label="Loading Admin"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>}>
-      <div className="admin-content" inert={Boolean(match)}>
+      <main id="admin-main" className="admin-content" inert={Boolean(match)}>
       {calendarSurface && <nav className="admin-calendar-views" aria-label="Calendar views">
         <AdminLink href="/admin/day" navigate={navigate} aria-current={surface === '/admin' ? 'page' : undefined}>Day</AdminLink>
         <AdminLink href="/admin/agenda" navigate={navigate} aria-current={surface === '/admin/agenda' ? 'page' : undefined}>Agenda</AdminLink>
@@ -142,7 +157,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {surface === '/admin/settings/welcome' && <WelcomeSettings />}
       {surface === '/admin/waitlist' && <Waitlist bookFor={request => newBooking(request.requested_date, request.client_id)} />}
       {!creating && !match && !['/admin', '/admin/agenda', '/admin/review', '/admin/alerts', '/admin/more', '/admin/clients', ...SETTINGS_PAGES].includes(surface) && !profile && <section className="admin-review"><h1>Admin page not found</h1><a href="/admin">Back to Calendar</a></section>}
-      </div>
+      </main>
       {match && <BookingDestination key={match[1]} id={match[1]} close={close} returnFocus={opener} changed={() => setRevision(value => value + 1)} />}
     </Suspense>
     {calendarSurface && !match && <button className={`btn btn--primary btn--lg admin-fab ${fabCompact ? 'is-compact' : ''}`} onClick={() => newBooking((surface === '/admin' && viewedDay.current) || date || today())}><span className="fab-plus">+</span><span className="fab-label"> New booking</span></button>}
