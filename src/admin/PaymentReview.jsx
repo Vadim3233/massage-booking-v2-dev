@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { clientName, dateLabel, label, money, sessionSummary, time } from './calendarPresentation.js'
 import { loadReviewResource, paymentReviewApi } from './paymentReviewApi.js'
 import PaymentActions from './PaymentActions.jsx'
+import { useReturnRefresh } from './useReturnRefresh.js'
 import Icon from '../ui/icons.jsx'
 
 const NEEDS_YOU = ['awaiting_verification', 'awaiting_approval']
@@ -28,13 +29,15 @@ export default function PaymentReview({ openBooking, revision }) {
   useEffect(() => {
     let live = true
     const version = ++readVersion.current
-    loadReviewResource(`queue:${offset}:${revision}`, () => paymentReviewApi.queue(offset), 3000).then(data => { if (live && version === readVersion.current) { setResult({ offset, attempt, revision, ...data }); setError('') } }, () => { if (live && version === readVersion.current) setError('Could not load payment reviews. Please retry.') })
+    loadReviewResource(`queue:${offset}:${revision}`, () => paymentReviewApi.queue(offset), 3000).then(data => { if (live && version === readVersion.current) { setResult({ offset, ...data }); setError('') } }, () => { if (live && version === readVersion.current) setError('Could not load payment reviews. Please retry.') })
     return () => { live = false }
   }, [offset, attempt, revision])
-  const current = result?.offset === offset && result?.attempt === attempt && result?.revision === revision ? result : null
+  useReturnRefresh(useCallback(() => setAttempt(value => value + 1), []))
+  // The page on show stays while it is read again.
+  const current = result?.offset === offset ? result : null
   async function refresh() {
     const version = ++readVersion.current
-    try { const data = await paymentReviewApi.queue(offset); if (version === readVersion.current) { setResult({ offset, attempt, revision, ...data }); setError('') } }
+    try { const data = await paymentReviewApi.queue(offset); if (version === readVersion.current) { setResult({ offset, ...data }); setError('') } }
     catch (error) { if (version === readVersion.current) setError(error.message); throw error }
   }
   const needs = current ? current.bookings.filter(booking => NEEDS_YOU.includes(booking.booking_payments.status)) : []

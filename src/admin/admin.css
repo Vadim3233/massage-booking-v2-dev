@@ -27,7 +27,6 @@
 
 /* ---------- Agenda ---------- */
 .admin-agenda { padding: 8px 16px 16px; }
-.admin-agenda-heading { display: flex; align-items: center; justify-content: flex-end; gap: 8px; min-height: 8px; }
 .admin-agenda-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 0 6px; }
 .admin-agenda-actions .btn--quiet { min-height: 40px; font-size: 14px; }
 .admin-agenda-days { margin: 0; }
@@ -53,7 +52,8 @@
 .admin-tocheck li strong { font-size: 16px; }
 .admin-tocheck li .when { grid-column: 1; color: var(--ink-soft); font-size: 14px; }
 .admin-tocheck li .admin-payment-actions { grid-column: 2; grid-row: 1 / span 2; }
-.admin-tocheck .more { display: inline-flex; margin-top: 10px; font-weight: 600; color: #3f2700; }
+.admin-tocheck-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.admin-tocheck-head .more { display: inline-flex; align-items: center; min-height: 44px; margin: -14px -6px -14px 0; padding: 0 6px; font-weight: 600; color: #3f2700; }
 
 /* ---------- Day and agenda rows ---------- */
 .admin-timeline { list-style: none; padding: 0; margin: 0; }

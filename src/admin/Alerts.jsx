@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { alertsApi, bookingIdFromLink, groupAlerts } from './alertsApi.js'
+import { useReturnRefresh } from './useReturnRefresh.js'
 
 const when = value => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
 
@@ -12,6 +13,7 @@ export default function Alerts({ openBooking, openPage, changed, api = alertsApi
     api.list().then(list => { if (live) { setAlerts(list); setError('') } }, failure => { if (live) setError(failure.message) })
     return () => { live = false }
   }, [api, attempt])
+  useReturnRefresh(useCallback(() => setAttempt(value => value + 1), []))
   async function markAll() {
     try { await api.markRead(null); setAttempt(value => value + 1); changed() } catch (failure) { setError(failure.message) }
   }

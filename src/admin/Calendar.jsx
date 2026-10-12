@@ -1,19 +1,23 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { createCalendarApi } from './calendarApi.js'
+import { useReturnRefresh } from './useReturnRefresh.js'
 import { bookingState, clientName, dateLabel, dayTimeline, money, postcode, sessionSummary, shiftDate, time, today } from './calendarPresentation.js'
 const BlockDialog = lazy(() => import('./BlockDialog.jsx'))
 const api = createCalendarApi(supabase)
-// One owner for all Calendar reads, including StrictMode's repeated mount effect.
+// One owner for all Calendar reads, including StrictMode's repeated mount effect. A later change or refresh is a new read.
 let inFlight
-function load(date) {
-  if (inFlight?.date === date) return inFlight.promise
+function load(date, version) {
+  const key = `${date}:${version}`
+  if (inFlight?.key === key) return inFlight.promise
   const promise = api.loadCalendarRange(date, shiftDate(date, 1)).finally(() => { if (inFlight?.promise === promise) inFlight = null })
-  inFlight = { date, promise }; return promise
+  inFlight = { key, promise }; return promise
 }
 export default function Calendar({ signOut, openBooking, revision, initialDate, onDate }) {
   const [date, setDate] = useState(() => initialDate || today())
-  const [result, setResult] = useState(null)
+  // The day last read stays on screen while it is read again, so a change never blanks the page or loses the place.
+  const [loaded, setLoaded] = useState(null)
+  const [failure, setFailure] = useState(null)
   const [attempt, setAttempt] = useState(0)
   const [now, setNow] = useState(Date.now)
   const [headerHidden, setHeaderHidden] = useState(false)
@@ -37,11 +41,12 @@ export default function Calendar({ signOut, openBooking, revision, initialDate, 
   }, [])
   useEffect(() => {
     let live = true
-    load(date).then(data => { if (live) setResult({ date, attempt, revision, data }) }, error => { if (live) setResult({ date, attempt, revision, error: error.message }) })
+    load(date, `${attempt}:${revision}`).then(data => { if (live) { setLoaded({ date, data }); setFailure(null) } }, error => { if (live) setFailure({ date, message: error.message }) })
     return () => { live = false }
   }, [date, attempt, revision])
-  const current = result?.date === date && result?.attempt === attempt && result?.revision === revision ? result : null
-  const data = current?.data
+  useReturnRefresh(useCallback(() => setAttempt(value => value + 1), []))
+  const data = loaded?.date === date ? loaded.data : null
+  const failed = failure?.date === date
   const timeline = data && dayTimeline(data, date, now)
   function navigate(value) { if (!value) return; setDate(value); setHeaderHidden(false) }
   return <>
@@ -70,8 +75,8 @@ export default function Calendar({ signOut, openBooking, revision, initialDate, 
     <section className="admin-day" aria-label="Day appointments">
       <h1 className="admin-sr-only">Appointments for {dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h1>
       <p className="admin-day-caption">London time</p>
-      {!current && <div className="skeleton-rows" role="status" aria-label="Loading calendar"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>}
-      {current?.error && <><p role="alert">Could not load calendar. Please check your connection and try again.</p><button onClick={() => setAttempt(value => value + 1)}>Retry calendar</button></>}
+      {!data && !failed && <div className="skeleton-rows" role="status" aria-label="Loading calendar"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>}
+      {failed && <div role="alert" className="error"><p>{data ? 'Could not refresh the calendar just now.' : 'Could not load calendar. Please check your connection and try again.'}</p><button className="btn--small" onClick={() => setAttempt(value => value + 1)}>{data ? 'Try again' : 'Retry calendar'}</button></div>}
       {data && <>
         <p className="admin-working-hours">{timeline.hours?.available ? `Working hours ${time(timeline.hours.start_minutes)}–${time(timeline.hours.end_minutes)}` : 'Not a working day'}</p>
         {!data.bookings.length && <p className="admin-day-note">No appointments for this day.</p>}

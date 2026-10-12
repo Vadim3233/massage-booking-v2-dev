@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { createCalendarApi } from './calendarApi.js'
 import PaymentActions from './PaymentActions.jsx'
-import Icon from '../ui/icons.jsx'
+import { useReturnRefresh } from './useReturnRefresh.js'
 import { bookingState, clientName, dateLabel, dayHeading, money, nextUp, postcode, sessionSummary, shiftDate, time, today } from './calendarPresentation.js'
 
 const api = createCalendarApi(supabase)
@@ -14,6 +14,16 @@ function loadRange(start, end) {
   const key = `${start}:${end}`
   if (!pending.has(key)) pending.set(key, api.loadAgendaRange(start, end).finally(() => pending.delete(key)))
   return pending.get(key)
+}
+
+// A read is limited to 31 days, so whatever is on show is read again a month at a time.
+function loadSpan(start, end) {
+  const parts = []
+  for (let from = start; from < end; from = shiftDate(from, CHUNK_DAYS)) {
+    const to = shiftDate(from, CHUNK_DAYS)
+    parts.push(loadRange(from, to < end ? to : end))
+  }
+  return Promise.all(parts).then(lists => lists.flat())
 }
 
 function groupByDate(bookings) {
@@ -35,76 +45,88 @@ function withToday(groups, start) {
   return index === -1 ? [...groups, empty] : [...groups.slice(0, index), empty, ...groups.slice(index)]
 }
 
+// What a day is worth, from the appointments that are going ahead.
+const dayTotal = bookings => bookings.filter(booking => booking.booking_status !== 'cancelled').reduce((sum, booking) => sum + Number(booking.total_gbp || 0), 0)
+
 // What needs the Admin, first thing: declared transfers and cash requests, each one tap and a confirmation away.
 function ToCheck({ toCheck, checked, seeAll }) {
   if (!toCheck?.needs.length) return null
   const shown = toCheck.needs.slice(0, 2)
   const count = toCheck.needs.length
   return <section className="admin-tocheck" aria-labelledby="tocheck-title">
-    <p className="eyebrow">Needs you</p>
+    <div className="admin-tocheck-head">
+      <p className="eyebrow">Needs you</p>
+      {count > shown.length && <button className="btn--quiet admin-link-button more" onClick={seeAll}>See all {count}</button>}
+    </div>
     <h2 id="tocheck-title">{count} {count === 1 ? 'payment' : 'payments'} to check · {money(toCheck.total)}</h2>
     <ul role="list">{shown.map(booking => <li key={booking.id}>
       <strong>{clientName(booking)}</strong>
       <span className="when">{dateLabel(booking.date)} · {time(booking.start_minutes)} · {booking.booking_payments.method === 'cash' ? 'Cash request' : 'Bank transfer'} · {money(booking.total_gbp)}</span>
       <PaymentActions booking={booking} refresh={checked} only={['verify', 'approve']} compact />
     </li>)}</ul>
-    {count > shown.length && <button className="btn--quiet admin-link-button more" onClick={seeAll}>See all {count}</button>}
   </section>
 }
 
 export default function Agenda({ openBooking, revision, toCheck, checked, seeAll }) {
-  const [result, setResult] = useState(null)
+  // What is on screen stays on screen while it is read again, so nothing flashes and the scroll position holds.
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
   const [paging, setPaging] = useState(null)
-  const [pagingError, setPagingError] = useState(null)
+  const [pagingError, setPagingError] = useState('')
   const [lastChunk, setLastChunk] = useState(1)
-  const readVersion = useRef(0)
+  const shown = useRef(null)
   const sentinel = useRef(null)
+  useEffect(() => { shown.current = data ? { start: data.start, end: data.end } : null }, [data])
 
   useEffect(() => {
     let live = true
-    const version = ++readVersion.current
-    const start = today()
-    const end = shiftDate(start, CHUNK_DAYS)
-    loadRange(start, end).then(bookings => {
-      if (live && version === readVersion.current) { setResult({ start, end, attempt, revision, bookings }); setLastChunk(bookings.length || 1) }
-    }, error => {
-      if (live && version === readVersion.current) setResult({ start, end, attempt, revision, error: error.message, bookings: [] })
+    // Read again whatever range is on show (it may have been scrolled further than the first month).
+    const first = !shown.current
+    const start = shown.current?.start ?? today()
+    const end = shown.current?.end ?? shiftDate(today(), CHUNK_DAYS)
+    loadSpan(start, end).then(bookings => {
+      if (!live) return
+      // More was scrolled into view while this was being read: the range on show has moved, so read it again.
+      if (shown.current && (shown.current.start !== start || shown.current.end !== end)) { setAttempt(value => value + 1); return }
+      setData({ start, end, bookings })
+      if (first) setLastChunk(bookings.length || 1)
+      setError('')
+    }, failure => {
+      if (live) setError(failure.message)
     })
     return () => { live = false }
   }, [attempt, revision])
+  useReturnRefresh(useCallback(() => setAttempt(value => value + 1), []))
 
-  const current = result?.attempt === attempt && result?.revision === revision ? result : null
-  const groups = current && !current.error ? withToday(groupByDate(current.bookings), current.start) : []
-  const upNext = current && !current.error ? nextUp(current.bookings) : null
+  const groups = data ? withToday(groupByDate(data.bookings), data.start) : []
+  const upNext = data ? nextUp(data.bookings) : null
 
   async function extend(direction) {
-    if (!current || current.error || paging) return
-    const version = ++readVersion.current
-    const start = direction === 'older' ? shiftDate(current.start, -CHUNK_DAYS) : current.end
-    const end = direction === 'older' ? current.start : shiftDate(current.end, CHUNK_DAYS)
+    if (!data || paging) return
+    const start = direction === 'older' ? shiftDate(data.start, -CHUNK_DAYS) : data.end
+    const end = direction === 'older' ? data.start : shiftDate(data.end, CHUNK_DAYS)
     setPaging(direction)
-    setPagingError(null)
+    setPagingError('')
     try {
       const bookings = await loadRange(start, end)
-      if (version !== readVersion.current) return
       if (direction === 'newer') setLastChunk(bookings.length)
-      setResult(previous => {
-        if (!previous || previous.attempt !== attempt || previous.revision !== revision) return previous
+      setData(previous => {
+        if (!previous) return previous
         return direction === 'older'
           ? { ...previous, start, bookings: [...bookings, ...previous.bookings] }
           : { ...previous, end, bookings: [...previous.bookings, ...bookings] }
       })
     } catch {
-      if (version === readVersion.current) setPagingError({ key: `${attempt}:${revision}`, message: 'Could not load more appointments. Please retry.' })
+      setPagingError('Could not load more appointments. Please retry.')
     } finally {
-      if (version === readVersion.current) setPaging(null)
+      setPaging(null)
     }
   }
 
   // Keep scrolling: the next month loads as the end of the list comes into view, for as long as it is likely to hold something.
-  const horizonDays = current ? Math.round((Date.parse(current.end) - Date.parse(today())) / 86400000) : 0
-  const canAutoLoad = Boolean(current) && !current.error && !paging && !pagingError && horizonDays < AUTO_LOAD_UNTIL_DAYS && (lastChunk > 0 || horizonDays < 62)
+  const horizonDays = data ? Math.round((Date.parse(data.end) - Date.parse(today())) / 86400000) : 0
+  const canAutoLoad = Boolean(data) && !paging && !pagingError && horizonDays < AUTO_LOAD_UNTIL_DAYS && (lastChunk > 0 || horizonDays < 62)
   useEffect(() => {
     const node = sentinel.current
     if (!node || !canAutoLoad || typeof IntersectionObserver === 'undefined') return undefined
@@ -113,28 +135,26 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
     return () => observer.disconnect()
     // extend closes over the current range and is recreated with it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canAutoLoad, current?.end, paging])
+  }, [canAutoLoad, data?.end, paging])
 
   return <section className="admin-agenda" aria-labelledby="agenda-title">
-    <header className="admin-agenda-heading">
-      <h1 id="agenda-title" className="admin-sr-only">Agenda</h1>
-      <button className="btn--quiet btn--icon" aria-label="Refresh agenda" title="Refresh agenda" onClick={() => setAttempt(value => value + 1)}><Icon name="refresh" size={22} /></button>
-    </header>
+    <h1 id="agenda-title" className="sr-only">Agenda</h1>
 
-    {!current && <div className="skeleton-rows" role="status"><span className="admin-sr-only">Loading agenda…</span><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>}
-    {current?.error && <><p role="alert">Could not load the agenda. Please check your connection and try again.</p><button onClick={() => setAttempt(value => value + 1)}>Retry agenda</button></>}
+    {!data && !error && <div className="skeleton-rows" role="status"><span className="sr-only">Loading agenda…</span><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>}
+    {error && <div role="alert" className="error"><p>{data ? 'Could not refresh the agenda just now.' : 'Could not load the agenda. Please check your connection and try again.'}</p><button className="btn--small" onClick={() => setAttempt(value => value + 1)}>Try again</button></div>}
 
-    {current && !current.error && <>
+    {data && <>
       <ToCheck toCheck={toCheck} checked={checked} seeAll={seeAll} />
-      <div className="admin-agenda-actions"><button className="btn--quiet btn--small admin-agenda-earlier" disabled={Boolean(paging)} onClick={() => extend('older')}>{paging === 'older' ? 'Loading earlier…' : 'Load earlier appointments'}</button></div>
+      <div className="admin-agenda-actions"><button className="btn--quiet btn--small admin-agenda-earlier" disabled={Boolean(paging)} onClick={() => extend('older')}>{paging === 'older' ? 'Loading earlier…' : 'Earlier appointments'}</button></div>
       <div className="admin-agenda-days">
         {groups.map(group => {
           const heading = dayHeading(group.date)
           const full = dateLabel(group.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+          const total = dayTotal(group.bookings)
           return <section className={`admin-agenda-day ${group.date === today() ? 'is-today' : ''}`} key={group.date} aria-labelledby={`agenda-${group.date}`}>
             <header className="admin-agenda-day-heading">
               <h2 id={`agenda-${group.date}`}><span className="day-name">{heading.name}</span>{heading.rest ? ` · ${heading.rest}` : ''}</h2>
-              <span>{group.bookings.length ? `${group.bookings.length} ${group.bookings.length === 1 ? 'booking' : 'bookings'}` : 'Free'}</span>
+              <span>{group.bookings.length ? `${group.bookings.length} ${group.bookings.length === 1 ? 'booking' : 'bookings'}${total > 0 ? ` · ${money(total)}` : ''}` : 'Free'}</span>
             </header>
             {!group.bookings.length && <p className="admin-agenda-empty"><strong>A free day.</strong>Nothing is booked.</p>}
             {group.bookings.length > 0 && <ol role="list" className="admin-timeline" aria-label={`Appointments for ${full}`}>
@@ -154,10 +174,10 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
           </section>
         })}
       </div>
-      {pagingError?.key === `${attempt}:${revision}` && <p role="alert">{pagingError.message}</p>}
+      {pagingError && <p role="alert" className="error">{pagingError}</p>}
       <div ref={sentinel} className="admin-agenda-sentinel" aria-hidden="true" />
       <button className="admin-agenda-load btn--quiet" disabled={Boolean(paging)} onClick={() => extend('newer')}>{paging === 'newer' ? 'Loading more…' : 'Load more upcoming appointments'}</button>
-      <p className="admin-agenda-range">Showing {dateLabel(current.start, { day: 'numeric', month: 'short', year: 'numeric' })} to {dateLabel(shiftDate(current.end, -1), { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+      <p className="admin-agenda-range">Showing {dateLabel(data.start, { day: 'numeric', month: 'short', year: 'numeric' })} to {dateLabel(shiftDate(data.end, -1), { day: 'numeric', month: 'short', year: 'numeric' })}</p>
     </>}
   </section>
 }
