@@ -90,10 +90,24 @@ test('cash is an explicit request awaiting approval', async ({ page }) => {
   await expect(page.getByRole('alert')).toContainText('Please tick the box')
   await expect(page.getByLabel('I understand the payment and cancellation terms.')).toBeFocused()
   await expect(page.getByRole('heading', { name: /Paying by/ })).toBeVisible()
+  // The reminder belongs to the press that caused it: switching method clears it, and it does not come back by itself.
+  await page.getByRole('button', { name: 'Back to bank transfer', exact: true }).click()
+  await expect(page.getByRole('alert')).toHaveCount(0)
+  await page.getByRole('button', { name: "I'd like to pay cash", exact: true }).click()
+  await expect(page.getByRole('alert')).toHaveCount(0)
   await page.getByLabel('I understand the payment and cancellation terms.').check()
   await expect(page.getByRole('alert')).toHaveCount(0)
   await page.getByRole('button', { name: 'Confirm cash booking', exact: true }).click()
   await expect(page.getByText('Payment: Cash on arrival', { exact: true })).toBeVisible()
+})
+
+test('Back on the payment screen goes nowhere, says why, keeps the address true, and a way to change is there', async ({ page }) => {
+  await toPayment(page)
+  await page.goBack()
+  await expect(page.getByRole('heading', { name: 'One last step' })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('no going back')
+  expect(new URL(page.url()).searchParams.get('step')).toBe('6')
+  await expect(page.getByRole('link', { name: 'Change the time or cancel this booking' })).toHaveAttribute('href', /\/account\?booking=/)
 })
 
 test('real expired-hold rejection never shows a successful confirmation', async ({ page }) => {

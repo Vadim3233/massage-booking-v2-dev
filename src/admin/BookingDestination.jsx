@@ -25,6 +25,6 @@ export default function BookingDestination({ id, close, changed, returnFocus }) 
   return <BookingDetails booking={booking} close={close} returnFocus={returnFocus} payment={<>
     <p className="admin-next-status">{label(booking.booking_payments?.method)} · {label(booking.booking_payments?.status)}</p>
     {error ? <p role="alert">{error}</p> : <PaymentActions booking={booking} refresh={refresh} />}
-    <button className="btn--quiet btn--small" onClick={() => setAttempt(value => value + 1)}>Refresh booking</button>
+    <button className="btn--quiet btn--small" onClick={() => setAttempt(value => value + 1)}>Check for changes</button>
   </>} lifecycle={error ? null : <BookingActions booking={booking} refresh={refresh} />} />
 }

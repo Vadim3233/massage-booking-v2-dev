@@ -32,6 +32,17 @@ function londonNow(now) {
 // The appointment that is happening now, or else the next one that is going ahead (not cancelled, finished or missed).
 // Bookings are given in date and time order, as the agenda has them.
 const GOING_AHEAD = ['confirmed', 'awaiting_payment_verification', 'awaiting_cash_approval', 'awaiting_transfer']
+// What a day is worth: the appointments going ahead or done. A cancellation and a no-show are not worth their price.
+const WORTH_NOTHING = ['cancelled', 'no_show']
+const dayTotal = bookings => bookings.filter(booking => !WORTH_NOTHING.includes(booking.booking_status)).reduce((sum, booking) => sum + Number(booking.total_gbp || 0), 0)
+// What a day's heading says: how many appointments are going ahead, and what they come to.
+export function daySummary(bookings) {
+  if (!bookings.length) return 'Free'
+  const live = bookings.filter(booking => booking.booking_status !== 'cancelled')
+  if (!live.length) return 'All cancelled'
+  const total = dayTotal(bookings)
+  return `${live.length} ${live.length === 1 ? 'booking' : 'bookings'}${total > 0 ? ` · ${money(total)}` : ''}`
+}
 export function nextUp(bookings, now = new Date()) {
   const { date, minutes } = londonNow(now)
   const live = bookings.filter(booking => GOING_AHEAD.includes(booking.booking_status))

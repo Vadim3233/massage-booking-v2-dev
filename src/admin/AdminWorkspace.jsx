@@ -31,6 +31,8 @@ const MORE_GROUPS = [
   ['What clients read', [['/admin/settings/welcome', 'Welcome message']]],
 ]
 const SETTINGS_PAGES = MORE_GROUPS.flatMap(([, links]) => links.map(([path]) => path))
+// Each settings page is named in the tab and read out first by its own name, not as "Settings".
+const SETTINGS_TITLES = Object.fromEntries(MORE_GROUPS.flatMap(([, links]) => links))
 const plainClick = event => !event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0
 function AdminLink({ href, navigate, children, ...rest }) {
   return <a href={href} onClick={event => { if (plainClick(event)) { event.preventDefault(); navigate(href) } }} {...rest}>{children}</a>
@@ -99,7 +101,9 @@ export default function AdminWorkspace({ signOut, ownerId }) {
   function created(result) {
     guard.current = null
     setRevision(value => value + 1)
-    const background = `/admin?date=${result.date}`
+    // The booking opens over the page she started from: the Agenda or the client's page, or else the day it is on.
+    const startedFrom = route.returnTo
+    const background = startedFrom === '/admin/agenda' || startedFrom?.startsWith('/admin/clients/') ? startedFrom : `/admin?date=${result.date}`
     window.history.replaceState({}, '', background)
     window.history.pushState({ adminBackground: background }, '', `/admin/bookings/${result.booking_id}`)
     setOpener(null)
@@ -107,7 +111,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
     window.scrollTo(0, 0)
   }
   const moreSurface = ['/admin/more', ...SETTINGS_PAGES].includes(surface)
-  const screen = creating ? 'New booking' : match ? 'Booking' : profile ? 'Client' : ({ '/admin': 'Day', '/admin/agenda': 'Agenda', '/admin/review': 'To check', '/admin/alerts': 'Alerts', '/admin/clients': 'Clients', '/admin/more': 'More', '/admin/waitlist': 'Waitlist', '/admin/schedule': 'Working hours' }[surface] || (SETTINGS_PAGES.includes(surface) ? 'Settings' : 'Admin'))
+  const screen = creating ? 'New booking' : match ? 'Booking' : profile ? 'Client' : ({ '/admin': 'Day', '/admin/agenda': 'Agenda', '/admin/review': 'To check', '/admin/alerts': 'Alerts', '/admin/clients': 'Clients', '/admin/more': 'More', '/admin/waitlist': 'Waitlist', '/admin/schedule': 'Working hours' }[surface] || (SETTINGS_PAGES.includes(surface) ? SETTINGS_TITLES[surface] : 'Admin'))
   const previousScreen = useRef(null)
   useEffect(() => {
     document.title = `${screen} \u00b7 Admin \u00b7 VadMassage`
@@ -140,7 +144,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {surface === '/admin' && <Calendar key={date || 'today'} initialDate={date} signOut={signOut} openBooking={openBooking} revision={revision} onDate={rememberDay} />}
       {surface === '/admin/agenda' && <Agenda openBooking={openBooking} revision={revision} toCheck={toCheck} checked={() => { setRevision(value => value + 1); refreshToCheck() }} seeAll={() => navigate('/admin/review')} />}
       {creating && <AdminNewBooking initialDate={date} initialClientId={clientParam} ownerId={ownerId} registerGuard={registerGuard} onCancel={() => navigate(route.returnTo || '/admin')} onCreated={created} />}
-      {surface === '/admin/review' && <PaymentReview openBooking={openBooking} revision={revision} />}
+      {surface === '/admin/review' && <PaymentReview openBooking={openBooking} revision={revision} changed={refreshToCheck} />}
       {surface === '/admin/clients' && <Clients openClient={id => navigate(`/admin/clients/${id}`)} />}
       {profile && <ClientProfile key={profile[1]} id={profile[1]} back={() => navigate('/admin/clients')} openBooking={openBooking} newBooking={clientId => newBooking(today(), clientId)} />}
       {surface === '/admin/alerts' && <Alerts openBooking={openBooking} openPage={path => navigate(path)} changed={refreshAlerts} />}

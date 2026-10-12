@@ -117,6 +117,7 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
   function edit(change) { if (!locked) { patch(change); setError('') } }
   function selectClient(client) {
     patch({ client, details: { ...emptyAddress } })
+    setError('')
     setAddressState({ clientId: client.id, addresses: [], loading: true, error: '' })
     setClientError('')
     api.addresses(client.id).then(addresses => {

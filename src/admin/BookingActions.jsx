@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { lifecycleActions, lifecycleApi, lifecycleLabels } from './bookingLifecycleApi.js'
+import { feeChoices, lifecycleActions, lifecycleApi, lifecycleLabels } from './bookingLifecycleApi.js'
 import { clientName, dateLabel, label, money, time, today } from './calendarPresentation.js'
 import { acquireBodyScrollLock } from './dialogScrollLock.js'
 import { toast } from '../ui/toast.js'
@@ -22,9 +22,14 @@ function Who({ value, onChange, disabled }) {
   </fieldset>
 }
 
+// What the sheet and the toast say once it is done: the outcome, not the name of the button that was pressed.
+const DONE = { complete: 'Marked completed', noShow: 'Marked no-show', reschedule: 'Booking moved', cancel: 'Booking cancelled', refund: 'Refund recorded', feeReceived: 'Fee recorded as received', feeWaive: 'Fee waived' }
+
 function ActionDialog({ kind, booking, api, close, done }) {
   const ref = useRef(null)
   const request = useRef(null)
+  // Set when she picks or types a fee, so a standard fee that arrives later never replaces it.
+  const feeTouched = useRef(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [initiatedBy, setInitiatedBy] = useState('client')
@@ -33,7 +38,6 @@ function ActionDialog({ kind, booking, api, close, done }) {
   const [standardFee, setStandardFee] = useState(null)
   const [slot, setSlot] = useState(null)
   const total = Number(booking.total_gbp)
-  const takesFee = kind === 'cancel' || kind === 'reschedule' || kind === 'noShow'
 
   useEffect(() => {
     const dialog = ref.current
@@ -49,10 +53,20 @@ function ActionDialog({ kind, booking, api, close, done }) {
     api.preview(booking.id, initiatedBy).then(value => {
       if (!live) return
       setStandardFee(value)
-      if (kind === 'cancel') setFee(String(value))
+      // The standard fee is only where she starts: it never replaces a fee she has already chosen.
+      if (kind === 'cancel' && !feeTouched.current) setFee(String(value))
     }, () => { if (live) setStandardFee(null) })
     return () => { live = false }
   }, [api, booking.id, kind, initiatedBy])
+
+  // Who is asking changes the standard fee, so it is looked up again; until it arrives no fee is chosen, so nothing old is carried over.
+  function changeWho(value) {
+    setInitiatedBy(value)
+    setStandardFee(null)
+    feeTouched.current = false
+    if (kind === 'cancel') setFee('')
+  }
+  function chooseFee(text) { feeTouched.current = true; setFee(text) }
 
   function input() {
     if (kind === 'cancel') return { reason: reason.trim() || null, initiatedBy, fee: fee === '' ? null : Number(fee) }
@@ -61,7 +75,8 @@ function ActionDialog({ kind, booking, api, close, done }) {
     return {}
   }
   const feeValid = fee === '' || (Number(fee) >= 0 && Number(fee) <= total)
-  const ready = (kind !== 'cancel' || feeValid) && (kind !== 'noShow' || feeValid) && (kind !== 'reschedule' || Boolean(slot))
+  // A cancellation never goes ahead on a fee she has not seen: either the standard fee has arrived or she chose one.
+  const ready = (kind !== 'cancel' || (feeValid && fee !== '')) && (kind !== 'noShow' || feeValid) && (kind !== 'reschedule' || Boolean(slot))
 
   async function submit(event) {
     event.preventDefault()
@@ -72,23 +87,17 @@ function ActionDialog({ kind, booking, api, close, done }) {
     if (request.current?.key !== key) request.current = { key, id: crypto.randomUUID() }
     try {
       await api.act(kind, booking, request.current.id, payload)
-      await done('Saved.')
+      await done(`${DONE[kind] || 'Saved'}.`)
     } catch (failure) {
       setError(failure.message)
       if (failure.conflict) await done(failure.message, true)
     } finally { setBusy(false) }
   }
 
-  // One tap for the usual answers: no fee, the standard fee, the full price. Anything else is typed.
-  const choices = []
-  if (takesFee && kind !== 'reschedule') {
-    choices.push([0, 'No fee'])
-    if (kind === 'cancel' && standardFee > 0 && standardFee < total) choices.push([standardFee, `Standard fee ${money(standardFee)}`])
-    if (total > 0) choices.push([total, `Full price ${money(total)}`])
-  }
+  const choices = feeChoices(kind, total, standardFee)
   // A no-show with nothing typed means the full price.
   const shownFee = fee === '' ? (kind === 'noShow' ? total : null) : Number(fee)
-  const refundNote = kind === 'cancel' && booking.booking_payments?.status === 'paid' && feeValid
+  const refundNote = kind === 'cancel' && booking.booking_payments?.status === 'paid' && feeValid && fee !== ''
     ? `Payment of ${money(booking.booking_payments.amount_gbp)} has been received. ${money(Math.max(Number(booking.booking_payments.amount_gbp) - Number(fee || 0), 0))} will be recorded as a refund due.` : ''
   const lateFeeNote = kind === 'reschedule' && initiatedBy === 'client' && booking.late_fee_status === 'none' && standardFee > 0
     ? `A late fee of ${money(standardFee)} will be recorded as due, because this change is inside the free cancellation window.` : ''
@@ -99,7 +108,7 @@ function ActionDialog({ kind, booking, api, close, done }) {
       <div className="admin-confirm-summary"><strong>{clientName(booking)}</strong><span>{dateLabel(booking.date)} · {time(booking.start_minutes)}</span><b className="figure">{money(booking.total_gbp)}</b></div>
       {explanations[kind] && <p>{explanations[kind]}</p>}
 
-      {(kind === 'cancel' || kind === 'reschedule') && <Who value={initiatedBy} onChange={setInitiatedBy} disabled={busy} />}
+      {(kind === 'cancel' || kind === 'reschedule') && <Who value={initiatedBy} onChange={changeWho} disabled={busy} />}
       {kind === 'reschedule' && <>
         <DayTimePicker horizonDays={365} dateLabel="New date" initialDate={booking.date >= today() ? booking.date : today()}
           loadDay={date => api.availability(date, booking.treatment_duration_minutes, booking.id)}
@@ -109,10 +118,10 @@ function ActionDialog({ kind, booking, api, close, done }) {
       </>}
       {choices.length > 0 && <>
         <fieldset className="admin-who admin-fee-choices" style={{ '--choices': choices.length }}><legend>Late fee</legend>
-          {choices.map(([value, text]) => <label key={value}><input type="radio" name="fee-choice" checked={shownFee === value} disabled={busy} onChange={() => setFee(String(value))} /> {text}</label>)}
+          {choices.map(choice => <label key={choice.value}><input type="radio" name="fee-choice" checked={shownFee === choice.value} disabled={busy} onChange={() => chooseFee(String(choice.value))} /> {choice.text}</label>)}
         </fieldset>
         <label className="admin-field">Another amount (£)
-          <input type="number" inputMode="decimal" min="0" max={total} step="0.01" value={fee} disabled={busy} onChange={event => setFee(event.target.value)} />
+          <input type="number" inputMode="decimal" min="0" max={total} step="0.01" value={fee} disabled={busy} onChange={event => chooseFee(event.target.value)} />
           <span className="admin-detail-hint">{kind === 'cancel' && standardFee !== null ? `Standard fee now: ${money(standardFee)}. ` : ''}Up to {money(total)}.</span>
         </label>
       </>}
@@ -147,9 +156,6 @@ function History({ booking, api }) {
     {events && <ol>{events.map((event, index) => <li key={index}><span>{when(event.occurred_at)}</span> {text(event)} <span className="admin-detail-hint">({label(event.actor_type)})</span></li>)}</ol>}
   </details>
 }
-
-// What the toast says once it is done: the outcome, not the name of the button that was pressed.
-const DONE = { complete: 'Marked completed', noShow: 'Marked no-show', reschedule: 'Booking moved', cancel: 'Booking cancelled', refund: 'Refund recorded', feeReceived: 'Fee recorded as received', feeWaive: 'Fee waived' }
 
 export default function BookingActions({ booking, refresh, api = lifecycleApi }) {
   const [kind, setKind] = useState(null)

@@ -2,26 +2,29 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { createCalendarApi } from './calendarApi.js'
 import PaymentActions from './PaymentActions.jsx'
-import { useReturnRefresh } from './useReturnRefresh.js'
-import { bookingState, clientName, dateLabel, dayHeading, money, nextUp, postcode, sessionSummary, shiftDate, time, today } from './calendarPresentation.js'
+import Icon from '../ui/icons.jsx'
+import { useQuietRetry, useReturnRefresh } from './useReturnRefresh.js'
+import { bookingState, clientName, dateLabel, dayHeading, daySummary, money, nextUp, postcode, sessionSummary, shiftDate, time, today } from './calendarPresentation.js'
 
 const api = createCalendarApi(supabase)
 const CHUNK_DAYS = 31
 const AUTO_LOAD_UNTIL_DAYS = 186
 const pending = new Map()
+const daysBetween = (from, to) => Math.round((Date.parse(to) - Date.parse(from)) / 86400000)
 
-function loadRange(start, end) {
-  const key = `${start}:${end}`
+// Identical reads share one answer (a repeated effect, or two things asking at once), but a read asked for after something changed is a new read.
+function loadRange(start, end, version) {
+  const key = `${start}:${end}:${version}`
   if (!pending.has(key)) pending.set(key, api.loadAgendaRange(start, end).finally(() => pending.delete(key)))
   return pending.get(key)
 }
 
 // A read is limited to 31 days, so whatever is on show is read again a month at a time.
-function loadSpan(start, end) {
+function loadSpan(start, end, version) {
   const parts = []
   for (let from = start; from < end; from = shiftDate(from, CHUNK_DAYS)) {
     const to = shiftDate(from, CHUNK_DAYS)
-    parts.push(loadRange(from, to < end ? to : end))
+    parts.push(loadRange(from, to < end ? to : end, version))
   }
   return Promise.all(parts).then(lists => lists.flat())
 }
@@ -44,9 +47,6 @@ function withToday(groups, start) {
   const empty = { date: day, bookings: [] }
   return index === -1 ? [...groups, empty] : [...groups.slice(0, index), empty, ...groups.slice(index)]
 }
-
-// What a day is worth, from the appointments that are going ahead.
-const dayTotal = bookings => bookings.filter(booking => booking.booking_status !== 'cancelled').reduce((sum, booking) => sum + Number(booking.total_gbp || 0), 0)
 
 // What needs the Admin, first thing: declared transfers and cash requests, each one tap and a confirmation away.
 function ToCheck({ toCheck, checked, seeAll }) {
@@ -72,35 +72,58 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
+  const [refreshing, setRefreshing] = useState(false)
   const [paging, setPaging] = useState(null)
   const [pagingError, setPagingError] = useState('')
   const [lastChunk, setLastChunk] = useState(1)
+  const [now, setNow] = useState(Date.now)
   const shown = useRef(null)
+  const anchor = useRef(null)
   const sentinel = useRef(null)
+  const reread = useCallback(() => setAttempt(value => value + 1), [])
+  const quiet = useQuietRetry(reread)
   useEffect(() => { shown.current = data ? { start: data.start, end: data.end } : null }, [data])
+  // The Now and Next tags follow the clock.
+  useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(timer) }, [])
 
   useEffect(() => {
     let live = true
     // Read again whatever range is on show (it may have been scrolled further than the first month).
-    const first = !shown.current
-    const start = shown.current?.start ?? today()
-    const end = shown.current?.end ?? shiftDate(today(), CHUNK_DAYS)
-    loadSpan(start, end).then(bookings => {
+    const base = shown.current
+    const first = !base
+    const day = today()
+    let start = base?.start ?? day
+    let end = base?.end ?? shiftDate(day, CHUNK_DAYS)
+    // Left open past midnight and never scrolled back: the list starts again from today, and is as long as it was.
+    if (base && anchor.current && anchor.current !== day && base.start === anchor.current) {
+      const length = daysBetween(start, end)
+      start = day
+      end = shiftDate(day, length)
+    }
+    loadSpan(start, end, `${attempt}:${revision}`).then(bookings => {
       if (!live) return
       // More was scrolled into view while this was being read: the range on show has moved, so read it again.
-      if (shown.current && (shown.current.start !== start || shown.current.end !== end)) { setAttempt(value => value + 1); return }
+      const current = shown.current
+      if (base && current && (current.start !== base.start || current.end !== base.end)) { reread(); return }
+      anchor.current = day
+      quiet.succeeded()
       setData({ start, end, bookings })
       if (first) setLastChunk(bookings.length || 1)
       setError('')
+      setRefreshing(false)
     }, failure => {
-      if (live) setError(failure.message)
+      if (!live) return
+      setRefreshing(false)
+      // Just after a phone wakes, the first read often fails: it is tried once more, quietly, before anyone is told.
+      if (!first && quiet.failed()) return
+      setError(failure.message)
     })
     return () => { live = false }
-  }, [attempt, revision])
-  useReturnRefresh(useCallback(() => setAttempt(value => value + 1), []))
+  }, [attempt, revision, reread, quiet])
+  useReturnRefresh(reread)
 
   const groups = data ? withToday(groupByDate(data.bookings), data.start) : []
-  const upNext = data ? nextUp(data.bookings) : null
+  const upNext = data ? nextUp(data.bookings, new Date(now)) : null
 
   async function extend(direction) {
     if (!data || paging) return
@@ -109,7 +132,7 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
     setPaging(direction)
     setPagingError('')
     try {
-      const bookings = await loadRange(start, end)
+      const bookings = await loadRange(start, end, `${attempt}:${revision}`)
       if (direction === 'newer') setLastChunk(bookings.length)
       setData(previous => {
         if (!previous) return previous
@@ -125,7 +148,7 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
   }
 
   // Keep scrolling: the next month loads as the end of the list comes into view, for as long as it is likely to hold something.
-  const horizonDays = data ? Math.round((Date.parse(data.end) - Date.parse(today())) / 86400000) : 0
+  const horizonDays = data ? daysBetween(today(), data.end) : 0
   const canAutoLoad = Boolean(data) && !paging && !pagingError && horizonDays < AUTO_LOAD_UNTIL_DAYS && (lastChunk > 0 || horizonDays < 62)
   useEffect(() => {
     const node = sentinel.current
@@ -141,20 +164,22 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
     <h1 id="agenda-title" className="sr-only">Agenda</h1>
 
     {!data && !error && <div className="skeleton-rows" role="status"><span className="sr-only">Loading agenda…</span><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>}
-    {error && <div role="alert" className="error"><p>{data ? 'Could not refresh the agenda just now.' : 'Could not load the agenda. Please check your connection and try again.'}</p><button className="btn--small" onClick={() => setAttempt(value => value + 1)}>Try again</button></div>}
+    {error && <div role={data ? 'status' : 'alert'} className="error"><p>{data ? 'Could not refresh the agenda just now.' : 'Could not load the agenda. Please check your connection and try again.'}</p><button className="btn--small" onClick={reread}>Try again</button></div>}
 
     {data && <>
       <ToCheck toCheck={toCheck} checked={checked} seeAll={seeAll} />
-      <div className="admin-agenda-actions"><button className="btn--quiet btn--small admin-agenda-earlier" disabled={Boolean(paging)} onClick={() => extend('older')}>{paging === 'older' ? 'Loading earlier…' : 'Earlier appointments'}</button></div>
+      <div className="admin-agenda-actions">
+        <button className="btn--quiet btn--small admin-agenda-earlier" disabled={Boolean(paging)} onClick={() => extend('older')}>{paging === 'older' ? 'Loading earlier…' : 'Earlier appointments'}</button>
+        <button className="btn--quiet btn--small" disabled={refreshing} onClick={() => { setRefreshing(true); reread() }}><Icon name="refresh" size={18} />{refreshing ? ' Refreshing…' : ' Refresh'}</button>
+      </div>
       <div className="admin-agenda-days">
         {groups.map(group => {
           const heading = dayHeading(group.date)
           const full = dateLabel(group.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-          const total = dayTotal(group.bookings)
           return <section className={`admin-agenda-day ${group.date === today() ? 'is-today' : ''}`} key={group.date} aria-labelledby={`agenda-${group.date}`}>
             <header className="admin-agenda-day-heading">
               <h2 id={`agenda-${group.date}`}><span className="day-name">{heading.name}</span>{heading.rest ? ` · ${heading.rest}` : ''}</h2>
-              <span>{group.bookings.length ? `${group.bookings.length} ${group.bookings.length === 1 ? 'booking' : 'bookings'}${total > 0 ? ` · ${money(total)}` : ''}` : 'Free'}</span>
+              <span>{daySummary(group.bookings)}</span>
             </header>
             {!group.bookings.length && <p className="admin-agenda-empty"><strong>A free day.</strong>Nothing is booked.</p>}
             {group.bookings.length > 0 && <ol role="list" className="admin-timeline" aria-label={`Appointments for ${full}`}>

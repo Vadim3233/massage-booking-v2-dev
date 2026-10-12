@@ -77,7 +77,7 @@ export default function PaymentActions({ booking, refresh, only, compact = false
     try {
       await paymentReviewApi.act(action, booking, request.current.id)
       setConfirmation(null)
-      setMessage({ text: 'Saved.' })
+      setMessage({ text: doneMessage(action, booking) })
       toast(doneMessage(action, booking))
       await refresh()
     } catch (error) {

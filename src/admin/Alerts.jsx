@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { alertsApi, bookingIdFromLink, groupAlerts } from './alertsApi.js'
-import { useReturnRefresh } from './useReturnRefresh.js'
+import { useQuietRetry, useReturnRefresh } from './useReturnRefresh.js'
 
 const when = value => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
 
@@ -8,12 +8,26 @@ export default function Alerts({ openBooking, openPage, changed, api = alertsApi
   const [alerts, setAlerts] = useState(null)
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
+  const hasList = useRef(false)
+  const reread = useCallback(() => setAttempt(value => value + 1), [])
+  const quiet = useQuietRetry(reread)
   useEffect(() => {
     let live = true
-    api.list().then(list => { if (live) { setAlerts(list); setError('') } }, failure => { if (live) setError(failure.message) })
+    api.list().then(list => {
+      if (!live) return
+      hasList.current = true
+      quiet.succeeded()
+      setAlerts(list)
+      setError('')
+    }, failure => {
+      if (!live) return
+      // A list already on screen that cannot be refreshed just now is tried once more, quietly, before anyone is told.
+      if (hasList.current && quiet.failed()) return
+      setError(failure.message)
+    })
     return () => { live = false }
-  }, [api, attempt])
-  useReturnRefresh(useCallback(() => setAttempt(value => value + 1), []))
+  }, [api, attempt, quiet])
+  useReturnRefresh(reread)
   async function markAll() {
     try { await api.markRead(null); setAttempt(value => value + 1); changed() } catch (failure) { setError(failure.message) }
   }

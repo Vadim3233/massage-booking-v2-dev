@@ -31,6 +31,7 @@ export default function BookingFlow() {
   const auth = useClientAuth(supabase)
   const [catalogue, setCatalogue] = useState(null)
   const [catalogueAttempt, setCatalogueAttempt] = useState(0)
+  const [catalogueFailed, setCatalogueFailed] = useState(false)
   const [clock, setClock] = useState(Date.now)
   const [savedBank, setSavedBank] = useState(null)
   const rules = useBookingRules(supabase)
@@ -38,7 +39,7 @@ export default function BookingFlow() {
   const testMode = import.meta.env.DEV || new URLSearchParams(window.location.search).get('test') === '1'
   useEffect(() => {
     let live = true
-    api.catalogue().then((data) => { if (live) setCatalogue(data) }).catch((err) => { if (live) store.setError(friendlyError(err)) })
+    api.catalogue().then((data) => { if (live) { setCatalogue(data); setCatalogueFailed(false) } }).catch((err) => { if (live) { setCatalogueFailed(true); store.setError(friendlyError(err)) } })
     return () => { live = false }
   }, [store, catalogueAttempt])
   useEffect(() => {
@@ -147,8 +148,8 @@ export default function BookingFlow() {
       {!draft.bookingId && <HoldNotice hold={draft.hold} remaining={remaining} busy={busy} pending={draft.pending} error={error} extend={store.extendHold} release={store.releaseHold} />}
       {error && step !== 6 && <p role="alert" className="error" ref={alertBox}>{error}</p>}
       {auth.error && <p role="alert" className="error">{auth.error}</p>}
-      {!catalogue ? (error
-        ? <button className="btn--tonal" onClick={() => { store.setError(''); setCatalogueAttempt(catalogueAttempt + 1) }}>Try again</button>
+      {!catalogue ? (catalogueFailed
+        ? <>{step === 6 && error && <p role="alert" className="error">{error}</p>}<button className="btn--tonal" onClick={() => { setCatalogueFailed(false); store.setError(''); setCatalogueAttempt(catalogueAttempt + 1) }}>Try again</button></>
         : <div className="skeleton-rows" role="status"><span className="sr-only">Just getting things ready…</span><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>) : <>
         {!held && step >= 4 && step < 7 && !draft.pending && !draft.bookingId && <button className="btn--tonal" onClick={() => navigate(3)}>Choose a time again</button>}
         <fieldset className={`screen enter ${busy ? 'is-busy' : ''}`} key={step}>
@@ -162,7 +163,7 @@ export default function BookingFlow() {
           {auth.ready && (needsAuth || auth.recovery) && <AuthPanel client={supabase} recovery={auth.recovery} onRecovered={auth.finishRecovery} onGuest={startGuest} />}
           {step === 5 && auth.session && !auth.recovery && <DetailsStep key={auth.session.user.id} draft={draft} user={auth.session.user} api={api} edit={store.edit} report={store.setError} guest={isGuest} newTestGuest={startNewTestGuest} next={() => goWithQuote(6)} />}
           {step === 6 && auth.session && !auth.recovery && <PaymentStep rules={rules} draft={draft} quote={quote} quoteError={quoteError} bank={bank} api={api} store={store} finalize={() => store.finalize(auth.session.user.id)} held={held} error={error} chooseTimeAgain={() => navigate(3)} />}
-          {step === 7 && auth.session && !auth.recovery && <ConfirmationStep id={draft.bookingId} result={result} api={api} bank={bank} again={startAgain} />}
+          {step === 7 && auth.session && !auth.recovery && <ConfirmationStep id={draft.bookingId} result={result} api={api} bank={bank} quote={quote} again={startAgain} />}
         </fieldset>
       </>}
     </main>

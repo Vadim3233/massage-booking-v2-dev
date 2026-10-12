@@ -26,6 +26,17 @@ export function restoreDraft(storage) {
   return newDraft()
 }
 
+// A postcode and a phone number that cannot be right: she travels to this address and rings this number.
+// Empty fields are asked for separately; this is only about what has been typed.
+const POSTCODE = /^[A-Za-z]{1,2}\d[A-Za-z\d]?\s*\d[A-Za-z]{2}$/
+export function detailProblems(details) {
+  const problems = {}
+  const digits = String(details.phone || '').replace(/\D/g, '')
+  if (details.phone?.trim() && (digits.length < 7 || digits.length > 15)) problems.phone = "That number doesn't look right. Please check it, so I can reach you."
+  if (!details.savedAddressId && details.postcode?.trim() && !POSTCODE.test(details.postcode.trim())) problems.postcode = "That postcode doesn't look right. Please check it, for example SW3 1AA."
+  return problems
+}
+
 export function validDetails(details) {
   return ['first_name', 'last_name', 'email', 'phone'].every((key) => details[key].trim()) &&
     (Boolean(details.savedAddressId) || ['address_line_1', 'city', 'postcode'].every((key) => details[key].trim()))

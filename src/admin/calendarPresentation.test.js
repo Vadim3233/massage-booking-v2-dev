@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { dayContext, nextUp, postcode, shiftDate } from './calendarPresentation.js'
+import { dayContext, daySummary, nextUp, postcode, shiftDate } from './calendarPresentation.js'
 it('handles London calendar dates across DST and month boundaries', () => {
   expect(shiftDate('2026-03-29', 1)).toBe('2026-03-30')
   expect(shiftDate('2026-10-31', 1)).toBe('2026-11-01')
@@ -33,4 +33,14 @@ it('names the appointment happening now, or else the next one going ahead, in Lo
 it('does not count an appointment that has no going-ahead status', () => {
   const missed = { id: 'm', date: '2026-10-12', start_minutes: 960, treatment_duration_minutes: 60, booking_status: 'no_show' }
   expect(nextUp([missed], new Date('2026-10-12T12:00:00Z'))).toBeNull()
+})
+it('says what a day comes to from the appointments that are going ahead', () => {
+  const make = (status, price) => ({ booking_status: status, total_gbp: price })
+  expect(daySummary([])).toBe('Free')
+  expect(daySummary([make('confirmed', '85.00')])).toBe('1 booking · £85.00')
+  expect(daySummary([make('confirmed', '85.00'), make('cancelled', '125.00')])).toBe('1 booking · £85.00')
+  expect(daySummary([make('confirmed', '85.00'), make('awaiting_transfer', '90.00')])).toBe('2 bookings · £175.00')
+  // A no-show is still an appointment that was made, but it is not worth its price.
+  expect(daySummary([make('confirmed', '85.00'), make('no_show', '85.00')])).toBe('2 bookings · £85.00')
+  expect(daySummary([make('cancelled', '85.00'), make('cancelled', '90.00')])).toBe('All cancelled')
 })

@@ -37,6 +37,7 @@ export default function SettingsBank({ api = settingsApi }) {
       </div>
       <label className="admin-field">A note for clients (optional)<input value={details.note} maxLength={300} disabled={busy} onChange={event => set({ note: event.target.value })} /></label>
       <p className="admin-detail-hint">The payment reference is added for each booking automatically.</p>
+      {!details.account_name && !details.sort_code && !details.account_number && <p className="admin-detail-hint">Nothing is saved here yet. Until you save your details, clients may not be able to pay by bank transfer.</p>}
       {problem && (details.account_name || details.sort_code || details.account_number) && <p role="alert" className="admin-field-error">{problem}</p>}
       {error && <p role="alert" className="admin-field-error">{error}</p>}
       {message && <p role="status">{message}</p>}

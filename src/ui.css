@@ -68,6 +68,7 @@
 
 /* ---------- Messages that need to be seen ---------- */
 .error { margin: 14px 0; padding: 12px 14px; border-left: 4px solid var(--danger-line); border-radius: 12px; background: var(--danger-soft); color: var(--danger); font-weight: 500; overflow-wrap: anywhere; }
+:where(button, a, summary, label, select, input) { touch-action: manipulation; }
 .error p { margin: 0 0 10px; }
 .error p:last-child { margin-bottom: 0; }
 .notice { margin: 14px 0; padding: 12px 14px; border-left: 4px solid var(--ok-rail); border-radius: 12px; background: var(--ok-bg); color: var(--ok-ink); font-weight: 500; }

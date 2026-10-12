@@ -155,6 +155,8 @@ test('every booking screen fits a 320px phone, and the usual booking is offered 
   const top = async (locator) => (await locator.boundingBox()).y
   const order = [await top(page.locator('.bank-card')), await top(page.locator('label.terms')), await top(page.getByRole('heading', { name: 'What happens next' })), await top(page.getByRole('region', { name: 'Appointment summary' }))]
   expect(order).toEqual([...order].sort((first, second) => first - second))
+  // A client who changes their mind has a way to change the time or cancel, right on the payment screen.
+  await expect(page.getByRole('link', { name: 'Change the time or cancel this booking' })).toHaveAttribute('href', /\/account\?booking=/)
   // Pressing the button before the box is ticked asks for the tick, and takes her to it, instead of doing nothing.
   await page.getByRole('button', { name: "I've made the bank transfer" }).click()
   await expect(page.getByRole('alert')).toContainText('Please tick the box')
@@ -236,6 +238,62 @@ test('the details button is never greyed out: what is missing is said in words',
   await expect(page.getByRole('heading', { name: 'Your details', exact: true })).toBeVisible()
   const draft = await readDraft(page)
   await fixture.trackUser(draft.ownerUserId)
+})
+
+test('a phone number or postcode that cannot be right is named beside the field, before anything is reserved', async ({ page }) => {
+  await toDuration(page)
+  await page.getByRole('button', { name: /^60 minutes/ }).click()
+  await page.getByLabel('Appointment date').fill(fixture.date)
+  await page.getByRole('button', { name: '10:00', exact: true }).click()
+  await page.getByRole('button', { name: 'Review booking', exact: true }).click()
+  await page.getByRole('button', { name: 'Continue to your details' }).click()
+  await page.getByRole('button', { name: 'Continue as guest' }).click()
+  await page.getByLabel('First name', { exact: true }).fill('Check')
+  await page.getByLabel('Last name', { exact: true }).fill('Details')
+  await page.getByLabel('Email address', { exact: true }).fill(`check-${crypto.randomUUID()}@example.test`)
+  await page.getByLabel('Street address', { exact: true }).fill('3 Check Road')
+  const phone = page.getByLabel('Contact number', { exact: true })
+  const postcode = page.getByLabel('Postcode', { exact: true })
+  await phone.fill('12345')
+  await postcode.fill('SW1A 2AA')
+  await page.getByRole('button', { name: 'Continue to payment' }).click()
+  await expect(page.getByText("That number doesn't look right")).toBeVisible()
+  await expect(phone).toHaveAttribute('aria-invalid', 'true')
+  await expect(phone).toBeFocused()
+  await expect(page.getByRole('heading', { name: 'Your details', exact: true })).toBeVisible()
+  // Typing in the field takes the message away; the next problem is named in its turn.
+  await phone.fill('07700 900654')
+  await expect(page.getByText("That number doesn't look right")).toHaveCount(0)
+  await postcode.fill('hello world')
+  await page.getByRole('button', { name: 'Continue to payment' }).click()
+  await expect(page.getByText("That postcode doesn't look right")).toBeVisible()
+  await expect(postcode).toBeFocused()
+  await expect(page.getByRole('heading', { name: 'Your details', exact: true })).toBeVisible()
+  await postcode.fill('SW1A 2AA')
+  await page.getByRole('button', { name: 'Continue to payment' }).click()
+  await expect(page.getByRole('heading', { name: 'One last step' })).toBeVisible()
+  // Now a client and a reservation exist, so the clean-up has something to remove.
+  await fixture.trackUser((await readDraft(page)).ownerUserId)
+})
+
+test.describe('a double tap', () => {
+  test.use({ hasTouch: true, viewport: { width: 390, height: 844 } })
+  test('lands on the screen it opened, not on a tile that appears under the finger', async ({ page }) => {
+    await page.goto('/')
+    const area = page.locator('.tiles--areas .tile').first()
+    await expect(area).toBeVisible()
+    await area.tap()
+    await expect(page.getByRole('heading', { name: 'What would help you most today?' })).toBeVisible()
+    // The second tap of a double tap arrives a moment after the screen has changed, on a treatment.
+    const treatment = await page.locator('.tiles .tile').first().boundingBox()
+    await page.touchscreen.tap(treatment.x + treatment.width / 2, treatment.y + treatment.height / 2)
+    await page.waitForTimeout(700)
+    await expect(page.getByRole('heading', { name: 'What would help you most today?' })).toBeVisible()
+    expect((await readDraft(page)).serviceId).toBeFalsy()
+    // Once the screen has settled a tap works as it always did.
+    await page.locator('.tiles .tile').first().tap()
+    await expect(page.getByRole('heading', { name: 'How much time would you like?' })).toBeVisible()
+  })
 })
 
 test('the payment button explains why it is waiting, and a technical error never reaches the screen', async ({ page }) => {

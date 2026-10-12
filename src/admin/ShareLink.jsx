@@ -22,7 +22,7 @@ export default function ShareLink({ api = adminNewBookingApi }) {
   const lengths = catalogue && service ? catalogue.prices.filter(price => price.service_id === service).map(price => price.duration_minutes) : []
   const link = bookingLink(window.location.origin, { area: areaName, treatment: serviceName, minutes: Number(minutes) || undefined })
   async function copy() {
-    try { await navigator.clipboard.writeText(link); setCopied(true) } catch { setCopied(false); setError('Could not copy it. Press and hold the link to copy it yourself.') }
+    try { await navigator.clipboard.writeText(link); setCopied(true); setError('') } catch { setCopied(false); setError('Could not copy it. Press and hold the link to copy it yourself.') }
     clearTimeout(timer.current)
     timer.current = setTimeout(() => setCopied(false), 2400)
   }
@@ -45,6 +45,7 @@ export default function ShareLink({ api = adminNewBookingApi }) {
         <label className="admin-field">Treatment<select value={service} onChange={event => { setService(event.target.value); setMinutes('') }}><option value="">Any treatment</option>{catalogue.services.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         {lengths.length > 0 && <label className="admin-field">Length<select value={minutes} onChange={event => setMinutes(event.target.value)}><option value="">Let them choose</option>{lengths.map(length => <option key={length} value={length}>{length} minutes</option>)}</select></label>}
         {area && !service && <p className="admin-detail-hint">Add a treatment as well, or the client will choose it themselves.</p>}
+        {service && !area && <p className="admin-detail-hint">Choose an area as well. A treatment on its own does not skip any steps.</p>}
       </div>
     </details>}
   </section>

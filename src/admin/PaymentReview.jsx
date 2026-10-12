@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { clientName, dateLabel, money, sessionSummary, time } from './calendarPresentation.js'
 import { loadReviewResource, paymentReviewApi } from './paymentReviewApi.js'
 import PaymentActions from './PaymentActions.jsx'
-import { useReturnRefresh } from './useReturnRefresh.js'
+import { useQuietRetry, useReturnRefresh } from './useReturnRefresh.js'
 import Icon from '../ui/icons.jsx'
 
 const NEEDS_YOU = ['awaiting_verification', 'awaiting_approval']
@@ -20,24 +20,38 @@ function Item({ booking, openBooking, refresh }) {
   </li>
 }
 
-export default function PaymentReview({ openBooking, revision }) {
+export default function PaymentReview({ openBooking, revision, changed }) {
   const [offset, setOffset] = useState(0)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
   const readVersion = useRef(0)
+  const shownOffset = useRef(null)
+  const reread = useCallback(() => setAttempt(value => value + 1), [])
+  const quiet = useQuietRetry(reread)
   useEffect(() => {
     let live = true
     const version = ++readVersion.current
-    loadReviewResource(`queue:${offset}:${revision}`, () => paymentReviewApi.queue(offset), 3000).then(data => { if (live && version === readVersion.current) { setResult({ offset, ...data }); setError('') } }, () => { if (live && version === readVersion.current) setError('Could not load payment reviews. Please retry.') })
+    loadReviewResource(`queue:${offset}:${revision}`, () => paymentReviewApi.queue(offset), 3000).then(data => {
+      if (!live || version !== readVersion.current) return
+      shownOffset.current = offset
+      quiet.succeeded()
+      setResult({ offset, ...data })
+      setError('')
+    }, () => {
+      if (!live || version !== readVersion.current) return
+      // A page already on screen that cannot be refreshed just now is tried once more, quietly, before anyone is told.
+      if (shownOffset.current === offset && quiet.failed()) return
+      setError('Could not load payment reviews. Please retry.')
+    })
     return () => { live = false }
-  }, [offset, attempt, revision])
-  useReturnRefresh(useCallback(() => setAttempt(value => value + 1), []))
+  }, [offset, attempt, revision, quiet])
+  useReturnRefresh(reread)
   // The page on show stays while it is read again.
   const current = result?.offset === offset ? result : null
   async function refresh() {
     const version = ++readVersion.current
-    try { const data = await paymentReviewApi.queue(offset); if (version === readVersion.current) { setResult({ offset, ...data }); setError('') } }
+    try { const data = await paymentReviewApi.queue(offset); if (version === readVersion.current) { setResult({ offset, ...data }); setError('') } changed?.() }
     catch (error) { if (version === readVersion.current) setError(error.message); throw error }
   }
   const needs = current ? current.bookings.filter(booking => NEEDS_YOU.includes(booking.booking_payments.status)) : []
@@ -47,7 +61,7 @@ export default function PaymentReview({ openBooking, revision }) {
   const ordered = [...needs, ...waiting]
   return <section className="admin-review" aria-labelledby="review-title">
     <header className="admin-review-heading"><div><h1 id="review-title">To check</h1><p>Confirm a payment when it arrives, or cancel a booking that will not be paid. Nothing is cancelled automatically.</p></div><button className="btn--quiet btn--icon" onClick={() => setAttempt(value => value + 1)} aria-label="Refresh reviews"><Icon name="refresh" size={22} /></button></header>
-    {error && <p role="alert">{error} <button onClick={() => setAttempt(value => value + 1)}>Retry reviews</button></p>}
+    {error && <p role={result ? 'status' : 'alert'}>{error} <button onClick={reread}>Retry reviews</button></p>}
     {!current && !error && <div className="skeleton-rows" role="status"><span className="admin-sr-only">Loading payment reviews…</span><span className="skeleton" /><span className="skeleton" /></div>}
     {current && <>
       {!current.bookings.length && <p className="admin-agenda-empty"><strong>All caught up.</strong>No payments awaiting review on this page.</p>}

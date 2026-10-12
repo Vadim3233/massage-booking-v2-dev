@@ -1,7 +1,7 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { createCalendarApi } from './calendarApi.js'
-import { useReturnRefresh } from './useReturnRefresh.js'
+import { useQuietRetry, useReturnRefresh } from './useReturnRefresh.js'
 import { bookingState, clientName, dateLabel, dayTimeline, money, postcode, sessionSummary, shiftDate, time, today } from './calendarPresentation.js'
 const BlockDialog = lazy(() => import('./BlockDialog.jsx'))
 const api = createCalendarApi(supabase)
@@ -19,6 +19,9 @@ export default function Calendar({ signOut, openBooking, revision, initialDate, 
   const [loaded, setLoaded] = useState(null)
   const [failure, setFailure] = useState(null)
   const [attempt, setAttempt] = useState(0)
+  const shownDate = useRef(null)
+  const reread = useCallback(() => setAttempt(value => value + 1), [])
+  const quiet = useQuietRetry(reread)
   const [now, setNow] = useState(Date.now)
   const [headerHidden, setHeaderHidden] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
@@ -41,10 +44,21 @@ export default function Calendar({ signOut, openBooking, revision, initialDate, 
   }, [])
   useEffect(() => {
     let live = true
-    load(date, `${attempt}:${revision}`).then(data => { if (live) { setLoaded({ date, data }); setFailure(null) } }, error => { if (live) setFailure({ date, message: error.message }) })
+    load(date, `${attempt}:${revision}`).then(data => {
+      if (!live) return
+      shownDate.current = date
+      quiet.succeeded()
+      setLoaded({ date, data })
+      setFailure(null)
+    }, error => {
+      if (!live) return
+      // A day already on screen that cannot be refreshed just now is tried once more, quietly, before anyone is told.
+      if (shownDate.current === date && quiet.failed()) return
+      setFailure({ date, message: error.message })
+    })
     return () => { live = false }
-  }, [date, attempt, revision])
-  useReturnRefresh(useCallback(() => setAttempt(value => value + 1), []))
+  }, [date, attempt, revision, quiet])
+  useReturnRefresh(reread)
   const data = loaded?.date === date ? loaded.data : null
   const failed = failure?.date === date
   const timeline = data && dayTimeline(data, date, now)
@@ -76,7 +90,7 @@ export default function Calendar({ signOut, openBooking, revision, initialDate, 
       <h1 className="admin-sr-only">Appointments for {dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h1>
       <p className="admin-day-caption">London time</p>
       {!data && !failed && <div className="skeleton-rows" role="status" aria-label="Loading calendar"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>}
-      {failed && <div role="alert" className="error"><p>{data ? 'Could not refresh the calendar just now.' : 'Could not load calendar. Please check your connection and try again.'}</p><button className="btn--small" onClick={() => setAttempt(value => value + 1)}>{data ? 'Try again' : 'Retry calendar'}</button></div>}
+      {failed && <div role={data ? 'status' : 'alert'} className="error"><p>{data ? 'Could not refresh the calendar just now.' : 'Could not load calendar. Please check your connection and try again.'}</p><button className="btn--small" onClick={reread}>{data ? 'Try again' : 'Retry calendar'}</button></div>}
       {data && <>
         <p className="admin-working-hours">{timeline.hours?.available ? `Working hours ${time(timeline.hours.start_minutes)}–${time(timeline.hours.end_minutes)}` : 'Not a working day'}</p>
         {!data.bookings.length && <p className="admin-day-note">No appointments for this day.</p>}

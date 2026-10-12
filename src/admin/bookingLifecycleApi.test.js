@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createLifecycleApi, lifecycleActions } from './bookingLifecycleApi.js'
+import { createLifecycleApi, feeChoices, lifecycleActions } from './bookingLifecycleApi.js'
 import { shiftDate, today } from './calendarPresentation.js'
 
 const booking = (overrides = {}) => ({ id: 'b1', updated_at: '2031-01-01T10:00:00Z', booking_status: 'confirmed', date: shiftDate(today(), 10), late_fee_status: 'none', refund_due_gbp: 0,
@@ -21,6 +21,22 @@ describe('which actions the Admin is offered', () => {
     expect(lifecycleActions(booking({ booking_status: 'cancelled', refund_due_gbp: '0.00', booking_payments: { status: 'paid' } }))).toEqual([])
     expect(lifecycleActions(booking({ booking_status: 'no_show', late_fee_status: 'due' }))).toEqual(['feeReceived', 'feeWaive'])
     expect(lifecycleActions(booking({ booking_status: 'cancelled', late_fee_status: 'received' }))).toEqual([])
+  })
+})
+
+describe('the usual answers to what late fee', () => {
+  it('offers no fee and the full price when the standard fee is nothing or everything', () => {
+    expect(feeChoices('cancel', 85, 0).map(choice => choice.text)).toEqual(['No fee', 'Full price £85.00'])
+    expect(feeChoices('cancel', 85, 85).map(choice => choice.text)).toEqual(['No fee', 'Full price £85.00'])
+    expect(feeChoices('cancel', 85, null).map(choice => choice.value)).toEqual([0, 85])
+  })
+  it('adds the standard fee when it lies between nothing and the full price', () => {
+    expect(feeChoices('cancel', 90, 45)).toEqual([{ value: 0, text: 'No fee' }, { value: 45, text: 'Standard fee £45.00' }, { value: 90, text: 'Full price £90.00' }])
+  })
+  it('offers a no-show no fee or the full price, and asks for nothing when moving or completing', () => {
+    expect(feeChoices('noShow', 125, null).map(choice => choice.text)).toEqual(['No fee', 'Full price £125.00'])
+    expect(feeChoices('reschedule', 125, 125)).toEqual([])
+    expect(feeChoices('complete', 125, 0)).toEqual([])
   })
 })
 

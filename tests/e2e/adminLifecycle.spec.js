@@ -99,6 +99,76 @@ test('rescheduling offers only available times, records the move, and explains a
   expect((await f.admin.from('bookings').select('start_minutes').eq('id', id).single()).data.start_minutes).toBe(hours * 60 + minutes)
 })
 
+test('a fee she has chosen is never replaced by a standard fee that arrives late', async ({ page }) => {
+  await f.authorize()
+  const id = f.bookings[2].id
+  await moveTo(id, 5 * 3600000)
+  await open(page, id)
+  await page.route('**/rpc/admin_late_fee_preview', async route => { await new Promise(resolve => setTimeout(resolve, 1500)); await route.continue() })
+  await details(page).getByRole('button', { name: 'Cancel booking', exact: true }).click()
+  // Until the standard fee arrives no fee is chosen, so the button waits; she taps No fee first.
+  await expect(action(page).getByRole('button', { name: /^Cancel booking/ })).toBeDisabled()
+  await action(page).getByLabel('No fee').check()
+  await expect(action(page).getByRole('button', { name: 'Cancel booking', exact: true })).toBeEnabled()
+  await expect(action(page)).toContainText('Standard fee now: £85.00')
+  await expect(action(page).getByLabel('No fee')).toBeChecked()
+  await expect(action(page).getByLabel('Another amount (£)')).toHaveValue('0')
+  await action(page).getByRole('button', { name: 'Cancel booking', exact: true }).click()
+  await expect(action(page)).toHaveCount(0)
+  const row = (await f.admin.from('bookings').select('booking_status,late_fee_due_gbp').eq('id', id).single()).data
+  expect(row.booking_status).toBe('cancelled')
+  expect(Number(row.late_fee_due_gbp)).toBe(0)
+})
+
+test('if the standard fee cannot be looked up, she chooses a fee before cancelling', async ({ page }) => {
+  await f.authorize()
+  const id = f.bookings[2].id
+  await moveTo(id, 5 * 3600000)
+  await open(page, id)
+  await page.route('**/rpc/admin_late_fee_preview', route => route.abort('failed'))
+  await details(page).getByRole('button', { name: 'Cancel booking', exact: true }).click()
+  await expect(action(page).getByLabel('Full price £85.00')).toBeVisible()
+  await expect(action(page).locator('input[name=fee-choice]:checked')).toHaveCount(0)
+  await expect(action(page).getByRole('button', { name: /^Cancel booking/ })).toBeDisabled()
+  await action(page).getByLabel('Full price £85.00').check()
+  await expect(action(page).getByRole('button', { name: 'Cancel booking · £85.00 fee due' })).toBeEnabled()
+  await action(page).getByRole('button', { name: /^Cancel booking/ }).click()
+  await expect(action(page)).toHaveCount(0)
+  expect(Number((await f.admin.from('bookings').select('late_fee_due_gbp').eq('id', id).single()).data.late_fee_due_gbp)).toBe(85)
+})
+
+test('the buttons stay in view on a short screen, and a field that takes focus is not hidden behind them', async ({ page }) => {
+  await f.authorize()
+  await page.setViewportSize({ width: 390, height: 600 })
+  const id = f.bookings[2].id
+  await moveTo(id, 5 * 3600000)
+  await open(page, id)
+  await details(page).getByRole('button', { name: 'Cancel booking', exact: true }).click()
+  const buttons = action(page).locator('.admin-sticky-actions')
+  await expect(buttons).toBeInViewport()
+  await action(page).getByLabel('Another amount (£)').focus()
+  const field = await action(page).getByLabel('Another amount (£)').boundingBox()
+  const bar = await buttons.boundingBox()
+  expect(field.y + field.height).toBeLessThanOrEqual(bar.y + 1)
+})
+
+test('a no-show offers the full price or no fee in one tap, and records the one chosen', async ({ page }) => {
+  await f.authorize()
+  const id = f.bookings[2].id
+  await moveTo(id, -5 * 3600000)
+  await open(page, id)
+  await details(page).getByRole('button', { name: 'Mark no-show', exact: true }).click()
+  // Nothing typed means the full price, so that is the one already chosen.
+  await expect(action(page).getByLabel('Full price £85.00')).toBeChecked()
+  await action(page).getByLabel('No fee').check()
+  await expect(action(page).getByLabel('Another amount (£)')).toHaveValue('0')
+  await action(page).getByRole('button', { name: 'Mark no-show', exact: true }).click()
+  await expect(action(page)).toHaveCount(0)
+  const row = (await f.admin.from('bookings').select('booking_status,late_fee_due_gbp').eq('id', id).single()).data
+  expect(row.booking_status).toBe('no_show')
+  expect(Number(row.late_fee_due_gbp)).toBe(0)
+})
+
 test('a started, confirmed appointment can be marked completed, but not before it starts', async ({ page }) => {
   await f.authorize()
   const id = f.bookings[2].id

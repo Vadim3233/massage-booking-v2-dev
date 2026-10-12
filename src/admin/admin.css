@@ -31,7 +31,7 @@
 .admin-agenda-actions .btn--quiet { min-height: 40px; font-size: 14px; }
 .admin-agenda-days { margin: 0; }
 .admin-agenda-day { padding: 0 0 8px; }
-.admin-agenda-day-heading { position: sticky; top: 0; z-index: 4; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 -16px; padding: 12px 16px 8px; background: rgb(247 246 242 / .97); }
+.admin-agenda-day-heading { position: sticky; top: 0; z-index: 4; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 -16px; padding: 12px 16px 8px; background: rgb(247 246 242); }
 .admin-agenda-day-heading h2 { font: 600 21px/1.2 var(--font-display); font-variant-numeric: lining-nums; letter-spacing: -.01em; }
 .admin-agenda-day-heading h2 .day-name { color: var(--primary); }
 .admin-agenda-day-heading span { color: var(--muted); font-size: 13px; font-weight: 500; white-space: nowrap; }
@@ -66,7 +66,7 @@
 .share-link input { font-size: 15px; text-overflow: ellipsis; }
 .share-more { margin-top: 18px; }
 .admin-next-tag { margin-top: 4px; padding: 3px 7px; border-radius: 6px; background: var(--accent-soft); color: var(--accent-ink); font: 700 10px/1 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; font-style: normal; }
-.admin-shell .admin-card { --rail: var(--ok-rail); position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; justify-content: stretch; align-items: start; justify-items: stretch; width: 100%; gap: 3px; padding: 13px 14px 13px 19px; border: 0; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); color: var(--ink); font: 400 15px/1.35 var(--font-ui); text-align: left; overflow: hidden; }
+.admin-shell .admin-card { --rail: var(--ok-rail); position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; justify-content: stretch; align-items: start; justify-items: stretch; width: 100%; gap: 3px 10px; padding: 13px 14px 13px 19px; border: 0; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); color: var(--ink); font: 400 15px/1.35 var(--font-ui); text-align: left; overflow: hidden; }
 .admin-shell .admin-card:not(:disabled):hover { background: #fcfdfb; box-shadow: var(--shadow-2); }
 .admin-card::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--rail); }
 .admin-card[data-chip="needs"] { --rail: var(--needs-rail); background: #fffaf0; }
@@ -79,9 +79,9 @@
 .admin-card-price { font: 600 19px/1 var(--font-display); font-variant-numeric: lining-nums; white-space: nowrap; }
 .admin-card-treatment, .admin-card-postcode { color: var(--ink-soft); font-size: 14px; }
 .admin-card-treatment { grid-column: 1; min-width: 0; }
-.admin-card-postcode { grid-column: 2; align-self: baseline; color: var(--muted); font-size: 13px; letter-spacing: .02em; white-space: nowrap; }
+.admin-card-postcode { grid-column: 2; align-self: baseline; color: var(--muted); font-size: 13px; letter-spacing: .02em; white-space: nowrap; max-width: 12ch; overflow: hidden; text-overflow: ellipsis; }
 .admin-card .admin-status { grid-column: 1 / -1; justify-self: start; margin-top: 4px; }
-.admin-shell .admin-card.cancelled { gap: 1px; padding-block: 9px; background: var(--cancel-bg); box-shadow: none; color: var(--cancel-ink); }
+.admin-shell .admin-card.cancelled { gap: 1px 10px; padding-block: 9px; background: var(--cancel-bg); box-shadow: none; color: var(--cancel-ink); }
 .admin-card.cancelled .admin-card-heading strong { font-weight: 500; text-decoration: line-through; text-decoration-thickness: 1px; }
 .admin-card.cancelled .admin-card-price { font-size: 15px; text-decoration: line-through; color: var(--cancel-ink); }
 .admin-card.cancelled .admin-card-treatment, .admin-card.cancelled .admin-card-postcode { font-size: 13px; }
@@ -357,3 +357,6 @@
 .admin-confirm .admin-confirm-ref { font-size: 14px; color: var(--ink-soft); }
 .admin-confirm .admin-confirm-ref strong { color: var(--ink); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
 .admin-confirm .admin-remove { justify-self: start; margin-top: 8px; }
+.admin-review form + form { margin-top: 32px; padding-top: 22px; border-top: 1px solid var(--hairline); }
+/* A field that takes focus is scrolled clear of the buttons that stay at the bottom of a sheet. */
+.admin-confirm { scroll-padding-bottom: 96px; }

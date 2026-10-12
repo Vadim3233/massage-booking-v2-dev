@@ -63,6 +63,11 @@ test('signed-out exact booking deep link survives login and reload', async ({ pa
 })
 test('bank verification persists and leaves the queue; cash approval and receipt remain separate', async ({ page }) => {
   await f.authorize(); await login(page)
+  // The confirmation names the reference to look for on the bank statement, and going back changes nothing.
+  await item(page, 0).getByRole('button', { name: 'Verify payment', exact: true }).click()
+  await expect(page.locator('dialog.admin-confirm')).toContainText(`Look for the reference ${f.bookings[0].booking_reference}`)
+  await page.locator('dialog.admin-confirm').getByRole('button', { name: 'Go back' }).click()
+  await expect(item(page, 0)).toHaveCount(1)
   await confirm(page, item(page, 0).getByRole('button', { name: 'Verify payment', exact: true }))
   await expect(item(page, 0)).toHaveCount(0)
   expect((await f.admin.from('booking_payments').select('status,paid_at').eq('booking_id', f.bookings[0].id).single()).data.status).toBe('paid')
@@ -218,7 +223,7 @@ test('an older manual refresh cannot overwrite status fetched after a payment ac
     const response = await route.fetch(); captured(); await gate
     await route.fulfill({ response })
   })
-  await page.getByRole('button', { name: 'Refresh booking', exact: true }).click()
+  await page.getByRole('button', { name: 'Check for changes', exact: true }).click()
   await ready
   await confirm(page, page.getByRole('button', { name: 'Verify payment', exact: true }))
   await expect(page.getByRole('dialog').getByText('Confirmed · Paid', { exact: true })).toBeVisible()

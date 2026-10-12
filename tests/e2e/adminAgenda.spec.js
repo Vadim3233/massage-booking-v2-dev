@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { adminFixture } from '../adminFixture.js'
 import { unwrap } from '../../src/client/booking/bookingApi.js'
+import { dateLabel, shiftDate, today } from '../../src/admin/calendarPresentation.js'
 
 let f
 test.beforeEach(async () => { f = await adminFixture(5) })
@@ -93,4 +94,53 @@ test('the Day view shows a booking made while the Admin was away, without blanki
   await bookWhileAway(page)
   await expect(page.locator('.admin-card')).toHaveCount(3)
   expect(await page.evaluate(() => window.__blanked)).toBe(false)
+})
+
+// A booking made while away, some days after the fixture's day (a later month, for the Agenda that has read on that far).
+async function bookLater(daysAhead) {
+  const { id, created_at, updated_at, ...copy } = f.bookings[0]
+  void id; void created_at; void updated_at
+  await unwrap(f.admin.from('bookings').insert({ ...copy, date: shiftDate(f.date, daysAhead), start_minutes: 900, booking_reference: `LATE-${crypto.randomUUID()}` }))
+}
+// The server says no at once (the database client would otherwise try a lost connection again for several seconds on its own).
+const refuse = route => route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ code: '22023', message: 'Test failure', details: null, hint: null }) })
+async function openAgenda(page) {
+  await f.authorize()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await login(page)
+  await expect(page.locator('.admin-card')).toHaveCount(3)
+}
+
+test('Refresh reads every month on show, not only the first', async ({ page }) => {
+  await openAgenda(page)
+  // Read on past the first month (the list also does this by itself as its end comes into view).
+  await page.getByRole('button', { name: 'Load more upcoming appointments' }).click()
+  await expect(page.locator('.admin-agenda-range')).not.toContainText(dateLabel(shiftDate(today(), 30), { day: 'numeric', month: 'short', year: 'numeric' }))
+  await bookLater(40)
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click()
+  await expect(page.locator('.admin-card')).toHaveCount(4)
+})
+
+test('a refresh that fails just after waking is tried once more before anyone is told', async ({ page }) => {
+  await openAgenda(page)
+  await bookLater(0)
+  // Every read is refused for the first second and a half, as it can be just after a phone wakes; the second try comes later and works.
+  const until = Date.now() + 1500
+  await page.route('**/rest/v1/bookings?*', route => (Date.now() < until ? refuse(route) : route.continue()))
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click()
+  await expect(page.locator('.admin-card')).toHaveCount(4, { timeout: 12000 })
+  await expect(page.getByText('Could not refresh the agenda just now.')).toHaveCount(0)
+})
+
+test('a refresh that keeps failing says so quietly, keeps the list, and Try again works', async ({ page }) => {
+  await openAgenda(page)
+  let broken = true
+  await page.route('**/rest/v1/bookings?*', route => (broken ? refuse(route) : route.continue()))
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click()
+  await expect(page.getByText('Could not refresh the agenda just now.')).toBeVisible({ timeout: 12000 })
+  await expect(page.getByRole('status').filter({ hasText: 'Could not refresh the agenda just now.' })).toBeVisible()
+  await expect(page.locator('.admin-card')).toHaveCount(3)
+  broken = false
+  await page.getByRole('button', { name: 'Try again', exact: true }).click()
+  await expect(page.getByText('Could not refresh the agenda just now.')).toHaveCount(0)
 })
