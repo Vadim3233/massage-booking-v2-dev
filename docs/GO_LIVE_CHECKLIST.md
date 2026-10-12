@@ -11,6 +11,7 @@ Both sides were redesigned as one product; the rules (availability, travel buffe
 - **Stays up to date**: coming back to the Admin from the bank or WhatsApp refreshes the Agenda, the Day view, To check and Alerts by itself, and nothing blanks while it does.
 - **Cancelling and moving**: cancelling shows No fee, Standard fee and Full price as one tap each (anything else is typed); moving a booking uses the same day-and-time picker as booking; both keep their buttons at the bottom while the form scrolls.
 - **Payment screen**: the amount, then the bank details, then the terms to tick, then what happens next, with the booking itself last. Pressing the button before the terms are ticked takes the client to the box and says why.
+- **Details are checked kindly**: a phone number or postcode that cannot be right is named beside its field before a time is reserved. A quick second tap on a choice no longer picks the next treatment or length by accident. On a reserved booking there is no way back, so the payment screen offers "Change the time or cancel this booking" instead.
 - **Your booking link** (More): the address of the booking page to copy or send on WhatsApp, and a link that starts part-way through for one area, treatment and length (for example `/?area=chelsea&treatment=massage&minutes=60`).
 - **Home screen**: on an iPhone, open the booking page or the Admin in Safari, press Share, then Add to Home Screen. The Admin gets its own name ("Vad Admin") and icon and opens full screen.
 
@@ -46,6 +47,11 @@ Both sides were redesigned as one product; the rules (availability, travel buffe
 6. **Fonts and privacy**: the pages load the Playfair Display and Inter fonts from Google Fonts. That sends visitors' addresses to Google. If you would rather not, say so and the fonts can be served from the site itself instead.
 
 ## Known limits (worth knowing, not blockers)
+
+- A guest who books twice as a guest appears twice under Clients. This is on purpose: an email typed by a guest cannot be trusted, so it is never used to link them to an existing client. If it becomes annoying, a "merge clients" button can be added.
+- Text left over from setting up still shows to clients until you write your own: the extra "Aftercare advice" says "Describe this enhancement." (More, Extras). Check the treatments, extras and areas once as a client would see them.
+- The "New test client" helper on the details page is reachable on the live site with `?test=1` at the end of the address. It only fills in made-up details, but if you do not need it on the live site it can be limited to development builds.
+- A client's page shows "Upcoming" and "Next appointment" for an appointment earlier today until the day is over.
 
 - Not tried on a real iPhone: the Add to Home Screen icons, adding an appointment to the calendar (the `.ics` file) and how it reads with VoiceOver. All of it was checked in a desktop browser and with automated tests. Please try each once on your phone before telling clients.
 
