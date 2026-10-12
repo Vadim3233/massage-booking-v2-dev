@@ -1,3 +1,5 @@
+import { withGuestNames } from '../../booking/guestNames.js'
+
 // Explicit client contracts: no client IDs, prices, payment state or order writes.
 export async function unwrap(request) {
   const { data, error } = await request
@@ -14,7 +16,7 @@ async function one(request) {
 export function quoteParams(draft) {
   return {
     p_service_area_id: draft.areaId,
-    p_sessions: draft.sessions.map(({ duration_minutes, recipient_name, preference_ids }) => ({
+    p_sessions: withGuestNames(draft.sessions).map(({ duration_minutes, recipient_name, preference_ids }) => ({
       service_id: draft.serviceId, duration_minutes, recipient_name, preference_ids,
     })),
     p_enhancement_ids: [...draft.enhancementIds],

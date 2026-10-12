@@ -116,7 +116,7 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
 
   function edit(change) { if (!locked) { patch(change); setError('') } }
   function selectClient(client) {
-    patch({ client, details: { ...emptyAddress }, sessions: draft.sessions.map((session, index) => index === 0 && !session.recipient_name ? { ...session, recipient_name: [client.first_name, client.last_name].filter(Boolean).join(' ') } : session) })
+    patch({ client, details: { ...emptyAddress } })
     setAddressState({ clientId: client.id, addresses: [], loading: true, error: '' })
     setClientError('')
     api.addresses(client.id).then(addresses => {
@@ -144,7 +144,7 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
   // The first thing still missing, in the order the page reads, with a plain sentence.
   function validation() {
     if (!draft.client || !draft.areaId || !draft.details.address_line_1?.trim() || !draft.details.city?.trim() || !draft.details.postcode?.trim()) return 'Choose a client, appointment address and service area.'
-    if (!draft.serviceId || !draft.sessions.length || draft.sessions.length > 4 || duration > 240 || draft.sessions.some(session => !session.recipient_name.trim() || !catalogue.prices.some(price => price.service_id === draft.serviceId && price.duration_minutes === session.duration_minutes))) return 'Choose an available treatment and duration, and name each recipient.'
+    if (!draft.serviceId || !draft.sessions.length || draft.sessions.length > 4 || duration > 240 || draft.sessions.some(session => !catalogue.prices.some(price => price.service_id === draft.serviceId && price.duration_minutes === session.duration_minutes))) return 'Choose a treatment and an available duration.'
     if (!draft.date || draft.start === null || !availability || availability.error || !availability.slots.some(slot => slot.start_minutes === draft.start)) return 'Choose an available appointment time.'
     return ''
   }

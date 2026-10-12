@@ -1,4 +1,5 @@
 import { dateLabel, money, timeLabel } from '../bookingDraft.js'
+import { guestLabel } from '../../../booking/guestNames.js'
 
 const PREFERENCE_GROUPS = [
   { title: 'Focus on', aliases: ['Focus on', 'Focus area', 'Focus'], empty: 'Optional' },
@@ -85,7 +86,7 @@ export default function ReviewStep({ draft, catalogue, quote, edit, navigate, re
     </section>
     {draft.sessions.map((session, index) => <section className="panel" key={index}>
       <h2>Session {index + 1} · {session.duration_minutes} minutes</h2>
-      <label>Guest name (optional)<input value={session.recipient_name} maxLength={120} onChange={(event) => sessionEdit(index, { recipient_name: event.target.value })} /></label>
+      {draft.sessions.length > 1 && <label>Name for {guestLabel(index)} (optional)<input value={session.recipient_name} placeholder={guestLabel(index)} maxLength={120} onChange={(event) => sessionEdit(index, { recipient_name: event.target.value })} /></label>}
       <fieldset>
         <legend>Session preferences</legend>
         <PreferenceGroups

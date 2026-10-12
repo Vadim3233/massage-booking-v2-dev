@@ -1,5 +1,7 @@
 import { supabase } from '../lib/supabase.js'
 import { createBookingApi, quoteParams, unwrap } from '../client/booking/bookingApi.js'
+import { withGuestNames } from '../booking/guestNames.js'
+import { clientLabel } from './newBooking/presentation.js'
 
 async function one(request) {
   const result = await unwrap(request)
@@ -13,7 +15,7 @@ export function bookingRequest(draft) {
     saved_address_id: draft.details.savedAddressId || null,
     address: draft.details.savedAddressId ? null : Object.fromEntries(['address_line_1', 'address_line_2', 'city', 'postcode', 'entry_instructions'].map(key => [key, draft.details[key]?.trim() || null])),
     service_area_id: draft.areaId,
-    sessions: quoteParams(draft).p_sessions,
+    sessions: withGuestNames(quoteParams(draft).p_sessions, clientLabel(draft.client)),
     enhancement_ids: [...draft.enhancementIds],
     date: draft.date,
     start_minutes: draft.start,
