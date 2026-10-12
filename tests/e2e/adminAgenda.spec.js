@@ -124,10 +124,12 @@ test('Refresh reads every month on show, not only the first', async ({ page }) =
 test('a refresh that fails just after waking is tried once more before anyone is told', async ({ page }) => {
   await openAgenda(page)
   await bookLater(0)
+  // Coming back after a real absence reads the Agenda again by itself.
+  await page.waitForTimeout(5300)
   // Every read is refused for the first second and a half, as it can be just after a phone wakes; the second try comes later and works.
   const until = Date.now() + 1500
   await page.route('**/rest/v1/bookings?*', route => (Date.now() < until ? refuse(route) : route.continue()))
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click()
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
   await expect(page.locator('.admin-card')).toHaveCount(4, { timeout: 12000 })
   await expect(page.getByText('Could not refresh the agenda just now.')).toHaveCount(0)
 })
@@ -136,8 +138,9 @@ test('a refresh that keeps failing says so quietly, keeps the list, and Try agai
   await openAgenda(page)
   let broken = true
   await page.route('**/rest/v1/bookings?*', route => (broken ? refuse(route) : route.continue()))
+  // A refresh she asked for herself says so at once; only one nobody asked for is tried again quietly first.
   await page.getByRole('button', { name: 'Refresh', exact: true }).click()
-  await expect(page.getByText('Could not refresh the agenda just now.')).toBeVisible({ timeout: 12000 })
+  await expect(page.getByText('Could not refresh the agenda just now.')).toBeVisible({ timeout: 1500 })
   await expect(page.getByRole('status').filter({ hasText: 'Could not refresh the agenda just now.' })).toBeVisible()
   await expect(page.locator('.admin-card')).toHaveCount(3)
   broken = false
