@@ -147,7 +147,9 @@ export default function BookingFlow() {
       {!draft.bookingId && <HoldNotice hold={draft.hold} remaining={remaining} busy={busy} pending={draft.pending} error={error} extend={store.extendHold} release={store.releaseHold} />}
       {error && step !== 6 && <p role="alert" className="error" ref={alertBox}>{error}</p>}
       {auth.error && <p role="alert" className="error">{auth.error}</p>}
-      {!catalogue ? <><p role="status">Just getting things ready…</p><button onClick={() => setCatalogueAttempt(catalogueAttempt + 1)}>Retry</button></> : <>
+      {!catalogue ? (error
+        ? <button className="btn--tonal" onClick={() => { store.setError(''); setCatalogueAttempt(catalogueAttempt + 1) }}>Try again</button>
+        : <div className="skeleton-rows" role="status"><span className="sr-only">Just getting things ready…</span><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>) : <>
         {!held && step >= 4 && step < 7 && !draft.pending && !draft.bookingId && <button className="btn--tonal" onClick={() => navigate(3)}>Choose a time again</button>}
         <fieldset className={`screen enter ${busy ? 'is-busy' : ''}`} key={step}>
           {step === 0 && <AreaStep welcome={welcome} rules={rules} catalogue={catalogue} usual={usual} bookUsual={bookUsual} choose={async (areaId) => { if (areaId === draft.areaId || await store.changeSelection({ areaId })) navigate(1) }} />}

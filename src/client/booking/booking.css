@@ -91,6 +91,8 @@
 .welcome-steps li::before { content: counter(welcome); position: absolute; left: 0; top: -1px; display: grid; place-items: center; width: 28px; height: 28px; border: 1.5px solid var(--accent); border-radius: 50%; color: var(--primary); font: 600 14px/1 var(--font-display); font-variant-numeric: lining-nums; }
 .welcome-note { display: flex; align-items: flex-start; gap: 10px; margin: 16px 0; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); color: var(--ink); font-size: 14px; line-height: 1.45; }
 .welcome-note .icon { flex-shrink: 0; margin-top: 1px; color: var(--accent-strong); }
+.welcome--after { margin-top: 26px; }
+.welcome--after .welcome-steps { margin-top: 0; }
 .welcome-about { margin: 8px 0 0; }
 .welcome-about summary { display: flex; align-items: center; min-height: 44px; color: var(--primary); font-weight: 600; cursor: pointer; }
 .usual { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; margin: 4px 0 8px; padding: 14px 16px; border: 1.5px solid var(--primary); border-radius: var(--radius); background: var(--primary-soft); text-align: left; box-shadow: var(--shadow-1); }
@@ -191,7 +193,7 @@
 .steps-list li { margin: 6px 0; }
 .switch-method { margin: 4px 0 0 -10px; }
 .terms-note { margin: 12px 0 4px; color: var(--ink-soft); font-size: 14px; }
-.terms { padding: 12px 14px; border: 1.5px solid var(--tile-border); border-radius: var(--radius); background: var(--surface); }
+.terms { scroll-margin-bottom: 170px; padding: 12px 14px; border: 1.5px solid var(--tile-border); border-radius: var(--radius); background: var(--surface); }
 .terms:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
 .success-mark { display: grid; place-items: center; width: 64px; height: 64px; margin: 18px 0 2px; border-radius: 50%; background: var(--ok-bg); color: var(--ok-ink); animation: pop var(--dur) var(--ease) both; }
 .success-mark[data-status=cancelled] { background: var(--cancel-bg); color: var(--cancel-ink); }
@@ -225,3 +227,4 @@
   .busy-bar.is-on::after { animation: none; left: 0; width: 100%; opacity: .5; }
   .success-mark { animation: none; }
 }
+

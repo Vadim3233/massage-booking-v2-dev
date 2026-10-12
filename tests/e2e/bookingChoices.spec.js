@@ -151,6 +151,14 @@ test('every booking screen fits a 320px phone, and the usual booking is offered 
   const user = (await unwrap(fixture.admin.from('clients').select('auth_user_id').eq('normalized_email', email)))[0].auth_user_id
   await fixture.trackUser(user)
   expect(await noSideways(page)).toBe(true)
+  // The bank details come first, then the terms, then what happens next, and the booking itself last.
+  const top = async (locator) => (await locator.boundingBox()).y
+  const order = [await top(page.locator('.bank-card')), await top(page.locator('label.terms')), await top(page.getByRole('heading', { name: 'What happens next' })), await top(page.getByRole('region', { name: 'Appointment summary' }))]
+  expect(order).toEqual([...order].sort((first, second) => first - second))
+  // Pressing the button before the box is ticked asks for the tick, and takes her to it, instead of doing nothing.
+  await page.getByRole('button', { name: "I've made the bank transfer" }).click()
+  await expect(page.getByRole('alert')).toContainText('Please tick the box')
+  await expect(page.getByLabel('I understand the payment and cancellation terms.')).toBeFocused()
   await page.getByLabel('I understand the payment and cancellation terms.').check()
   await page.getByRole('button', { name: "I've made the bank transfer" }).click()
   await expect(page.getByRole('heading', { name: "I've received your booking" })).toBeVisible()
@@ -164,6 +172,17 @@ test('every booking screen fits a 320px phone, and the usual booking is offered 
   await expect(page.getByRole('heading', { name: 'Choose date and time' })).toBeVisible()
   expect((await readDraft(page)).sessions.map((session) => session.duration_minutes)).toEqual([60])
   expect(errors).toEqual([])
+})
+
+test('the first area is on screen without scrolling, and how booking works comes after the areas', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/')
+  const first = page.locator('.tiles--areas .tile').first()
+  await expect(first).toBeVisible()
+  const box = await first.boundingBox()
+  expect(box.y + box.height).toBeLessThan(844)
+  const steps = await page.getByRole('list', { name: 'How booking works' }).boundingBox()
+  expect(steps.y).toBeGreaterThan(box.y)
 })
 
 test('a link with the area, treatment and length in it opens the booking part-way through', async ({ page }) => {

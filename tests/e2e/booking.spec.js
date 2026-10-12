@@ -85,9 +85,13 @@ test('cash is an explicit request awaiting approval', async ({ page }) => {
   await page.getByRole('button', { name: "I'd like to pay cash", exact: true }).click()
   await expect(page.getByText('Payment: Cash on arrival', { exact: true })).toBeVisible()
   await expect(page.getByText('Payment: Awaiting your bank transfer', { exact: true })).toHaveCount(0)
-  // The cash terms are a fresh question: the button stays off until they are acknowledged again.
-  await expect(page.getByRole('button', { name: 'Confirm cash booking', exact: true })).toBeDisabled()
+  // The cash terms are a fresh question: pressing the button before they are ticked asks for the tick, and goes no further.
+  await page.getByRole('button', { name: 'Confirm cash booking', exact: true }).click()
+  await expect(page.getByRole('alert')).toContainText('Please tick the box')
+  await expect(page.getByLabel('I understand the payment and cancellation terms.')).toBeFocused()
+  await expect(page.getByRole('heading', { name: /Paying by/ })).toBeVisible()
   await page.getByLabel('I understand the payment and cancellation terms.').check()
+  await expect(page.getByRole('alert')).toHaveCount(0)
   await page.getByRole('button', { name: 'Confirm cash booking', exact: true }).click()
   await expect(page.getByText('Payment: Cash on arrival', { exact: true })).toBeVisible()
 })

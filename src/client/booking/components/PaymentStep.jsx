@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { money } from '../bookingDraft.js'
 import { cancellationNote } from '../../bookingRules.js'
 import { friendlyError } from '../friendlyError.js'
@@ -8,6 +8,8 @@ import BookingSummary from './BookingSummary.jsx'
 
 export default function PaymentStep({ rules, draft, quote, quoteError, bank, api, store, finalize, held, error, chooseTimeAgain }) {
   const [acknowledged, setAcknowledged] = useState(false)
+  const [termsHint, setTermsHint] = useState(false)
+  const termsBox = useRef(null)
   const [view, setView] = useState({ booking: null, error: '' })
   const [attempt, setAttempt] = useState(0)
   useEffect(() => {
@@ -34,6 +36,17 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
     setAcknowledged(false)
     setTimeout(() => document.querySelector('.booking-main h1')?.focus({ preventScroll: true }), 0)
   }
+  // The button is always there to press; if the terms have not been ticked it says so and takes her to the box.
+  function confirm() {
+    if (!acknowledged) {
+      setTermsHint(true)
+      termsBox.current?.scrollIntoView({ block: 'center' })
+      termsBox.current?.focus({ preventScroll: true })
+      return
+    }
+    store.completePayment()
+  }
+  const summary = <BookingSummary booking={booking} paymentLabel={cash ? 'Cash on arrival' : undefined} />
   return <>
     <h1 tabIndex={-1}>{cash ? <>Paying by <em>cash</em></> : <>One last <em>step</em></>}</h1>
     <p role="status" className="reserved"><span className="reserved-dot" aria-hidden="true" />Your appointment time is reserved for you.</p>
@@ -42,38 +55,36 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
       <p className="eyebrow">Amount to transfer</p>
       <p className="amount figure">{money(booking.total_gbp)}</p>
     </section>}
-    <BookingSummary booking={booking} paymentLabel={cash ? 'Cash on arrival' : undefined} />
     {!cash && <section className="panel bank-card">
       <h2>Bank transfer</h2>
       <BankDetails bank={bank} reference={booking.booking_payments.payment_reference} />
-      <h3>What happens next</h3>
-      <ol role="list" className="steps-list">
-        <li>Make the bank transfer.</li>
-        <li>Press <strong>I've made the bank transfer</strong>.</li>
-        <li>I'll check the payment and confirm your appointment.</li>
-      </ol>
     </section>}
     {cash && <section className="panel">
       <h2>Cash on arrival</h2>
       <p>You can pay the full amount in cash at your appointment.</p>
-      <h3>What happens next</h3>
-      <ol role="list" className="steps-list">
+    </section>}
+    <p className="terms-note" id="terms-note">{cancellationNote(rules)}</p>
+    <label className="check terms"><input ref={termsBox} type="checkbox" aria-describedby={termsHint && !acknowledged ? 'terms-note terms-help' : 'terms-note'} checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} />I understand the payment and cancellation terms.</label>
+    {termsHint && !acknowledged && <p role="alert" className="error" id="terms-help">Please tick the box to say you understand the terms, then press the button again.</p>}
+    <h2 className="section-title">What happens next</h2>
+    <ol role="list" className="steps-list">
+      {cash ? <>
         <li>Confirm your cash booking below.</li>
         <li>I'll look at your request, confirm your appointment and let you know.</li>
-      </ol>
-    </section>}
+      </> : <>
+        <li>Make the bank transfer.</li>
+        <li>Press <strong>I've made the bank transfer</strong>.</li>
+        <li>I'll check the payment and confirm your appointment.</li>
+      </>}
+    </ol>
     {!draft.paymentPending && <button className="btn--quiet switch-method" onClick={switchMethod}>{cash ? 'Back to bank transfer' : "I'd like to pay cash"}</button>}
-    <>
-      <p className="terms-note" id="terms-note">{cancellationNote(rules)}</p>
-      <label className="check terms"><input type="checkbox" aria-describedby="terms-note" checked={acknowledged} onChange={(event) => setAcknowledged(event.target.checked)} />I understand the payment and cancellation terms.</label>
-    </>
+    {summary}
+    <p className="fine"><a href="https://vadmassage.com">Contact Vad</a></p>
     {error && <p role="alert" className="error">{error}</p>}
-    {!acknowledged && <p className="fine" id="terms-help">Tick the box above to continue.</p>}
     <div className="action-bar">
-      <button className="btn--primary btn--lg btn--block" aria-describedby={acknowledged ? undefined : 'terms-help'} disabled={!acknowledged || (!cash && !bank.configured)} onClick={store.completePayment}>
+      <button className="btn--primary btn--lg btn--block" disabled={!cash && !bank.configured} onClick={confirm}>
         {draft.paymentPending ? 'Try again' : cash ? 'Confirm cash booking' : "I've made the bank transfer"}
       </button>
     </div>
-    <p className="fine"><a href="https://vadmassage.com">Contact Vad</a></p>
   </>
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Icon from '../../../ui/icons.jsx'
 import WaitlistPanel from './WaitlistPanel.jsx'
-import Welcome from './Welcome.jsx'
+import Welcome, { HowItWorks } from './Welcome.jsx'
 import { activeHold, durationOf, money, newSession, timeLabel } from '../bookingDraft.js'
 import DayTimePicker from './DayTimePicker.jsx'
 import { dayParts } from '../dateStrip.js'
@@ -20,6 +20,7 @@ export function AreaStep({ catalogue, choose, welcome, rules, usual, bookUsual }
       {surcharges(area).map(note => <span className="tile-note" key={note}>{note}</span>)}
     </button>)}</div>
     {!catalogue.areas.length && <p>Online booking areas are being updated.</p>}
+    <HowItWorks welcome={welcome} />
     <p className="fine">I visit selected parts of these areas. Outside my usual route? <a href="https://vadmassage.com">Get in touch</a> and I'll see what I can arrange.</p>
   </>
 }
