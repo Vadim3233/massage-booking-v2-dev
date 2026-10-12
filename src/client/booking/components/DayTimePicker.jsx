@@ -114,7 +114,7 @@ export default function DayTimePicker({ horizonDays, dateLabel = 'Appointment da
         const known = days[date]
         return <button type="button" className="daychip" key={date} aria-pressed={date === viewDate} data-free={known ? (known.error ? 'unknown' : known.slots.length ? 'yes' : 'no') : 'unknown'}
           aria-label={`${parts.weekday} ${parts.day} ${parts.month}, ${freeText(known)}`} onClick={() => pick(date)}>
-          <span className="daychip-dow">{parts.weekday}</span><span className="figure daychip-day">{parts.day}</span><span className="daychip-dot" aria-hidden="true" />
+          <span className="daychip-dow">{parts.weekday}</span>{' '}<span className="figure daychip-day">{parts.day}</span><span className="daychip-dot" aria-hidden="true" />
         </button>
       })}
       <button type="button" className="daystrip-arrow" aria-label="Later days" aria-disabled={atEnd} onClick={() => { if (!atEnd) setStripStart(clampStrip(addDays(stripStart, STRIP_DAYS), today, last)) }}><Icon name="right" size={22} /></button>

@@ -48,9 +48,9 @@ export function DurationStep({ draft, catalogue, change, choose, next }) {
   return <><h1 tabIndex={-1}>How much time would <em>you like?</em></h1>
     {!group && <>
       <p className="lede">Choose a length and you'll go straight on to picking a time.</p>
-      <div className="tiles tiles--durations">{prices.map((price) => <button className="tile tile--duration" key={price.duration_minutes} aria-label={`${price.duration_minutes} minutes, ${money(price.price_gbp)} per person`}
+      <div className="tiles tiles--durations">{prices.map((price) => <button className="tile tile--duration" key={price.duration_minutes} aria-label={`${price.duration_minutes} minutes ${money(price.price_gbp)} per person`}
         aria-pressed={draft.sessions.length === 1 && draft.sessions[0].duration_minutes === price.duration_minutes} onClick={() => choose(price.duration_minutes)}>
-        <span className="figure tile-figure">{price.duration_minutes}</span><span className="tile-unit">minutes</span><span className="tile-price">{money(price.price_gbp)}</span>
+        <span className="figure tile-figure">{price.duration_minutes}</span>{' '}<span className="tile-unit">minutes</span>{' '}<span className="tile-price">{money(price.price_gbp)}</span>
       </button>)}</div>
       {prices.length > 0 && <button className="btn--quiet group-toggle" onClick={() => setGroup(true)}>Booking for more than one person?</button>}
     </>}

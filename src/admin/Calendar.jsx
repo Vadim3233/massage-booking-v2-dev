@@ -61,7 +61,7 @@ export default function Calendar({ signOut, openBooking, revision, initialDate, 
         <button aria-label="Previous day" onClick={() => navigate(shiftDate(date, -1))}>‹</button>
         {[-2, -1, 0, 1, 2].map(offset => {
           const day = shiftDate(date, offset)
-          return <button key={day} className="admin-day-choice" aria-label={dateLabel(day, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} aria-current={offset === 0 ? 'date' : undefined} onClick={() => navigate(day)}><span>{dateLabel(day, { weekday: 'short' })}</span><strong>{Number(day.slice(-2))}</strong></button>
+          return <button key={day} className="admin-day-choice" aria-label={dateLabel(day, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })} aria-current={offset === 0 ? 'date' : undefined} onClick={() => navigate(day)}><span>{dateLabel(day, { weekday: 'short' })}</span>{' '}<strong>{Number(day.slice(-2))}</strong></button>
         })}
         <button aria-label="Next day" onClick={() => navigate(shiftDate(date, 1))}>›</button>
       </nav>

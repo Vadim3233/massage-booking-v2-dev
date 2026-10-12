@@ -2,6 +2,15 @@
 
 Updated 2026-10-09. This is written for the owner, in plain words. Nothing here has been done on the real (hosted) Supabase project or on Vercel. Everything below was built and tested on a local copy.
 
+## New in the design overhaul (2026-10-12)
+
+Both sides were redesigned as one product; the rules (availability, travel buffers, payments, cancellation) did not change and nothing in the database changed.
+
+- **Booking page**: tap a length and you go straight to choosing a time; the time page opens on the first day with room and shows the days before it as full; looking at other days never lets go of a time that is held; the review is a ticket with preferences and extras tucked away and a price that updates by itself; "Continue as guest" is the plain way on and signing in waits behind "Returning client?"; a confirmed appointment can be added to a phone's calendar; a regular client is offered "Book your usual"; "Book another appointment" starts afresh.
+- **Admin**: a tab bar at the bottom (a rail on a wide screen) with a number on To check and Alerts; the Agenda opens with a "Needs you" strip where Verify and Approve are one tap and one confirmation away; the next appointment is tagged Now or Next; alerts about one booking are one card; New booking is one numbered page where treatment and length are tapped; clients show their initials; more buttons say what they do ("Cancel unpaid booking").
+- **Your booking link** (More): the address of the booking page to copy or send on WhatsApp, and a link that starts part-way through for one area, treatment and length (for example `/?area=chelsea&treatment=massage&minutes=60`).
+- **Home screen**: on an iPhone, open the booking page or the Admin in Safari, press Share, then Add to Home Screen. The Admin gets its own name ("Vad Admin") and icon and opens full screen.
+
 ## What works now (tested locally)
 
 **For clients** (the website)
@@ -34,6 +43,8 @@ Updated 2026-10-09. This is written for the owner, in plain words. Nothing here 
 6. **Fonts and privacy**: the pages load the Playfair Display and Inter fonts from Google Fonts. That sends visitors' addresses to Google. If you would rather not, say so and the fonts can be served from the site itself instead.
 
 ## Known limits (worth knowing, not blockers)
+
+- Not tried on a real iPhone: the Add to Home Screen icons, adding an appointment to the calendar (the `.ics` file) and how it reads with VoiceOver. All of it was checked in a desktop browser and with automated tests. Please try each once on your phone before telling clients.
 
 - Repeating bookings are set up by you for now; clients cannot yet ask for a repeat themselves. The daily job that books each next session runs when the sender is called (see `docs/NOTIFICATIONS_SETUP.md`), so it must be scheduled at least once a day.
 

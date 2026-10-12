@@ -90,7 +90,7 @@ function BlockedTime({ api }) {
     return `${dateLabel(item.start_date, short)}${item.start_minutes === 0 ? '' : ` ${clock(item.start_minutes)}`} to ${dateLabel(item.end_date, short)}${item.end_minutes === 1440 ? '' : ` ${clock(item.end_minutes)}`}`
   }
   return <section className="admin-blocked-time" aria-labelledby="blocked-time-title">
-    <h3 id="blocked-time-title">Block time</h3>
+    <h2 id="blocked-time-title">Block time</h2>
     <p className="admin-detail-hint">Away for a few days, or busy for a few hours? Pick a start date and time and an end date and time, like an event in your phone calendar. Clients can't book that time.</p>
     <button className="btn--primary" onClick={() => setDialog({ date: today() })}>Block time</button>
     {error && <p role="alert">{error}</p>}

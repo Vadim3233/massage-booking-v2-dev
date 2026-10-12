@@ -40,7 +40,7 @@ test('each screen has its question as the heading, named in the tab and read out
 
 test('tapping a length goes straight on to the time, and the first free day is already open', async ({ page }) => {
   await toDuration(page)
-  await expect(page.getByRole('button', { name: /^60 minutes, £85\.00 per person/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^60 minutes £85\.00 per person/ })).toBeVisible()
   await page.getByRole('button', { name: /^90 minutes/ }).click()
   await expect(page.getByRole('heading', { name: 'Choose date and time' })).toBeVisible()
   const draft = await readDraft(page)
