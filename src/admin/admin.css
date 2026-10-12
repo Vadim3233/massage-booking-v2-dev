@@ -21,9 +21,9 @@
 .admin-fab .fab-plus { font-size: 28px; font-weight: 500; line-height: 1; margin-top: -2px; }
 
 /* ---------- Calendar / Agenda switch ---------- */
-.admin-calendar-views { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 12px 16px 4px; padding: 4px; border-radius: 16px; background: #e9ece6; }
-.admin-calendar-views a { display: flex; align-items: center; justify-content: center; min-height: 44px; border-radius: 12px; color: var(--ink-soft); font: 600 16px/1 var(--font-ui); text-decoration: none; transition: background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
-.admin-calendar-views a[aria-current="page"] { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgb(37 59 54 / .16); }
+.admin-shell .admin-calendar-views { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 12px 16px 4px; padding: 4px; border: 0; border-radius: 16px; background: #e9ece6; }
+.admin-shell .admin-calendar-views a { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 44px; padding: 0; border: 0; border-radius: 12px; background: transparent; color: var(--ink-soft); font: 600 16px/1 var(--font-ui); text-decoration: none; transition: background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
+.admin-shell .admin-calendar-views a[aria-current="page"] { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgb(37 59 54 / .16); }
 
 /* ---------- Agenda ---------- */
 .admin-agenda { padding: 8px 16px 16px; }
@@ -66,7 +66,7 @@
 .share-link input { font-size: 15px; text-overflow: ellipsis; }
 .share-more { margin-top: 18px; }
 .admin-next-tag { margin-top: 4px; padding: 3px 7px; border-radius: 6px; background: var(--accent-soft); color: var(--accent-ink); font: 700 10px/1 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; font-style: normal; }
-.admin-shell .admin-card { --rail: var(--ok-rail); position: relative; display: grid; justify-content: stretch; align-items: start; justify-items: stretch; width: 100%; gap: 3px; padding: 13px 14px 13px 19px; border: 0; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); color: var(--ink); font: 400 15px/1.35 var(--font-ui); text-align: left; overflow: hidden; }
+.admin-shell .admin-card { --rail: var(--ok-rail); position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; justify-content: stretch; align-items: start; justify-items: stretch; width: 100%; gap: 3px; padding: 13px 14px 13px 19px; border: 0; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); color: var(--ink); font: 400 15px/1.35 var(--font-ui); text-align: left; overflow: hidden; }
 .admin-shell .admin-card:not(:disabled):hover { background: #fcfdfb; box-shadow: var(--shadow-2); }
 .admin-card::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--rail); }
 .admin-card[data-chip="needs"] { --rail: var(--needs-rail); background: #fffaf0; }
@@ -74,12 +74,13 @@
 .admin-card[data-chip="done"] { --rail: var(--done-rail); }
 .admin-card[data-chip="noshow"] { --rail: var(--noshow-rail); }
 .admin-card[data-chip="cancel"] { --rail: var(--cancel-rail); }
-.admin-card-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: baseline; }
+.admin-card-heading { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: baseline; }
 .admin-card-heading strong { min-width: 0; font: 650 17px/1.25 var(--font-ui); }
 .admin-card-price { font: 600 19px/1 var(--font-display); font-variant-numeric: lining-nums; white-space: nowrap; }
 .admin-card-treatment, .admin-card-postcode { color: var(--ink-soft); font-size: 14px; }
-.admin-card-postcode { color: var(--muted); font-size: 13px; letter-spacing: .02em; }
-.admin-card .admin-status { justify-self: start; margin-top: 4px; }
+.admin-card-treatment { grid-column: 1; min-width: 0; }
+.admin-card-postcode { grid-column: 2; align-self: baseline; color: var(--muted); font-size: 13px; letter-spacing: .02em; white-space: nowrap; }
+.admin-card .admin-status { grid-column: 1 / -1; justify-self: start; margin-top: 4px; }
 .admin-shell .admin-card.cancelled { gap: 1px; padding-block: 9px; background: var(--cancel-bg); box-shadow: none; color: var(--cancel-ink); }
 .admin-card.cancelled .admin-card-heading strong { font-weight: 500; text-decoration: line-through; text-decoration-thickness: 1px; }
 .admin-card.cancelled .admin-card-price { font-size: 15px; text-decoration: line-through; color: var(--cancel-ink); }
@@ -87,6 +88,8 @@
 .admin-card-action { display: flex; flex-wrap: wrap; gap: 8px; }
 .admin-card-action .admin-payment-buttons { margin: 0; }
 
+.admin-timeline-row.admin-timeline-buffer { margin: 2px 0; }
+.admin-timeline-row.admin-timeline-free { margin: 6px 0; }
 .admin-timeline-entry { min-width: 0; padding: 10px 12px; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; row-gap: 2px; border-radius: 10px; font-size: 14px; }
 .admin-timeline-entry small { font-size: 13px; color: var(--muted); }
 .admin-timeline-entry.hold { border: 1.5px dashed #b59b62; background: #faf3e2; color: #795019; }
@@ -291,7 +294,7 @@
   .admin-fab { right: 32px; bottom: 32px; }
   .admin-details { left: auto; width: min(600px, 100vw); box-shadow: var(--shadow-2); }
   .admin-agenda, .admin-day, .admin-review { padding-inline: 8px; }
-  .admin-calendar-views { margin-inline: 8px; max-width: 360px; }
+  .admin-shell .admin-calendar-views { margin-inline: 8px; max-width: 360px; }
   .admin-timeline-row { grid-template-columns: 70px minmax(0, 1fr); }
   .toast-host { bottom: 32px; }
 }
@@ -339,3 +342,18 @@
 
 /* Navigation and short labels never break inside a word; long free text (emails, notes) still wraps. */
 .admin-primary-nav, .admin-primary-nav a, .admin-date-strip, .admin-chip-row, .chip, .admin-status { overflow-wrap: normal; }
+
+/* ---------- Sheets: a long form keeps its buttons in reach, and the usual answers are one tap ---------- */
+.admin-confirm .admin-payment-buttons.admin-sticky-actions { position: sticky; bottom: -22px; z-index: 2; flex-direction: row; flex-wrap: nowrap; gap: 10px; margin: 16px -22px -22px; padding: 12px 22px 22px; background: var(--paper); box-shadow: 0 -1px 0 var(--hairline); }
+.admin-confirm .admin-payment-buttons.admin-sticky-actions button { flex: 1 1 auto; width: auto; min-width: 0; min-height: 52px; }
+.admin-confirm .admin-payment-buttons.admin-sticky-actions .btn--quiet { flex: 0 0 auto; }
+@media (max-width: 767px) {
+  .admin-confirm .admin-payment-buttons.admin-sticky-actions { bottom: calc(-22px - env(safe-area-inset-bottom)); flex-direction: row; margin: 16px -18px calc(-22px - env(safe-area-inset-bottom)); padding: 12px 18px calc(12px + env(safe-area-inset-bottom)); }
+  .admin-confirm .admin-payment-buttons.admin-sticky-actions button { flex: 1 1 auto; width: auto; }
+  .admin-confirm .admin-payment-buttons.admin-sticky-actions .btn--quiet { flex: 0 0 auto; }
+}
+.admin-who.admin-fee-choices { grid-template-columns: repeat(var(--choices, 2), minmax(0, 1fr)); }
+.admin-confirm .admin-new-time { margin: 10px 0 0; padding: 10px 14px; border-radius: 12px; background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+.admin-confirm .admin-confirm-ref { font-size: 14px; color: var(--ink-soft); }
+.admin-confirm .admin-confirm-ref strong { color: var(--ink); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+.admin-confirm .admin-remove { justify-self: start; margin-top: 8px; }

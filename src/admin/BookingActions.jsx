@@ -3,6 +3,7 @@ import { lifecycleActions, lifecycleApi, lifecycleLabels } from './bookingLifecy
 import { clientName, dateLabel, label, money, time, today } from './calendarPresentation.js'
 import { acquireBodyScrollLock } from './dialogScrollLock.js'
 import { toast } from '../ui/toast.js'
+import DayTimePicker from '../client/booking/components/DayTimePicker.jsx'
 
 const ACTION_STYLE = { complete: 'btn--primary', feeReceived: 'btn--primary', refund: 'btn--primary', cancel: 'btn--danger', feeWaive: 'btn--quiet', noShow: '', reschedule: '' }
 
@@ -30,9 +31,7 @@ function ActionDialog({ kind, booking, api, close, done }) {
   const [reason, setReason] = useState('')
   const [fee, setFee] = useState('')
   const [standardFee, setStandardFee] = useState(null)
-  const [date, setDate] = useState(booking.date >= today() ? booking.date : today())
-  const [times, setTimes] = useState(null)
-  const [start, setStart] = useState('')
+  const [slot, setSlot] = useState(null)
   const total = Number(booking.total_gbp)
   const takesFee = kind === 'cancel' || kind === 'reschedule' || kind === 'noShow'
 
@@ -55,21 +54,14 @@ function ActionDialog({ kind, booking, api, close, done }) {
     return () => { live = false }
   }, [api, booking.id, kind, initiatedBy])
 
-  useEffect(() => {
-    if (kind !== 'reschedule' || !date) return undefined
-    let live = true
-    api.availability(date, booking.treatment_duration_minutes, booking.id).then(list => { if (live) { setTimes(list); setStart('') } }, failure => { if (live) { setTimes([]); setError(failure.message) } })
-    return () => { live = false }
-  }, [api, kind, date, booking.id, booking.treatment_duration_minutes])
-
   function input() {
     if (kind === 'cancel') return { reason: reason.trim() || null, initiatedBy, fee: fee === '' ? null : Number(fee) }
     if (kind === 'noShow') return { fee: fee === '' ? null : Number(fee) }
-    if (kind === 'reschedule') return { date, start: Number(start), initiatedBy }
+    if (kind === 'reschedule') return { date: slot.date, start: slot.start, initiatedBy }
     return {}
   }
   const feeValid = fee === '' || (Number(fee) >= 0 && Number(fee) <= total)
-  const ready = (kind !== 'cancel' || feeValid) && (kind !== 'noShow' || feeValid) && (kind !== 'reschedule' || (date && start !== ''))
+  const ready = (kind !== 'cancel' || feeValid) && (kind !== 'noShow' || feeValid) && (kind !== 'reschedule' || Boolean(slot))
 
   async function submit(event) {
     event.preventDefault()
@@ -87,6 +79,15 @@ function ActionDialog({ kind, booking, api, close, done }) {
     } finally { setBusy(false) }
   }
 
+  // One tap for the usual answers: no fee, the standard fee, the full price. Anything else is typed.
+  const choices = []
+  if (takesFee && kind !== 'reschedule') {
+    choices.push([0, 'No fee'])
+    if (kind === 'cancel' && standardFee > 0 && standardFee < total) choices.push([standardFee, `Standard fee ${money(standardFee)}`])
+    if (total > 0) choices.push([total, `Full price ${money(total)}`])
+  }
+  // A no-show with nothing typed means the full price.
+  const shownFee = fee === '' ? (kind === 'noShow' ? total : null) : Number(fee)
   const refundNote = kind === 'cancel' && booking.booking_payments?.status === 'paid' && feeValid
     ? `Payment of ${money(booking.booking_payments.amount_gbp)} has been received. ${money(Math.max(Number(booking.booking_payments.amount_gbp) - Number(fee || 0), 0))} will be recorded as a refund due.` : ''
   const lateFeeNote = kind === 'reschedule' && initiatedBy === 'client' && booking.late_fee_status === 'none' && standardFee > 0
@@ -98,29 +99,28 @@ function ActionDialog({ kind, booking, api, close, done }) {
       <div className="admin-confirm-summary"><strong>{clientName(booking)}</strong><span>{dateLabel(booking.date)} · {time(booking.start_minutes)}</span><b className="figure">{money(booking.total_gbp)}</b></div>
       {explanations[kind] && <p>{explanations[kind]}</p>}
 
-      {kind === 'cancel' && <>
-        <Who value={initiatedBy} onChange={setInitiatedBy} disabled={busy} />
-        <label className="admin-field">Reason (optional, kept in the booking history)<textarea maxLength={500} rows={3} value={reason} disabled={busy} onChange={event => setReason(event.target.value)} /></label>
-      </>}
+      {(kind === 'cancel' || kind === 'reschedule') && <Who value={initiatedBy} onChange={setInitiatedBy} disabled={busy} />}
       {kind === 'reschedule' && <>
-        <Who value={initiatedBy} onChange={setInitiatedBy} disabled={busy} />
-        <label className="admin-field">New date<input type="date" required min={today()} value={date} disabled={busy} onChange={event => setDate(event.target.value)} /></label>
-        <label className="admin-field">New time
-          <select required value={start} disabled={busy || !times?.length} onChange={event => setStart(event.target.value)}>
-            <option value="">{times === null ? 'Loading times…' : times.length ? 'Choose a time' : 'No times available'}</option>
-            {(times || []).map(minutes => <option key={minutes} value={minutes}>{time(minutes)}</option>)}
-          </select>
-        </label>
+        <DayTimePicker horizonDays={365} dateLabel="New date" initialDate={booking.date >= today() ? booking.date : today()}
+          loadDay={date => api.availability(date, booking.treatment_duration_minutes, booking.id)}
+          selected={slot} onPick={(date, start) => { setSlot({ date, start }); setError('') }} emptyMessage="No available times. Choose another date." />
+        {slot && <p className="admin-new-time" role="status">New time: {dateLabel(slot.date, { weekday: 'short', day: 'numeric', month: 'short' })} · {time(slot.start)}</p>}
         {lateFeeNote && <p role="status">{lateFeeNote}</p>}
       </>}
-      {takesFee && kind !== 'reschedule' && <label className="admin-field">Late fee (£)
-        <input type="number" inputMode="decimal" min="0" max={total} step="0.01" value={fee} disabled={busy} onChange={event => setFee(event.target.value)} />
-        <span className="admin-detail-hint">{kind === 'cancel' && standardFee !== null ? `Standard fee now: ${money(standardFee)}. ` : ''}Enter 0 to waive. Up to {money(total)}.</span>
-      </label>}
+      {choices.length > 0 && <>
+        <fieldset className="admin-who admin-fee-choices" style={{ '--choices': choices.length }}><legend>Late fee</legend>
+          {choices.map(([value, text]) => <label key={value}><input type="radio" name="fee-choice" checked={shownFee === value} disabled={busy} onChange={() => setFee(String(value))} /> {text}</label>)}
+        </fieldset>
+        <label className="admin-field">Another amount (£)
+          <input type="number" inputMode="decimal" min="0" max={total} step="0.01" value={fee} disabled={busy} onChange={event => setFee(event.target.value)} />
+          <span className="admin-detail-hint">{kind === 'cancel' && standardFee !== null ? `Standard fee now: ${money(standardFee)}. ` : ''}Up to {money(total)}.</span>
+        </label>
+      </>}
+      {kind === 'cancel' && <label className="admin-field">Reason (optional, kept in the booking history)<textarea maxLength={500} rows={2} value={reason} disabled={busy} onChange={event => setReason(event.target.value)} /></label>}
       {refundNote && <p role="status">{refundNote}</p>}
 
       {error && <p role="alert">{error}</p>}
-      <div className="admin-payment-buttons">
+      <div className={`admin-payment-buttons ${kind === 'cancel' || kind === 'reschedule' ? 'admin-sticky-actions' : ''}`}>
         <button type="submit" className={kind === 'cancel' ? 'btn--danger-solid' : 'btn--primary'} disabled={busy || !ready}>{busy ? 'Saving…' : kind === 'cancel' && Number(fee) > 0 ? `${lifecycleLabels[kind]} · £${Number(fee).toFixed(2)} fee due` : lifecycleLabels[kind]}</button>
         <button type="button" className="btn--quiet" disabled={busy} onClick={close}>Go back</button>
       </div>

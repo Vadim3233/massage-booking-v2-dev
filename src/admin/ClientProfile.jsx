@@ -151,14 +151,14 @@ export default function ClientProfile({ id, back, openBooking, newBooking, api =
     {editing && <section aria-label="Edit details"><ClientForm initial={client} submitLabel="Save details" onCancel={() => setEditing(false)} onSubmit={async details => { await api.update(id, details); setEditing(false); changed() }} /></section>}
     {error && <p role="alert">{error}</p>}
     <Summary clientId={id} api={api} version={version} />
+    <History clientId={id} api={api} openBooking={openBooking} version={version} />
+    <Notes clientId={id} api={api} />
     <ClientRepeats clientId={id} openBooking={openBooking} />
+    <Addresses clientId={id} api={api} changed={changed} />
     <section aria-labelledby="online-title"><h2 id="online-title">Online booking</h2>
       <p>{client.online_booking_enabled ? 'This client can book online.' : 'Online booking is switched off for this client. They cannot book on the website.'}</p>
       <button className="btn--small" disabled={busy} onClick={toggleOnline}>{client.online_booking_enabled ? 'Switch off online booking' : 'Switch on online booking'}</button>
       <p className="admin-detail-hint">{client.auth_user_id ? 'Has an online account.' : 'No online account yet.'} Client since {stamp(client.created_at)}.</p>
     </section>
-    <Addresses clientId={id} api={api} changed={changed} />
-    <Notes clientId={id} api={api} />
-    <History clientId={id} api={api} openBooking={openBooking} version={version} />
   </section>
 }

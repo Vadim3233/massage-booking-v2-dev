@@ -45,6 +45,7 @@ function Confirmation({ action, booking, cancel, confirm, busy }) {
     <h2 id="payment-confirm-title">{actionLabels[action]}?</h2>
     <div className="admin-confirm-summary"><strong>{clientName(booking)}</strong><span>{dateLabel(booking.date)} · {time(booking.start_minutes)}</span><b className="figure">{money(booking.total_gbp)}</b></div>
     <p id="payment-confirm-what">{CONSEQUENCES[action]}</p>
+    {(action === 'verify' || action === 'receiveBank') && booking.booking_reference && <p className="admin-confirm-ref">Look for the reference <strong>{booking.booking_reference}</strong> on your bank statement.</p>}
     <div className="admin-payment-buttons">
       <button className={action === 'remove' ? 'btn--danger-solid' : 'btn--primary'} disabled={busy} onClick={confirm}>{busy ? 'Saving…' : confirmLabel(action, booking)}</button>
       <button className="btn--quiet" disabled={busy} onClick={cancel}>Go back</button>
@@ -60,7 +61,8 @@ function buttonClass(action, booking) {
   return ''
 }
 
-export default function PaymentActions({ booking, refresh, only, compact = false }) {
+// `short` shows one word on each button (Verify, Cancel) where the card around it already says whose booking it is.
+export default function PaymentActions({ booking, refresh, only, compact = false, short = compact }) {
   const [confirmation, setConfirmation] = useState(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState(null)
@@ -87,7 +89,7 @@ export default function PaymentActions({ booking, refresh, only, compact = false
   const available = paymentActions(booking).filter(action => !only || only.includes(action))
   if (!available.length && !message && !confirmation) return null
   return <div className={`admin-payment-actions ${compact ? 'is-compact' : ''}`}>
-    <div className="admin-payment-buttons">{available.map(action => <button key={action} className={`${buttonClass(action, booking)} ${compact ? 'btn--small' : ''}`} aria-label={compact ? `${actionLabels[action]}, ${clientName(booking)} ${money(booking.total_gbp)}` : undefined} disabled={busy} onClick={() => { setMessage(null); setConfirmation(action) }}>{compact ? SHORT[action] : actionLabels[action]}</button>)}</div>
+    <div className="admin-payment-buttons">{available.map(action => <button key={action} className={`${buttonClass(action, booking)} ${compact ? 'btn--small' : ''}`} aria-label={compact ? `${actionLabels[action]}, ${clientName(booking)} ${money(booking.total_gbp)}` : short ? actionLabels[action] : undefined} disabled={busy} onClick={() => { setMessage(null); setConfirmation(action) }}>{short ? SHORT[action] : actionLabels[action]}</button>)}</div>
     {message && <p role={message.error ? 'alert' : 'status'}>{message.text}</p>}
     {confirmation && <Confirmation action={confirmation} booking={booking} cancel={() => setConfirmation(null)} confirm={submit} busy={busy} />}
   </div>
