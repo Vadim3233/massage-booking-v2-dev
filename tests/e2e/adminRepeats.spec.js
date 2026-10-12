@@ -21,7 +21,6 @@ async function login(page, route) {
   await page.getByLabel('Password', { exact: true }).fill(f.password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
 }
-async function next(page) { await page.getByRole('button', { name: 'Continue', exact: true }).click() }
 
 test('a booking can be made to repeat weekly, the slot is held, and the repeat is managed from the client', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
@@ -32,12 +31,9 @@ test('a booking can be made to repeat weekly, the slot is held, and the repeat i
   await page.getByLabel('Find a client').fill(f.recipient.email)
   await page.getByRole('button', { name: new RegExp(f.recipient.first_name) }).click()
   await page.getByRole('combobox', { name: 'Service area', exact: true }).selectOption(f.ids.area)
-  await next(page)
   await page.getByRole('combobox', { name: 'Treatment', exact: true }).selectOption(f.ids.service)
   await page.getByLabel('Recipient name 1', { exact: true }).fill('Regular Client')
-  await next(page)
   await page.getByRole('group', { name: 'Available times' }).getByRole('button').first().click()
-  await next(page)
 
   const repeat = page.getByRole('checkbox', { name: /Repeat every/ })
   await repeat.check()
@@ -45,7 +41,6 @@ test('a booking can be made to repeat weekly, the slot is held, and the repeat i
   const end = shiftDate(f.date, 21)
   await page.getByLabel('Stop repeating after (optional)').fill(end)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-  await next(page)
   await expect(page.getByText(/Repeats every .* until/)).toBeVisible()
   await page.getByRole('button', { name: 'Create booking', exact: true }).click()
   await expect(page.getByRole('dialog')).toBeVisible()

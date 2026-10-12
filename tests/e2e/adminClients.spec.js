@@ -152,7 +152,8 @@ test('booking history opens the booking and returns to the client, and a new boo
   await expect(page).toHaveURL(new RegExp(`/admin/clients/${owner.client_id}$`))
   await page.getByRole('button', { name: '+ New booking' }).click()
   await expect(page.getByRole('heading', { name: 'New booking', exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { pressed: true }).first()).toContainText('Alexandra')
+  await expect(page.getByRole('button', { name: 'Change client', exact: true })).toBeVisible()
+  await expect(page.locator('.anb-block').first()).toContainText('Alexandra')
 })
 
 test('private notes about a client show on their booking, newest first', async ({ page }) => {

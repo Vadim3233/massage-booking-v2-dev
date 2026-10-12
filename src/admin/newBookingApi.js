@@ -28,6 +28,8 @@ export function createAdminNewBookingApi(client) {
     search: query => unwrap(client.rpc('admin_search_clients', { p_query: query })),
     client: id => unwrap(client.from('clients').select('id,first_name,last_name,email,phone').eq('id', id).maybeSingle()),
     addresses: clientId => unwrap(client.rpc('admin_client_addresses', { p_client_id: clientId })),
+    // The client's most recent booking that was not cancelled, used only to suggest defaults.
+    lastBooking: async clientId => (await unwrap(client.from('bookings').select('service_area_id,booking_sessions(service_id,duration_minutes,position),booking_payments(method)').eq('client_id', clientId).neq('booking_status', 'cancelled').order('date', { ascending: false }).order('start_minutes', { ascending: false }).limit(1)))?.[0] || null,
     createClient: (details, requestId) => one(client.rpc('admin_create_client', { p_details: details, p_request_id: requestId })),
     quote: draft => one(client.rpc('admin_quote_booking', quoteParams(draft))),
     availability: (date, duration) => unwrap(client.rpc('admin_booking_availability', { p_date: date, p_treatment_duration_minutes: duration })),

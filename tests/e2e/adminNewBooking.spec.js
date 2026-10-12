@@ -7,7 +7,7 @@ let f
 test.beforeEach(async () => { f = await newBookingFixture(37) })
 test.afterEach(async () => { await f?.cleanup() })
 
-async function login(page, route = '/admin') {
+async function login(page, route = '/admin/day') {
   await page.goto(route)
   await page.getByLabel('Email', { exact: true }).fill(f.email)
   await page.getByLabel('Password', { exact: true }).fill(f.password)
@@ -26,39 +26,43 @@ async function selectClient(page) {
   await expect(page.getByRole('radio', { name: /10 Saved Street/ })).toBeChecked()
   await page.getByRole('combobox', { name: 'Service area', exact: true }).selectOption(f.ids.area)
 }
-async function next(page) { await page.getByRole('button', { name: 'Continue', exact: true }).click() }
+// "More options" holds extra people and extras; open it only if it is closed.
+async function openMore(page) {
+  const more = page.locator('details.anb-more').filter({ hasText: 'More options' })
+  if (!(await more.evaluate(element => element.open))) await more.locator('summary').first().click()
+}
 async function treatment(page, sessions = 1) {
-  await next(page)
   await page.getByRole('combobox', { name: 'Treatment', exact: true }).selectOption(f.ids.service)
   for (let i = 1; i <= sessions; i++) {
-    if (i > 1) await page.getByRole('button', { name: '+ Add session', exact: true }).click()
+    if (i > 1) { await openMore(page); await page.getByRole('button', { name: '+ Add session', exact: true }).click() }
     await page.getByLabel(`Recipient name ${i}`, { exact: true }).fill(`Recipient ${i}`)
   }
-  await page.locator('fieldset.anb-session').first().locator('summary').filter({ hasText: /^Focus(?! on)/ }).click()
-  await page.getByRole('button', { name: 'Integration focus', exact: true }).first().click()
+  const first = page.locator('fieldset.anb-session').first()
+  await first.locator('summary').filter({ hasText: 'Session preferences' }).click()
+  await first.locator('summary').filter({ hasText: /^Focus(?! on)/ }).click()
+  await first.getByRole('button', { name: 'Integration focus', exact: true }).click()
+  await openMore(page)
   await page.getByRole('checkbox', { name: /Integration enhancement/ }).check()
 }
-async function timeAndPayment(page) {
-  await next(page)
+async function pickTime(page) {
   await expect(page.getByLabel('Appointment date')).toHaveValue(f.date)
   await page.getByRole('group', { name: 'Available times' }).getByRole('button').first().click()
-  await next(page)
 }
 
-test('Day date, saved address, sessions, authoritative quote, four payments and exactly-once success', async ({ page }) => {
+test('one page: saved address, sessions, authoritative quote, four payments and exactly-once success', async ({ page }) => {
   await start(page)
   await selectClient(page)
   await treatment(page, 2)
-  await timeAndPayment(page)
+  await pickTime(page)
   for (const name of ['Bank transfer — payment pending', 'Bank transfer — already received', 'Cash — at appointment', 'Cash — already received']) {
     await page.getByRole('radio', { name, exact: true }).check()
     await expect(page.getByRole('radio', { name, exact: true })).toBeChecked()
   }
   await page.getByLabel('Appointment note (optional)').fill('Admin E2E appointment note')
-  await next(page)
   await expect(page.getByText('Use side entrance', { exact: true })).toBeVisible()
   await expect(page.getByText('£200.00', { exact: true })).toBeVisible()
   await expect(page.getByText('Congestion fee', { exact: true })).toBeVisible()
+  await expect(page.locator('.anb-footer-total')).toHaveText('Total £200.00')
   let creates = 0
   page.on('request', request => { if (request.url().includes('/rpc/admin_create_booking')) creates++ })
   await page.getByRole('button', { name: 'Create booking', exact: true }).evaluate(button => { button.click(); button.click() })
@@ -73,21 +77,54 @@ test('Day date, saved address, sessions, authoritative quote, four payments and 
   await expect(page.locator('.admin-card')).toHaveCount(1)
 })
 
-test('Agenda entry defaults today, preserves one-off draft through browser history and confirms discard', async ({ page }) => {
+test('choosing a client fills in their usual treatment, length, area and payment from their last booking', async ({ page }) => {
+  const earlier = await unwrap(f.client.rpc('admin_create_booking', { p_request_id: crypto.randomUUID(), p_request: {
+    client_id: f.recipient.id, saved_address_id: f.addresses[0].id, service_area_id: f.ids.area,
+    sessions: [{ service_id: f.ids.service, duration_minutes: 90, recipient_name: 'Usual Person', preference_ids: [] }],
+    enhancement_ids: [], date: f.date, start_minutes: 600, payment_arrangement: 'cash_appointment', note: null } }))
+  expect(earlier).toHaveLength(1)
+  await start(page)
+  await page.getByLabel('Find a client').fill(f.recipient.email)
+  await page.getByRole('button', { name: new RegExp(f.recipient.first_name) }).click()
+  await expect(page.getByRole('combobox', { name: 'Service area', exact: true })).toHaveValue(f.ids.area)
+  await expect(page.getByRole('combobox', { name: 'Treatment', exact: true })).toHaveValue(f.ids.service)
+  await expect(page.getByRole('combobox', { name: /^Duration 1/ })).toHaveValue('90')
+  await expect(page.getByRole('radio', { name: 'Cash — at appointment', exact: true })).toBeChecked()
+  await expect(page.locator('.anb-footer-total')).toHaveText(/Total £/)
+  await page.getByRole('button', { name: 'Change client', exact: true }).click()
+  await expect(page.getByLabel('Find a client')).toBeVisible()
+})
+
+test('Create booking says what is still missing, in a plain sentence, and creates nothing', async ({ page }) => {
+  await start(page)
+  await page.getByRole('button', { name: 'Create booking', exact: true }).click()
+  await expect(page.getByRole('alert')).toHaveText('Choose a client, appointment address and service area.')
+  await selectClient(page)
+  await page.getByRole('combobox', { name: 'Treatment', exact: true }).selectOption('')
+  await page.getByRole('button', { name: 'Create booking', exact: true }).click()
+  await expect(page.getByRole('alert')).toHaveText('Choose an available treatment and duration, and name each recipient.')
+  await page.getByRole('combobox', { name: 'Treatment', exact: true }).selectOption(f.ids.service)
+  await page.getByLabel('Recipient name 1', { exact: true }).fill('Recipient 1')
+  await page.getByRole('button', { name: 'Create booking', exact: true }).click()
+  await expect(page.getByRole('alert')).toHaveText('Choose an available appointment time.')
+  expect(await unwrap(f.admin.from('bookings').select('id').eq('client_id', f.recipient.id))).toEqual([])
+})
+
+test('Agenda entry defaults today, keeps the draft when leaving is declined, and confirms discard', async ({ page }) => {
   await start(page, true)
   await selectClient(page)
   await page.getByRole('radio', { name: 'One-off booking address', exact: true }).check()
   await page.getByLabel('Address line 1', { exact: true }).fill('99 Temporary Road')
   await page.getByLabel('City', { exact: true }).fill('London')
   await page.getByLabel('Postcode', { exact: true }).fill('SW1A 1AA')
-  await treatment(page)
-  await next(page)
+  await page.getByRole('combobox', { name: 'Treatment', exact: true }).selectOption(f.ids.service)
+  await page.getByLabel('Recipient name 1', { exact: true }).fill('Recipient 1')
   await expect(page.getByLabel('Appointment date')).toHaveValue(today())
+  page.once('dialog', dialog => dialog.dismiss())
   await page.goBack()
-  await expect(page.getByLabel('Recipient name 1')).toHaveValue('Recipient 1')
-  await page.goBack()
+  await expect(page.getByRole('heading', { name: 'New booking', exact: true })).toBeVisible()
   await expect(page.getByLabel('Address line 1', { exact: true })).toHaveValue('99 Temporary Road')
-  await page.goForward()
+  await expect(page.getByLabel('Recipient name 1')).toHaveValue('Recipient 1')
   await expect(page.getByRole('combobox', { name: 'Treatment', exact: true })).toHaveValue(f.ids.service)
   page.once('dialog', dialog => dialog.dismiss())
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
@@ -121,8 +158,7 @@ test('stale selected slot is rejected and no booking is created', async ({ page 
   await start(page)
   await selectClient(page)
   await treatment(page)
-  await timeAndPayment(page)
-  await next(page)
+  await pickTime(page)
   const holdKey = f.key()
   const hold = await f.publicApi.hold(f.date, 600, 60, holdKey)
   await page.getByRole('button', { name: 'Create booking', exact: true }).click()
@@ -151,10 +187,8 @@ test('responsive long client/address and four sessions fit all six requested wid
   await capture('client')
   await treatment(page, 4)
   await capture('four-sessions')
-  await timeAndPayment(page)
-  await capture('payment')
-  await next(page)
-  await capture('review')
+  await pickTime(page)
+  await capture('whole-page')
   await page.getByRole('button', { name: 'Create booking', exact: true }).focus()
   await expect(page.getByRole('button', { name: 'Create booking', exact: true })).toBeFocused()
 })
