@@ -62,6 +62,10 @@
 .admin-time { display: grid; align-content: start; justify-items: start; gap: 2px; padding-top: 12px; font: 600 15px/1.1 var(--font-ui); font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; }
 .admin-time .figure { font: 600 21px/1 var(--font-display); font-variant-numeric: lining-nums; letter-spacing: -.01em; }
 .admin-time small { color: var(--muted); font: 500 12px/1 var(--font-ui); }
+.share-link { margin: 12px 0; }
+.share-link input { font-size: 15px; text-overflow: ellipsis; }
+.share-more { margin-top: 18px; }
+.admin-next-tag { margin-top: 4px; padding: 3px 7px; border-radius: 6px; background: var(--accent-soft); color: var(--accent-ink); font: 700 10px/1 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; font-style: normal; }
 .admin-shell .admin-card { --rail: var(--ok-rail); position: relative; display: grid; justify-content: stretch; align-items: start; justify-items: stretch; width: 100%; gap: 3px; padding: 13px 14px 13px 19px; border: 0; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); color: var(--ink); font: 400 15px/1.35 var(--font-ui); text-align: left; overflow: hidden; }
 .admin-shell .admin-card:not(:disabled):hover { background: #fcfdfb; box-shadow: var(--shadow-2); }
 .admin-card::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--rail); }

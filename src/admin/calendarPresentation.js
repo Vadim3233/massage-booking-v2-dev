@@ -24,6 +24,22 @@ export function dayHeading(date, from = today()) {
   if (date === shiftDate(from, 1)) return { name: 'Tomorrow', rest: dateLabel(date, { weekday: 'short', day: 'numeric', month: 'short' }) }
   return { name: short, rest: '' }
 }
+// The date and the minutes since midnight in London, whatever the phone's own clock zone is.
+function londonNow(now) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(now).map(part => [part.type, part.value]))
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, minutes: Number(parts.hour) * 60 + Number(parts.minute) }
+}
+// The appointment that is happening now, or else the next one that is going ahead (not cancelled, finished or missed).
+// Bookings are given in date and time order, as the agenda has them.
+const GOING_AHEAD = ['confirmed', 'awaiting_payment_verification', 'awaiting_cash_approval', 'awaiting_transfer']
+export function nextUp(bookings, now = new Date()) {
+  const { date, minutes } = londonNow(now)
+  const live = bookings.filter(booking => GOING_AHEAD.includes(booking.booking_status))
+  const current = live.find(booking => booking.date === date && booking.start_minutes <= minutes && minutes < booking.start_minutes + booking.treatment_duration_minutes)
+  if (current) return { id: current.id, now: true }
+  const next = live.find(booking => booking.date > date || (booking.date === date && booking.start_minutes > minutes))
+  return next ? { id: next.id, now: false } : null
+}
 export function sessionSummary(booking) {
   const sessions = booking.booking_sessions || []
   if (sessions.length === 1) return `${sessions[0].service_name_snapshot} · ${sessions[0].duration_minutes} min`

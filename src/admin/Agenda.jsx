@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase.js'
 import { createCalendarApi } from './calendarApi.js'
 import PaymentActions from './PaymentActions.jsx'
 import Icon from '../ui/icons.jsx'
-import { bookingState, clientName, dateLabel, dayHeading, money, postcode, sessionSummary, shiftDate, time, today } from './calendarPresentation.js'
+import { bookingState, clientName, dateLabel, dayHeading, money, nextUp, postcode, sessionSummary, shiftDate, time, today } from './calendarPresentation.js'
 
 const api = createCalendarApi(supabase)
 const CHUNK_DAYS = 31
@@ -76,6 +76,7 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
 
   const current = result?.attempt === attempt && result?.revision === revision ? result : null
   const groups = current && !current.error ? withToday(groupByDate(current.bookings), current.start) : []
+  const upNext = current && !current.error ? nextUp(current.bookings) : null
 
   async function extend(direction) {
     if (!current || current.error || paging) return
@@ -140,7 +141,7 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
               {group.bookings.map(booking => {
                 const state = bookingState(booking)
                 return <li key={booking.id} className="admin-timeline-row admin-timeline-booking">
-                  <time className="admin-time"><span className="figure">{time(booking.start_minutes)}</span><small>{booking.treatment_duration_minutes} min</small></time>
+                  <time className="admin-time"><span className="figure">{time(booking.start_minutes)}</span><small>{booking.treatment_duration_minutes} min</small>{upNext?.id === booking.id && <em className="admin-next-tag">{upNext.now ? 'Now' : 'Next'}</em>}</time>
                   <button className={`admin-card ${booking.booking_status === 'cancelled' ? 'cancelled' : ''}`} data-chip={state.chip} onClick={() => openBooking(booking.id)}>
                     <span className="admin-card-heading"><strong>{clientName(booking)}</strong><span className="admin-card-price">{money(booking.total_gbp)}</span></span>
                     <span className="admin-card-treatment">{sessionSummary(booking)}</span>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { presetFromSearch, stepForPreset } from './deepLink.js'
+import { bookingLink, presetFromSearch, stepForPreset } from './deepLink.js'
 
 const catalogue = {
   areas: [{ id: 'a1', name: 'Chelsea' }, { id: 'a2', name: 'Hammersmith & Fulham' }],
@@ -26,5 +26,21 @@ describe('booking links', () => {
   })
   it('does not skip ahead without an area, since the area comes first', () => {
     expect(stepForPreset(presetFromSearch('?treatment=massage&minutes=60', catalogue))).toBe(0)
+  })
+})
+
+describe('the link Vad sends', () => {
+  it('is the plain booking page, or a page that starts part-way through', () => {
+    expect(bookingLink('https://booking.example.test')).toBe('https://booking.example.test/')
+    expect(bookingLink('https://booking.example.test', { area: 'Chelsea' })).toBe('https://booking.example.test/?area=chelsea')
+    expect(bookingLink('https://booking.example.test', { area: 'Chelsea', treatment: 'Assisted Stretching', minutes: 90 })).toBe('https://booking.example.test/?area=chelsea&treatment=assisted-stretching&minutes=90')
+  })
+  it('leaves out a length that has no treatment and area to go with it', () => {
+    expect(bookingLink('https://booking.example.test', { treatment: 'Massage', minutes: 60 })).toBe('https://booking.example.test/?treatment=massage')
+    expect(bookingLink('https://booking.example.test', { area: 'Chelsea', treatment: 'Massage' })).toBe('https://booking.example.test/?area=chelsea&treatment=massage')
+  })
+  it('is read back by the booking page as the same area, treatment and length', () => {
+    const link = new URL(bookingLink('https://booking.example.test', { area: 'Hammersmith & Fulham', treatment: 'Assisted Stretching', minutes: 60 }))
+    expect(presetFromSearch(link.search, catalogue)).toEqual({ areaId: 'a2', serviceId: 's2', minutes: 60 })
   })
 })
