@@ -34,7 +34,7 @@ export default function WaitlistPanel({ date, duration, join }) {
       <label>Anything I should know? (optional)<textarea maxLength={500} value={form.note} disabled={busy} onChange={event => set({ note: event.target.value })} /></label>
       <p className="hint">Please give a phone number or an email address, so I can reach you.</p>
       {error && <p role="alert" className="error">{error}</p>}
-      <button type="submit" disabled={busy || !valid}>{busy ? 'Adding you…' : 'Add me to the waitlist'}</button>
+      <button type="submit" className="btn--primary btn--block" disabled={busy || !valid}>{busy ? 'Adding you…' : 'Add me to the waitlist'}</button>
     </form>
   </section>
 }

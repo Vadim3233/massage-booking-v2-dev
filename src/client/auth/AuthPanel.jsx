@@ -6,7 +6,12 @@ export default function AuthPanel({ client, recovery = false, onRecovered, onGue
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [open, setOpen] = useState(false)
   const redirectTo = redirectOverride || `${window.location.origin}${window.location.pathname}?step=5`
+  // Booking as a guest is the quick way on, so signing in waits behind "Returning client?" until it is asked for.
+  const guestable = Boolean(onGuest) && !recovery
+  const expanded = !guestable || open || mode !== 'login'
+  function go(next) { setMode(next); setOpen(true) }
   async function act(action) {
     setBusy(true); setError(''); setMessage('')
     try { await action() } catch (err) { setError(err.message || 'Sign-in failed. Please retry.') }
@@ -30,15 +35,7 @@ export default function AuthPanel({ client, recovery = false, onRecovered, onGue
     })
   }
   const heading = headingOverride && mode === 'login' && !recovery ? headingOverride : recovery ? 'Choose a new password' : mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Complete your booking'
-  return <section className="panel">
-    <h2>{heading}</h2>
-    {mode === 'login' && !recovery
-      ? <p>{onGuest ? 'Continue as a guest, or sign in if you already have an account.' : 'Sign in with the email you used to book.'}</p>
-      : <p>Your selections will stay here while you continue.</p>}
-    {mode === 'login' && !recovery && onGuest && <button className="primary" type="button" disabled={busy} onClick={() => act(onGuest)}>
-      {busy ? 'Please wait…' : 'Continue as guest'}
-    </button>}
-    {mode === 'login' && !recovery && <p><strong>Returning client?</strong> Sign in below.</p>}
+  const form = <>
     <form onSubmit={submit}>
       <fieldset disabled={busy}>
         {mode === 'register' && !recovery && <div className="two-columns">
@@ -47,14 +44,27 @@ export default function AuthPanel({ client, recovery = false, onRecovered, onGue
         </div>}
         {!recovery && <label>Email address<input name="email" type="email" autoComplete="email" required /></label>}
         {(mode !== 'reset' || recovery) && <label>Password<input name="password" type="password" minLength={8} autoComplete={mode === 'register' || recovery ? 'new-password' : 'current-password'} required /></label>}
-        <button className="primary" type="submit">{busy ? 'Please wait…' : recovery ? 'Save password' : mode === 'register' ? 'Register' : mode === 'reset' ? 'Send reset link' : 'Sign in'}</button>
+        <button className="btn--primary btn--block" type="submit">{busy ? 'Please wait…' : recovery ? 'Save password' : mode === 'register' ? 'Register' : mode === 'reset' ? 'Send reset link' : 'Sign in'}</button>
       </fieldset>
     </form>
     {!recovery && <div className="actions">
-      <button disabled={busy} onClick={() => setMode(mode === 'register' ? 'login' : 'register')}>{mode === 'register' ? 'Already registered? Sign in' : 'Create an account'}</button>
-      <button disabled={busy} onClick={() => setMode(mode === 'reset' ? 'login' : 'reset')}>{mode === 'reset' ? 'Back to sign in' : 'Forgot password?'}</button>
+      <button className="btn--quiet" disabled={busy} onClick={() => go(mode === 'register' ? 'login' : 'register')}>{mode === 'register' ? 'Already registered? Sign in' : 'Create an account'}</button>
+      <button className="btn--quiet" disabled={busy} onClick={() => go(mode === 'reset' ? 'login' : 'reset')}>{mode === 'reset' ? 'Back to sign in' : 'Forgot password?'}</button>
     </div>}
+  </>
+  return <section className="gate" aria-labelledby="gate-title">
+    <h1 id="gate-title" tabIndex={-1}>{heading}</h1>
+    {mode === 'login' && !recovery
+      ? <p className="lede">{onGuest ? 'Continue as a guest, or sign in if you already have an account.' : 'Sign in with the email you used to book.'}</p>
+      : <p className="lede">Your selections will stay here while you continue.</p>}
+    {guestable && mode === 'login' && <button className="btn--primary btn--lg btn--block" type="button" disabled={busy} onClick={() => act(onGuest)}>
+      {busy ? 'Please wait…' : 'Continue as guest'}
+    </button>}
+    {guestable ? <details className="signin more" open={expanded} onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary>Returning client? Sign in</summary>
+      {form}
+    </details> : <div className="panel gate-form">{form}</div>}
     {error && <p role="alert" className="error">{error}</p>}
-    {message && <p role="status">{message}</p>}
+    {message && <p role="status" className="notice">{message}</p>}
   </section>
 }

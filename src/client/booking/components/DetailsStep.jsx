@@ -72,16 +72,16 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
     } catch (error) { report(error.message) }
     finally { setSaving(false) }
   }
-  return <><h1>Your details</h1><p>{guest ? 'No account is required. Share the details I need for your visit.' : 'Share the details I need for your visit.'} I only use them to arrange your appointment and to get in touch about it.</p>
+  return <><h1 tabIndex={-1}>Your <em>details</em></h1><p className="lede">{guest ? 'No account is required. Share the details I need for your visit.' : 'Share the details I need for your visit.'} I only use them to arrange your appointment and to get in touch about it.</p>
     {loading && <p role="status">Loading your saved details…</p>}
     <form onSubmit={submit}><fieldset disabled={loading || saving || testing}>
-      {showTestTools && guest && newTestGuest && <button type="button" onClick={startNewTestClient}>{testing ? 'Creating test client…' : 'New test client'}</button>}
+      {showTestTools && guest && newTestGuest && <button type="button" className="btn--tonal btn--small" onClick={startNewTestClient}>{testing ? 'Creating test client…' : 'New test client'}</button>}
       <div className="two-columns">
         <label>First name<input autoComplete="given-name" value={details.first_name} required onChange={(event) => field('first_name', event.target.value)} /></label>
         <label>Last name<input autoComplete="family-name" value={details.last_name} required onChange={(event) => field('last_name', event.target.value)} /></label>
       </div>
-      <label>Email address<input type="email" autoComplete="email" value={guest ? details.email : (user.email || details.email)} readOnly={!guest} required onChange={(event) => guest && field('email', event.target.value)} /></label>
-      <label>Contact number<input type="tel" autoComplete="tel" value={details.phone} required onChange={(event) => field('phone', event.target.value)} /></label>
+      <label>Email address<input type="email" inputMode="email" autoComplete="email" value={guest ? details.email : (user.email || details.email)} readOnly={!guest} required onChange={(event) => guest && field('email', event.target.value)} /></label>
+      <label>Contact number<input type="tel" inputMode="tel" autoComplete="tel" value={details.phone} required onChange={(event) => field('phone', event.target.value)} /></label>
       {!guest && addresses.length > 0 && <label>Saved address<select value={details.savedAddressId} onChange={(event) => {
         const address = addresses.find((item) => item.id === event.target.value)
         edit({ details: { ...details, ...(address ? Object.fromEntries(['address_line_1', 'address_line_2', 'city', 'postcode', 'entry_instructions'].map((key) => [key, address[key] || ''])) : {}), savedAddressId: event.target.value } })
@@ -90,12 +90,17 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
         <label>Street address<input autoComplete="address-line1" value={details.address_line_1} required onChange={(event) => field('address_line_1', event.target.value)} /></label>
         <label>Apartment, suite, unit (optional)<input autoComplete="address-line2" value={details.address_line_2} onChange={(event) => field('address_line_2', event.target.value)} /></label>
         <div className="two-columns"><label>City<input autoComplete="address-level2" value={details.city} required onChange={(event) => field('city', event.target.value)} /></label>
-          <label>Postcode<input autoComplete="postal-code" value={details.postcode} required onChange={(event) => field('postcode', event.target.value)} /></label></div>
-        <label>Entry instructions (optional)<input value={details.entry_instructions} onChange={(event) => field('entry_instructions', event.target.value)} /></label>
+          <label>Postcode<input autoComplete="postal-code" autoCapitalize="characters" value={details.postcode} required onChange={(event) => field('postcode', event.target.value)} /></label></div>
       </fieldset>
-      <label>Additional notes (optional)<textarea maxLength={4000} value={draft.note} onChange={(event) => edit({ note: event.target.value })} /></label>
-      <small>Please do not include medical or health information here. Contact Vad directly if needed.</small>
-      <button className="primary" disabled={!validDetails(details)}>{saving ? 'Saving details…' : 'Continue to payment'}</button>
+      <details className="more more--flat">
+        <summary><span className="more-title">Getting in and anything else</span><span className="more-hint">Optional</span></summary>
+        <div className="more-body">
+          <fieldset disabled={!guest && Boolean(details.savedAddressId)}><label>Entry instructions (optional)<input value={details.entry_instructions} onChange={(event) => field('entry_instructions', event.target.value)} /></label></fieldset>
+          <label>Additional notes (optional)<textarea maxLength={4000} rows={3} value={draft.note} onChange={(event) => edit({ note: event.target.value })} /></label>
+          <p className="fine">Please do not include medical or health information here. Contact Vad directly if needed.</p>
+        </div>
+      </details>
+      <div className="action-bar"><button className="btn--primary btn--lg btn--block" disabled={!validDetails(details)}>{saving ? 'Saving details…' : 'Continue to payment'}</button></div>
     </fieldset></form>
   </>
 }

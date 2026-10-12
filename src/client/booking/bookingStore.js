@@ -5,7 +5,8 @@ const holdReleasedMessage = 'Your selected time was released. Please choose an a
 
 // One owner for draft mutations and writes; synchronous busy guard prevents double clicks.
 export function createBookingStore({ api, storage, clientKey, uuid = () => crypto.randomUUID(), now = () => Date.now() }) {
-  let state = { draft: restoreDraft(storage), step: 0, busy: false, error: '', quote: null, result: null }
+  let state = { draft: restoreDraft(storage), step: 0, busy: false, error: '', quote: null, quoteError: '', result: null }
+  let quoting = null
   state.step = allowedStep(state.draft, Number(new URLSearchParams(globalThis.location?.search).get('step')) || 0, now())
   const listeners = new Set()
   function publish(patch) { state = { ...state, ...patch }; listeners.forEach((listener) => listener()) }
@@ -91,7 +92,7 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
       try {
         const draft = { ...state.draft, ...patch }
         const changed = JSON.stringify(quoteParams(draft)) !== JSON.stringify(quoteParams(state.draft))
-        save(draft); publish({ quote: changed ? null : state.quote, error: '' })
+        save(draft); publish({ quote: changed ? null : state.quote, quoteError: changed ? '' : state.quoteError, error: '' })
       }
       catch (error) { publish({ error: error.message }) }
     },
@@ -102,19 +103,32 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
       publish({ quote: null })
       return true
     }) },
-    selectSlot(start) { return run(async () => {
+    // The day being looked at is only saved with a chosen time, so browsing other days never lets go of a time already held.
+    selectSlot(start, date = state.draft.date) { return run(async () => {
       if (state.draft.pending || state.draft.bookingId) return
-      const hold = await api.hold(state.draft.date, start, durationOf(state.draft), clientKey)
+      const hold = await api.hold(date, start, durationOf(state.draft), clientKey)
       // create_booking_hold atomically replaces any previous hold for this key.
-      save({ ...state.draft, start, hold: { ...hold, extension_used: hold.hold_id === state.draft.hold?.hold_id && state.draft.hold.extension_used } })
+      save({ ...state.draft, date, start, hold: { ...hold, extension_used: hold.hold_id === state.draft.hold?.hold_id && state.draft.hold.extension_used } })
       return true
     }) },
     loadQuote() { return run(async () => {
-      publish({ quote: null })
+      publish({ quote: null, quoteError: '' })
       const quote = await api.quote(state.draft)
       publish({ quote })
       return quote
     }) },
+    // Keeps the price on the review page up to date without locking the screen. A price for choices that have since changed is dropped.
+    refreshQuote() {
+      const key = JSON.stringify(quoteParams(state.draft))
+      if (quoting?.key === key) return quoting.promise
+      const current = () => JSON.stringify(quoteParams(state.draft)) === key
+      const promise = api.quote(state.draft).then(
+        (quote) => { if (current()) publish({ quote, quoteError: '' }); return quote },
+        () => { if (current()) publish({ quoteError: 'We could not update the price just now.' }) },
+      ).finally(() => { if (quoting?.promise === promise) quoting = null })
+      quoting = { key, promise }
+      return promise
+    },
     finalize(userId) { return run(async () => {
       if (state.draft.bookingId) return
       if (state.draft.ownerUserId && state.draft.ownerUserId !== userId) throw new Error('Sign in with the account used for this booking request.')

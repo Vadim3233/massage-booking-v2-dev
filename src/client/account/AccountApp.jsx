@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import Icon from '../../ui/icons.jsx'
 import { supabase } from '../../lib/supabase.js'
 import { useClientAuth } from '../auth/useClientAuth.js'
 import AuthPanel from '../auth/AuthPanel.jsx'
 import { dateLabel, londonDate, money, timeLabel } from '../booking/bookingDraft.js'
+import DayTimePicker from '../booking/components/DayTimePicker.jsx'
 import BookingSummary from '../booking/components/BookingSummary.jsx'
 import { accountApi } from './accountApi.js'
 import { useBookingRules } from '../bookingRules.js'
@@ -13,8 +15,18 @@ const STATUS_TEXT = {
   awaiting_transfer: 'Waiting for your bank transfer', awaiting_payment_verification: "Transfer sent — I'll check it shortly",
   awaiting_cash_approval: "Cash request — I'll confirm it soon", confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled', no_show: 'Missed',
 }
+const CHIP = {
+  awaiting_transfer: 'needs', awaiting_payment_verification: 'wait', awaiting_cash_approval: 'wait', confirmed: 'ok', completed: 'done', cancelled: 'cancel', no_show: 'noshow',
+}
 const OPEN = ['awaiting_transfer', 'awaiting_payment_verification', 'awaiting_cash_approval', 'confirmed']
 const londonStamp = value => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
+
+// "Massage, Massage" reads better as "Massage × 2".
+function servicesLabel(text) {
+  const counts = new Map()
+  for (const name of String(text || 'Massage').split(', ')) counts.set(name, (counts.get(name) || 0) + 1)
+  return [...counts].map(([name, count]) => (count > 1 ? `${name} × ${count}` : name)).join(', ')
+}
 
 function Terms({ terms, action }) {
   if (!terms) return <p role="status">Checking your options…</p>
@@ -49,51 +61,39 @@ function CancelPanel({ booking, terms, done, back, refresh }) {
     {fee > 0 && <label className="check"><input type="checkbox" checked={agreed} disabled={busy} onChange={event => setAgreed(event.target.checked)} />I understand a late fee of {money(fee)} will apply.</label>}
     {error && <p role="alert" className="error">{error}</p>}
     <div className="actions">
-      <button type="button" disabled={busy} onClick={back}>Keep my appointment</button>
-      <button type="submit" className="account-danger" disabled={busy || (fee > 0 && !agreed)}>{busy ? 'Cancelling…' : 'Cancel appointment'}</button>
+      <button type="button" className="btn--primary" disabled={busy} onClick={back}>Keep my appointment</button>
+      <button type="submit" className="btn--danger" disabled={busy || (fee > 0 && !agreed)}>{busy ? 'Cancelling…' : 'Cancel appointment'}</button>
     </div>
   </form>
 }
 
 function ReschedulePanel({ booking, terms, rules, done, back, refresh }) {
-  const [date, setDate] = useState('')
-  const [times, setTimes] = useState(null)
-  const [start, setStart] = useState(null)
+  const [chosen, setChosen] = useState(null)
   const [agreed, setAgreed] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const request = useRef(null)
   const fee = Number(terms.reschedule_fee_gbp)
-  useEffect(() => {
-    if (!date) return undefined
-    let live = true
-    accountApi.availability(booking.id, date).then(list => { if (live) { setTimes(list); setStart(null); setError('') } }, failure => { if (live) { setTimes([]); setError(failure.message) } })
-    return () => { live = false }
-  }, [booking.id, date])
   async function submit(event) {
     event.preventDefault()
-    if (busy || start === null) return
+    if (busy || !chosen) return
     setBusy(true); setError('')
-    const key = JSON.stringify([booking.id, date, start, fee])
+    const key = JSON.stringify([booking.id, chosen.date, chosen.start, fee])
     if (request.current?.key !== key) request.current = { key, id: crypto.randomUUID() }
-    try { done(await accountApi.reschedule(booking.id, request.current.id, date, start, fee)) }
+    try { done(await accountApi.reschedule(booking.id, request.current.id, chosen.date, chosen.start, fee)) }
     catch (failure) { setError(failure.message); if (failure.refresh) { setAgreed(false); refresh() } }
     finally { setBusy(false) }
   }
   return <form className="panel" onSubmit={submit}>
     <h2>Choose a new time</h2>
     <Terms terms={terms} action="reschedule" />
-    <label>New date<input type="date" required min={londonDate()} max={londonDate(rules.horizonDays)} value={date} disabled={busy} onChange={event => setDate(event.target.value)} /></label>
-    {date && times === null && <p role="status">Looking for times…</p>}
-    {times && !times.length && !error && <p>There are no times on that day. Please try another date.</p>}
-    {times?.length > 0 && <div className="slots" role="group" aria-label="Available times">
-      {times.map(minutes => <button type="button" key={minutes} aria-pressed={start === minutes} disabled={busy} onClick={() => setStart(minutes)}>{timeLabel(minutes)}</button>)}
-    </div>}
+    <DayTimePicker key={booking.id} horizonDays={rules.horizonDays} dateLabel="New date" loadDay={(date) => accountApi.availability(booking.id, date)}
+      selected={chosen} onPick={(date, start) => { setChosen({ date, start }); setError('') }} emptyMessage="There are no times on that day. Please try another date." />
     {fee > 0 && <label className="check"><input type="checkbox" checked={agreed} disabled={busy} onChange={event => setAgreed(event.target.checked)} />I understand a late fee of {money(fee)} will apply.</label>}
     {error && <p role="alert" className="error">{error}</p>}
     <div className="actions">
       <button type="button" disabled={busy} onClick={back}>Back</button>
-      <button type="submit" className="primary account-inline" disabled={busy || start === null || (fee > 0 && !agreed)}>{busy ? 'Saving…' : 'Move my appointment'}</button>
+      <button type="submit" className="btn--primary" disabled={busy || !chosen || (fee > 0 && !agreed)}>{busy ? 'Saving…' : 'Move my appointment'}</button>
     </div>
   </form>
 }
@@ -122,8 +122,8 @@ function Manage({ id, rules, close, changed }) {
   const open = OPEN.includes(booking.booking_status)
   const owes = Number(booking.late_fee_due_gbp) > 0 && booking.late_fee_status === 'due'
   return <section>
-    <button className="account-back" onClick={close}>← Your bookings</button>
-    <h1>{STATUS_TEXT[booking.booking_status]}</h1>
+    <button className="btn--quiet btn--small account-back" onClick={close}><Icon name="left" size={20} />Your bookings</button>
+    <h1 tabIndex={-1}>{STATUS_TEXT[booking.booking_status]}</h1>
     {message && <p role="status" className="account-note">{message}</p>}
     {mode === 'view' && <>
       <BookingSummary booking={booking} />
@@ -131,7 +131,7 @@ function Manage({ id, rules, close, changed }) {
       {booking.booking_status === 'cancelled' && Number(booking.refund_due_gbp) > 0 && <p className="account-note">A refund of {money(booking.refund_due_gbp)} is on its way to you.</p>}
       {open && terms?.can_change && <>
         <Terms terms={terms} action="reschedule" />
-        <div className="actions"><button onClick={() => setMode('reschedule')}>Change the time</button><button onClick={() => setMode('cancel')}>Cancel appointment</button></div>
+        <div className="actions"><button className="btn--primary" onClick={() => setMode('reschedule')}>Change the time</button><button className="btn--danger" onClick={() => setMode('cancel')}>Cancel appointment</button></div>
       </>}
       {open && terms && !terms.can_change && <p>This appointment can no longer be changed online. Please contact Vad.</p>}
     </>}
@@ -156,16 +156,16 @@ function BookingList({ open }) {
   const upcoming = rows.filter(row => OPEN.includes(row.booking_status) && row.date >= today).reverse()
   const earlier = rows.filter(row => !upcoming.includes(row))
   const item = row => <li key={row.id}>
-    <button className="account-booking" onClick={() => open(row.id)}>
+    <button className="tile account-booking" onClick={() => open(row.id)}>
       <span className="account-when">{dateLabel(row.date)} · {timeLabel(row.start_minutes)}</span>
-      <span className="account-what">{row.services || 'Massage'} · {row.treatment_duration_minutes} min</span>
-      <span className={`account-status account-status--${row.booking_status}`}>{STATUS_TEXT[row.booking_status]}</span>
+      <span className="account-what">{servicesLabel(row.services)} · {row.treatment_duration_minutes} min</span>
+      <span className={`chip chip--${CHIP[row.booking_status] || 'done'} account-status`}>{STATUS_TEXT[row.booking_status]}</span>
     </button>
   </li>
   return <>
-    <h2>Coming up</h2>
+    <h2 className="section-title">Coming up</h2>
     {upcoming.length ? <ul className="account-list">{upcoming.map(item)}</ul> : <p>You have no upcoming appointments. <a href="/">Book a treatment</a></p>}
-    {earlier.length > 0 && <><h2>Earlier</h2><ul className="account-list">{earlier.map(item)}</ul></>}
+    {earlier.length > 0 && <><h2 className="section-title">Earlier</h2><ul className="account-list">{earlier.map(item)}</ul></>}
   </>
 }
 
@@ -181,13 +181,15 @@ export default function AccountApp() {
     if (id) url.searchParams.set('booking', id); else url.searchParams.delete('booking')
     window.history.replaceState(null, '', url)
   }
-  return <main className="booking-shell">
-    <header className="brand"><a href="/"><b className="brand-mark" aria-hidden="true">VM</b>VadMassage</a><span>Your bookings</span></header>
+  return <div className="booking-shell">
+    <header className="brand"><a className="brand-link" href="/"><b className="brand-mark" aria-hidden="true">VM</b>VadMassage</a><a className="brand-aside" href="/">Book a treatment</a></header>
+    <main className="booking-main">
     {!auth.ready && <p role="status">Checking your account…</p>}
     {auth.ready && !auth.session && <AuthPanel client={supabase} heading="Sign in to see your bookings" redirectTo={`${window.location.origin}/account`} />}
     {auth.ready && auth.session && (selected
       ? <Manage key={selected} id={selected} rules={rules} close={() => select(null)} changed={() => setRevision(value => value + 1)} />
-      : <><h1>Your bookings</h1><BookingList key={revision} open={select} /></>)}
+      : <><h1 tabIndex={-1}>Your <em>bookings</em></h1><BookingList key={revision} open={select} /></>)}
+    </main>
     <footer>Personal treatments, thoughtfully arranged. <a href="https://vadmassage.com">Contact Vad</a></footer>
-  </main>
+  </div>
 }

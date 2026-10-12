@@ -13,6 +13,7 @@ async function toReview(page) {
   await page.goto('/')
   await page.getByRole('button', { name: /Integration area/ }).click()
   await page.getByRole('button', { name: /Integration massage/ }).click()
+  await page.getByRole('button', { name: /more than one person/ }).click()
   await page.getByRole('button', { name: 'Add 60 minutes', exact: true }).click()
   await page.getByRole('button', { name: 'Add 60 minutes', exact: true }).click()
   await page.getByRole('button', { name: 'Choose date & time' }).click()
@@ -25,10 +26,11 @@ async function toReview(page) {
 async function toDetails(page) {
   await toReview(page)
   await page.getByLabel(/Integration enhancement/).check()
-  await page.locator('.preference-group summary').first().click()
+  await page.getByText('Your preferences').click()
   await page.getByRole('button', { name: 'Integration focus', exact: true }).first().click()
   await page.getByLabel('Session notes (optional)').fill('Preserve my note')
   await page.getByRole('button', { name: 'Continue to your details' }).click()
+  await page.getByText('Returning client? Sign in').click()
   await page.getByLabel('Email address', { exact: true }).fill(fixture.email)
   await page.getByLabel('Password', { exact: true }).fill(fixture.password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
@@ -57,6 +59,7 @@ test('mobile bank-transfer journey, browser Back, reload and real persisted resu
   await expect(page.getByLabel('Session notes (optional)')).toHaveValue('Keep this note')
   await page.getByLabel(/Integration enhancement/).check()
   await page.getByRole('button', { name: 'Continue to your details' }).click()
+  await page.getByText('Returning client? Sign in').click()
   await page.getByLabel('Email address', { exact: true }).fill(fixture.email)
   await page.getByLabel('Password', { exact: true }).fill(fixture.password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
@@ -100,6 +103,7 @@ test('real expired-hold rejection never shows a successful confirmation', async 
 test('email registration activates the canonical client and preserves the draft', async ({ page }) => {
   await toReview(page)
   await page.getByRole('button', { name: 'Continue to your details' }).click()
+  await page.getByText('Returning client? Sign in').click()
   await page.getByRole('button', { name: 'Create an account', exact: true }).click()
   const email = `browser-signup-${crypto.randomUUID()}@example.test`
   await page.getByLabel('First name', { exact: true }).fill('Browser')
@@ -121,7 +125,7 @@ test('email registration activates the canonical client and preserves the draft'
 test('changing duration releases the old hold and refreshes availability', async ({ page }) => {
   await toReview(page)
   const original = await page.evaluate(() => JSON.parse(sessionStorage.getItem('vad-v2-booking-draft-v1')).draft.hold)
-  await page.getByRole('button', { name: /Sessions:.*Edit/ }).click()
+  await page.getByRole('button', { name: 'Change treatment or length' }).click()
   await page.getByRole('button', { name: 'Remove 60 minutes', exact: true }).click()
   await expect(page.getByRole('status', { name: '60 minute sessions' })).toHaveText('1')
   const rows = await unwrap(fixture.admin.from('booking_holds').select('status').eq('id', original.hold_id))
@@ -130,8 +134,8 @@ test('changing duration releases the old hold and refreshes availability', async
   await expect(page.getByRole('button', { name: 'Review booking', exact: true })).toBeDisabled()
   await page.getByRole('button', { name: '10:00', exact: true }).click()
   await page.getByRole('button', { name: 'Review booking', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Session 1 · 60 minutes' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Session 2 · 60 minutes' })).toHaveCount(0)
+  await expect(page.getByRole('region', { name: 'Your appointment' })).toContainText('60 min')
+  await expect(page.getByRole('region', { name: 'Your appointment' })).not.toContainText('60 min + 60 min')
   const draft = await page.evaluate(() => JSON.parse(sessionStorage.getItem('vad-v2-booking-draft-v1')).draft)
   await fixture.publicApi.release(draft.hold, await page.evaluate(() => localStorage.getItem('vad-v2-hold-client-v1')))
 })
@@ -469,6 +473,14 @@ for (const decision of ['approve', 'reject', 'receive']) test(`saved client conf
     await page.reload()
     await expect(page.getByRole('heading', { name: decision === 'reject' ? 'Your appointment is cancelled' : 'Your appointment is confirmed' })).toBeVisible()
     await expect(page.getByText("I'll confirm your appointment as soon as possible.", { exact: true })).toHaveCount(0)
+    // A confirmed appointment can go into the client's own calendar; one that will not happen cannot.
+    const calendar = page.getByRole('link', { name: 'Add to your calendar' })
+    if (decision === 'reject') await expect(calendar).toHaveCount(0)
+    else {
+      await expect(calendar).toHaveAttribute('download', 'massage-with-vad.ics')
+      await expect(calendar).toHaveAttribute('href', /^data:text\/calendar;charset=utf-8,BEGIN%3AVCALENDAR/)
+    }
+    await expect(page.getByRole('button', { name: 'Book another appointment' })).toBeVisible()
     if (decision === 'receive') await expect(page.getByText('Payment: Payment received', { exact: true })).toBeVisible()
     if (decision === 'reject') await expect(page.getByText('This appointment will not go ahead.', { exact: false })).toBeVisible()
     if (decision === 'approve') await expect(page.getByText('Please pay the full amount in cash at your appointment.')).toBeVisible()

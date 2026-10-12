@@ -1,81 +1,99 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import Icon from '../../../ui/icons.jsx'
 import WaitlistPanel from './WaitlistPanel.jsx'
 import Welcome from './Welcome.jsx'
-import { activeHold, dateLabel, durationOf, londonDate, money, newSession, timeLabel } from '../bookingDraft.js'
+import { activeHold, durationOf, money, newSession, timeLabel } from '../bookingDraft.js'
+import DayTimePicker from './DayTimePicker.jsx'
+import { dayParts } from '../dateStrip.js'
 
-export function AreaStep({ catalogue, choose, welcome, rules }) {
-  const [expanded, setExpanded] = useState(false)
+const surcharges = area => [
+  Number(area.travel_surcharge_gbp) > 0 && `Travel +${money(area.travel_surcharge_gbp)}`,
+  Number(area.congestion_fee_gbp) > 0 && `Congestion +${money(area.congestion_fee_gbp)}`,
+].filter(Boolean)
+
+export function AreaStep({ catalogue, choose, welcome, rules, usual, bookUsual }) {
   return <>
-    <Welcome welcome={welcome} rules={rules} />
-    <h2>Choose your area</h2>
-    <div className="choices">{catalogue.areas.slice(0, expanded ? undefined : 6).map((area) => <button key={area.id} onClick={() => choose(area.id)}>
-      <strong>{area.name}</strong>
-      {Number(area.travel_surcharge_gbp) > 0 && <span>Travel surcharge {money(area.travel_surcharge_gbp)}</span>}
-      {Number(area.congestion_fee_gbp) > 0 && <span>Congestion charge {money(area.congestion_fee_gbp)}</span>}
+    <Welcome welcome={welcome} rules={rules} usual={usual} bookUsual={bookUsual} />
+    <h2 className="section-title">Choose your area</h2>
+    <div className="tiles tiles--areas">{catalogue.areas.map((area) => <button className="tile" key={area.id} onClick={() => choose(area.id)}>
+      <strong className="tile-title">{area.name}</strong>
+      {surcharges(area).map(note => <span className="tile-note" key={note}>{note}</span>)}
     </button>)}</div>
-    {catalogue.areas.length > 6 && <button onClick={() => setExpanded(!expanded)}>{expanded ? 'Show fewer areas' : 'Show more areas'}</button>}
     {!catalogue.areas.length && <p>Online booking areas are being updated.</p>}
-    <p>I visit selected parts of these areas. Outside my usual route? <a href="https://vadmassage.com">Contact Vad</a> to arrange your visit.</p>
+    <p className="fine">I visit selected parts of these areas. Outside my usual route? <a href="https://vadmassage.com">Contact Vad</a> to arrange your visit.</p>
   </>
 }
 
 export function TreatmentStep({ catalogue, choose }) {
-  return <><h1>What would help you most today?</h1><p>Choose the treatment that feels closest to what you need.</p>
-    <div className="choices">{catalogue.services.map((service) => <button key={service.id} onClick={() => choose(service.id)}>
-      <strong>{service.name}</strong><span>{service.short_description || service.long_description}</span>
+  const from = id => {
+    const prices = catalogue.prices.filter((price) => price.service_id === id).map((price) => Number(price.price_gbp))
+    return prices.length ? Math.min(...prices) : null
+  }
+  return <><h1 tabIndex={-1}>What would help you <em>most today?</em></h1><p className="lede">Choose the treatment that feels closest to what you need.</p>
+    <div className="tiles">{catalogue.services.map((service) => <button className="tile tile--wide" key={service.id} onClick={() => choose(service.id)}>
+      <span className="tile-body">
+        <strong className="tile-title tile-title--display">{service.name}</strong>
+        <span className="tile-note">{service.short_description || service.long_description}</span>
+      </span>
+      <span className="tile-side">{from(service.id) !== null && <span className="tile-from">From <b className="figure">{money(from(service.id))}</b></span>}<Icon name="right" size={20} className="tile-chevron" /></span>
     </button>)}</div>{!catalogue.services.length && <p>No treatments are currently available. Please contact Vad.</p>}
   </>
 }
 
-export function DurationStep({ draft, catalogue, change, next }) {
+export function DurationStep({ draft, catalogue, change, choose, next }) {
+  const [group, setGroup] = useState(draft.sessions.length > 1)
   const total = durationOf(draft)
   const prices = catalogue.prices.filter((price) => price.service_id === draft.serviceId)
-  return <><h1>How much time would you like?</h1><p>Select a session for each person. Sessions run consecutively at the same address.</p>
-    {prices.map((price) => {
-      const count = draft.sessions.filter((session) => session.duration_minutes === price.duration_minutes).length
-      return <div className="quantity" key={price.duration_minutes}>
-        <div><strong>{price.duration_minutes} minutes</strong><span>{money(price.price_gbp)} per person</span></div>
-        <button aria-label={`Remove ${price.duration_minutes} minutes`} disabled={!count} onClick={() => {
-          const index = draft.sessions.findLastIndex((session) => session.duration_minutes === price.duration_minutes)
-          change(draft.sessions.filter((_, i) => i !== index))
-        }}>−</button><output aria-label={`${price.duration_minutes} minute sessions`}>{count}</output>
-        <button aria-label={`Add ${price.duration_minutes} minutes`} disabled={total + price.duration_minutes > 240} onClick={() => change([...draft.sessions, newSession(price.duration_minutes)])}>+</button>
-      </div>
-    })}
+  const treatments = draft.sessions.reduce((sum, session) => sum + Number(prices.find((price) => price.duration_minutes === session.duration_minutes)?.price_gbp || 0), 0)
+  return <><h1 tabIndex={-1}>How much time would <em>you like?</em></h1>
+    {!group && <>
+      <p className="lede">Choose a length and we go straight on to the time.</p>
+      <div className="tiles tiles--durations">{prices.map((price) => <button className="tile tile--duration" key={price.duration_minutes} aria-label={`${price.duration_minutes} minutes, ${money(price.price_gbp)} per person`}
+        aria-pressed={draft.sessions.length === 1 && draft.sessions[0].duration_minutes === price.duration_minutes} onClick={() => choose(price.duration_minutes)}>
+        <span className="figure tile-figure">{price.duration_minutes}</span><span className="tile-unit">minutes</span><span className="tile-price">{money(price.price_gbp)}</span>
+      </button>)}</div>
+      {prices.length > 0 && <button className="btn--quiet group-toggle" onClick={() => setGroup(true)}>Booking for more than one person?</button>}
+    </>}
+    {group && <>
+      <p className="lede">Choose a session for each person. Sessions run one after another at the same address.</p>
+      {prices.map((price) => {
+        const count = draft.sessions.filter((session) => session.duration_minutes === price.duration_minutes).length
+        return <div className="quantity" key={price.duration_minutes}>
+          <div><strong>{price.duration_minutes} minutes</strong><span>{money(price.price_gbp)} per person</span></div>
+          <div className="stepper-control">
+            <button aria-label={`Remove ${price.duration_minutes} minutes`} disabled={!count} onClick={() => {
+              const index = draft.sessions.findLastIndex((session) => session.duration_minutes === price.duration_minutes)
+              change(draft.sessions.filter((_, i) => i !== index))
+            }}><Icon name="minus" size={20} /></button>
+            <output aria-label={`${price.duration_minutes} minute sessions`}>{count}</output>
+            <button aria-label={`Add ${price.duration_minutes} minutes`} disabled={total + price.duration_minutes > 240} onClick={() => change([...draft.sessions, newSession(price.duration_minutes)])}><Icon name="plus" size={20} /></button>
+          </div>
+        </div>
+      })}
+      <p className="total-line">{total ? <><b>{draft.sessions.length} {draft.sessions.length === 1 ? 'session' : 'sessions'}</b> · {total} minutes · treatments {money(treatments)}</> : 'No sessions chosen yet.'} <span className="fine">Up to 240 minutes per visit.</span></p>
+      <div className="action-bar"><button className="btn--primary btn--lg btn--block" disabled={!total} onClick={next}>Choose date &amp; time</button></div>
+      <button className="btn--quiet group-toggle" onClick={() => setGroup(false)}>Just me</button>
+    </>}
     {!prices.length && <p>This treatment currently has no bookable durations. Please select another treatment.</p>}
-    <p>{draft.sessions.length} session(s) · {total} minutes. Maximum 240 minutes per visit.</p>
-    <button className="primary" disabled={!total} onClick={next}>Choose date &amp; time</button>
   </>
 }
 
-export function TimeStep({ rules, draft, loadAvailability, selectDate, selectSlot, next, joinWaitlist }) {
-  const [availability, setAvailability] = useState({ slots: [], loading: true, error: '' })
+const shortDay = (date) => { const parts = dayParts(date); return `${parts.weekday} ${parts.day} ${parts.month}` }
+
+export function TimeStep({ rules, draft, loadAvailability, selectSlot, next, joinWaitlist }) {
   const duration = durationOf(draft)
-  useEffect(() => {
-    let live = true
-    if (!draft.date) return
-    loadAvailability(draft.date, duration).then((slots) => {
-      if (live) setAvailability({ slots, loading: false, error: '' })
-    }).catch((error) => { if (live) setAvailability({ slots: [], loading: false, error: error.message }) })
-    return () => { live = false }
-  }, [loadAvailability, draft.date, draft.hold?.hold_id, draft.hold?.hold_token, duration])
-  const slots = availability.slots.map((slot) => slot.start_minutes)
-  return <><h1>Choose date and time</h1><p>All appointment times are London time.</p>
-    <label>Appointment date<input type="date" value={draft.date} min={londonDate()} max={londonDate(rules.horizonDays)} onClick={(event) => {
-      try {
-        event.currentTarget.showPicker?.()
-      } catch {
-        // Keep native date entry available when the browser restricts showPicker.
-      }
-    }} onChange={(event) => selectDate(event.target.value)} /></label>
-    <p>{dateLabel(draft.date)}</p>
-    {availability.loading && draft.date && <p role="status">Loading available times…</p>}
-    {availability.error && <p className="error" role="alert">{availability.error}</p>}
-    <div className="slots" aria-label="Available times">{slots.sort((a, b) => a - b).map((start) => <button key={start} aria-pressed={draft.start === start && activeHold(draft)} onClick={() => selectSlot(start)}>{timeLabel(start)}</button>)}</div>
-    {!availability.loading && !availability.error && !slots.length && draft.date && <>
-      <p>No suitable times on this day. Choose another date or <a href="https://vadmassage.com">contact Vad</a>.</p>
-      {joinWaitlist && <WaitlistPanel key={`${draft.date}:${duration}`} date={draft.date} duration={duration} join={joinWaitlist} />}
-    </>}
-    <button className="primary" disabled={!activeHold(draft)} onClick={next}>Review booking</button>
+  const held = activeHold(draft)
+  const holdKey = `${draft.hold?.hold_id}:${draft.hold?.hold_token}`
+  const chosen = held && draft.date && draft.start != null
+  return <><h1 tabIndex={-1}>Choose date <em>and time</em></h1><p className="lede">All appointment times are London time.</p>
+    <DayTimePicker key={duration} horizonDays={rules.horizonDays} initialDate={draft.date} reloadKey={holdKey}
+      loadDay={(date) => loadAvailability(date, duration).then((rows) => rows.map((row) => row.start_minutes))}
+      selected={chosen ? { date: draft.date, start: draft.start } : null} onPick={(date, start) => selectSlot(start, date)}
+      emptyMessage={<>No suitable times on this day. Choose another date or <a href="https://vadmassage.com">contact Vad</a>.</>}
+      renderEmpty={(date) => joinWaitlist && <WaitlistPanel key={`${date}:${duration}`} date={date} duration={duration} join={joinWaitlist} />} />
+    <div className="action-bar">
+      <p className="action-summary" aria-live="polite">{chosen ? <><b>{shortDay(draft.date)}</b><span>{timeLabel(draft.start)}–{timeLabel(draft.start + duration)}</span></> : <span>Choose a time to continue</span>}</p>
+      <button className="btn--primary btn--lg" disabled={!held} onClick={next}>Review booking</button>
+    </div>
   </>
 }
