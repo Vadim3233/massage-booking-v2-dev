@@ -16,12 +16,14 @@ export default function TreatmentStep({ draft, catalogue, patch }) {
   function editSession(index, values) { sessionsChange(draft.sessions.map((session, i) => index === i ? { ...session, ...values } : session)) }
   return <>
     <label>Treatment<select required value={draft.serviceId} onChange={event => patch({ serviceId: event.target.value, start: null })}><option value="">Select treatment</option>{catalogue.services.map(service => <option key={service.id} value={service.id}>{service.name}</option>)}</select></label>
-    <p className="anb-hint">One visit, up to four consecutive sessions. Maximum 240 minutes.</p>
     {draft.sessions.map((session, index) => <fieldset className="anb-session" key={index}><legend>Session {index + 1}</legend><div className="anb-fields"><label>Recipient name {index + 1}<input value={session.recipient_name} required maxLength={120} onChange={event => editSession(index, { recipient_name: event.target.value })} /></label><label>Duration {index + 1}<select value={session.duration_minutes} onChange={event => editSession(index, { duration_minutes: Number(event.target.value) })}>{[60, 90, 120].map(minutes => { const price = prices.find(item => item.duration_minutes === minutes); return <option key={minutes} value={minutes} disabled={!price || duration - session.duration_minutes + minutes > 240}>{minutes} min{price ? ` · ${money(price.price_gbp)}` : ' · Unavailable'}</option> })}</select></label></div>
-      <Preferences catalogue={catalogue} selected={session.preference_ids} change={preference_ids => editSession(index, { preference_ids })} />
+      <details className="anb-more" open={session.preference_ids.length > 0 || undefined}><summary>Session preferences (optional)</summary><Preferences catalogue={catalogue} selected={session.preference_ids} change={preference_ids => editSession(index, { preference_ids })} /></details>
       {draft.sessions.length > 1 && <button type="button" onClick={() => sessionsChange(draft.sessions.filter((_, i) => index !== i))}>Remove session {index + 1}</button>}
     </fieldset>)}
+    <details className="anb-more" open={draft.sessions.length > 1 || draft.enhancementIds.length > 0 || undefined}><summary>More options: another person, extras</summary>
+    <p className="anb-hint">One visit, up to four consecutive sessions. Maximum 240 minutes.</p>
     <div className="anb-inline-actions"><button type="button" disabled={draft.sessions.length >= 4 || duration + 60 > 240} onClick={() => sessionsChange([...draft.sessions, { duration_minutes: 60, recipient_name: '', preference_ids: [] }])}>+ Add session</button><span>{duration} minutes total</span></div>
     {!!catalogue.enhancements.length && <fieldset className="anb-section"><legend>Enhancements</legend><p className="anb-hint">Applied once to the visit.</p>{catalogue.enhancements.map(item => <label className="anb-radio" key={item.id}><input type="checkbox" checked={draft.enhancementIds.includes(item.id)} onChange={() => patch({ enhancementIds: draft.enhancementIds.includes(item.id) ? draft.enhancementIds.filter(id => id !== item.id) : [...draft.enhancementIds, item.id] })} /><span>{item.name} · {money(item.price_gbp)}</span></label>)}</fieldset>}
+    </details>
   </>
 }

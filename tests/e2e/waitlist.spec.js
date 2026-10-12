@@ -118,6 +118,7 @@ test.describe('the Admin works the waitlist', () => {
     await expect(page.getByRole('heading', { name: 'Waitlist', level: 1 })).toBeVisible()
     await page.locator('.admin-waitlist-item').filter({ hasText: 'E2E Waiting Wendy' }).getByRole('button', { name: 'Book for them' }).click()
     await expect(page.getByRole('heading', { name: 'New booking', exact: true })).toBeVisible()
-    await expect(page.getByRole('button', { pressed: true }).first()).toContainText('Alexandra')
+    await expect(page.getByRole('button', { name: 'Change client', exact: true })).toBeVisible()
+    await expect(page.locator('.anb-block').first()).toContainText('Alexandra')
   })
 })

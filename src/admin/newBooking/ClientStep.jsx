@@ -11,6 +11,8 @@ export function AddressFields({ details, change, prefix = 'address' }) {
 
 export default function ClientStep({ draft, patch, catalogue, query, setQuery, clients, searchLoading, searchError, selectClient, addresses, addressLoading, addressError, createClient, clientBusy, clientError }) {
   const [adding, setAdding] = useState(false)
+  const [changing, setChanging] = useState(false)
+  const searching = !draft.client || changing
   const newClient = draft.newClient || { first_name: '', last_name: '', phone: '', email: '', ...emptyAddress }
   const setNewClient = value => patch({ newClient: value })
   const [contactError, setContactError] = useState('')
@@ -22,11 +24,11 @@ export default function ClientStep({ draft, patch, catalogue, query, setQuery, c
     if (await createClient(newClient)) { patch({ newClient: null }); setAdding(false) }
   }
   return <>
-    {!adding && <>
+    {!adding && searching && <>
       <label>Find a client<input type="search" value={query} placeholder="Name, phone or email" autoComplete="off" maxLength={160} onChange={event => setQuery(event.target.value)} /></label>
       {searchLoading && <p role="status">Finding clients…</p>}
       {searchError && <p role="alert">{searchError}</p>}
-      <ul className="anb-client-list" aria-label={query ? 'Matching clients' : 'Recent clients'}>{clients.map(client => <li key={client.id}><button type="button" aria-pressed={draft.client?.id === client.id} onClick={() => selectClient(client)}><strong>{clientLabel(client)}</strong><span>{[client.phone, client.email].filter(Boolean).join(' · ')}</span></button></li>)}</ul>
+      <ul className="anb-client-list" aria-label={query ? 'Matching clients' : 'Recent clients'}>{clients.map(client => <li key={client.id}><button type="button" aria-pressed={draft.client?.id === client.id} onClick={() => { selectClient(client); setChanging(false) }}><strong>{clientLabel(client)}</strong><span>{[client.phone, client.email].filter(Boolean).join(' · ')}</span></button></li>)}</ul>
       {!searchLoading && !searchError && !clients.length && <p>No matching clients.</p>}
       <button type="button" onClick={() => setAdding(true)}>+ Add new client</button>
     </>}
@@ -39,7 +41,7 @@ export default function ClientStep({ draft, patch, catalogue, query, setQuery, c
       {clientError && <p role="alert">{clientError}</p>}
       <div className="anb-inline-actions"><button type="button" disabled={clientBusy} onClick={() => setAdding(false)}>Back to client search</button><button className="anb-primary" disabled={clientBusy}>{clientBusy ? 'Saving client…' : 'Save client'}</button></div>
     </form>}
-    {draft.client && <section className="anb-section"><h3>{clientLabel(draft.client)}</h3><p className="anb-hint">{[draft.client.phone, draft.client.email].filter(Boolean).join(' · ')}</p>
+    {draft.client && !adding && <section className="anb-section"><h3>{clientLabel(draft.client)}</h3>{!changing && <button type="button" onClick={() => setChanging(true)}>Change client</button>}<p className="anb-hint">{[draft.client.phone, draft.client.email].filter(Boolean).join(' · ')}</p>
       {addressLoading && <p role="status">Loading saved addresses…</p>}{addressError && <p role="alert">{addressError}</p>}
       <fieldset><legend>Appointment address</legend>{addresses.map(address => <label className="anb-radio" key={address.id}><input type="radio" name="booking-address" checked={draft.details.savedAddressId === address.id} onChange={() => patch({ details: { ...emptyAddress, ...address, savedAddressId: address.id } })} /><span>{address.address_line_1}, {address.postcode}{address.is_default ? ' · Default' : ''}</span></label>)}
       <label className="anb-radio"><input type="radio" name="booking-address" checked={!draft.details.savedAddressId} onChange={() => patch({ details: { ...emptyAddress } })} /><span>One-off booking address</span></label></fieldset>

@@ -26,10 +26,18 @@ export function PaymentStep({ draft, patch }) {
     </fieldset></>
 }
 
-export function ReviewStep({ draft, catalogue, quote }) {
+// The whole booking at a glance, just above the Create button.
+export function Summary({ draft, catalogue, quote }) {
   const duration = draft.sessions.reduce((sum, session) => sum + session.duration_minutes, 0)
-  return <><section className="anb-review-summary"><h3>{clientLabel(draft.client)}</h3><p>{dateLabel(draft.date, { weekday: 'short', day: 'numeric', month: 'short' })} · {time(draft.start)}–{time(draft.start + duration)}</p><p>{duration} min {catalogue.services.find(item => item.id === draft.serviceId)?.name}</p><address>{[draft.details.address_line_1, draft.details.address_line_2, draft.details.city, draft.details.postcode].filter(Boolean).join(', ')}</address>{draft.details.entry_instructions && <p>{draft.details.entry_instructions}</p>}</section>
-    <section className="anb-section"><h3>Sessions</h3>{draft.sessions.map((session, index) => <div className="anb-review-session" key={index}><strong>{index + 1}. {session.recipient_name} · {session.duration_minutes} min</strong><p>{catalogue.preferences.filter(item => session.preference_ids.includes(item.id)).map(item => item.label).join(', ') || 'No session preferences'}</p></div>)}<p>Enhancements: {catalogue.enhancements.filter(item => draft.enhancementIds.includes(item.id)).map(item => item.name).join(', ') || 'None'}</p><p className="anb-hint">{duration} minutes treatment · 60-minute travel buffer around the visit, not between sessions.</p><p>Service area: {catalogue.areas.find(item => item.id === draft.areaId)?.name}</p></section>
-    <Quote quote={quote} /><section className="anb-section"><h3>Payment</h3><p>{PAYMENT_OPTIONS.find(([value]) => value === draft.payment)?.[1]}</p><p className="anb-hint">The appointment will be confirmed.</p>{draft.repeat?.on && <p>Repeats every {dayName(draft.date)}{draft.repeat.endDate ? ` until ${dateLabel(draft.repeat.endDate, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}` : ', with no end date'}. Later appointments use this payment arrangement ({draft.payment.startsWith('cash') ? 'cash' : 'bank transfer'}).</p>}{draft.note && <><h3>Appointment note</h3><p className="anb-note">{draft.note}</p></>}</section>
-  </>
+  const service = catalogue.services.find(item => item.id === draft.serviceId)
+  const area = catalogue.areas.find(item => item.id === draft.areaId)
+  const when = draft.start === null ? 'Choose a time above' : `${dateLabel(draft.date, { weekday: 'short', day: 'numeric', month: 'short' })} · ${time(draft.start)}–${time(draft.start + duration)}`
+  return <section className="anb-block anb-summary" aria-labelledby="anb-summary-title"><h2 id="anb-summary-title">Summary</h2>
+    <p><strong>{draft.client ? clientLabel(draft.client) : 'No client chosen yet'}</strong></p>
+    <p>{when}</p>
+    <p>{duration} min {service?.name || 'treatment to choose'}{area ? ` · ${area.name}` : ''}</p>
+    <p className="anb-hint">{PAYMENT_OPTIONS.find(([value]) => value === draft.payment)?.[1]}. The appointment will be confirmed.</p>
+    {draft.repeat?.on && <p>Repeats every {dayName(draft.date)}{draft.repeat.endDate ? ` until ${dateLabel(draft.repeat.endDate, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}` : ', with no end date'}. Later appointments use this payment arrangement ({draft.payment.startsWith('cash') ? 'cash' : 'bank transfer'}).</p>}
+    <Quote quote={quote} />
+  </section>
 }

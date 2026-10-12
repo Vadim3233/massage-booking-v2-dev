@@ -46,3 +46,17 @@
 @media (min-width: 768px) { .anb-mobile-progress { display: none; } .anb-progress { display: flex; list-style: none; padding: 0; margin: 24px 0; gap: 16px; font-size: 13px; } .anb-progress li { display: flex; align-items: baseline; gap: 5px; color: #596b63; } .anb-progress li[aria-current] { color: var(--ink); font-weight: 700; } .anb-footer { grid-template-columns: 120px 200px; justify-content: end; } }
 @media (prefers-reduced-motion: reduce) { .admin-new-booking * { scroll-behavior: auto; } }
 .anb-repeat { margin-top: 16px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; }
+
+/* One page: each part is a block, with the price and Create button always in reach. */
+.anb-block { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
+.anb-block:first-child { margin-top: 12px; padding-top: 0; border-top: 0; }
+.anb-block > h2 { margin-bottom: 12px; }
+.anb-summary p { margin: 4px 0; }
+.anb-footer { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); align-items: center; }
+.anb-footer-total { font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.anb-more { margin: 12px 0; border-top: 1px solid var(--line); }
+.anb-more > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-size: 14px; font-weight: 600; color: var(--ink); }
+.anb-more > summary { list-style: none; }
+.anb-more > summary::-webkit-details-marker { display: none; }
+.anb-more > summary::before { content: '+'; display: inline-grid; place-items: center; width: 20px; margin-right: 8px; font-weight: 700; }
+.anb-more[open] > summary::before { content: '−'; }
