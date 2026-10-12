@@ -60,8 +60,8 @@ export default function PaymentReview({ openBooking, revision, changed }) {
   // The list keeps the order the server gives, with the bookings that need the Admin first.
   const ordered = [...needs, ...waiting]
   return <section className="admin-review" aria-labelledby="review-title">
-    <header className="admin-review-heading"><div><h1 id="review-title">To check</h1><p>Confirm a payment when it arrives, or cancel a booking that will not be paid. Nothing is cancelled automatically.</p></div><button className="btn--quiet btn--icon" onClick={() => setAttempt(value => value + 1)} aria-label="Refresh reviews"><Icon name="refresh" size={22} /></button></header>
-    {error && <p role={result ? 'status' : 'alert'}>{error} <button onClick={reread}>Retry reviews</button></p>}
+    <header className="admin-review-heading"><div><h1 id="review-title">To check</h1><p>Confirm a payment when it arrives, or cancel a booking that will not be paid. Nothing is cancelled automatically.</p></div><button className="btn--quiet btn--icon" onClick={() => { quiet.asked(); reread() }} aria-label="Refresh reviews"><Icon name="refresh" size={22} /></button></header>
+    {error && <p role={result ? 'status' : 'alert'}>{error} <button onClick={() => { quiet.asked(); reread() }}>Retry reviews</button></p>}
     {!current && !error && <div className="skeleton-rows" role="status"><span className="admin-sr-only">Loading payment reviews…</span><span className="skeleton" /><span className="skeleton" /></div>}
     {current && <>
       {!current.bookings.length && <p className="admin-agenda-empty"><strong>All caught up.</strong>No payments awaiting review on this page.</p>}

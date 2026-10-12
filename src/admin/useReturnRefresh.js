@@ -20,7 +20,8 @@ export function useReturnRefresh(refresh, quietMs = 5000) {
 }
 
 // Just after a phone wakes, the first read often fails. A refresh that fails is tried once more, quietly, before anyone is told.
-// `failed()` says a second try has been set up instead (so no message is needed); `succeeded()` readies it for next time.
+// `failed()` says a second try has been set up instead (so no message is needed); `succeeded()` readies it for next time;
+// `asked()` marks the next read as one she asked for.
 export function useQuietRetry(retry, delayMs = 2500) {
   const timer = useRef(0)
   const used = useRef(false)
@@ -32,6 +33,8 @@ export function useQuietRetry(retry, delayMs = 2500) {
       timer.current = setTimeout(retry, delayMs)
       return true
     },
-    succeeded() { used.current = false },
+    succeeded() { used.current = false; clearTimeout(timer.current) },
+    // A read she asked for herself says so at once if it fails, and does not wait for a second try.
+    asked() { used.current = true; clearTimeout(timer.current) },
   }), [retry, delayMs])
 }

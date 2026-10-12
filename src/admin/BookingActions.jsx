@@ -36,6 +36,8 @@ function ActionDialog({ kind, booking, api, close, done }) {
   const [reason, setReason] = useState('')
   const [fee, setFee] = useState('')
   const [standardFee, setStandardFee] = useState(null)
+  // Whether the standard fee has been looked up: loading, ok or failed.
+  const [lookup, setLookup] = useState('loading')
   const [slot, setSlot] = useState(null)
   const total = Number(booking.total_gbp)
 
@@ -53,9 +55,10 @@ function ActionDialog({ kind, booking, api, close, done }) {
     api.preview(booking.id, initiatedBy).then(value => {
       if (!live) return
       setStandardFee(value)
+      setLookup('ok')
       // The standard fee is only where she starts: it never replaces a fee she has already chosen.
       if (kind === 'cancel' && !feeTouched.current) setFee(String(value))
-    }, () => { if (live) setStandardFee(null) })
+    }, () => { if (live) { setStandardFee(null); setLookup('failed') } })
     return () => { live = false }
   }, [api, booking.id, kind, initiatedBy])
 
@@ -63,6 +66,7 @@ function ActionDialog({ kind, booking, api, close, done }) {
   function changeWho(value) {
     setInitiatedBy(value)
     setStandardFee(null)
+    setLookup('loading')
     feeTouched.current = false
     if (kind === 'cancel') setFee('')
   }
@@ -76,7 +80,10 @@ function ActionDialog({ kind, booking, api, close, done }) {
   }
   const feeValid = fee === '' || (Number(fee) >= 0 && Number(fee) <= total)
   // A cancellation never goes ahead on a fee she has not seen: either the standard fee has arrived or she chose one.
-  const ready = (kind !== 'cancel' || (feeValid && fee !== '')) && (kind !== 'noShow' || feeValid) && (kind !== 'reschedule' || Boolean(slot))
+  // A change she makes for the client, inside the free window, records a late fee. She is not let go on before she has been told what it is,
+  // or told that it could not be checked.
+  const feeAtStake = kind === 'reschedule' && initiatedBy === 'client' && booking.late_fee_status === 'none'
+  const ready = (kind !== 'cancel' || (feeValid && fee !== '')) && (kind !== 'noShow' || feeValid) && (kind !== 'reschedule' || (Boolean(slot) && !(feeAtStake && lookup === 'loading')))
 
   async function submit(event) {
     event.preventDefault()
@@ -99,8 +106,11 @@ function ActionDialog({ kind, booking, api, close, done }) {
   const shownFee = fee === '' ? (kind === 'noShow' ? total : null) : Number(fee)
   const refundNote = kind === 'cancel' && booking.booking_payments?.status === 'paid' && feeValid && fee !== ''
     ? `Payment of ${money(booking.booking_payments.amount_gbp)} has been received. ${money(Math.max(Number(booking.booking_payments.amount_gbp) - Number(fee || 0), 0))} will be recorded as a refund due.` : ''
-  const lateFeeNote = kind === 'reschedule' && initiatedBy === 'client' && booking.late_fee_status === 'none' && standardFee > 0
+  const lateFeeNote = feeAtStake && standardFee > 0
     ? `A late fee of ${money(standardFee)} will be recorded as due, because this change is inside the free cancellation window.` : ''
+  const lateFeeWait = feeAtStake && lookup === 'loading' && slot ? 'Checking whether a late fee applies…' : ''
+  const lateFeeUnknown = feeAtStake && lookup === 'failed'
+    ? "I couldn't check whether a late fee applies. If this change is inside the free cancellation window, a fee may be recorded, unless it is your own decision." : ''
 
   return <dialog ref={ref} className="admin-confirm admin-action" aria-labelledby="booking-action-title" onCancel={event => { event.preventDefault(); event.stopPropagation(); if (!busy) close() }}>
     <form onSubmit={submit}>
@@ -115,11 +125,14 @@ function ActionDialog({ kind, booking, api, close, done }) {
           selected={slot} onPick={(date, start) => { setSlot({ date, start }); setError('') }} emptyMessage="No available times. Choose another date." />
         {slot && <p className="admin-new-time" role="status">New time: {dateLabel(slot.date, { weekday: 'short', day: 'numeric', month: 'short' })} · {time(slot.start)}</p>}
         {lateFeeNote && <p role="status">{lateFeeNote}</p>}
+        {lateFeeWait && <p className="admin-detail-hint" role="status">{lateFeeWait}</p>}
+        {lateFeeUnknown && <p role="status">{lateFeeUnknown}</p>}
       </>}
       {choices.length > 0 && <>
         <fieldset className="admin-who admin-fee-choices" style={{ '--choices': choices.length }}><legend>Late fee</legend>
           {choices.map(choice => <label key={choice.value}><input type="radio" name="fee-choice" checked={shownFee === choice.value} disabled={busy} onChange={() => chooseFee(String(choice.value))} /> {choice.text}</label>)}
         </fieldset>
+        {kind === 'cancel' && fee === '' && <p className="admin-detail-hint" role="status">{lookup === 'failed' ? "I couldn't look up the usual fee. Please choose one above." : 'Looking up the usual fee…'}</p>}
         <label className="admin-field">Another amount (£)
           <input type="number" inputMode="decimal" min="0" max={total} step="0.01" value={fee} disabled={busy} onChange={event => chooseFee(event.target.value)} />
           <span className="admin-detail-hint">{kind === 'cancel' && standardFee !== null ? `Standard fee now: ${money(standardFee)}. ` : ''}Up to {money(total)}.</span>

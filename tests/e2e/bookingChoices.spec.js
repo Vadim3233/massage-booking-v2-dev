@@ -276,21 +276,39 @@ test('a phone number or postcode that cannot be right is named beside the field,
   await fixture.trackUser((await readDraft(page)).ownerUserId)
 })
 
+test('the bar at the bottom of the review is one row on phones from 360 to 430 px wide', async ({ page }) => {
+  await toDuration(page)
+  await page.getByRole('button', { name: /^60 minutes/ }).click()
+  await page.getByLabel('Appointment date').fill(fixture.date)
+  await page.getByRole('button', { name: '10:00', exact: true }).click()
+  await page.getByRole('button', { name: 'Review booking', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Review your booking' })).toBeVisible()
+  for (const width of [360, 375, 390, 430]) {
+    await page.setViewportSize({ width, height: 800 })
+    const bar = await page.locator('.action-bar').boundingBox()
+    expect(bar.height, `the bar at ${width}px`).toBeLessThan(120)
+  }
+})
+
 test.describe('a double tap', () => {
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } })
   test('lands on the screen it opened, not on a tile that appears under the finger', async ({ page }) => {
+    await page.clock.install({ time: Date.now() })
     await page.goto('/')
     const area = page.locator('.tiles--areas .tile').first()
     await expect(area).toBeVisible()
+    // Time stands still from here, so the moment after a screen has changed lasts as long as the test needs it to.
+    await page.clock.pauseAt(Date.now() + 5000)
     await area.tap()
     await expect(page.getByRole('heading', { name: 'What would help you most today?' })).toBeVisible()
     // The second tap of a double tap arrives a moment after the screen has changed, on a treatment.
     const treatment = await page.locator('.tiles .tile').first().boundingBox()
     await page.touchscreen.tap(treatment.x + treatment.width / 2, treatment.y + treatment.height / 2)
-    await page.waitForTimeout(700)
+    await page.waitForTimeout(300)
     await expect(page.getByRole('heading', { name: 'What would help you most today?' })).toBeVisible()
     expect((await readDraft(page)).serviceId).toBeFalsy()
-    // Once the screen has settled a tap works as it always did.
+    // Time moves on, the screen settles, and a tap works as it always did.
+    await page.clock.runFor(500)
     await page.locator('.tiles .tile').first().tap()
     await expect(page.getByRole('heading', { name: 'How much time would you like?' })).toBeVisible()
   })

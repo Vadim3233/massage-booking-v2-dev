@@ -147,6 +147,37 @@ test('the buttons stay in view on a short screen, and a field that takes focus i
   expect(field.y + field.height).toBeLessThanOrEqual(bar.y + 1)
 })
 
+test('moving a booking for the client waits for the late fee to be looked up, and says what it is waiting for', async ({ page }) => {
+  await f.authorize()
+  await open(page, f.bookings[2].id)
+  let release
+  const held = new Promise(resolve => { release = resolve })
+  await page.route('**/rpc/admin_late_fee_preview', async route => { await held; await route.continue() })
+  await details(page).getByRole('button', { name: 'Reschedule', exact: true }).click()
+  const slots = action(page).locator('.dtp .slots button')
+  await expect(slots.first()).toBeVisible()
+  await slots.nth(1).click()
+  await expect(action(page).getByText('Checking whether a late fee applies…')).toBeVisible()
+  await expect(action(page).getByRole('button', { name: 'Reschedule', exact: true })).toBeDisabled()
+  release()
+  await expect(action(page).getByRole('button', { name: 'Reschedule', exact: true })).toBeEnabled()
+  await expect(action(page).getByText('Checking whether a late fee applies…')).toHaveCount(0)
+})
+
+test('when the late fee cannot be looked up, a change for the client says so, and her own decision can still go ahead', async ({ page }) => {
+  await f.authorize()
+  const id = f.bookings[2].id
+  await open(page, id)
+  await page.route('**/rpc/admin_late_fee_preview', route => route.abort('failed'))
+  await details(page).getByRole('button', { name: 'Reschedule', exact: true }).click()
+  await expect(action(page).getByText(/I couldn't check whether a late fee applies/)).toBeVisible()
+  await action(page).getByLabel('It is my own decision').check()
+  await expect(action(page).getByText(/I couldn't check whether a late fee applies/)).toHaveCount(0)
+  await action(page).locator('.dtp .slots button').nth(1).click()
+  await action(page).getByRole('button', { name: 'Reschedule', exact: true }).click()
+  await expect(details(page)).toContainText('Moved from')
+})
+
 test('a no-show offers the full price or no fee in one tap, and records the one chosen', async ({ page }) => {
   await f.authorize()
   const id = f.bookings[2].id

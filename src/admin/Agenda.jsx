@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase.js'
 import { createCalendarApi } from './calendarApi.js'
 import PaymentActions from './PaymentActions.jsx'
 import Icon from '../ui/icons.jsx'
+import { reanchored } from './agendaRange.js'
 import { useQuietRetry, useReturnRefresh } from './useReturnRefresh.js'
 import { bookingState, clientName, dateLabel, dayHeading, daySummary, money, nextUp, postcode, sessionSummary, shiftDate, time, today } from './calendarPresentation.js'
 
@@ -92,14 +93,8 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
     const base = shown.current
     const first = !base
     const day = today()
-    let start = base?.start ?? day
-    let end = base?.end ?? shiftDate(day, CHUNK_DAYS)
-    // Left open past midnight and never scrolled back: the list starts again from today, and is as long as it was.
-    if (base && anchor.current && anchor.current !== day && base.start === anchor.current) {
-      const length = daysBetween(start, end)
-      start = day
-      end = shiftDate(day, length)
-    }
+    // Left open past midnight and never scrolled back, the list starts again from today.
+    const { start, end } = reanchored(base, anchor.current, day) ?? { start: day, end: shiftDate(day, CHUNK_DAYS) }
     loadSpan(start, end, `${attempt}:${revision}`).then(bookings => {
       if (!live) return
       // More was scrolled into view while this was being read: the range on show has moved, so read it again.
@@ -164,13 +159,13 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
     <h1 id="agenda-title" className="sr-only">Agenda</h1>
 
     {!data && !error && <div className="skeleton-rows" role="status"><span className="sr-only">Loading agenda…</span><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>}
-    {error && <div role={data ? 'status' : 'alert'} className="error"><p>{data ? 'Could not refresh the agenda just now.' : 'Could not load the agenda. Please check your connection and try again.'}</p><button className="btn--small" onClick={reread}>Try again</button></div>}
+    {error && <div role={data ? 'status' : 'alert'} className="error"><p>{data ? 'Could not refresh the agenda just now.' : 'Could not load the agenda. Please check your connection and try again.'}</p><button className="btn--small" onClick={() => { quiet.asked(); reread() }}>Try again</button></div>}
 
     {data && <>
       <ToCheck toCheck={toCheck} checked={checked} seeAll={seeAll} />
       <div className="admin-agenda-actions">
         <button className="btn--quiet btn--small admin-agenda-earlier" disabled={Boolean(paging)} onClick={() => extend('older')}>{paging === 'older' ? 'Loading earlier…' : 'Earlier appointments'}</button>
-        <button className="btn--quiet btn--small" disabled={refreshing} onClick={() => { setRefreshing(true); reread() }}><Icon name="refresh" size={18} />{refreshing ? ' Refreshing…' : ' Refresh'}</button>
+        <button className="btn--quiet btn--small" disabled={refreshing} onClick={() => { quiet.asked(); setRefreshing(true); reread() }}><Icon name="refresh" size={18} />{refreshing ? ' Refreshing…' : ' Refresh'}</button>
       </div>
       <div className="admin-agenda-days">
         {groups.map(group => {

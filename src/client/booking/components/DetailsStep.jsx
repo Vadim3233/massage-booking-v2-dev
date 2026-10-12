@@ -106,14 +106,15 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
       {problems.phone && <p className="field-problem" id="details-phone-problem" role="alert">{problems.phone}</p>}
       {!guest && addresses.length > 0 && <label>Saved address<select value={details.savedAddressId} onChange={(event) => {
         const address = addresses.find((item) => item.id === event.target.value)
+        setProblems((known) => ({ ...known, postcode: undefined }))
         edit({ details: { ...details, ...(address ? Object.fromEntries(['address_line_1', 'address_line_2', 'city', 'postcode', 'entry_instructions'].map((key) => [key, address[key] || ''])) : {}), savedAddressId: event.target.value } })
       }}><option value="">Enter an address</option>{addresses.map((address) => <option key={address.id} value={address.id}>{address.label} · {address.address_line_1}, {address.postcode}</option>)}</select></label>}
       <fieldset disabled={!guest && Boolean(details.savedAddressId)}>
         <label>Street address<input autoComplete="address-line1" maxLength={120} value={details.address_line_1} required onChange={(event) => field('address_line_1', event.target.value)} /></label>
         <label>Flat or building (optional)<input autoComplete="address-line2" maxLength={120} value={details.address_line_2} onChange={(event) => field('address_line_2', event.target.value)} /></label>
         <div className="two-columns"><label>City<input autoComplete="address-level2" maxLength={60} value={details.city} required onChange={(event) => field('city', event.target.value)} /></label>
-          <label>Postcode<input id="details-postcode" autoComplete="postal-code" autoCapitalize="characters" maxLength={12} aria-invalid={Boolean(problems.postcode)} aria-describedby={problems.postcode ? 'details-postcode-problem' : undefined} value={details.postcode} required onChange={(event) => field('postcode', event.target.value)} /></label></div>
-        {problems.postcode && <p className="field-problem" id="details-postcode-problem" role="alert">{problems.postcode}</p>}
+          <label>Postcode<input id="details-postcode" autoComplete="postal-code" autoCapitalize="characters" maxLength={12} aria-invalid={Boolean(problems.postcode) && !details.savedAddressId} aria-describedby={problems.postcode && !details.savedAddressId ? 'details-postcode-problem' : undefined} value={details.postcode} required onChange={(event) => field('postcode', event.target.value)} /></label></div>
+        {problems.postcode && !details.savedAddressId && <p className="field-problem" id="details-postcode-problem" role="alert">{problems.postcode}</p>}
       </fieldset>
       <details className="more more--flat">
         <summary><span className="more-title">How to get in</span><span className="more-hint">Optional</span></summary>

@@ -32,6 +32,13 @@ export default function BookingFlow() {
   const [catalogue, setCatalogue] = useState(null)
   const [catalogueAttempt, setCatalogueAttempt] = useState(0)
   const [catalogueFailed, setCatalogueFailed] = useState(false)
+  // A second tap that lands just after a screen has changed is the first tap arriving twice: for a moment the new screen takes no taps.
+  const [settledStep, setSettledStep] = useState(step)
+  useEffect(() => {
+    const timer = setTimeout(() => setSettledStep(step), 400)
+    return () => clearTimeout(timer)
+  }, [step])
+  const settling = settledStep !== step
   const [clock, setClock] = useState(Date.now)
   const [savedBank, setSavedBank] = useState(null)
   const rules = useBookingRules(supabase)
@@ -134,7 +141,7 @@ export default function BookingFlow() {
   const shown = Math.min(step, STEPS.length - 1)
   return <div className="booking-shell">
     <header className="brand"><a className="brand-link" href="/"><b className="brand-mark" aria-hidden="true">VM</b>VadMassage</a><a className="brand-aside" href="/account">Your bookings</a></header>
-    <main className="booking-main">
+    <main className={`booking-main ${settling ? 'is-settling' : ''}`}>
       <nav className="stepper" aria-label="Booking progress">
         <div className="stepper-row">
           {catalogue && canGoBack ? <button className="btn--quiet btn--small back" disabled={busy} onClick={() => navigate(step - 1)}><Icon name="left" size={20} />Back</button> : <span />}

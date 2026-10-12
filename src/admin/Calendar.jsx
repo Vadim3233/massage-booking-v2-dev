@@ -70,7 +70,7 @@ export default function Calendar({ signOut, openBooking, revision, initialDate, 
           <input aria-label="Calendar date" type="date" value={date} onChange={event => navigate(event.target.value)} onClick={event => { try { event.currentTarget.showPicker?.() } catch { /* Native date entry remains available. */ } }} />
         </label>
         <button className="admin-today" onClick={() => navigate(today())}>Today</button>
-        <button aria-label="Refresh calendar" title="Refresh calendar" onClick={() => setAttempt(value => value + 1)}>↻</button>
+        <button aria-label="Refresh calendar" title="Refresh calendar" onClick={() => { quiet.asked(); reread() }}>↻</button>
         <div className="admin-account" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setAccountOpen(false) }} onKeyDown={event => { if (event.key === 'Escape') { setAccountOpen(false); event.currentTarget.querySelector('button').focus() } }}>
           <button aria-label="Account menu" title="Account" aria-expanded={accountOpen} aria-controls="admin-account-actions" onClick={() => setAccountOpen(value => !value)}>⋯</button>
           {accountOpen && <div id="admin-account-actions" className="admin-account-actions"><button onClick={signOut}>Sign out</button></div>}
@@ -90,7 +90,7 @@ export default function Calendar({ signOut, openBooking, revision, initialDate, 
       <h1 className="admin-sr-only">Appointments for {dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h1>
       <p className="admin-day-caption">London time</p>
       {!data && !failed && <div className="skeleton-rows" role="status" aria-label="Loading calendar"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>}
-      {failed && <div role={data ? 'status' : 'alert'} className="error"><p>{data ? 'Could not refresh the calendar just now.' : 'Could not load calendar. Please check your connection and try again.'}</p><button className="btn--small" onClick={reread}>{data ? 'Try again' : 'Retry calendar'}</button></div>}
+      {failed && <div role={data ? 'status' : 'alert'} className="error"><p>{data ? 'Could not refresh the calendar just now.' : 'Could not load calendar. Please check your connection and try again.'}</p><button className="btn--small" onClick={() => { quiet.asked(); reread() }}>{data ? 'Try again' : 'Retry calendar'}</button></div>}
       {data && <>
         <p className="admin-working-hours">{timeline.hours?.available ? `Working hours ${time(timeline.hours.start_minutes)}–${time(timeline.hours.end_minutes)}` : 'Not a working day'}</p>
         {!data.bookings.length && <p className="admin-day-note">No appointments for this day.</p>}

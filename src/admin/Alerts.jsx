@@ -41,8 +41,8 @@ export default function Alerts({ openBooking, openPage, changed, api = alertsApi
   const unread = (alerts || []).filter(alert => !alert.read_at).length
   return <section className="admin-review" aria-labelledby="alerts-title">
     <header className="admin-review-heading"><div><h1 id="alerts-title">Alerts</h1><p>What has happened since you last looked.</p></div>
-      <button onClick={() => setAttempt(value => value + 1)} aria-label="Refresh alerts">↻</button></header>
-    {error && <p role="alert">{error} <button onClick={() => setAttempt(value => value + 1)}>Retry alerts</button></p>}
+      <button onClick={() => { quiet.asked(); reread() }} aria-label="Refresh alerts">↻</button></header>
+    {error && <p role="alert">{error} <button onClick={() => { quiet.asked(); reread() }}>Retry alerts</button></p>}
     {!alerts && !error && <p role="status">Loading alerts…</p>}
     {alerts && !alerts.length && <p>Nothing yet. New bookings and client changes will appear here.</p>}
     {alerts?.length > 0 && <>

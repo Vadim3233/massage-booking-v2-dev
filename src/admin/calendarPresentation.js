@@ -35,7 +35,7 @@ const GOING_AHEAD = ['confirmed', 'awaiting_payment_verification', 'awaiting_cas
 // What a day is worth: the appointments going ahead or done. A cancellation and a no-show are not worth their price.
 const WORTH_NOTHING = ['cancelled', 'no_show']
 const dayTotal = bookings => bookings.filter(booking => !WORTH_NOTHING.includes(booking.booking_status)).reduce((sum, booking) => sum + Number(booking.total_gbp || 0), 0)
-// What a day's heading says: how many appointments are going ahead, and what they come to.
+// What a day's heading says: how many appointments were not cancelled, and what the ones that are worth something come to.
 export function daySummary(bookings) {
   if (!bookings.length) return 'Free'
   const live = bookings.filter(booking => booking.booking_status !== 'cancelled')

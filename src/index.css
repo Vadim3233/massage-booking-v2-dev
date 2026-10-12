@@ -54,7 +54,7 @@
 }
 * { box-sizing: border-box; }
 /* Something focused or jumped to is never hidden behind a sticky bar. */
-html { scroll-padding-top: 76px; scroll-padding-bottom: 110px; }
+html { scroll-padding-top: 76px; scroll-padding-bottom: 150px; }
 body { margin: 0; color: var(--ink); background: var(--paper); font-family: var(--font-ui); line-height: 1.55; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 button, input, textarea, select { font: inherit; }
 button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
