@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { paymentReviewFixture } from '../paymentReviewFixture.js'
+import { londonSlot } from '../londonSlot.js'
 
 let f
 test.beforeEach(async () => { f = await paymentReviewFixture() })
@@ -15,12 +16,6 @@ async function open(page, id) {
 const details = page => page.locator('dialog.admin-details')
 const action = page => page.locator('dialog.admin-action')
 
-// A London date and 30-minute start that fall offsetMs from now.
-function londonSlot(offsetMs) {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
-    .formatToParts(new Date(Date.now() + offsetMs)).map(part => [part.type, part.value]))
-  return { date: `${parts.year}-${parts.month}-${parts.day}`, start: Math.floor((Number(parts.hour) * 60 + Number(parts.minute)) / 30) * 30 }
-}
 // Also backdates the booking so the one-hour grace period for new bookings does not apply.
 async function moveTo(id, offsetMs) {
   const slot = londonSlot(offsetMs)
