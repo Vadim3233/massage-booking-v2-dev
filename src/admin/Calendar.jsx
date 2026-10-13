@@ -2,7 +2,8 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { createCalendarApi } from './calendarApi.js'
 import { useQuietRetry, useReturnRefresh } from './useReturnRefresh.js'
-import { bookingState, clientName, dateLabel, dayTimeline, money, postcode, sessionSummary, shiftDate, time, today } from './calendarPresentation.js'
+import BookingCard from './BookingCard.jsx'
+import { dateLabel, dayTimeline, shiftDate, time, today } from './calendarPresentation.js'
 const BlockDialog = lazy(() => import('./BlockDialog.jsx'))
 const api = createCalendarApi(supabase)
 // One owner for all Calendar reads, including StrictMode's repeated mount effect. A later change or refresh is a new read.
@@ -97,12 +98,7 @@ export default function Calendar({ signOut, openBooking, revision, initialDate, 
         <ol role="list" className="admin-timeline" aria-label="Day timeline">
           {timeline.rows.map(row => <li key={`${row.kind}-${row.id}`} className={`admin-timeline-row admin-timeline-${row.kind}`} data-start={row.start}>
             <time className="admin-time">{row.kind === 'booking' ? <><span className="figure">{time(row.start)}</span><small>{row.booking.treatment_duration_minutes} min</small></> : time(row.start)}</time>
-            {row.kind === 'booking' ? <button className={`admin-card ${row.booking.booking_status === 'cancelled' ? 'cancelled' : ''}`} data-chip={bookingState(row.booking).chip} onClick={() => openBooking(row.booking.id)}>
-              <span className="admin-card-heading"><strong>{clientName(row.booking)}</strong><span className="admin-card-price">{money(row.booking.total_gbp)}</span></span>
-              <span className="admin-card-treatment">{sessionSummary(row.booking)}</span>
-              <span className="admin-card-postcode">{postcode(row.booking.postcode_snapshot)}</span>
-              <span className={`chip chip--${bookingState(row.booking).chip} admin-status ${bookingState(row.booking).tone}`}>{bookingState(row.booking).text}</span>
-            </button> : row.kind === 'block' && row.block.kind !== 'series_hold' ? <button className="admin-timeline-entry block admin-block-button" onClick={() => setBlockDialog({ date, block: row.block })}>
+            {row.kind === 'booking' ? <BookingCard booking={row.booking} open={() => openBooking(row.booking.id)} now={new Date(now)} /> : row.kind === 'block' && row.block.kind !== 'series_hold' ? <button className="admin-timeline-entry block admin-block-button" onClick={() => setBlockDialog({ date, block: row.block })}>
                 <span>{row.title}</span>
                 <small>Until {time(row.end)} · tap to change</small>
             </button> : <div className={`admin-timeline-entry ${row.kind}`}>

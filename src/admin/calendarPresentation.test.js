@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { dayContext, daySummary, nextUp, postcode, shiftDate } from './calendarPresentation.js'
+import { canNavigateTo, dayContext, daySummary, nextUp, postcode, shiftDate } from './calendarPresentation.js'
 it('handles London calendar dates across DST and month boundaries', () => {
   expect(shiftDate('2026-03-29', 1)).toBe('2026-03-30')
   expect(shiftDate('2026-10-31', 1)).toBe('2026-11-01')
@@ -43,4 +43,15 @@ it('says what a day comes to from the appointments that are going ahead', () => 
   // A no-show is still an appointment that was made, but it is not worth its price.
   expect(daySummary([make('confirmed', '85.00'), make('no_show', '85.00')])).toBe('2 bookings · £85.00')
   expect(daySummary([make('cancelled', '85.00'), make('cancelled', '90.00')])).toBe('All cancelled')
+})
+it('offers the way there only for an appointment that is going ahead and has not yet ended, in London time', () => {
+  const make = (status, date, start, minutes = 60) => ({ booking_status: status, date, start_minutes: start, treatment_duration_minutes: minutes })
+  const noon = new Date('2026-10-12T11:00:00Z') // 12:00 in London
+  expect(canNavigateTo(make('confirmed', '2026-10-12', 840), noon)).toBe(true)
+  expect(canNavigateTo(make('awaiting_transfer', '2026-10-13', 600), noon)).toBe(true)
+  // Under way until 12:30, but over at 12:00 exactly.
+  expect(canNavigateTo(make('confirmed', '2026-10-12', 690), noon)).toBe(true)
+  expect(canNavigateTo(make('confirmed', '2026-10-12', 660), noon)).toBe(false)
+  expect(canNavigateTo(make('confirmed', '2026-10-11', 840), noon)).toBe(false)
+  for (const status of ['cancelled', 'completed', 'no_show']) expect(canNavigateTo(make(status, '2026-10-13', 600), noon)).toBe(false)
 })

@@ -5,7 +5,8 @@ import PaymentActions from './PaymentActions.jsx'
 import Icon from '../ui/icons.jsx'
 import { reanchored } from './agendaRange.js'
 import { useQuietRetry, useReturnRefresh } from './useReturnRefresh.js'
-import { bookingState, clientName, dateLabel, dayHeading, daySummary, money, nextUp, postcode, sessionSummary, shiftDate, time, today } from './calendarPresentation.js'
+import BookingCard from './BookingCard.jsx'
+import { clientName, dateLabel, dayHeading, daySummary, money, nextUp, shiftDate, time, today } from './calendarPresentation.js'
 
 const api = createCalendarApi(supabase)
 const CHUNK_DAYS = 31
@@ -178,18 +179,10 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
             </header>
             {!group.bookings.length && <p className="admin-agenda-empty"><strong>A free day.</strong>Nothing is booked.</p>}
             {group.bookings.length > 0 && <ol role="list" className="admin-timeline" aria-label={`Appointments for ${full}`}>
-              {group.bookings.map(booking => {
-                const state = bookingState(booking)
-                return <li key={booking.id} className="admin-timeline-row admin-timeline-booking">
-                  <time className="admin-time"><span className="figure">{time(booking.start_minutes)}</span><small>{booking.treatment_duration_minutes} min</small>{upNext?.id === booking.id && <em className="admin-next-tag">{upNext.now ? 'Now' : 'Next'}</em>}</time>
-                  <button className={`admin-card ${booking.booking_status === 'cancelled' ? 'cancelled' : ''}`} data-chip={state.chip} onClick={() => openBooking(booking.id)}>
-                    <span className="admin-card-heading"><strong>{clientName(booking)}</strong><span className="admin-card-price">{money(booking.total_gbp)}</span></span>
-                    <span className="admin-card-treatment">{sessionSummary(booking)}</span>
-                    <span className="admin-card-postcode">{postcode(booking.postcode_snapshot)}</span>
-                    <span className={`chip chip--${state.chip} admin-status ${state.tone}`}>{state.text}</span>
-                  </button>
-                </li>
-              })}
+              {group.bookings.map(booking => <li key={booking.id} className="admin-timeline-row admin-timeline-booking">
+                <time className="admin-time"><span className="figure">{time(booking.start_minutes)}</span><small>{booking.treatment_duration_minutes} min</small>{upNext?.id === booking.id && <em className="admin-next-tag">{upNext.now ? 'Now' : 'Next'}</em>}</time>
+                <BookingCard booking={booking} open={() => openBooking(booking.id)} now={new Date(now)} />
+              </li>)}
             </ol>}
           </section>
         })}

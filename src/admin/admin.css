@@ -360,3 +360,9 @@
 .admin-review form + form { margin-top: 32px; padding-top: 22px; border-top: 1px solid var(--hairline); }
 /* A field that takes focus is scrolled clear of the buttons that stay at the bottom of a sheet. */
 .admin-confirm { scroll-padding-bottom: 96px; }
+
+/* A Directions button sits beside the status of an appointment still to come: a control of its own, next to the card and not inside it. */
+.admin-card-wrap { position: relative; min-width: 0; }
+.admin-shell .admin-card-directions { position: absolute; right: 8px; bottom: 6px; z-index: 1; display: inline-flex; align-items: center; gap: 5px; min-height: 40px; padding: 0 10px 0 9px; border-radius: 20px; background: var(--primary-soft); color: var(--primary); font: 600 13px/1 var(--font-ui); text-decoration: none; }
+.admin-shell .admin-card-directions:hover { background: #d9e8df; }
+.admin-card-wrap.has-directions .admin-status { max-width: calc(100% - 108px); white-space: normal; border-radius: 16px; }

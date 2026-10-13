@@ -147,3 +147,34 @@ test('a refresh that keeps failing says so quietly, keeps the list, and Try agai
   await page.getByRole('button', { name: 'Try again', exact: true }).click()
   await expect(page.getByText('Could not refresh the agenda just now.')).toHaveCount(0)
 })
+
+test('an appointment still to come has a Directions button of its own beside its status, and a cancelled one has none', async ({ page }) => {
+  await openAgenda(page)
+  const directions = page.getByRole('link', { name: /^Directions to/ })
+  // Two of the three are going ahead (one is cancelled), so two have the way there one tap away.
+  await expect(directions).toHaveCount(2)
+  const first = directions.first()
+  await expect(first).toHaveAttribute('href', /^https:\/\/www\.google\.com\/maps\/dir\/\?api=1&destination=.*VeryLongStreet/)
+  await expect(first).toHaveAttribute('target', '_blank')
+  await expect(first).toHaveAttribute('rel', /noopener/)
+  // A long status ("Confirmed · Cash approved") wraps beside the button instead of being clipped by it.
+  const clipped = await page.locator('.admin-card-wrap.has-directions .admin-status').evaluateAll(chips => chips.filter(chip => chip.scrollWidth > chip.clientWidth + 1).length)
+  expect(clipped).toBe(0)
+  // It is a control of its own: pressing it does not also open the booking's details.
+  await first.evaluate(link => link.addEventListener('click', event => event.preventDefault()))
+  await first.click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  // And the card beside it still opens the details.
+  await page.locator('.admin-card').first().click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+})
+
+test('the Day view has the same Directions button on an appointment still to come', async ({ page }) => {
+  await f.authorize()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await login(page)
+  await page.getByRole('navigation', { name: 'Calendar views' }).getByRole('link', { name: 'Day', exact: true }).click()
+  await page.getByLabel('Calendar date', { exact: true }).fill(f.date)
+  await expect(page.locator('.admin-card')).toHaveCount(2)
+  await expect(page.getByRole('link', { name: /^Directions to/ })).toHaveCount(1)
+})
