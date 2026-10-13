@@ -52,7 +52,7 @@ Booking, payment, cancellation and rescheduling rules did not change for clients
 
 ## New: delete a client (2026-10-13)
 
-Booking, payment, cancellation and rescheduling rules did not change. It needs one database change, `20261025100000_admin_delete_client.sql`, which has been applied to the local copy only and **not** to the online Supabase project (like the others, it is applied only with your say-so); until it is, the Delete section on a client's page shows a plain error there.
+Booking, payment, cancellation and rescheduling rules did not change. It needs one database change, `20261025100000_admin_delete_client.sql`, which was applied to the online Supabase project on 2026-10-13 with the owner's say-so (that one file, after a dry run).
 
 - **Where.** At the bottom of a client's page: **Delete this client…**. It asks first, naming the client and what would go, with "Keep" as the choice that has focus.
 - **Who can be deleted.** Someone with no bookings and no weekly repeat: added by mistake, a profile made twice, a made-up test profile. What goes: their details, saved addresses and notes, the waiting-list requests they made, the alerts that name them, and their online account if they have one (so that email can register again). There is no undo.
