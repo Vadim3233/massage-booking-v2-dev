@@ -20,7 +20,7 @@ Both sides were redesigned as one product; the rules (availability, travel buffe
 
 ## New: "Is this the same person?" (2026-10-13)
 
-Booking, payment and cancellation rules did not change. This one needs a database change on the real Supabase project before it works there (step 3 below).
+Booking, payment and cancellation rules did not change. It needs one database change, which was applied to the online Supabase project on 2026-10-13 with the owner's say-so (step 3 below).
 
 - **A guest who registers later is no longer turned away.** Before, someone who had booked as a guest and then registered with the same email saw "This email is already linked to another client account" and could not carry on. Now they register normally and get a profile of their own.
 - **The app asks you before it combines anything.** When two profiles share an email or a phone number (07700 900123 and +44 7700 900123 count as the same number), the pair is listed under "Might be the same person" at the top of Clients. When there is something to combine (a booking on either profile) you also get one alert, "Is this the same person?". Two profiles that each have their own login are never offered: they are two real accounts.
@@ -55,7 +55,7 @@ Booking, payment and cancellation rules did not change. This one needs a databas
 
 1. **Telegram and email alerts** (about 30 minutes). Follow `docs/NOTIFICATIONS_SETUP.md`: the old bot's token and your chat ID, a Resend account with `vadmassage.com` verified, and the settings in Vercel. Alerts in the app work without any of this.
 2. **Vercel**: create or open the project, add `booking.vadmassage.com`, and put in the settings listed in the notifications notes. Also set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for the website to reach Supabase.
-3. **The real Supabase project**: the database changes (about 40 files in `supabase/migrations`) have only been applied to a local copy. They need rehearsing on a Supabase branch first, then applying to the dev project, then to production. Ask for this as its own step; I will not do it without you saying so. The newest one, `20261022100000_same_person_clients.sql`, is what makes "Is this the same person?" work: apply it before (or together with) merging the change that adds the screens, or the Clients note stays hidden and the combine screen shows a plain error.
+3. **The real Supabase project**: the database changes (about 40 files in `supabase/migrations`) have only been applied to a local copy. They need rehearsing on a Supabase branch first, then applying to the dev project, then to production. Ask for this as its own step; I will not do it without you saying so. The newest one, `20261022100000_same_person_clients.sql`, is what makes "Is this the same person?" work. It has been applied to the online project (2026-10-13); the screens that use it come with the pull request that adds them, and show a plain error on a project that does not have it yet.
 4. **Your own details**: save your real bank details in More, Bank transfer details; check the treatments, prices and areas in More; set your usual week in Working hours.
 5. **Your own phone**: use it on an iPhone in Safari for a week with your own bookings before opening it to clients.
 6. **Fonts and privacy**: the pages load the Playfair Display and Inter fonts from Google Fonts. That sends visitors' addresses to Google. If you would rather not, say so and the fonts can be served from the site itself instead.
