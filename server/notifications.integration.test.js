@@ -52,6 +52,27 @@ describe('the sender against local Supabase', () => {
     expect((await deliveries(event))[0]).toMatchObject({ status: 'sent' })
   })
 
+  it('puts a private link in the client\'s email that really opens that booking, and keeps the code out of the database', async () => {
+    // A booking as the page shows it has a payment record too.
+    await admin.from('booking_payments').insert({ booking_id: ids.booking, method: 'cash', status: 'approved', amount_gbp: 85 })
+    const event = await emit('booking.bank_transfer_verified')
+    const bodies = []
+    await createDispatcher({ client: admin, config: readConfig(env), fetchImpl: async (url, init) => { if (url.includes('resend')) bodies.push(JSON.parse(init.body)); return { ok: true, status: 200, json: async () => ({}) } } }).dispatch({ limit: 50 })
+    const mine = bodies.find(body => body.to[0] === ids.email)
+    const code =/\/account\?booking=[0-9a-f-]{36}#key=([0-9a-f]{64})/.exec(mine.text)?.[1]
+    expect(code).toBeTruthy()
+    const config = localConfig()
+    const visitor = createClient(config.API_URL, config.ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
+    const opened = await visitor.rpc('booking_by_key', { p_booking_id: ids.booking, p_key: code })
+    expect(opened.error).toBeNull()
+    expect(opened.data).toMatchObject({ id: ids.booking, booking_status: 'confirmed' })
+    const wrong = await visitor.rpc('booking_by_key', { p_booking_id: ids.booking, p_key: code.replace(/.$/, last => (last === 'a' ? 'b' : 'a')) })
+    expect(wrong.error?.message).toBe('This link is not valid or has expired. Please contact Vad.')
+    // Only a hash is stored: the code is in the email and nowhere else.
+    expect(JSON.stringify((await admin.from('notification_deliveries').select('*').eq('event_id', event.id)).data)).not.toContain(code)
+    expect(JSON.stringify((await admin.from('booking_access_tokens').select('*').eq('booking_id', ids.booking)).data)).not.toContain(code)
+  })
+
   it('records a failure with a retry time, then does not resend until it is due', async () => {
     const event = await emit('booking.cash_requested', { method: 'cash' })
     const failing = async () => ({ ok: false, status: 502, json: async () => ({ ok: false, description: 'Bad Gateway' }) })

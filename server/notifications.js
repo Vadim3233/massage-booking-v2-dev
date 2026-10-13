@@ -64,6 +64,23 @@ async function sendEmail(row, message, config, fetchImpl) {
   }
 }
 
+// A client's email about a booking gets a private link to that booking, made now, just before it is sent. The code goes after a # so it
+// never reaches a web server or a log, only the browser, and it is kept nowhere but in the message (the database holds only its hash).
+// If a code cannot be made the plain link goes instead: the message is never held back for it. Nothing else gets a code: not the Admin's
+// messages, not a message that is not an email (a Telegram message would show it in the text and on the button), and not an email with
+// no public address to put the link on (the link is dropped from it, so the code would be made for nothing).
+async function withPrivateLink(row, client, config) {
+  const path = String(row.link_path || '')
+  if (row.audience !== 'client' || row.channel !== 'email' || !config.appBaseUrl || !path.startsWith('/account?booking=')) return { row, code: '' }
+  const booking = new URLSearchParams(path.slice(path.indexOf('?') + 1)).get('booking')
+  if (!booking) return { row, code: '' }
+  try {
+    const { data, error } = await client.rpc('mint_booking_access_token', { p_booking_id: booking })
+    if (error || typeof data !== 'string' || !data) return { row, code: '' }
+    return { row: { ...row, link_path: `${path}#key=${data}` }, code: data }
+  } catch { return { row, code: '' } }
+}
+
 export function createDispatcher({ client, config, fetchImpl = fetch }) {
   const secrets = [config.telegram.token, config.email.apiKey]
   return {
@@ -75,12 +92,15 @@ export function createDispatcher({ client, config, fetchImpl = fetch }) {
       let sent = 0, failed = 0
       for (const row of rows) {
         let failure = null
+        let code = ''
         try {
-          const message = composeMessage(row, config)
+          const linked = await withPrivateLink(row, client, config)
+          code = linked.code
+          const message = composeMessage(linked.row, config)
           if (row.channel === 'telegram') await sendTelegram(row, message, config, fetchImpl)
           else if (row.channel === 'email') await sendEmail(row, message, config, fetchImpl)
           else throw new Error('Unsupported channel')
-        } catch (caught) { failure = scrub(caught?.message, secrets) }
+        } catch (caught) { failure = scrub(caught?.message, code ? [...secrets, code] : secrets) }
         const { error: completeError } = await client.rpc('complete_notification_delivery', { p_id: row.id, p_ok: !failure, p_error: failure })
         if (completeError) failure = failure || 'Could not record the result'
         if (failure) failed += 1; else sent += 1

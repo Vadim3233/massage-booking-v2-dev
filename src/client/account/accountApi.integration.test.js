@@ -61,8 +61,10 @@ describe('a client managing their own booking against local Supabase', () => {
     try {
       const theirs = await booking({ client_id: other.id })
       expect(await api.list()).toEqual([])
-      await expect(api.terms(theirs.id)).rejects.toThrow('Something went wrong. Please try again, or contact Vad if it keeps happening.')
-      await expect(api.cancel(theirs.id, crypto.randomUUID(), 0)).rejects.toThrow('Something went wrong')
+      // Said in plain words (it is what someone sees when signed in as a different person), and with nothing technical in it.
+      const refusal = 'This appointment is not on the account you are signed in to. If you booked as a guest, open the link in your latest confirmation email, or contact Vad.'
+      await expect(api.terms(theirs.id)).rejects.toThrow(refusal)
+      await expect(api.cancel(theirs.id, crypto.randomUUID(), 0)).rejects.toThrow(refusal)
     } finally {
       const rows = await unwrap(f.admin.from('bookings').select('id').eq('client_id', other.id))
       for (const row of rows) await f.admin.from('event_outbox').delete().eq('aggregate_id', row.id)

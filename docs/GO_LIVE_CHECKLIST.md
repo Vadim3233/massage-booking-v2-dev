@@ -50,6 +50,18 @@ Booking, payment, cancellation and rescheduling rules did not change for clients
 - **Clients see nothing different.** They are still offered only the usual times. After you book an unusual time, the rest of that day usually has no times left for clients, because the first and last appointments of a day set what is offered.
 - **Repeating bookings** are only offered at usual times: choosing an unusual time turns the repeat off for that booking. If a repeating client's time is kept free on that day, the screen warns that an unusual booking may stop that week's repeat. **Moving** an existing appointment still offers the usual times only; say if you want the same there.
 
+## New: the link in a booking email works on any phone (2026-10-13)
+
+Booking, payment, cancellation and rescheduling rules did not change. It needs one database change, `20261026100000_booking_access_link.sql`, which has **not** been applied to the online Supabase project yet (I only do that with your say-so, after a dry run, and I will note it here once it is done). Until it is, emails keep the old link and nothing breaks.
+
+- **What went wrong before.** A guest who booked on the website and opened "See or change your booking" on another phone, or in an email app's own browser, saw "something went wrong" or "no bookings", because the page only knew the browser that had made the booking.
+- **What is different.** Every email to a client about a booking now has a private link with a long secret code at the end. Opening it shows that booking on any phone or browser, with no sign-in, and the client can cancel it or move it there. The rules are the ones they always were: inside 24 hours a late fee has to be ticked first, and you and the client are emailed and alerted as before. It works whoever is signed in on that phone, even you as the Admin.
+- **How private it is.** The code is random and far too long to guess, and the database keeps only a scrambled copy of it. It belongs to one booking and stops working 30 days after the appointment (or 30 days after the email, if that is later, so an email sent after the appointment, a refund for example, still has a working link). It does not show the client's other bookings. Anyone who has the email can use the link, like any booking link in an email, so clients should not forward it. A wrong or old link only says "This link is not valid or has expired. Please contact Vad." and gives nothing away. You cannot switch off one link on its own; deleting a booking removes its codes.
+- **Clients with an account** see the same page with "If you have an account, you can sign in to see all your bookings." The full list (Your bookings) still needs a sign-in.
+- **Older emails and the calendar file.** Emails sent before this change, and the link inside "Add to calendar", keep the old address with no code. They open the booking only on the phone where the client booked or is signed in; anywhere else the page says "Booked as a guest? There is no password to enter. Use the link in your latest confirmation email, or the phone you booked on."
+- **Your own emails and Telegram messages** do not carry a code, and there are no new settings.
+- **To try it** (after the database change is applied): book as a guest, then open the link in the confirmation email on a different phone or in a private window. It should show the booking and let you cancel or move it. A real iPhone has not been tried.
+
 ## What works now (tested locally)
 
 **For clients** (the website)
