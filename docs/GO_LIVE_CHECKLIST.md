@@ -1,6 +1,6 @@
 # Going live: what is built, what is left, and what only you can do
 
-Updated 2026-10-09. This is written for the owner, in plain words. Nothing here has been done on the real (hosted) Supabase project or on Vercel. Everything below was built and tested on a local copy.
+Updated 2026-10-13. This is written for the owner, in plain words. Almost nothing here has been done on the real (hosted) Supabase project or on Vercel: the one exception, the database change for "Is this the same person?", is noted under step 3. Everything below was built and tested on a local copy.
 
 ## New in the design overhaul (2026-10-12)
 
@@ -20,7 +20,7 @@ Both sides were redesigned as one product; the rules (availability, travel buffe
 
 ## New: "Is this the same person?" (2026-10-13)
 
-Booking, payment and cancellation rules did not change. This one needs a database change on the real Supabase project before it works there (step 3 below).
+Booking, payment and cancellation rules did not change. It needs one database change, which was applied to the online Supabase project on 2026-10-13 with the owner's say-so (step 3 below).
 
 - **A guest who registers later is no longer turned away.** Before, someone who had booked as a guest and then registered with the same email saw "This email is already linked to another client account" and could not carry on. Now they register normally and get a profile of their own.
 - **The app asks you before it combines anything.** When two profiles share an email or a phone number (07700 900123 and +44 7700 900123 count as the same number), the pair is listed under "Might be the same person" at the top of Clients. When there is something to combine (a booking on either profile) you also get one alert, "Is this the same person?". Two profiles that each have their own login are never offered: they are two real accounts.
@@ -28,6 +28,17 @@ Booking, payment and cancellation rules did not change. This one needs a databas
 - **What combining does.** The profile with the login stays (with no login on either, you choose; the app suggests the one you added yourself). Its bookings keep their status, payment and fees exactly as they were; the other profile's bookings, weekly repeats, notes, addresses (one the client already had is not copied twice, and entry instructions are never lost) and waitlist requests move across, and any missing email, phone number or last name is filled in. A note on the profile says what was combined, and the old profile is saved whole in the database so a mistake can be put right by hand. A guest whose profile is combined will then see and change those bookings only by signing in.
 - **For pairs the app cannot spot** (a different email and phone), open the client and press "Combine with another client…" at the bottom of their page.
 - **A client who shares an email or phone with someone else can still be corrected** (a family on one phone, for example); only a new email or phone that another client already uses is refused.
+
+## New: receipts (2026-10-13)
+
+Booking, payment and cancellation rules did not change. It needs one database change, `20261023100000_booking_receipts.sql`, which was applied to the online Supabase project on 2026-10-13 with the owner's say-so (step 3 below). On a project that does not have it, the Receipt button shows a plain error.
+
+- **Where.** Open a booking whose payment you have marked as received (a confirmed or finished appointment) and press **Receipt**. The first time it makes the receipt and gives it the next number, `VM-2026-0001`, `0002` and so on, never skipping one; pressing it again shows the same receipt. Save your business details once first (More, Receipt details): the receipt asks for them if they are missing.
+- **What it says.** Your business name and contact details (an address only if you add one), who it is for with the booking reference, the appointment, a line for each treatment, extra and travel charge, the total paid, and how and when it was paid. It does not show the client's address, says nothing about VAT, and is not a VAT invoice.
+- **Sending it.** **Email to** the client (from the app, plain text, no PDF), **WhatsApp** (opens their chat with the receipt already typed in) or **Share or copy**. The email goes out through the same sender as every other email, so it needs the email settings in step 1. The receipt only says "Emailed" once it has really been sent; while it waits it says "Email queued" (and "still waiting" if it takes more than ten minutes, which means the sender may not be switched on), and if it fails it says so. Pressing Email again after a dropped connection cannot send it twice, and an email still waiting when you cancel the booking or refund the payment is stopped.
+- **Edit.** Changes the words on that one receipt: who it is for, a note, what each line says, and your details. It cannot change the amounts, the receipt number, or how and when it was paid, because they come from the booking and must match the money you received (the date is the day you marked the payment as received). Every earlier version is kept. If you move the appointment after making the receipt, the receipt tells you and one tap, "Update the date and time", fixes it.
+- **Who gets one.** Only a payment marked as received on a confirmed or finished booking. Not a booking still waiting for payment, a cancelled booking (even where you kept a late fee), an appointment you marked as missed, or a refunded payment. If a booking is cancelled after its receipt was made, the receipt stays on record, but it can no longer be sent or changed, and the booking says so.
+- **Before real clients start.** Receipts you make while trying it out use up numbers. Ask me to clear the test receipts first so your first real receipt is number 1 (a booking that has a receipt cannot be deleted from the database until its receipt is, on purpose, so I do it in the right order).
 
 ## What works now (tested locally)
 
@@ -55,8 +66,8 @@ Booking, payment and cancellation rules did not change. This one needs a databas
 
 1. **Telegram and email alerts** (about 30 minutes). Follow `docs/NOTIFICATIONS_SETUP.md`: the old bot's token and your chat ID, a Resend account with `vadmassage.com` verified, and the settings in Vercel. Alerts in the app work without any of this.
 2. **Vercel**: create or open the project, add `booking.vadmassage.com`, and put in the settings listed in the notifications notes. Also set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for the website to reach Supabase.
-3. **The real Supabase project**: the database changes (about 40 files in `supabase/migrations`) have only been applied to a local copy. They need rehearsing on a Supabase branch first, then applying to the dev project, then to production. Ask for this as its own step; I will not do it without you saying so. The newest one, `20261022100000_same_person_clients.sql`, is what makes "Is this the same person?" work: apply it before (or together with) merging the change that adds the screens, or the Clients note stays hidden and the combine screen shows a plain error.
-4. **Your own details**: save your real bank details in More, Bank transfer details; check the treatments, prices and areas in More; set your usual week in Working hours.
+3. **The real Supabase project**: the database changes (about 40 files in `supabase/migrations`) have only been applied to a local copy. They need rehearsing on a Supabase branch first, then applying to the dev project, then to production. Ask for this as its own step; I will not do it without you saying so. The one for "Is this the same person?", `20261022100000_same_person_clients.sql`, has been applied to the online project (2026-10-13); the screens that use it show a plain error on a project that does not have it. The next one, `20261023100000_booking_receipts.sql`, is what makes receipts work and has been applied online too (2026-10-13).
+4. **Your own details**: save your real bank details in More, Bank transfer details, and your business details for receipts in More, Receipt details; check the treatments, prices and areas in More; set your usual week in Working hours.
 5. **Your own phone**: use it on an iPhone in Safari for a week with your own bookings before opening it to clients.
 6. **Fonts and privacy**: the pages load the Playfair Display and Inter fonts from Google Fonts. That sends visitors' addresses to Google. If you would rather not, say so and the fonts can be served from the site itself instead.
 
@@ -73,7 +84,7 @@ Booking, payment and cancellation rules did not change. This one needs a databas
 
 - The two-hour notice, the 40 days and the 24 hours are now settings, but the hold on a time while a client books (20 minutes, plus one 10-minute extension) and the 60-minute travel allowance are still fixed in the database.
 - Clients cannot yet change their own details or addresses from `/account`; you do that under Clients.
-- There is no analytics, receipts or financial reporting, and no WhatsApp assistant. These were left out on purpose.
+- There is no analytics or financial reporting, and no WhatsApp assistant. These were left out on purpose. Receipts are built but simple: no PDF, no VAT, and none for a cancelled booking or a missed appointment.
 - The waitlist never contacts anyone: it shows you who to message and when a time opens up.
 - Fees and refunds are records for you; the app does not take or send money.
 - The continuous-integration checks on GitHub have not run yet. Open a pull request to start them.

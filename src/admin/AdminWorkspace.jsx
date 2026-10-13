@@ -14,6 +14,7 @@ const Clients = lazy(() => import('./Clients.jsx'))
 const ServicesSettings = lazy(() => import('./SettingsCatalogue.jsx').then(module => ({ default: module.ServicesSettings })))
 const AreasSettings = lazy(() => import('./SettingsCatalogue.jsx').then(module => ({ default: module.AreasSettings })))
 const BankSettings = lazy(() => import('./SettingsBank.jsx'))
+const ReceiptSettings = lazy(() => import('./SettingsReceipts.jsx'))
 const RulesSettings = lazy(() => import('./SettingsRules.jsx'))
 const WelcomeSettings = lazy(() => import('./SettingsWelcome.jsx'))
 const ShareLink = lazy(() => import('./ShareLink.jsx'))
@@ -28,7 +29,7 @@ const AdminNewBooking = lazy(() => import('./AdminNewBooking.jsx'))
 const MORE_GROUPS = [
   ['Every day', [['/admin/waitlist', 'Waitlist'], ['/admin/schedule', 'Working hours and special days'], ['/admin/settings/link', 'Your booking link']]],
   ['What you offer', [['/admin/settings/services', 'Services and prices'], ['/admin/settings/extras', 'Extras'], ['/admin/settings/areas', 'Areas and travel fees']]],
-  ['Payments and rules', [['/admin/settings/bank', 'Bank transfer details'], ['/admin/settings/rules', 'Booking rules']]],
+  ['Payments and rules', [['/admin/settings/bank', 'Bank transfer details'], ['/admin/settings/receipts', 'Receipt details'], ['/admin/settings/rules', 'Booking rules']]],
   ['What clients read', [['/admin/settings/welcome', 'Welcome message']]],
 ]
 const SETTINGS_PAGES = MORE_GROUPS.flatMap(([, links]) => links.map(([path]) => path))
@@ -119,11 +120,16 @@ export default function AdminWorkspace({ signOut, ownerId }) {
   const openCombine = (a, b) => navigate(`/admin/clients/combine?a=${a}&b=${b}`)
   const screen = creating ? 'New booking' : match ? 'Booking' : profile ? 'Client' : combining ? 'Same person?' : ({ '/admin': 'Day', '/admin/agenda': 'Agenda', '/admin/review': 'To check', '/admin/alerts': 'Alerts', '/admin/clients': 'Clients', '/admin/more': 'More', '/admin/waitlist': 'Waitlist', '/admin/schedule': 'Working hours' }[surface] || (SETTINGS_PAGES.includes(surface) ? SETTINGS_TITLES[surface] : 'Admin'))
   const previousScreen = useRef(null)
+  const headingFocusWanted = useRef(false)
   useEffect(() => {
     document.title = `${screen} \u00b7 Admin \u00b7 VadMassage`
     const before = previousScreen.current
     previousScreen.current = screen
-    if (before === null || before === screen || before === 'Booking' || screen === 'Booking') return
+    // Closing a booking returns focus to where it was opened. Leaving it for another page on purpose (to the receipt details) puts focus on that page's heading.
+    const headingWanted = headingFocusWanted.current
+    headingFocusWanted.current = false
+    if (before === null || before === screen) return
+    if (!headingWanted && (before === 'Booking' || screen === 'Booking')) return
     const focusHeading = (tries = 0) => {
       const heading = document.querySelector('#admin-main h1')
       if (heading) { heading.setAttribute('tabindex', '-1'); heading.focus({ preventScroll: true }) }
@@ -165,13 +171,14 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {surface === '/admin/settings/extras' && <ExtrasSettings />}
       {surface === '/admin/settings/areas' && <AreasSettings />}
       {surface === '/admin/settings/bank' && <BankSettings />}
+      {surface === '/admin/settings/receipts' && <ReceiptSettings />}
       {surface === '/admin/settings/rules' && <RulesSettings />}
       {surface === '/admin/settings/welcome' && <WelcomeSettings />}
       {surface === '/admin/settings/link' && <ShareLink />}
       {surface === '/admin/waitlist' && <Waitlist bookFor={request => newBooking(request.requested_date, request.client_id)} />}
       {!creating && !match && !['/admin', '/admin/agenda', '/admin/review', '/admin/alerts', '/admin/more', '/admin/clients', ...SETTINGS_PAGES].includes(surface) && !profile && !combining && <section className="admin-review"><h1>Admin page not found</h1><a href="/admin">Back to Calendar</a></section>}
       </main>
-      {match && <BookingDestination key={match[1]} id={match[1]} close={close} returnFocus={opener} changed={() => setRevision(value => value + 1)} />}
+      {match && <BookingDestination key={match[1]} id={match[1]} close={close} returnFocus={opener} changed={() => setRevision(value => value + 1)} openPage={path => { headingFocusWanted.current = true; navigate(path) }} />}
     </Suspense>
     {calendarSurface && !match && <button className={`btn btn--primary btn--lg admin-fab ${fabCompact ? 'is-compact' : ''}`} onClick={() => newBooking((surface === '/admin' && viewedDay.current) || date || today())}><span className="fab-plus">+</span><span className="fab-label"> New booking</span></button>}
     <ToastHost />
