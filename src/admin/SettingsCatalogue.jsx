@@ -22,7 +22,7 @@ function Frame({ title, intro, list, children, adding, onAdd, addLabel }) {
     {list.error && <p role="alert">{list.error} <button onClick={list.reload}>Try again</button></p>}
     {!list.items && !list.error && <p role="status">Loading…</p>}
     {list.items && <>
-      {!adding && <div className="admin-payment-buttons"><button onClick={onAdd}>{addLabel}</button></div>}
+      {!adding && <div className="admin-payment-buttons"><button className="btn--tonal" onClick={onAdd}>{addLabel}</button></div>}
       {children}
     </>}
   </section>
@@ -34,10 +34,10 @@ function Row({ item, index, items, summary, onMove, onToggle, editing, onEdit, c
       <div className="admin-setting-head"><strong>{item.name}</strong><span className="admin-detail-hint">{item.active ? 'Shown to clients' : `${hiddenWord} from clients`}</span></div>
       <p>{summary}</p>
       <div className="admin-payment-buttons">
-        <button disabled={busy} onClick={onEdit}>Change</button>
-        <button disabled={busy} onClick={onToggle}>{item.active ? 'Hide' : 'Show'}</button>
-        <button disabled={busy || index === 0} aria-label={`Move ${item.name} up`} onClick={() => onMove(items[index - 1], item)}>↑</button>
-        <button disabled={busy || index === items.length - 1} aria-label={`Move ${item.name} down`} onClick={() => onMove(item, items[index + 1])}>↓</button>
+        <button className="btn--small" disabled={busy} onClick={onEdit}>Change</button>
+        <button className="btn--small btn--quiet" disabled={busy} onClick={onToggle}>{item.active ? 'Hide' : 'Show'}</button>
+        <button className="btn--small btn--icon" disabled={busy || index === 0} aria-label={`Move ${item.name} up`} onClick={() => onMove(items[index - 1], item)}>↑</button>
+        <button className="btn--small btn--icon" disabled={busy || index === items.length - 1} aria-label={`Move ${item.name} down`} onClick={() => onMove(item, items[index + 1])}>↓</button>
       </div>
     </>}
   </li>
@@ -56,7 +56,7 @@ function useSaver(list) {
 function FormButtons({ busy, problem, onCancel, label }) {
   return <>
     {problem && <p role="alert" className="admin-field-error">{problem}</p>}
-    <div className="admin-payment-buttons"><button type="button" disabled={busy} onClick={onCancel}>Cancel</button><button type="submit" disabled={busy || Boolean(problem)}>{busy ? 'Saving…' : label}</button></div>
+    <div className="admin-payment-buttons"><button type="button" className="btn--quiet" disabled={busy} onClick={onCancel}>Cancel</button><button type="submit" className="btn--primary" disabled={busy || Boolean(problem)}>{busy ? 'Saving…' : label}</button></div>
   </>
 }
 
@@ -96,7 +96,7 @@ export function ServicesSettings({ api = catalogueApi }) {
     {saver.message && <p role="status">{saver.message}</p>}
     {editing === 'new' && <section aria-label="Add a treatment"><h2>Add a treatment</h2>
       <ServiceForm busy={saver.busy} label="Add treatment" onCancel={done} onSave={async (service, prices) => { if (await saver.run(() => api.createService(service, prices, nextOrder(list.items)), 'Added.')) done() }} /></section>}
-    <ul className="admin-setting-list">{(list.items || []).map((item, index, items) => <Row key={item.id} item={item} index={index} items={items} busy={saver.busy} summary={priceSummary(item)}
+    <ul role="list" className="admin-setting-list">{(list.items || []).map((item, index, items) => <Row key={item.id} item={item} index={index} items={items} busy={saver.busy} summary={priceSummary(item)}
       editing={editing === item.id} onEdit={() => setEditing(item.id)} onMove={(a, b) => saver.run(() => api.swapServices(a, b), 'Order changed.')}
       onToggle={() => saver.run(() => api.saveService({ ...item, active: !item.active }, DURATIONS.map(duration => { const found = item.service_duration_prices.find(price => price.duration_minutes === duration); return { duration_minutes: duration, offered: Boolean(found?.active), price: found ? priceText(found.price_gbp) : '0' } })), item.active ? 'Hidden from clients.' : 'Shown to clients.')}>
       <ServiceForm initial={item} busy={saver.busy} label="Save changes" onCancel={done} onSave={async (service, prices) => { if (await saver.run(() => api.saveService({ ...service, id: item.id }, prices))) done() }} />
@@ -130,7 +130,7 @@ export function AreasSettings({ api = catalogueApi }) {
     {saver.message && <p role="status">{saver.message}</p>}
     {editing === 'new' && <section aria-label="Add an area"><h2>Add an area</h2>
       <AreaForm busy={saver.busy} label="Add area" onCancel={done} onSave={async area => { if (await saver.run(() => api.createArea(area, nextOrder(list.items)), 'Added.')) done() }} /></section>}
-    <ul className="admin-setting-list">{(list.items || []).map((item, index, items) => <Row key={item.id} item={item} index={index} items={items} busy={saver.busy} summary={summary(item)} hiddenWord="Not bookable"
+    <ul role="list" className="admin-setting-list">{(list.items || []).map((item, index, items) => <Row key={item.id} item={item} index={index} items={items} busy={saver.busy} summary={summary(item)} hiddenWord="Not bookable"
       editing={editing === item.id} onEdit={() => setEditing(item.id)} onMove={(a, b) => saver.run(() => api.swapAreas(a, b), 'Order changed.')}
       onToggle={() => saver.run(() => api.saveArea({ ...item, active: !item.active, travel_surcharge_gbp: priceText(item.travel_surcharge_gbp), congestion_fee_gbp: priceText(item.congestion_fee_gbp) }), item.active ? 'Clients can no longer book this area.' : 'Clients can book this area.')}>
       <AreaForm initial={item} busy={saver.busy} label="Save changes" onCancel={done} onSave={async area => { if (await saver.run(() => api.saveArea({ ...area, id: item.id }))) done() }} />
@@ -165,7 +165,7 @@ export function ExtrasSettings({ api = catalogueApi }) {
     {saver.message && <p role="status">{saver.message}</p>}
     {editing === 'new' && <section aria-label="Add an extra"><h2>Add an extra</h2>
       <ExtraForm busy={saver.busy} label="Add extra" onCancel={done} onSave={async extra => { if (await saver.run(() => api.createExtra(extra, nextOrder(list.items)), 'Added.')) done() }} /></section>}
-    <ul className="admin-setting-list">{(list.items || []).map((item, index, items) => <Row key={item.id} item={item} index={index} items={items} busy={saver.busy} summary={summary(item)}
+    <ul role="list" className="admin-setting-list">{(list.items || []).map((item, index, items) => <Row key={item.id} item={item} index={index} items={items} busy={saver.busy} summary={summary(item)}
       editing={editing === item.id} onEdit={() => setEditing(item.id)} onMove={(a, b) => saver.run(() => api.swapExtras(a, b), 'Order changed.')}
       onToggle={() => saver.run(() => api.saveExtra({ ...item, active: !item.active, price_gbp: priceText(item.price_gbp) }), item.active ? 'Hidden from clients.' : 'Shown to clients.')}>
       <ExtraForm initial={item} busy={saver.busy} label="Save changes" onCancel={done} onSave={async extra => { if (await saver.run(() => api.saveExtra({ ...extra, id: item.id }))) done() }} />

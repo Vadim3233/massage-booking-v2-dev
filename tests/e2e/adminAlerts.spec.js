@@ -38,6 +38,23 @@ test('a new booking shows as an unread badge and an alert that opens the exact b
   await expect(page.locator('.admin-alerts li.is-unread')).toHaveCount(0)
 })
 
+test('several alerts about one booking are one card, and opening it reads them all', async ({ page }) => {
+  await f.authorize()
+  await emit('booking.created', f.bookings[0].id, { booking_status: 'awaiting_transfer' })
+  await emit('booking.transfer_declared', f.bookings[0].id, { method: 'bank_transfer' })
+  await signIn(page)
+  const list = page.locator('.admin-alerts li')
+  await expect(list).toHaveCount(1)
+  await expect(list).toContainText('says the transfer is made')
+  await expect(list).toContainText('Also: New booking request')
+  await expect(nav(page).getByLabel('2 unread')).toBeVisible()
+  await list.getByRole('button').click()
+  await expect(page.locator('dialog.admin-details')).toBeVisible()
+  await page.getByRole('button', { name: 'Close details' }).click()
+  await expect(nav(page).getByLabel(/unread/)).toHaveCount(0)
+  await expect(page.locator('.admin-alerts li.is-unread')).toHaveCount(0)
+})
+
 test('with nothing to report the page says so kindly, and the navigation fits a small phone', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 })
   await f.authorize()
@@ -58,4 +75,23 @@ test('only events the Admin needs to hear about create alerts, and never the Adm
   await page.getByRole('button', { name: 'Refresh alerts' }).click()
   await expect(page.locator('.admin-alerts li')).toHaveCount(1)
   await expect(page.locator('.admin-alerts li')).toContainText('Late fee of £85.00 recorded as due.')
+})
+
+test('alerts sit under the day they were raised on, with the time on each card', async ({ page }) => {
+  await f.authorize()
+  await emit('booking.created', f.bookings[0].id, { booking_status: 'awaiting_transfer' })
+  await emit('booking.created', f.bookings[1].id, { booking_status: 'awaiting_transfer' })
+  // The second booking's alert was raised three days ago.
+  const earlier = new Date(Date.now() - 3 * 86400000).toISOString()
+  const moved = await f.admin.from('notification_deliveries').update({ created_at: earlier }).eq('link_path', `/admin/bookings/${f.bookings[1].id}`)
+  expect(moved.error).toBeNull()
+  await signIn(page)
+  const days = page.locator('.admin-alerts-day')
+  await expect(days).toHaveCount(2)
+  await expect(days.first().getByRole('heading', { level: 2 })).toContainText('Today')
+  await expect(days.first().locator('li')).toHaveCount(1)
+  await expect(days.last().getByRole('heading', { level: 2 })).not.toContainText('Today')
+  await expect(days.last().locator('li')).toHaveCount(1)
+  // The day is in the heading, so a card only needs the time.
+  await expect(days.last().locator('li small')).toHaveText(/^\d\d:\d\d · New$/)
 })

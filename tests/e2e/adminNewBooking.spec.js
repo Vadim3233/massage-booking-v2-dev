@@ -32,10 +32,9 @@ async function openMore(page) {
   if (!(await more.evaluate(element => element.open))) await more.locator('summary').first().click()
 }
 async function treatment(page, sessions = 1) {
-  await page.getByRole('combobox', { name: 'Treatment', exact: true }).selectOption(f.ids.service)
+  await page.getByRole('radio', { name: 'Integration massage', exact: true }).check()
   for (let i = 1; i <= sessions; i++) {
     if (i > 1) { await openMore(page); await page.getByRole('button', { name: '+ Add session', exact: true }).click() }
-    await page.getByLabel(`Recipient name ${i}`, { exact: true }).fill(`Recipient ${i}`)
   }
   const first = page.locator('fieldset.anb-session').first()
   await first.locator('summary').filter({ hasText: 'Session preferences' }).click()
@@ -60,7 +59,7 @@ test('one page: saved address, sessions, authoritative quote, four payments and 
   }
   await page.getByLabel('Appointment note (optional)').fill('Admin E2E appointment note')
   await expect(page.getByText('Use side entrance', { exact: true })).toBeVisible()
-  await expect(page.getByText('£200.00', { exact: true })).toBeVisible()
+  await expect(page.locator('.anb-price').getByText('£200.00', { exact: true })).toBeVisible()
   await expect(page.getByText('Congestion fee', { exact: true })).toBeVisible()
   await expect(page.locator('.anb-footer-total')).toHaveText('Total £200.00')
   let creates = 0
@@ -71,6 +70,8 @@ test('one page: saved address, sessions, authoritative quote, four payments and 
   const rows = await unwrap(f.admin.from('bookings').select('id,booking_payments(*)').eq('client_id', f.recipient.id))
   expect(rows).toHaveLength(1)
   expect(rows[0].booking_payments).toMatchObject({ method: 'cash', status: 'paid' })
+  const people = await unwrap(f.admin.from('booking_sessions').select('position,recipient_name').eq('booking_id', rows[0].id).order('position'))
+  expect(people.map(person => person.recipient_name)).toEqual(['Guest 1', 'Guest 2'])
   expect(await page.evaluate(id => sessionStorage.getItem(`admin-new-booking:v1:${id}`), f.user.id)).toBeNull()
   await page.getByRole('button', { name: 'Close details', exact: true }).click()
   await expect(page.getByLabel('Calendar date')).toHaveValue(f.date)
@@ -87,8 +88,8 @@ test('choosing a client fills in their usual treatment, length, area and payment
   await page.getByLabel('Find a client').fill(f.recipient.email)
   await page.getByRole('button', { name: new RegExp(f.recipient.first_name) }).click()
   await expect(page.getByRole('combobox', { name: 'Service area', exact: true })).toHaveValue(f.ids.area)
-  await expect(page.getByRole('combobox', { name: 'Treatment', exact: true })).toHaveValue(f.ids.service)
-  await expect(page.getByRole('combobox', { name: /^Duration 1/ })).toHaveValue('90')
+  await expect(page.getByRole('radio', { name: 'Integration massage', exact: true })).toBeChecked()
+  await expect(page.getByRole('radio', { name: /^90 min/ })).toBeChecked()
   await expect(page.getByRole('radio', { name: 'Cash — at appointment', exact: true })).toBeChecked()
   await expect(page.locator('.anb-footer-total')).toHaveText(/Total £/)
   await page.getByRole('button', { name: 'Change client', exact: true }).click()
@@ -100,11 +101,7 @@ test('Create booking says what is still missing, in a plain sentence, and create
   await page.getByRole('button', { name: 'Create booking', exact: true }).click()
   await expect(page.getByRole('alert')).toHaveText('Choose a client, appointment address and service area.')
   await selectClient(page)
-  await page.getByRole('combobox', { name: 'Treatment', exact: true }).selectOption('')
-  await page.getByRole('button', { name: 'Create booking', exact: true }).click()
-  await expect(page.getByRole('alert')).toHaveText('Choose an available treatment and duration, and name each recipient.')
-  await page.getByRole('combobox', { name: 'Treatment', exact: true }).selectOption(f.ids.service)
-  await page.getByLabel('Recipient name 1', { exact: true }).fill('Recipient 1')
+  // A client with no history still gets the usual first choice, so what is missing now is the time.
   await page.getByRole('button', { name: 'Create booking', exact: true }).click()
   await expect(page.getByRole('alert')).toHaveText('Choose an available appointment time.')
   expect(await unwrap(f.admin.from('bookings').select('id').eq('client_id', f.recipient.id))).toEqual([])
@@ -117,15 +114,13 @@ test('Agenda entry defaults today, keeps the draft when leaving is declined, and
   await page.getByLabel('Address line 1', { exact: true }).fill('99 Temporary Road')
   await page.getByLabel('City', { exact: true }).fill('London')
   await page.getByLabel('Postcode', { exact: true }).fill('SW1A 1AA')
-  await page.getByRole('combobox', { name: 'Treatment', exact: true }).selectOption(f.ids.service)
-  await page.getByLabel('Recipient name 1', { exact: true }).fill('Recipient 1')
+  await page.getByRole('radio', { name: 'Integration massage', exact: true }).check()
   await expect(page.getByLabel('Appointment date')).toHaveValue(today())
   page.once('dialog', dialog => dialog.dismiss())
   await page.goBack()
   await expect(page.getByRole('heading', { name: 'New booking', exact: true })).toBeVisible()
   await expect(page.getByLabel('Address line 1', { exact: true })).toHaveValue('99 Temporary Road')
-  await expect(page.getByLabel('Recipient name 1')).toHaveValue('Recipient 1')
-  await expect(page.getByRole('combobox', { name: 'Treatment', exact: true })).toHaveValue(f.ids.service)
+  await expect(page.getByRole('radio', { name: 'Integration massage', exact: true })).toBeChecked()
   page.once('dialog', dialog => dialog.dismiss())
   await page.getByRole('button', { name: 'Cancel', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'New booking', exact: true })).toBeVisible()
@@ -180,7 +175,10 @@ test('responsive long client/address and four sessions fit all six requested wid
   async function capture(step) {
     for (const width of [320, 360, 390, 412, 768, 1280]) {
       await page.setViewportSize({ width, height: 900 })
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${step} overflow at ${width}`).toBe(true)
+      expect(await page.evaluate(() => {
+        if (document.documentElement.scrollWidth <= innerWidth) return 'fits'
+        return [...document.querySelectorAll('body *')].filter(el => el.getBoundingClientRect().right > innerWidth + 0.5).slice(0, 5).map(el => `${el.tagName.toLowerCase()}.${el.className}`).join('; ')
+      }), `${step} overflow at ${width}`).toBe('fits')
       await page.screenshot({ path: testInfo.outputPath(`new-booking-${step}-${width}.png`), fullPage: true })
     }
   }

@@ -30,7 +30,7 @@ function RepeatSetting({ api }) {
     {!valid && <p role="alert" className="admin-field-error">Enter a number of days from 1 to 30.</p>}
     {error && <p role="alert" className="admin-field-error">{error}</p>}
     {message && <p role="status">{message}</p>}
-    <button type="submit" disabled={busy || !valid}>{busy ? 'Saving…' : 'Save'}</button>
+    <button type="submit" className="btn--primary btn--block" disabled={busy || !valid}>{busy ? 'Saving…' : 'Save'}</button>
   </form>
 }
 
@@ -66,7 +66,7 @@ export default function SettingsRules({ api = settingsApi, repeatApi = seriesApi
       {problem && <p role="alert" className="admin-field-error">{problem}</p>}
       {error && <p role="alert" className="admin-field-error">{error}</p>}
       {message && <p role="status">{message}</p>}
-      <button type="submit" disabled={busy || Boolean(problem)}>{busy ? 'Saving…' : 'Save rules'}</button>
+      <button type="submit" className="btn--primary btn--block" disabled={busy || Boolean(problem)}>{busy ? 'Saving…' : 'Save rules'}</button>
     </form>
     <RepeatSetting api={repeatApi} />
   </section>

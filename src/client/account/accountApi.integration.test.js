@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { localFixture } from '../../../tests/localSupabase.js'
+import { londonSlot } from '../../../tests/londonSlot.js'
 import { unwrap } from '../booking/bookingApi.js'
 import { createAccountApi } from './accountApi.js'
 
@@ -47,10 +48,8 @@ describe('a client managing their own booking against local Supabase', () => {
   })
 
   it('inside 24 hours the client must acknowledge the exact fee', async () => {
-    const soon = new Date(Date.now() + 5 * 3600000)
-    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
-      .formatToParts(soon).map(part => [part.type, part.value]))
-    const b = await booking({ date: `${parts.year}-${parts.month}-${parts.day}`, start_minutes: Math.floor((Number(parts.hour) * 60 + Number(parts.minute)) / 30) * 30, created_at: new Date(Date.now() - 3 * DAY).toISOString() })
+    const soon = londonSlot(5 * 3600000)
+    const b = await booking({ date: soon.date, start_minutes: soon.start, created_at: new Date(Date.now() - 3 * DAY).toISOString() })
     expect((await api.terms(b.id)).cancel_fee_gbp).toBe(85)
     await expect(api.cancel(b.id, crypto.randomUUID(), 0)).rejects.toMatchObject({ message: 'The late fee has changed. Please review it and confirm again.', refresh: true })
     const result = await api.cancel(b.id, crypto.randomUUID(), 85)

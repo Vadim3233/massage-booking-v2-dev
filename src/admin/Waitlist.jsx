@@ -24,8 +24,8 @@ function Request({ request, busy, act, bookFor }) {
     {request.status !== 'closed' && <>
       <label className="admin-field">Your note (only you see this)<input value={note} maxLength={500} disabled={busy} onChange={event => setNote(event.target.value)} /></label>
       <div className="admin-payment-buttons">
-        {request.client_id && <button disabled={busy} onClick={() => bookFor(request)}>Book for them</button>}
-        {waitlistActions(request).map(action => <button key={action} disabled={busy} onClick={() => act(request, action, note)}>{waitlistLabels[action]}</button>)}
+        {request.client_id && <button className="btn--primary btn--small" disabled={busy} onClick={() => bookFor(request)}>Book for them</button>}
+        {waitlistActions(request).map(action => <button key={action} className="btn--small" disabled={busy} onClick={() => act(request, action, note)}>{waitlistLabels[action]}</button>)}
       </div>
       {!request.client_id && <p className="admin-detail-hint">They have no client record yet. Add them under Clients, then book.</p>}
     </>}
@@ -59,9 +59,9 @@ export default function Waitlist({ api = waitlistApi, bookFor }) {
     {message && <p role="status">{message}</p>}
     {!rows && !error && <p role="status">Loading the waitlist…</p>}
     {rows && !open.length && <p>Nobody is waiting right now.</p>}
-    {open.length > 0 && <ul className="admin-waitlist">{open.map(request => <Request key={request.id} request={request} busy={busy} act={act} bookFor={bookFor} />)}</ul>}
+    {open.length > 0 && <ul role="list" className="admin-waitlist">{open.map(request => <Request key={request.id} request={request} busy={busy} act={act} bookFor={bookFor} />)}</ul>}
     <label className="admin-who-row"><input type="checkbox" checked={closed} onChange={event => setClosed(event.target.checked)} /> Show closed requests from the last 60 days</label>
-    {closed && shut.length > 0 && <ul className="admin-waitlist">{shut.map(request => <Request key={request.id} request={request} busy={busy} act={act} bookFor={bookFor} />)}</ul>}
+    {closed && shut.length > 0 && <ul role="list" className="admin-waitlist">{shut.map(request => <Request key={request.id} request={request} busy={busy} act={act} bookFor={bookFor} />)}</ul>}
     {closed && rows && !shut.length && <p>No closed requests.</p>}
   </section>
 }

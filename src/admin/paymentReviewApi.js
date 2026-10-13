@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase.js'
+import { createAdminGate } from './adminGate.js'
 
 const fields = `*,clients!bookings_client_id_fkey(id,first_name,last_name,email,phone),
 booking_sessions(*,booking_session_preferences(*),booking_session_enhancements(*)),
@@ -16,15 +17,10 @@ export const paymentActions = booking => {
   if (['confirmed', 'completed'].includes(booking.booking_status) && payment?.method === 'bank_transfer' && payment.status === 'awaiting_transfer') return ['receiveBank']
   return []
 }
-export const actionLabels = { verify: 'Verify payment', approve: 'Approve', remove: 'Remove booking', receive: 'Mark payment received', receiveBank: 'Mark bank transfer received' }
+export const actionLabels = { verify: 'Verify payment', approve: 'Approve', remove: 'Cancel unpaid booking', receive: 'Mark payment received', receiveBank: 'Mark bank transfer received' }
 const operations = { verify: 'admin_verify_bank_transfer', approve: 'admin_approve_cash_request', remove: 'admin_remove_pending_booking', receive: 'admin_record_payment_received', receiveBank: 'admin_record_bank_transfer_received' }
 export function createPaymentReviewApi(client) {
-  async function authorized() {
-    const user = await client.auth.getUser()
-    if (user.error || !user.data.user || user.data.user.is_anonymous) throw new Error('Admin sign-in required.')
-    const result = await client.rpc('is_booking_admin')
-    if (result.error || !result.data) throw new Error('Admin access required.')
-  }
+  const authorized = createAdminGate(client, { signedOut: 'Admin sign-in required.', denied: 'Admin access required.' })
   return {
     async queue(offset = 0) {
       await authorized()
@@ -45,7 +41,7 @@ export function createPaymentReviewApi(client) {
       const { error } = await client.rpc(operations[action], { p_booking_id: booking.id, p_request_id: requestId,
         p_booking_updated_at: booking.updated_at, p_payment_updated_at: booking.booking_payments.updated_at })
       if (error) {
-        const failure = new Error(['PT409', '40001'].includes(error.code) ? 'This booking changed before the action was completed. Refreshing its current status.' : 'Could not complete the payment action. Refresh the booking before trying again.')
+        const failure = new Error(['PT409', '40001'].includes(error.code) ? 'This booking changed before you could finish, so it has been reloaded. Please check it and try again.' : 'Could not complete the payment action. Refresh the booking before trying again.')
         failure.conflict = ['PT409', '40001'].includes(error.code)
         throw failure
       }
@@ -53,9 +49,14 @@ export function createPaymentReviewApi(client) {
   }
 }
 export const paymentReviewApi = createPaymentReviewApi(supabase)
-// Deduplicate StrictMode's initial reads; entries exist only while a request is pending.
+// Identical reads share one answer: StrictMode's repeated effects, and the To check count and the Payment review page asking for
+// the same list as the page opens. An answer is kept for `keepMs` after it arrives; a failure is never kept.
 const pending = new Map()
-export function loadReviewResource(key, read) {
-  if (!pending.has(key)) pending.set(key, read().finally(() => pending.delete(key)))
-  return pending.get(key)
+export function loadReviewResource(key, read, keepMs = 0) {
+  if (pending.has(key)) return pending.get(key)
+  const promise = read()
+  const forget = () => { if (pending.get(key) === promise) pending.delete(key) }
+  promise.then(() => setTimeout(forget, keepMs), forget)
+  pending.set(key, promise)
+  return promise
 }

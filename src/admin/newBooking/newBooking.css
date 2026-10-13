@@ -1,62 +1,96 @@
-.admin-new-booking { padding: 12px; max-width: 820px; margin: auto; padding-bottom: 24px; }
-.anb-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.anb-header h1 { font-size: 22px; margin: 0; }
-.admin-new-booking h2 { font-size: 20px; margin: 4px 0 16px; }
-.admin-new-booking h3 { font-size: 16px; margin: 0 0 8px; }
-.anb-mobile-progress, .anb-hint { font-size: 13px; color: #596b63; margin: 8px 0; }
-.admin-new-booking label:not(.anb-radio) { display: grid; gap: 4px; font-size: 14px; margin: 12px 0; }
-.admin-new-booking input:not([type=radio]):not([type=checkbox]), .admin-new-booking select, .admin-new-booking textarea { width: 100%; min-width: 0; min-height: 44px; border: 1px solid #86968c; border-radius: 6px; padding: 8px 10px; background: white; color: var(--ink); font-size: 16px; }
-.admin-new-booking textarea { min-height: 88px; resize: vertical; }
-.admin-new-booking fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
-.admin-new-booking legend { font-weight: 650; font-size: 15px; padding: 0; }
-.anb-content:disabled { opacity: .75; }
-.anb-fields { display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 16px; }
-.anb-client-list { list-style: none; padding: 0; margin: 12px 0; }
-.anb-client-list li + li { margin-top: 6px; }
-.anb-client-list button { width: 100%; display: grid; text-align: left; gap: 2px; overflow-wrap: anywhere; }
-.anb-client-list button span { font-size: 13px; }
-.admin-new-booking button[aria-pressed=true], .admin-shell .admin-new-booking .anb-primary { background: var(--ink); border-color: var(--ink); color: white; }
-.anb-radio { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 0; font-size: 14px; }
-.admin-new-booking .anb-radio input { flex: 0 0 20px; width: 20px; height: 20px; min-height: 20px; margin: 0; accent-color: var(--ink); }
-.anb-section, .anb-inline-client, .admin-new-booking .anb-session { border-top: 1px solid var(--line); margin-top: 20px; padding-top: 16px; }
+/* New booking: one page, in the order the Admin thinks of it: who, what, when, how it is paid. */
+.admin-new-booking { max-width: 640px; margin: 0 auto; padding: 8px 16px 24px; }
+.anb-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0 2px; }
+.anb-header h1 { margin: 0; font: 600 30px/1.1 var(--font-display); font-variant-numeric: lining-nums; letter-spacing: -.01em; }
+.anb-error { margin: 12px 0; padding: 12px 14px; border-left: 4px solid var(--danger-line); border-radius: 12px; background: var(--danger-soft); color: var(--danger); font-weight: 500; }
+.anb-content:disabled { opacity: .78; }
+:where(.admin-new-booking) fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+:where(.admin-new-booking) legend { padding: 0; font-size: 14px; font-weight: 600; }
+:where(.admin-new-booking) label { display: grid; gap: 6px; margin: 12px 0; font-size: 14px; font-weight: 600; }
+:where(.admin-new-booking) h3 { margin: 0; font-size: 16px; }
+.admin-new-booking textarea { min-height: 88px; }
+.anb-hint { margin: 6px 0; color: var(--muted); font-size: 13px; line-height: 1.45; }
+.anb-fields { display: grid; grid-template-columns: minmax(0, 1fr); column-gap: 14px; }
+.admin-new-booking :is(input, select, textarea, button, summary) { scroll-margin-block: 90px; }
+
+/* Four numbered parts, each with plenty of room, so the page reads top to bottom. */
+.anb-content { counter-reset: anb; }
+.anb-block { margin-top: 30px; }
+.anb-content .anb-block:first-child { margin-top: 10px; }
+.anb-block > h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; font: 600 22px/1.2 var(--font-display); font-variant-numeric: lining-nums; counter-increment: anb; }
+.anb-block > h2::before { content: counter(anb); display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; border: 1.5px solid var(--accent); border-radius: 50%; color: var(--primary); font: 600 14px/1 var(--font-display); }
+
+/* Choosing the client: people with their initials, the one chosen as a card. */
+.anb-client-list { display: grid; gap: 8px; margin: 12px 0 8px; padding: 0; list-style: none; }
+.admin-shell .anb-client { display: flex; align-items: center; justify-content: flex-start; gap: 12px; width: 100%; min-height: 60px; padding: 8px 14px 8px 10px; border: 1.5px solid var(--tile-border); border-radius: var(--radius); background: var(--surface); color: var(--ink); text-align: left; }
+.admin-shell .anb-client:hover { border-color: var(--primary); }
+.anb-client-text { display: grid; min-width: 0; gap: 1px; overflow-wrap: anywhere; }
+.anb-client-text strong { font-size: 16px; }
+.anb-client-text > span { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.anb-chosen { display: flex; align-items: center; gap: 12px; padding: 12px 8px 12px 12px; border-radius: var(--radius); background: var(--primary-soft); }
+.anb-chosen h3 { font: 600 20px/1.2 var(--font-display); }
+.anb-chosen .anb-hint { margin: 2px 0 0; overflow-wrap: anywhere; }
+.anb-chosen > button { flex-shrink: 0; margin-left: auto; }
+.anb-section, .anb-inline-client { margin-top: 18px; }
+.anb-inline-client { padding: 16px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); }
 .anb-inline-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0; }
 .anb-inline-actions > span { font-size: 14px; }
-.admin-new-booking address { font-style: normal; font-size: 14px; margin: 8px 0; }
+.admin-new-booking address { margin: 8px 0; font-size: 14px; font-style: normal; overflow-wrap: anywhere; }
+.anb-radio { display: flex; align-items: center; gap: 12px; min-height: 52px; margin: 8px 0; padding: 8px 14px; border: 1.5px solid var(--tile-border); border-radius: var(--radius); background: var(--surface); font-size: 15px; font-weight: 500; cursor: pointer; }
+.anb-radio > span { min-width: 0; overflow-wrap: anywhere; }
+.anb-radio:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
+.admin-new-booking .anb-radio input { flex: 0 0 22px; width: 22px; height: 22px; margin: 0; }
+
+/* Treatment and length are things to tap, not lists to open. */
+.anb-choice { margin: 14px 0; }
+.anb-choice > legend { margin-bottom: 8px; }
+.anb-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.anb-chip { position: relative; display: block; margin: 0; }
+.admin-new-booking .anb-chip input { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.anb-chip > span { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; padding: 0 18px; border: 1.5px solid var(--tile-border); border-radius: var(--radius-pill); background: var(--surface); font-size: 15px; font-weight: 600; transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
+@media (hover: hover) { .anb-chip:hover > span { border-color: var(--primary); } }
+.anb-chip input:checked + span { border-color: var(--primary); background: var(--primary); color: #fff; }
+.anb-chip input:focus-visible + span { outline: 3px solid var(--primary); outline-offset: 2px; }
+.anb-chip input:disabled + span { opacity: .45; }
+.anb-chip--length > span { flex-direction: column; gap: 0; min-width: 96px; min-height: 58px; padding: 6px 14px; border-radius: var(--radius); line-height: 1.25; }
+.anb-chip--length small { font-size: 13px; font-weight: 500; opacity: .85; font-variant-numeric: tabular-nums; }
+.admin-new-booking .anb-session + .anb-session { margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--tile-border); }
+.anb-more { margin: 14px 0; border: 1px solid var(--tile-border); border-radius: var(--radius); background: var(--surface); }
+.anb-more > summary { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 16px; font-size: 15px; font-weight: 600; list-style: none; cursor: pointer; }
+.anb-more > summary::-webkit-details-marker { display: none; }
+.anb-more > summary::after { content: ''; flex-shrink: 0; width: 8px; height: 8px; margin: -3px 2px 0 auto; border: solid var(--muted); border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform var(--dur) var(--ease); }
+.anb-more[open] > summary::after { margin-top: 3px; transform: rotate(-135deg); }
+.anb-more > :not(summary) { margin-inline: 16px; }
+.anb-more > :last-child { margin-bottom: 16px; }
 .anb-preferences { margin: 8px 0; }
-.anb-preferences details { border-bottom: 1px solid var(--line); }
-.anb-preferences summary { cursor: pointer; padding: 12px 0; min-height: 44px; font-size: 14px; }
-.anb-preferences summary span { display: block; margin-left: 16px; color: #596b63; font-size: 13px; }
+.anb-preferences details { border-bottom: 1px solid var(--hairline); }
+.anb-preferences summary { min-height: 48px; padding: 12px 0; font-size: 14px; font-weight: 600; cursor: pointer; }
+.anb-preferences summary span { display: block; margin-top: 1px; color: var(--muted); font-size: 13px; font-weight: 400; }
 .anb-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 0 12px; }
-.anb-chips button { font-size: 14px; }
-.anb-slots { display: grid; grid-template-columns: repeat(auto-fit, minmax(66px, 1fr)); gap: 8px; margin: 16px 0; }
-.anb-price { margin: 20px 0; border-top: 1px solid var(--line); padding-top: 12px; font-size: 14px; }
+.anb-chips button { min-height: 44px; border-radius: var(--radius-pill); font-size: 14px; }
+.anb-chips button[aria-pressed=true] { border-color: var(--primary); background: var(--primary); color: #fff; }
+.anb-repeat { margin-top: 18px; padding: 4px 14px 8px; border: 1.5px dashed var(--tile-border); border-radius: var(--radius); }
+.anb-repeat > legend { padding: 0 6px; }
+.anb-repeat .anb-radio { margin: 4px 0; border: 0; background: none; padding-inline: 0; }
+
+/* The booking at a glance, then the price, then the one button that matters. */
+.anb-summary { margin-top: 30px; padding: 16px 18px; border: 1px solid var(--hairline); border-left: 4px solid var(--accent); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); }
+.anb-summary > h2 { margin: 0 0 8px; font: 600 20px/1.2 var(--font-display); counter-increment: none; }
+.anb-summary > h2::before { display: none; }
+.anb-summary p { margin: 4px 0; }
+.anb-price { margin: 14px 0 0; padding-top: 10px; border-top: 1px dashed var(--tile-border); font-size: 14px; }
 .anb-price > div { display: flex; justify-content: space-between; gap: 16px; margin: 4px 0; }
 .anb-price dd { margin: 0; font-variant-numeric: tabular-nums; }
-.anb-price > div:last-child { font-size: 18px; font-weight: 650; border-top: 1px solid var(--line); margin-top: 10px; padding-top: 10px; }
-.anb-review-summary h3 { font-size: 20px; }
-.anb-review-summary p { margin: 4px 0; }
-.anb-review-session { margin: 12px 0; font-size: 14px; }
-.anb-review-session p { margin: 4px 0; color: #596b63; }
-.anb-note { white-space: pre-wrap; }
-.anb-footer { position: sticky; bottom: 0; z-index: 2; display: grid; grid-template-columns: minmax(70px, 1fr) minmax(0, 2fr); gap: 12px; padding: 12px 0 max(12px, env(safe-area-inset-bottom)); background: var(--paper); border-top: 1px solid var(--line); margin-top: 20px; }
-.admin-new-booking :is(input, select, textarea, button, summary) { scroll-margin-block: 80px; }
-.anb-error { color: #842d2d; border-left: 3px solid currentColor; padding: 8px 12px; background: #fff0eb; }
-.anb-progress { display: none; }
-@media (min-width: 600px) { .admin-new-booking { padding: 20px 24px; } .anb-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } .anb-wide { grid-column: 1 / -1; } }
-@media (min-width: 768px) { .anb-mobile-progress { display: none; } .anb-progress { display: flex; list-style: none; padding: 0; margin: 24px 0; gap: 16px; font-size: 13px; } .anb-progress li { display: flex; align-items: baseline; gap: 5px; color: #596b63; } .anb-progress li[aria-current] { color: var(--ink); font-weight: 700; } .anb-footer { grid-template-columns: 120px 200px; justify-content: end; } }
-@media (prefers-reduced-motion: reduce) { .admin-new-booking * { scroll-behavior: auto; } }
-.anb-repeat { margin-top: 16px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; }
-
-/* One page: each part is a block, with the price and Create button always in reach. */
-.anb-block { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); }
-.anb-block:first-child { margin-top: 12px; padding-top: 0; border-top: 0; }
-.anb-block > h2 { margin-bottom: 12px; }
-.anb-summary p { margin: 4px 0; }
-.anb-footer { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); align-items: center; }
-.anb-footer-total { font-size: 18px; font-weight: 650; font-variant-numeric: tabular-nums; }
-.anb-more { margin: 12px 0; border-top: 1px solid var(--line); }
-.anb-more > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-size: 14px; font-weight: 600; color: var(--ink); }
-.anb-more > summary { list-style: none; }
-.anb-more > summary::-webkit-details-marker { display: none; }
-.anb-more > summary::before { content: '+'; display: inline-grid; place-items: center; width: 20px; margin-right: 8px; font-weight: 700; }
-.anb-more[open] > summary::before { content: '−'; }
+.anb-price > div:last-child { align-items: baseline; margin-top: 8px; font-size: 16px; font-weight: 700; }
+.anb-price > div:last-child dd { color: var(--primary); font: 600 26px/1 var(--font-display); font-variant-numeric: lining-nums; }
+.anb-footer { position: sticky; bottom: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 24px -16px 0; padding: 14px 16px max(14px, env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--paper) 74%, rgb(247 246 242 / 0)); }
+.anb-footer-total { display: grid; gap: 1px; color: var(--muted); font-size: 13px; }
+.anb-footer-total b { color: var(--primary); font-size: 26px; line-height: 1.05; }
+.anb-footer .btn--lg { white-space: nowrap; }
+@media (min-width: 600px) {
+  .admin-new-booking { padding-inline: 24px; }
+  .anb-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .anb-wide { grid-column: 1 / -1; }
+  .anb-footer { margin-inline: -24px; padding-inline: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { .admin-new-booking * { scroll-behavior: auto; transition: none; } }

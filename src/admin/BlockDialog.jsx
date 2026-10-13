@@ -12,6 +12,8 @@ const stamp = (date, minutes) => `${dateLabel(date, { weekday: 'short', day: 'nu
 // it clashes with, never moves them. A block over several days is one block: changes and removal apply to all its days.
 export default function BlockDialog({ date, block, close, saved, api = scheduleApi }) {
   const ref = useRef(null)
+  const warning = useRef(null)
+  const removeQuestion = useRef(null)
   const confirmed = useRef(false)
   const [form, setForm] = useState(() => block
     ? { kind: block.kind, title: block.title || '', start_date: block.date, end_date: block.date, start_minutes: block.start_minutes, end_minutes: block.end_minutes, notes: block.notes || '' }
@@ -32,6 +34,9 @@ export default function BlockDialog({ date, block, close, saved, api = scheduleA
     const release = acquireBodyScrollLock()
     return () => { if (dialog.open) dialog.close(); release(); opener?.focus({ preventScroll: true }) }
   }, [])
+  // The buttons stay at the bottom while the form scrolls, so what they have just brought up is scrolled into view.
+  useEffect(() => { if (conflicts) warning.current?.scrollIntoView({ block: 'center' }) }, [conflicts])
+  useEffect(() => { if (removing) removeQuestion.current?.scrollIntoView({ block: 'center' }) }, [removing])
   // The row that was tapped is one day of the block; fetch every day so the whole block can be shown and changed.
   useEffect(() => {
     if (!block) return undefined
@@ -91,16 +96,16 @@ export default function BlockDialog({ date, block, close, saved, api = scheduleA
       <label className="admin-field">Notes (only you see this)<textarea rows={2} maxLength={500} value={form.notes} disabled={busy} onChange={event => edit({ notes: event.target.value })} /></label>
       <p className="admin-detail-hint">Travel time around a block is kept free too.</p>
       {problem && <p role="alert" className="admin-field-error">{problem}</p>}
-      {conflicts && <div role="alert" className="admin-conflicts"><strong>This clashes with {conflicts.length === 1 ? 'a booking' : `${conflicts.length} bookings`}:</strong>
+      {conflicts && <div role="alert" className="admin-conflicts" ref={warning}><strong>This clashes with {conflicts.length === 1 ? 'a booking' : `${conflicts.length} bookings`}:</strong>
         <ul>{conflicts.map(item => <li key={item.booking_id}>{dateLabel(item.date, { weekday: 'short', day: 'numeric', month: 'short' })}, {item.client_name}, {clock(item.start_minutes)} ({item.booking_status.replaceAll('_', ' ')})</li>)}</ul>
         <p>Those appointments will not be moved or cancelled for you. Save again if you still want to block this time.</p></div>}
       {error && <p role="alert">{error}</p>}
-      {removing && <div role="alert" className="admin-conflicts"><p>Remove this {form.kind === 'personal_event' ? 'event' : 'blocked time'}{days > 1 ? ` (all ${days} days)` : ''}? The time becomes available again.</p>
-        <div className="admin-payment-buttons"><button type="button" disabled={busy} onClick={() => setRemoving(false)}>Keep it</button><button type="button" disabled={busy} onClick={remove}>{busy ? 'Removing…' : 'Yes, remove'}</button></div></div>}
-      <div className="admin-payment-buttons">
-        <button type="button" disabled={busy} onClick={close}>Go back</button>
-        {block && !removing && <button type="button" disabled={busy} onClick={() => setRemoving(true)}>Remove</button>}
-        <button type="submit" disabled={busy || loading || Boolean(problem)}>{busy ? 'Saving…' : conflicts ? 'Save anyway' : block ? 'Save changes' : 'Block this time'}</button>
+      {block && !removing && <button type="button" className="btn--danger btn--small admin-remove" disabled={busy} onClick={() => setRemoving(true)}>Remove</button>}
+      {removing && <div role="alert" className="admin-conflicts" ref={removeQuestion}><p>Remove this {form.kind === 'personal_event' ? 'event' : 'blocked time'}{days > 1 ? ` (all ${days} days)` : ''}? The time becomes available again.</p>
+        <div className="admin-payment-buttons"><button type="button" disabled={busy} onClick={() => setRemoving(false)}>Keep it</button><button type="button" className="btn--danger-solid" disabled={busy} onClick={remove}>{busy ? 'Removing…' : 'Yes, remove'}</button></div></div>}
+      <div className="admin-payment-buttons admin-sticky-actions">
+        <button type="button" className="btn--quiet" disabled={busy} onClick={close}>Go back</button>
+        <button type="submit" className="btn--primary" disabled={busy || loading || removing || Boolean(problem)}>{busy ? 'Saving…' : conflicts ? 'Save anyway' : block ? 'Save changes' : 'Block this time'}</button>
       </div>
     </form>
   </dialog>

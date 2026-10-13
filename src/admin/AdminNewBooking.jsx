@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { adminNewBookingApi as api, bookingRequest } from './newBookingApi.js'
 import { useAdminBookingDraft } from './useAdminBookingDraft.js'
 import ClientStep from './newBooking/ClientStep.jsx'
@@ -94,7 +94,7 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
     function guard() {
       if (completed.current || !current.current.meaningful) return true
       if (busyRef.current) return false
-      if (current.current.draft.submission) return window.confirm('Creation has not been confirmed. Your draft and retry request will be kept. Leave this screen?')
+      if (current.current.draft.submission) return window.confirm('It is not clear yet whether this booking was saved. Your details are kept. Leave this screen?')
       if (!window.confirm('Discard this unsaved booking?')) return false
       clear()
       return true
@@ -116,7 +116,8 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
 
   function edit(change) { if (!locked) { patch(change); setError('') } }
   function selectClient(client) {
-    patch({ client, details: { ...emptyAddress }, sessions: draft.sessions.map((session, index) => index === 0 && !session.recipient_name ? { ...session, recipient_name: [client.first_name, client.last_name].filter(Boolean).join(' ') } : session) })
+    patch({ client, details: { ...emptyAddress } })
+    setError('')
     setAddressState({ clientId: client.id, addresses: [], loading: true, error: '' })
     setClientError('')
     api.addresses(client.id).then(addresses => {
@@ -144,7 +145,7 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
   // The first thing still missing, in the order the page reads, with a plain sentence.
   function validation() {
     if (!draft.client || !draft.areaId || !draft.details.address_line_1?.trim() || !draft.details.city?.trim() || !draft.details.postcode?.trim()) return 'Choose a client, appointment address and service area.'
-    if (!draft.serviceId || !draft.sessions.length || draft.sessions.length > 4 || duration > 240 || draft.sessions.some(session => !session.recipient_name.trim() || !catalogue.prices.some(price => price.service_id === draft.serviceId && price.duration_minutes === session.duration_minutes))) return 'Choose an available treatment and duration, and name each recipient.'
+    if (!draft.serviceId || !draft.sessions.length || draft.sessions.length > 4 || duration > 240 || draft.sessions.some(session => !catalogue.prices.some(price => price.service_id === draft.serviceId && price.duration_minutes === session.duration_minutes))) return 'Choose a treatment and an available duration.'
     if (!draft.date || draft.start === null || !availability || availability.error || !availability.slots.some(slot => slot.start_minutes === draft.start)) return 'Choose an available appointment time.'
     return ''
   }
@@ -168,13 +169,14 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
         patch({ submission: null })
         if (/slot|available|occupied|past|hold|schedule|blocked/i.test(message(failure))) { patch({ start: null, submission: null }); setAvailabilityAttempt(value => value + 1) }
         setError(message(failure))
-      } else setError('The result could not be confirmed. Retry creation to safely check the same request. Your draft is kept and editing is paused.')
+      } else setError('The connection dropped, so it is not clear whether this booking was saved. Press Retry creation to check: it will not book twice. Nothing you entered is lost.')
     } finally { busyRef.current = false; setBusy(false) }
   }
+  const loadDay = useCallback(date => api.availability(date, duration).then(slots => slots.map(slot => slot.start_minutes)), [duration])
   const data = catalogue || EMPTY_CATALOGUE
   const addressCurrent = addressState.clientId === draft.client?.id
   return <section className="admin-new-booking" aria-labelledby="new-booking-title">
-    <header className="anb-header"><h1 id="new-booking-title">New booking</h1><button type="button" disabled={busy} onClick={onCancel}>Cancel</button></header>
+    <header className="anb-header"><h1 id="new-booking-title">New booking</h1><button type="button" className="btn--quiet" disabled={busy} onClick={onCancel}>Cancel</button></header>
     {error && <p className="anb-error" role="alert" ref={errorRef} tabIndex={-1}>{error}</p>}
     {!catalogue && !catalogueError && <p role="status">Loading booking options…</p>}
     {catalogueError && <><p role="alert">{catalogueError}</p><button onClick={() => setAttempt(value => value + 1)}>Retry booking options</button></>}
@@ -184,14 +186,14 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
       <section className="anb-block" aria-labelledby="anb-treatment-title"><h2 id="anb-treatment-title">Treatment</h2>
         <TreatmentStep draft={draft} patch={edit} catalogue={data} /></section>
       <section className="anb-block" aria-labelledby="anb-time-title"><h2 id="anb-time-title">Date and time</h2>
-        <DateTimeStep draft={draft} patch={edit} availability={availability?.slots || []} loading={!availability} error={availability?.error} retry={() => setAvailabilityAttempt(value => value + 1)} /></section>
+        <DateTimeStep draft={draft} patch={edit} duration={duration} loadDay={loadDay} /></section>
       <section className="anb-block" aria-labelledby="anb-payment-title"><h2 id="anb-payment-title">Payment, note and repeat</h2>
         <PaymentStep draft={draft} patch={edit} /></section>
     </fieldset>
     <Summary draft={draft} catalogue={data} quote={quote} />
     {!quote && !quoteError && draft.serviceId && draft.areaId && <p role="status">Updating price…</p>}
     {quoteError && <><p role="alert">{quoteError}</p><button type="button" disabled={locked} onClick={() => setAttempt(value => value + 1)}>Retry price</button></>}
-    <footer className="anb-footer"><span className="anb-footer-total">{quote ? `Total ${money(quote.total_gbp)}` : 'Total to come'}</span>
-      <button type="button" className="anb-primary" disabled={busy || clientBusy} onClick={create}>{busy ? 'Creating booking…' : draft.submission ? 'Retry creation' : 'Create booking'}</button></footer></>}
+    <footer className="anb-footer"><span className="anb-footer-total">{quote ? <><span>Total</span> <b className="figure">{money(quote.total_gbp)}</b></> : 'Total to come'}</span>
+      <button type="button" className="btn--primary btn--lg" disabled={busy || clientBusy} onClick={create}>{busy ? 'Creating booking…' : draft.submission ? 'Retry creation' : 'Create booking'}</button></footer></>}
   </section>
 }

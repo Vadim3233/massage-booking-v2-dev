@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { paymentReviewFixture } from '../paymentReviewFixture.js'
+import { dayHeading, shiftDate } from '../../src/admin/calendarPresentation.js'
 let f
 test.beforeEach(async () => { f = await paymentReviewFixture() })
 test.afterEach(async () => { await f?.cleanup() })
@@ -14,7 +15,7 @@ async function confirm(page, button) {
   await button.click()
   const confirmation = page.locator('dialog.admin-confirm')
   await expect(confirmation).toBeVisible()
-  await confirmation.getByRole('button', { name: /^Confirm / }).click()
+  await confirmation.getByRole('button', { name: /^Yes, / }).click()
 }
 for (const width of [320, 360, 390, 412]) test(`Review, confirmation and exact booking deep link fit ${width}px`, async ({ page }) => {
   await f.authorize(); await page.setViewportSize({ width, height: 844 })
@@ -27,7 +28,7 @@ for (const width of [320, 360, 390, 412]) test(`Review, confirmation and exact b
   expect(requests.filter(url => url.includes('/admin_payment_review_queue'))).toHaveLength(1)
   await expect(page.getByRole('navigation', { name: 'Admin navigation' })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-  await item(page, 1).getByRole('button', { name: 'Remove booking', exact: true }).click()
+  await item(page, 1).getByRole('button', { name: 'Cancel unpaid booking', exact: true }).click()
   const confirmation = page.getByRole('dialog')
   await expect(confirmation).toContainText('recorded as cancelled')
   expect(await confirmation.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
@@ -63,6 +64,11 @@ test('signed-out exact booking deep link survives login and reload', async ({ pa
 })
 test('bank verification persists and leaves the queue; cash approval and receipt remain separate', async ({ page }) => {
   await f.authorize(); await login(page)
+  // The confirmation names the reference to look for on the bank statement, and going back changes nothing.
+  await item(page, 0).getByRole('button', { name: 'Verify payment', exact: true }).click()
+  await expect(page.locator('dialog.admin-confirm')).toContainText(`Look for the reference ${f.bookings[0].booking_reference}`)
+  await page.locator('dialog.admin-confirm').getByRole('button', { name: 'Go back' }).click()
+  await expect(item(page, 0)).toHaveCount(1)
   await confirm(page, item(page, 0).getByRole('button', { name: 'Verify payment', exact: true }))
   await expect(item(page, 0)).toHaveCount(0)
   expect((await f.admin.from('booking_payments').select('status,paid_at').eq('booking_id', f.bookings[0].id).single()).data.status).toBe('paid')
@@ -80,7 +86,7 @@ test('bank verification persists and leaves the queue; cash approval and receipt
 })
 test('removing a cash request requires deliberate confirmation and persists cancellation', async ({ page }) => {
   await f.authorize(); await login(page)
-  await confirm(page, item(page, 1).getByRole('button', { name: 'Remove booking', exact: true }))
+  await confirm(page, item(page, 1).getByRole('button', { name: 'Cancel unpaid booking', exact: true }))
   await expect(item(page, 1)).toHaveCount(0)
   const result = (await f.admin.from('bookings').select('booking_status,cancelled_at').eq('id', f.bookings[1].id).single()).data
   expect(result.booking_status).toBe('cancelled'); expect(result.cancelled_at).toBeTruthy()
@@ -90,7 +96,7 @@ test('a transfer the client never declared stays listed and the Admin can remove
   await f.authorize(); await login(page)
   await expect(item(page, 0)).toContainText('Transfer not yet declared by the client')
   await expect(item(page, 0).getByRole('button', { name: 'Verify payment', exact: true })).toBeVisible()
-  await confirm(page, item(page, 0).getByRole('button', { name: 'Remove booking', exact: true }))
+  await confirm(page, item(page, 0).getByRole('button', { name: 'Cancel unpaid booking', exact: true }))
   await expect(page.locator('.admin-review-item')).toHaveCount(1)
   const result = (await f.admin.from('bookings').select('booking_status,cancelled_by_actor_type').eq('id', f.bookings[0].id).single()).data
   expect(result).toMatchObject({ booking_status: 'cancelled', cancelled_by_actor_type: 'admin' })
@@ -101,7 +107,7 @@ test('failed mutation keeps authoritative state, hides internal errors, and prev
   const gate = new Promise(resolve => { release = resolve })
   await page.route('**/rpc/admin_verify_bank_transfer', async route => { requests++; await gate; await route.fulfill({ status: 500, json: { message: 'secret SQL detail', code: 'XX000' } }) })
   await page.getByRole('button', { name: 'Verify payment', exact: true }).click()
-  await page.getByRole('button', { name: 'Confirm verify payment', exact: true }).click()
+  await page.getByRole('button', { name: /^Yes, .* has arrived$/ }).click()
   await expect(page.getByRole('button', { name: 'Saving…' })).toBeDisabled()
   expect(requests).toBeLessThanOrEqual(1)
   release()
@@ -115,7 +121,7 @@ test('stale action refreshes to the persisted state without claiming success', a
   await page.getByRole('button', { name: 'Verify payment', exact: true }).click()
   await f.admin.from('bookings').update({ booking_status: 'confirmed' }).eq('id', f.bookings[0].id)
   await f.admin.from('booking_payments').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('booking_id', f.bookings[0].id)
-  await page.getByRole('button', { name: 'Confirm verify payment', exact: true }).click()
+  await page.getByRole('button', { name: /^Yes, .* has arrived$/ }).click()
   await expect(page.getByRole('alert')).toContainText('This booking changed')
   await expect(page.getByRole('button', { name: 'Verify payment', exact: true })).toHaveCount(0)
   await expect(page.getByRole('dialog').getByText('Confirmed · Paid', { exact: true })).toBeVisible()
@@ -123,11 +129,11 @@ test('stale action refreshes to the persisted state without claiming success', a
 test('desktop Review uses compact navigation and the existing details panel', async ({ page }) => {
   await f.authorize(); await page.setViewportSize({ width: 1280, height: 900 }); await login(page)
   await expect(page.locator('.admin-review-item')).toHaveCount(2)
-  expect((await page.getByRole('navigation', { name: 'Admin navigation' }).boundingBox()).height).toBeLessThan(70)
+  expect((await page.getByRole('navigation', { name: 'Admin navigation' }).boundingBox()).width).toBe(92)
   await page.screenshot({ path: 'test-results/admin-review-desktop.png', fullPage: true })
   await item(page, 0).getByRole('link', { name: 'View booking' }).click()
   const box = await page.getByRole('dialog').boundingBox()
-  expect(box.width).toBe(580)
+  expect(box.width).toBe(600)
   await page.screenshot({ path: 'test-results/admin-review-details-desktop.png' })
 })
 test('Escape cancels only the payment confirmation and restores its action focus', async ({ page }) => {
@@ -185,7 +191,7 @@ test('lost response after a committed transfer is safely retried with the same c
 
 test('Calendar, Review and booking support browser Back and Forward', async ({ page }) => {
   await f.authorize(); await login(page, '/admin')
-  await page.getByRole('link', { name: 'Review', exact: true }).click()
+  await page.getByRole('link', { name: /^To check/ }).click()
   await item(page, 0).getByRole('link', { name: 'View booking' }).click()
   await expect(page.getByRole('dialog')).toContainText(f.bookings[0].booking_reference)
   await page.goBack(); await expect(page).toHaveURL(/\/admin\/review$/)
@@ -200,7 +206,7 @@ test('revoked Admin access during confirmation cannot mutate the payment', async
   await f.authorize(); await login(page)
   await item(page, 0).getByRole('button', { name: 'Verify payment', exact: true }).click()
   expect((await f.admin.from('admin_users').delete().eq('user_id', f.user.id)).error).toBeNull()
-  await page.getByRole('button', { name: 'Confirm verify payment', exact: true }).click()
+  await page.getByRole('button', { name: /^Yes, .* has arrived$/ }).click()
   await expect(page.getByRole('alert')).toContainText('Could not complete')
   expect((await f.admin.from('booking_payments').select('status').eq('booking_id', f.bookings[0].id).single()).data.status).toBe('awaiting_verification')
 })
@@ -218,7 +224,7 @@ test('an older manual refresh cannot overwrite status fetched after a payment ac
     const response = await route.fetch(); captured(); await gate
     await route.fulfill({ response })
   })
-  await page.getByRole('button', { name: 'Refresh booking', exact: true }).click()
+  await page.getByRole('button', { name: 'Check for changes', exact: true }).click()
   await ready
   await confirm(page, page.getByRole('button', { name: 'Verify payment', exact: true }))
   await expect(page.getByRole('dialog').getByText('Confirmed · Paid', { exact: true })).toBeVisible()
@@ -227,4 +233,21 @@ test('an older manual refresh cannot overwrite status fetched after a payment ac
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
   await expect(page.getByRole('dialog').getByText('Confirmed · Paid', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Verify payment', exact: true })).toHaveCount(0)
+})
+
+test('payments to check sit under the day of their appointment, soonest first, with the time on each card', async ({ page }) => {
+  await f.authorize()
+  const later = shiftDate(f.bookings[1].date, 2)
+  const moved = await f.admin.from('bookings').update({ date: later }).eq('id', f.bookings[1].id)
+  expect(moved.error).toBeNull()
+  await login(page)
+  const days = page.locator('.admin-review-day')
+  await expect(days).toHaveCount(2)
+  await expect(days.nth(0).getByRole('heading', { level: 2 })).toContainText(dayHeading(f.bookings[0].date).name)
+  await expect(days.nth(1).getByRole('heading', { level: 2 })).toContainText(dayHeading(later).name)
+  await expect(days.nth(0).locator('.admin-review-item')).toHaveCount(1)
+  await expect(days.nth(1).locator('.admin-review-item')).toHaveCount(1)
+  // The day is in the heading, so a card says the time; the heading says what needs her that day.
+  await expect(days.nth(0).locator('.admin-review-when')).toHaveText(/^\d\d:\d\d · /)
+  await expect(days.nth(0).locator('.admin-agenda-day-heading > span')).toContainText(/needs? you · £/)
 })

@@ -16,13 +16,11 @@ export function rulesFromRow(row) {
 
 const hoursWord = hours => `${hours} ${hours === 1 ? 'hour' : 'hours'}`
 
-// The reminder shown above the payment button, in words that match the Admin's own settings.
-export function cancellationNote(rules, cash) {
+// The note shown above the payment button, in words that match the Admin's own settings. It is the same for bank transfer and cash:
+// free to change or cancel while there is time, and a late fee of up to the full price (which Vad can reduce or waive) after that.
+export function cancellationNote(rules) {
   if (rules.freeHours === 0) return 'You can cancel or change your appointment at any time before it begins.'
-  const window = hoursWord(rules.freeHours)
-  return cash
-    ? `Just a quick reminder: the full appointment fee applies to cancellations made within ${window} of your appointment.`
-    : `Free cancellation up to ${window} before your appointment. Cancellations within ${window} are subject to the full appointment fee.`
+  return `Free to change or cancel more than ${hoursWord(rules.freeHours)} before your appointment. After that, a late fee of up to the full appointment price may apply.`
 }
 
 export function useBookingRules(client = supabase) {

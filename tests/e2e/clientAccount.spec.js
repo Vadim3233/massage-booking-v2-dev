@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { localFixture } from '../localSupabase.js'
 import { unwrap } from '../../src/client/booking/bookingApi.js'
+import { londonSlot } from '../londonSlot.js'
 
 let f
 test.beforeEach(async () => { f = await localFixture(28) })
@@ -21,12 +22,6 @@ async function signIn(page, path = '/account') {
   await page.getByLabel('Password', { exact: true }).fill(f.password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
 }
-function londonSlot(offsetMs) {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
-    .formatToParts(new Date(Date.now() + offsetMs)).map(part => [part.type, part.value]))
-  return { date: `${parts.year}-${parts.month}-${parts.day}`, start: Math.floor((Number(parts.hour) * 60 + Number(parts.minute)) / 30) * 30 }
-}
-
 test('a signed-out visitor is asked to sign in, and sees their booking afterwards', async ({ page }) => {
   await booking()
   await page.goto('/account')
@@ -48,6 +43,10 @@ test('changing the time well in advance is free and the new time is shown', asyn
   await expect(slots.first()).toBeVisible()
   const label = (await slots.nth(1).textContent()).trim()
   await slots.nth(1).click()
+  // Tapping a time only chooses it: nothing moves until the button is pressed.
+  await expect(page.getByRole('button', { name: 'Move my appointment', exact: true })).toBeEnabled()
+  await expect(page.getByText('Your appointment has been moved.')).toHaveCount(0)
+  expect((await f.admin.from('bookings').select('start_minutes').eq('id', b.id).single()).data.start_minutes).toBe(600)
   await page.getByRole('button', { name: 'Move my appointment', exact: true }).click()
   await expect(page.getByText('Your appointment has been moved.')).toBeVisible()
   await expect(page.getByRole('region', { name: 'Appointment summary' })).toContainText(label)

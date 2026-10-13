@@ -4,7 +4,7 @@ export const time = (minutes) => `${Math.floor(minutes / 60).toString().padStart
 export const money = (value) => new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(value)
 export const label = (value) => ({ awaiting_transfer: 'Awaiting transfer', awaiting_payment_verification: 'Awaiting payment verification', awaiting_cash_approval: 'Awaiting cash approval', awaiting_verification: 'Awaiting verification', awaiting_approval: 'Awaiting approval', bank_transfer: 'Bank transfer', no_show: 'No show' }[value] || (value ? value[0].toUpperCase() + value.slice(1).replaceAll('_', ' ') : 'Not recorded'))
 export const postcode = (value) => (value || '').replace(/\s/g, '').toUpperCase().replace(/(.+)(.{3})$/, '$1 $2')
-export const clientName = (booking) => [booking.clients?.first_name, booking.clients?.last_name].filter(Boolean).join(' ') || 'Client unavailable'
+export const clientName = (booking) => [booking.clients?.first_name, booking.clients?.last_name].filter(Boolean).join(' ') || 'Name not recorded'
 export function dayContext(data, date, now) {
   const hours = data.overrides.find(row => row.date === date) || data.hours.find(row => row.weekday === (new Date(date + 'T12:00:00Z').getUTCDay() || 7))
   const holds = data.holds.filter(row => Date.parse(row.expires_at) > now)
@@ -17,19 +17,66 @@ export function dayContext(data, date, now) {
 }
 
 export const dateLabel = (date, options = { weekday: 'short', day: 'numeric', month: 'short' }) => new Intl.DateTimeFormat('en-GB', { ...options, timeZone: 'Europe/London' }).format(new Date(date + 'T12:00:00Z'))
+// "Today", "Tomorrow", or the weekday and date; the year only when it is not this year.
+export function dayHeading(date, from = today()) {
+  const short = dateLabel(date, { weekday: 'short', day: 'numeric', month: 'short', ...(date.slice(0, 4) === from.slice(0, 4) ? {} : { year: 'numeric' }) })
+  if (date === from) return { name: 'Today', rest: dateLabel(date, { weekday: 'short', day: 'numeric', month: 'short' }) }
+  if (date === shiftDate(from, 1)) return { name: 'Tomorrow', rest: dateLabel(date, { weekday: 'short', day: 'numeric', month: 'short' }) }
+  return { name: short, rest: '' }
+}
+// The date and the minutes since midnight in London, whatever the phone's own clock zone is.
+function londonNow(now) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(now).map(part => [part.type, part.value]))
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, minutes: Number(parts.hour) * 60 + Number(parts.minute) }
+}
+// The appointment that is happening now, or else the next one that is going ahead (not cancelled, finished or missed).
+// Bookings are given in date and time order, as the agenda has them.
+const GOING_AHEAD = ['confirmed', 'awaiting_payment_verification', 'awaiting_cash_approval', 'awaiting_transfer']
+// What a day is worth: the appointments going ahead or done. A cancellation and a no-show are not worth their price.
+const WORTH_NOTHING = ['cancelled', 'no_show']
+const dayTotal = bookings => bookings.filter(booking => !WORTH_NOTHING.includes(booking.booking_status)).reduce((sum, booking) => sum + Number(booking.total_gbp || 0), 0)
+// What a day's heading says: how many appointments were not cancelled, and what the ones that are worth something come to.
+export function daySummary(bookings) {
+  if (!bookings.length) return 'Free'
+  const live = bookings.filter(booking => booking.booking_status !== 'cancelled')
+  if (!live.length) return 'All cancelled'
+  const total = dayTotal(bookings)
+  return `${live.length} ${live.length === 1 ? 'booking' : 'bookings'}${total > 0 ? ` · ${money(total)}` : ''}`
+}
+// Whether there is still somewhere to travel to: the appointment is going ahead and has not yet ended (London time).
+export function canNavigateTo(booking, now = new Date()) {
+  if (!GOING_AHEAD.includes(booking.booking_status)) return false
+  const { date, minutes } = londonNow(now)
+  return booking.date > date || (booking.date === date && booking.start_minutes + booking.treatment_duration_minutes > minutes)
+}
+export function nextUp(bookings, now = new Date()) {
+  const { date, minutes } = londonNow(now)
+  const live = bookings.filter(booking => GOING_AHEAD.includes(booking.booking_status))
+  const current = live.find(booking => booking.date === date && booking.start_minutes <= minutes && minutes < booking.start_minutes + booking.treatment_duration_minutes)
+  if (current) return { id: current.id, now: true }
+  const next = live.find(booking => booking.date > date || (booking.date === date && booking.start_minutes > minutes))
+  return next ? { id: next.id, now: false } : null
+}
 export function sessionSummary(booking) {
   const sessions = booking.booking_sessions || []
   if (sessions.length === 1) return `${sessions[0].service_name_snapshot} · ${sessions[0].duration_minutes} min`
   return `${sessions.length} sessions · ${booking.treatment_duration_minutes} min`
 }
+// What state a booking is in, in words, and whose turn it is. `chip` picks the colour: needs = the Admin acts, wait = the client acts,
+// ok = settled, done = finished, cancel and noshow = it did not happen. Colour never carries the meaning alone: the words always do.
 export function bookingState(booking) {
-  if (booking.booking_status === 'cancelled') return { text: 'Cancelled', tone: 'cancelled' }
+  const status = booking.booking_status
+  if (status === 'cancelled') return { text: 'Cancelled', tone: 'cancelled', chip: 'cancel' }
   const payment = booking.booking_payments?.status
-  if (booking.booking_status === 'awaiting_payment_verification' || payment === 'awaiting_verification') return { text: 'Awaiting payment verification', tone: 'pending' }
-  if (booking.booking_status === 'awaiting_cash_approval' || payment === 'awaiting_approval') return { text: 'Awaiting cash approval', tone: 'pending' }
-  if (booking.booking_status === 'awaiting_transfer') return { text: 'Awaiting transfer', tone: 'pending' }
   const paymentText = payment === 'approved' && booking.booking_payments?.method === 'cash' ? 'Cash approved' : label(payment)
-  return { text: `${label(booking.booking_status)} · ${paymentText}`, tone: ['confirmed', 'completed'].includes(booking.booking_status) ? 'confirmed' : 'muted' }
+  if (status === 'no_show') return { text: `${label(status)} · ${paymentText}`, tone: 'muted', chip: 'noshow' }
+  if (status === 'awaiting_payment_verification' || payment === 'awaiting_verification') return { text: 'Awaiting payment verification', tone: 'pending', chip: 'needs' }
+  if (status === 'awaiting_cash_approval' || payment === 'awaiting_approval') return { text: 'Awaiting cash approval', tone: 'pending', chip: 'needs' }
+  if (status === 'awaiting_transfer') return { text: 'Awaiting transfer', tone: 'pending', chip: 'wait' }
+  const text = `${label(status)} · ${paymentText}`
+  if (status === 'completed') return { text, tone: 'confirmed', chip: 'done' }
+  if (status === 'confirmed') return { text, tone: 'confirmed', chip: payment === 'awaiting_transfer' ? 'wait' : 'ok' }
+  return { text, tone: 'muted', chip: 'wait' }
 }
 
 // Presentation only: use the existing occupied intervals and persisted buffers.

@@ -13,8 +13,7 @@ for (const mode of ['native', 'unavailable', 'restricted']) {
     await page.goto('/')
     await page.getByRole('button', { name: /Integration area/ }).click()
     await page.getByRole('button', { name: /Integration massage/ }).click()
-    await page.getByRole('button', { name: 'Add 60 minutes', exact: true }).click()
-    await page.getByRole('button', { name: 'Choose date & time' }).click()
+    await page.getByRole('button', { name: /^60 minutes/ }).click()
     const field = page.getByLabel('Appointment date')
     await field.fill(fixture.date)
     await field.evaluate((input, mode) => {

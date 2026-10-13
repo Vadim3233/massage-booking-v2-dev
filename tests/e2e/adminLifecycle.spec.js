@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { paymentReviewFixture } from '../paymentReviewFixture.js'
+import { londonSlot } from '../londonSlot.js'
 
 let f
 test.beforeEach(async () => { f = await paymentReviewFixture() })
@@ -15,12 +16,6 @@ async function open(page, id) {
 const details = page => page.locator('dialog.admin-details')
 const action = page => page.locator('dialog.admin-action')
 
-// A London date and 30-minute start that fall offsetMs from now.
-function londonSlot(offsetMs) {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
-    .formatToParts(new Date(Date.now() + offsetMs)).map(part => [part.type, part.value]))
-  return { date: `${parts.year}-${parts.month}-${parts.day}`, start: Math.floor((Number(parts.hour) * 60 + Number(parts.minute)) / 30) * 30 }
-}
 // Also backdates the booking so the one-hour grace period for new bookings does not apply.
 async function moveTo(id, offsetMs) {
   const slot = londonSlot(offsetMs)
@@ -35,12 +30,19 @@ test('cancelling inside 24 hours shows the standard fee, records it as due, and 
   await open(page, id)
   await details(page).getByRole('button', { name: 'Cancel booking', exact: true }).click()
   await expect(action(page)).toBeVisible()
-  await expect(action(page).getByLabel('Late fee (£)')).toHaveValue('85')
+  await expect(action(page).getByLabel('Another amount (£)')).toHaveValue('85')
   await expect(action(page)).toContainText('Standard fee now: £85.00')
+  // The usual answers are one tap: here the standard fee is the full price, and waiving is a tap, not typing.
+  await expect(action(page).getByLabel('Full price £85.00')).toBeChecked()
+  await action(page).getByLabel('No fee').check()
+  await expect(action(page).getByLabel('Another amount (£)')).toHaveValue('0')
+  await expect(action(page).getByRole('button', { name: 'Cancel booking', exact: true })).toBeVisible()
+  await action(page).getByLabel('Full price £85.00').check()
+  await expect(action(page).getByLabel('Another amount (£)')).toHaveValue('85')
   await action(page).getByLabel('Reason').fill('Client has a family emergency')
   expect(await action(page).evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
   await page.screenshot({ path: 'test-results/admin-cancel-dialog-390.png' })
-  await action(page).getByRole('button', { name: 'Cancel booking', exact: true }).click()
+  await action(page).getByRole('button', { name: /^Cancel booking/ }).click()
   await expect(details(page).getByText('Late fee: Due · £85.00')).toBeVisible()
   await expect(details(page)).toContainText('Reason: Client has a family emergency')
   const row = (await f.admin.from('bookings').select('booking_status,late_fee_due_gbp,late_fee_status,cancellation_initiated_by').eq('id', id).single()).data
@@ -62,9 +64,10 @@ test('an Admin-requested cancellation never suggests a fee, and the reason is op
   await open(page, id)
   await details(page).getByRole('button', { name: 'Cancel booking', exact: true }).click()
   await action(page).getByLabel('It is my own decision').check()
-  await expect(action(page).getByLabel('Late fee (£)')).toHaveValue('0')
-  await expect(action(page).getByRole('button', { name: 'Cancel booking', exact: true })).toBeEnabled()
-  await action(page).getByRole('button', { name: 'Cancel booking', exact: true }).click()
+  await expect(action(page).getByLabel('Another amount (£)')).toHaveValue('0')
+  await expect(action(page).getByLabel('No fee')).toBeChecked()
+  await expect(action(page).getByRole('button', { name: /^Cancel booking/ })).toBeEnabled()
+  await action(page).getByRole('button', { name: /^Cancel booking/ }).click()
   await expect(details(page).getByText('Cancelled', { exact: false }).first()).toBeVisible()
   const row = (await f.admin.from('bookings').select('late_fee_status,cancellation_reason').eq('id', id).single()).data
   expect(row).toMatchObject({ late_fee_status: 'none', cancellation_reason: null })
@@ -75,16 +78,121 @@ test('rescheduling offers only available times, records the move, and explains a
   const id = f.bookings[2].id
   await open(page, id)
   await details(page).getByRole('button', { name: 'Reschedule', exact: true }).click()
-  const times = action(page).getByLabel('New time')
-  await expect(times).toBeEnabled()
-  const options = await times.locator('option').evaluateAll(list => list.map(option => option.value).filter(Boolean))
-  expect(options.length).toBeGreaterThan(1)
-  await times.selectOption(options[1])
+  // The same day-and-time picker as booking: the days come first, the free times of the open day below them.
+  const slots = action(page).locator('.dtp .slots button')
+  await expect(slots.first()).toBeVisible()
+  expect(await slots.count()).toBeGreaterThan(1)
+  const second = slots.nth(1)
+  const chosen = (await second.textContent()).trim()
+  await second.click()
+  await expect(action(page).getByRole('status').filter({ hasText: 'New time' })).toContainText(chosen)
   expect(await action(page).evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
   await page.screenshot({ path: 'test-results/admin-reschedule-dialog-390.png' })
   await action(page).getByRole('button', { name: 'Reschedule', exact: true }).click()
   await expect(details(page)).toContainText('Moved from')
-  expect((await f.admin.from('bookings').select('start_minutes').eq('id', id).single()).data.start_minutes).toBe(Number(options[1]))
+  const [hours, minutes] = chosen.split(':').map(Number)
+  expect((await f.admin.from('bookings').select('start_minutes').eq('id', id).single()).data.start_minutes).toBe(hours * 60 + minutes)
+})
+
+test('a fee she has chosen is never replaced by a standard fee that arrives late', async ({ page }) => {
+  await f.authorize()
+  const id = f.bookings[2].id
+  await moveTo(id, 5 * 3600000)
+  await open(page, id)
+  await page.route('**/rpc/admin_late_fee_preview', async route => { await new Promise(resolve => setTimeout(resolve, 1500)); await route.continue() })
+  await details(page).getByRole('button', { name: 'Cancel booking', exact: true }).click()
+  // Until the standard fee arrives no fee is chosen, so the button waits; she taps No fee first.
+  await expect(action(page).getByRole('button', { name: /^Cancel booking/ })).toBeDisabled()
+  await action(page).getByLabel('No fee').check()
+  await expect(action(page).getByRole('button', { name: 'Cancel booking', exact: true })).toBeEnabled()
+  await expect(action(page)).toContainText('Standard fee now: £85.00')
+  await expect(action(page).getByLabel('No fee')).toBeChecked()
+  await expect(action(page).getByLabel('Another amount (£)')).toHaveValue('0')
+  await action(page).getByRole('button', { name: 'Cancel booking', exact: true }).click()
+  await expect(action(page)).toHaveCount(0)
+  const row = (await f.admin.from('bookings').select('booking_status,late_fee_due_gbp').eq('id', id).single()).data
+  expect(row.booking_status).toBe('cancelled')
+  expect(Number(row.late_fee_due_gbp)).toBe(0)
+})
+
+test('if the standard fee cannot be looked up, she chooses a fee before cancelling', async ({ page }) => {
+  await f.authorize()
+  const id = f.bookings[2].id
+  await moveTo(id, 5 * 3600000)
+  await open(page, id)
+  await page.route('**/rpc/admin_late_fee_preview', route => route.abort('failed'))
+  await details(page).getByRole('button', { name: 'Cancel booking', exact: true }).click()
+  await expect(action(page).getByLabel('Full price £85.00')).toBeVisible()
+  await expect(action(page).locator('input[name=fee-choice]:checked')).toHaveCount(0)
+  await expect(action(page).getByRole('button', { name: /^Cancel booking/ })).toBeDisabled()
+  await action(page).getByLabel('Full price £85.00').check()
+  await expect(action(page).getByRole('button', { name: 'Cancel booking · £85.00 fee due' })).toBeEnabled()
+  await action(page).getByRole('button', { name: /^Cancel booking/ }).click()
+  await expect(action(page)).toHaveCount(0)
+  expect(Number((await f.admin.from('bookings').select('late_fee_due_gbp').eq('id', id).single()).data.late_fee_due_gbp)).toBe(85)
+})
+
+test('the buttons stay in view on a short screen, and a field that takes focus is not hidden behind them', async ({ page }) => {
+  await f.authorize()
+  await page.setViewportSize({ width: 390, height: 600 })
+  const id = f.bookings[2].id
+  await moveTo(id, 5 * 3600000)
+  await open(page, id)
+  await details(page).getByRole('button', { name: 'Cancel booking', exact: true }).click()
+  const buttons = action(page).locator('.admin-sticky-actions')
+  await expect(buttons).toBeInViewport()
+  await action(page).getByLabel('Another amount (£)').focus()
+  const field = await action(page).getByLabel('Another amount (£)').boundingBox()
+  const bar = await buttons.boundingBox()
+  expect(field.y + field.height).toBeLessThanOrEqual(bar.y + 1)
+})
+
+test('moving a booking for the client waits for the late fee to be looked up, and says what it is waiting for', async ({ page }) => {
+  await f.authorize()
+  await open(page, f.bookings[2].id)
+  let release
+  const held = new Promise(resolve => { release = resolve })
+  await page.route('**/rpc/admin_late_fee_preview', async route => { await held; await route.continue() })
+  await details(page).getByRole('button', { name: 'Reschedule', exact: true }).click()
+  const slots = action(page).locator('.dtp .slots button')
+  await expect(slots.first()).toBeVisible()
+  await slots.nth(1).click()
+  await expect(action(page).getByText('Checking whether a late fee applies…')).toBeVisible()
+  await expect(action(page).getByRole('button', { name: 'Reschedule', exact: true })).toBeDisabled()
+  release()
+  await expect(action(page).getByRole('button', { name: 'Reschedule', exact: true })).toBeEnabled()
+  await expect(action(page).getByText('Checking whether a late fee applies…')).toHaveCount(0)
+})
+
+test('when the late fee cannot be looked up, a change for the client says so, and her own decision can still go ahead', async ({ page }) => {
+  await f.authorize()
+  const id = f.bookings[2].id
+  await open(page, id)
+  await page.route('**/rpc/admin_late_fee_preview', route => route.abort('failed'))
+  await details(page).getByRole('button', { name: 'Reschedule', exact: true }).click()
+  await expect(action(page).getByText(/I couldn't check whether a late fee applies/)).toBeVisible()
+  await action(page).getByLabel('It is my own decision').check()
+  await expect(action(page).getByText(/I couldn't check whether a late fee applies/)).toHaveCount(0)
+  await action(page).locator('.dtp .slots button').nth(1).click()
+  await action(page).getByRole('button', { name: 'Reschedule', exact: true }).click()
+  await expect(details(page)).toContainText('Moved from')
+})
+
+test('a no-show offers the full price or no fee in one tap, and records the one chosen', async ({ page }) => {
+  await f.authorize()
+  const id = f.bookings[2].id
+  await moveTo(id, -5 * 3600000)
+  await open(page, id)
+  await details(page).getByRole('button', { name: 'Mark no-show', exact: true }).click()
+  // Nothing typed means the full price, so that is the one already chosen.
+  await expect(action(page).getByLabel('Full price £85.00')).toBeChecked()
+  await action(page).getByLabel('No fee').check()
+  await expect(action(page).getByLabel('Another amount (£)')).toHaveValue('0')
+  await action(page).getByRole('button', { name: 'Mark no-show', exact: true }).click()
+  await expect(action(page)).toHaveCount(0)
+  const row = (await f.admin.from('bookings').select('booking_status,late_fee_due_gbp').eq('id', id).single()).data
+  expect(row.booking_status).toBe('no_show')
+  expect(Number(row.late_fee_due_gbp)).toBe(0)
 })
 
 test('a started, confirmed appointment can be marked completed, but not before it starts', async ({ page }) => {

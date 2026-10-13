@@ -1,88 +1,233 @@
-.booking-shell { max-width: 760px; padding: 24px; margin: auto; }
-.brand { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding-bottom: 24px; border-bottom: 1px solid var(--line); }
-.brand a { display: inline-flex; align-items: center; text-decoration: none; font-family: var(--font-display); font-size: 22px; font-weight: 500; color: var(--green-deep); }
-.brand-mark { display: inline-grid; place-items: center; width: 36px; height: 36px; margin-right: 10px; border: 1.5px solid var(--gold); border-radius: 50%; font-size: 14px; font-weight: 600; letter-spacing: .02em; }
-.brand > span { font-size: 12px; color: var(--muted); }
-.progress { list-style: none; display: flex; gap: 8px 18px; flex-wrap: wrap; padding: 0; margin: 24px 0; font-size: 12px; color: var(--muted); }
-.progress [aria-current] { color: var(--green-deep); font-weight: 750; border-bottom: 2px solid var(--gold); }
-.booking-shell h1 { font: 500 clamp(28px, 5vw, 40px)/1.2 var(--font-display); margin: 28px 0 16px; letter-spacing: -.005em; }
-.booking-shell h2 { font: 500 23px/1.3 var(--font-display); margin-top: 0; }
-.booking-shell p { margin: 16px 0; }
-.booking-shell button { cursor: pointer; min-height: 44px; border: 1px solid #cbd7ce; border-radius: 9px; padding: 10px 16px; background: #fff; color: #25483c; }
-.booking-shell button:hover:not(:disabled) { background: #edf2eb; border-color: #467660; }
-.booking-shell button:disabled { cursor: default; opacity: .48; }
-.booking-shell button.primary { display: block; width: 100%; color: #fff; background: var(--green); margin-top: 22px; padding: 15px; }
-.booking-shell button[aria-pressed=true] { background: var(--green); color: #fff; }
-.panel { padding: 22px; margin: 22px 0; background: #fff; border: 1px solid #dde3da; border-radius: 12px; }
-.choices { display: grid; gap: 12px; margin: 24px 0; }
-.choices button { text-align: left; padding: 22px; }.choices strong, .choices span, .quantity span { display: block; }.choices span, .quantity span { font-size: 14px; margin-top: 4px; }
-.quantity { display: flex; gap: 16px; align-items: center; border-bottom: 1px solid var(--line); padding: 20px 0; }.quantity > div { flex: 1; }.quantity output { min-width: 18px; text-align: center; }
-.booking-shell fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }.booking-shell legend { padding: 12px 0; font-weight: 600; }
-.booking-shell label { display: grid; gap: 6px; margin: 14px 0; font-size: 14px; font-weight: 600; }
-.booking-shell input, .booking-shell textarea, .booking-shell select { width: 100%; min-width: 0; padding: 12px; border: 1px solid var(--line-strong); background: #fff; border-radius: 7px; color: var(--ink); }
-.booking-shell input[type=date] { cursor: pointer; }
-.booking-shell textarea { min-height: 100px; resize: vertical; }
-.booking-shell .check { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-weight: 400; padding: 9px 0; }.booking-shell .check input { width: 20px; height: 20px; flex-shrink: 0; }.check small { width: 100%; }
-.preference-groups { display: grid; gap: 8px; }
-.preference-group { border: 1px solid #dce3dc; border-radius: 10px; background: #fafcf9; overflow: hidden; }
-.preference-group summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 10px 12px; cursor: pointer; list-style: none; }
-.preference-group summary::-webkit-details-marker { display: none; }
-.preference-group summary::after { content: '⌄'; flex-shrink: 0; color: var(--muted); transition: transform .15s ease; }
-.preference-group[open] summary::after { transform: rotate(180deg); }
-.preference-group summary strong { font-size: 14px; }
-.preference-group summary span { flex: 1; min-width: 0; text-align: right; font-size: 12px; font-weight: 500; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.preference-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 12px 12px; }
-.booking-shell button.preference-chip { min-height: 36px; padding: 7px 11px; border-radius: 999px; font-size: 13px; line-height: 1.2; }
-.two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }.slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 20px 0; }
-.summary button { display: block; width: 100%; text-align: left; margin: 8px 0; }
-.prices > div { display: flex; gap: 20px; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e6e9e3; }.prices dd { margin: 0; font-weight: 650; text-align: right; overflow-wrap: anywhere; }.prices > div:last-child { font-weight: 700; }
-.actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }.error { padding: 16px; color: var(--danger); background: var(--danger-soft); border-left: 3px solid var(--danger-line); overflow-wrap: anywhere; }
-.booking-shell footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 12px; }
-@media (max-width: 480px) {
-  .booking-shell { padding: 18px; }
-  .brand > span { display: none; }
-  .two-columns { grid-template-columns: 1fr; gap: 0; }
-  .slots { grid-template-columns: repeat(3, 1fr); }
-  .panel { padding: 16px; }
-  .quantity { gap: 10px; }
-  .preference-group summary { min-height: 40px; padding: 8px 10px; }
-  .preference-chips { gap: 6px; padding: 2px 10px 10px; }
-  .booking-shell button.preference-chip { min-height: 34px; padding: 6px 10px; font-size: 12px; }
-}
+/* The booking pages: one warm, calm column made for a phone, with one clear next step on every screen.
+   Buttons, fields, chips and toasts come from ui.css; this file is the page frame, the choices and the review. */
 
-.hold-dialog { width: min(440px, calc(100% - 36px)); max-height: calc(100dvh - 36px); overflow: auto; box-sizing: border-box; padding: 24px; border: 1px solid var(--line); border-radius: 12px; background: #fafbf7; color: var(--ink); box-shadow: 0 16px 48px #0003; }
-.hold-dialog::backdrop { background: rgb(25 40 35 / 45%); }
-.hold-dialog .actions { flex-direction: column; }
-.booking-shell .hold-dialog button.primary { margin-top: 0; }
-.hold-dialog small { display: block; line-height: 1.5; }
+/* ---------- Frame ---------- */
+.booking-shell { display: flex; flex-direction: column; max-width: 600px; min-height: 100dvh; margin: 0 auto; padding: 0 16px; }
+.booking-main { flex: 1 0 auto; padding-bottom: 32px; overflow-wrap: break-word; }
+.brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0 10px; }
+.brand-link { display: inline-flex; align-items: center; gap: 10px; color: var(--primary); text-decoration: none; font: 600 22px/1 var(--font-display); letter-spacing: -.005em; }
+.brand-aside { padding: 10px 2px; color: var(--primary); font-size: 14px; font-weight: 600; text-decoration: none; }
+.brand-aside:hover { text-decoration: underline; }
+.booking-shell > footer { margin-top: auto; padding: 18px 0 28px; border-top: 1px solid var(--hairline); color: var(--muted); font-size: 12px; }
 
-/* Progress: one clear line and a bar on a phone, the full list where there is room. */
-.progress-summary { margin: 20px 0 8px; font-size: 13px; font-weight: 600; color: var(--green-deep); letter-spacing: .02em; }
-.progress-bar { height: 4px; border-radius: 999px; background: var(--line); overflow: hidden; }
-.progress-bar span { display: block; height: 100%; border-radius: 999px; background: var(--gold); transition: width .3s ease; }
-@media (max-width: 640px) {
-  .progress { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-  .progress-summary + .progress-bar { margin-bottom: 20px; }
-}
-@media (min-width: 641px) { .progress-summary, .progress-bar { display: none; } }
+/* Where you are: Back on the left, the step on the right, and a bar that fills as you go. */
+.stepper { margin: 0 0 6px; }
+.stepper-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+.progress-summary { margin: 0 0 0 auto; color: var(--muted); font-size: 13px; font-weight: 600; letter-spacing: .02em; }
+.booking-shell .back { margin-left: -10px; padding-inline: 8px 14px; }
+.progress-bar { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; }
+.progress-bar span { height: 4px; border-radius: 4px; background: var(--hairline); transition: background-color var(--dur) var(--ease); }
+.progress-bar .done { background: var(--primary); }
+.progress-bar .current { background: var(--accent); }
+.progress { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; list-style: none; }
+.busy-bar { position: relative; height: 3px; margin: 10px 0 0; overflow: hidden; border-radius: 3px; background: transparent; }
+.busy-bar.is-on { background: var(--hairline); }
+.busy-bar.is-on::after { content: ''; position: absolute; inset: 0 auto 0 -40%; width: 40%; border-radius: 3px; background: var(--primary); animation: busy 1s var(--ease) infinite; }
+@keyframes busy { to { left: 100%; } }
 
-/* Choices and buttons: a clearer response to touch and a visible chosen state. */
-.choices button { box-shadow: 0 1px 0 rgb(37 59 54 / 4%); }
-.booking-shell .choices button:active:not(:disabled) { background: var(--green-soft); }
-.booking-shell button.primary { box-shadow: 0 2px 0 rgb(30 86 70 / 25%); }
-.booking-shell button.primary:hover:not(:disabled) { background: var(--green-deep); border-color: var(--green-deep); }
-.panel { box-shadow: 0 1px 2px rgb(37 59 54 / 5%); }
-.booking-shell footer { color: var(--muted); }
+/* ---------- Type: one expressive question per screen, plain words beneath it ---------- */
+:where(.booking-shell) h1 { margin: 10px 0 8px; font: 600 clamp(30px, 8.6vw, 38px)/1.12 var(--font-display); font-variant-numeric: lining-nums; letter-spacing: -.012em; text-wrap: balance; }
+:where(.booking-shell) h1 em { font-style: italic; font-weight: 500; color: var(--accent-strong); }
+:where(.booking-shell) h1:focus { outline: none; }
+:where(.booking-shell) h2 { margin: 28px 0 12px; font: 600 22px/1.25 var(--font-display); font-variant-numeric: lining-nums; }
+:where(.booking-shell) h3 { margin: 20px 0 8px; font: 700 15px/1.3 var(--font-ui); }
+:where(.booking-shell) p { margin: 12px 0; }
+.lede { margin: 0 0 20px; color: var(--ink-soft); font-size: 17px; line-height: 1.55; }
+.fine { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.booking-shell .eyebrow { margin: 0 0 4px; }
+.booking-shell .section-title { margin-top: 24px; }
+.optional { margin-left: 6px; color: var(--muted); font: 500 13px var(--font-ui); letter-spacing: 0; }
+.screen { border: 0; padding: 0; margin: 0; min-width: 0; }
+.screen { transition: opacity var(--dur) var(--ease); }
+.screen.is-busy { opacity: .8; pointer-events: none; }
+.panel { margin: 16px 0; padding: 18px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); }
+.panel > h2:first-child { margin-top: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
 
-/* The welcome at the top of the first step: warm and brief, with the one thing people ask first. */
-.welcome { margin: 8px 0 12px; }
-.welcome h1 { margin-top: 20px; }
-.welcome p { color: var(--ink-soft); }
-.welcome-steps { display: grid; gap: 10px; margin: 20px 0; padding: 0; list-style: none; counter-reset: welcome; }
-.welcome-steps li { position: relative; padding-left: 38px; counter-increment: welcome; color: var(--ink-soft); }
-.welcome-steps li::before { content: counter(welcome); position: absolute; left: 0; top: 0; display: grid; place-items: center; width: 26px; height: 26px; border: 1.5px solid var(--gold); border-radius: 50%; font-size: 13px; font-weight: 600; color: var(--green-deep); }
-.booking-shell .welcome-note { padding: 12px 14px; margin: 18px 0; border-left: 3px solid var(--gold); background: var(--gold-soft); border-radius: 0 8px 8px 0; color: var(--ink); font-size: 14px; }
+/* ---------- Fields ---------- */
+:where(.booking-shell) fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+:where(.booking-shell) label { display: grid; gap: 6px; margin: 14px 0; color: var(--ink); font-size: 14px; font-weight: 600; }
+.booking-shell .check { display: flex; align-items: center; gap: 12px; margin: 8px 0; font-size: 15px; font-weight: 500; cursor: pointer; }
+.two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field-note { margin-top: 20px; }
+
+/* ---------- Choices: whole-row tiles that go straight on when tapped ---------- */
+.tiles { display: grid; gap: 10px; margin: 16px 0; }
+.tiles--areas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.tile { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 2px 12px; width: 100%; min-height: 64px; padding: 14px 16px; border: 1.5px solid var(--control-border); border-radius: var(--radius); background: var(--surface); color: var(--ink); text-align: left; box-shadow: var(--shadow-1); }
+@media (hover: hover) { .tile:hover { border-color: var(--primary); background: var(--surface); box-shadow: var(--shadow-2); transform: translateY(-1px); } }
+.tile:active { background: var(--primary-soft); }
+.tile[aria-pressed=true] { border-color: var(--primary); background: var(--primary-soft); }
+.tile-title { font: 600 17px/1.25 var(--font-ui); }
+.tile-note { display: block; color: var(--muted); font-size: 13px; font-weight: 500; line-height: 1.4; }
+.tiles--areas .tile { flex-direction: column; align-items: flex-start; justify-content: center; }
+.tile--wide { flex-wrap: nowrap; justify-content: space-between; gap: 12px; padding: 16px 16px 16px 18px; }
+.tile-body { display: grid; gap: 4px; min-width: 0; }
+.tile-title--display { font: 600 22px/1.2 var(--font-display); font-variant-numeric: lining-nums; }
+.tile-side { display: grid; justify-items: end; gap: 6px; flex-shrink: 0; }
+.tile-from { color: var(--muted); font-size: 12px; font-weight: 500; }
+.tile-from b { color: var(--primary); font-size: 17px; }
+.tile-chevron { color: var(--muted); }
+.tiles--durations { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
+.tile--duration { flex-direction: column; justify-content: center; align-items: center; gap: 2px; min-height: 132px; padding: 14px 8px; text-align: center; }
+.tile-figure { color: var(--ink); font-size: 44px; line-height: 1; }
+.tile-unit { color: var(--muted); font-size: 13px; font-weight: 500; }
+.tile-price { margin-top: 10px; color: var(--primary); font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tile--duration[aria-pressed=true] .tile-figure { color: var(--primary); }
+.group-toggle { margin: 10px 0 0 -10px; }
+.quantity { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; margin: 10px 0; border: 1.5px solid var(--tile-border); border-radius: var(--radius); background: var(--surface); }
+.quantity strong { display: block; font-size: 17px; }
+.quantity span { display: block; color: var(--muted); font-size: 14px; }
+.stepper-control { display: flex; align-items: center; gap: 6px; }
+.stepper-control button { width: 44px; min-height: 44px; padding: 0; border-radius: 50%; }
+.stepper-control output { min-width: 34px; text-align: center; font: 600 24px/1 var(--font-display); font-variant-numeric: lining-nums; }
+.total-line { margin: 16px 0; }
+
+/* The welcome and "your usual" */
+.welcome { margin: 0 0 4px; }
+.welcome .eyebrow { margin-top: 14px; }
+.welcome-steps { counter-reset: welcome; display: grid; gap: 10px; margin: 18px 0; padding: 0; list-style: none; }
+.welcome-steps li { position: relative; padding: 2px 0 2px 40px; counter-increment: welcome; color: var(--ink-soft); font-size: 15px; line-height: 1.45; }
+.welcome-steps li::before { content: counter(welcome); position: absolute; left: 0; top: -1px; display: grid; place-items: center; width: 28px; height: 28px; border: 1.5px solid var(--accent); border-radius: 50%; color: var(--primary); font: 600 14px/1 var(--font-display); font-variant-numeric: lining-nums; }
+.welcome-note { display: flex; align-items: flex-start; gap: 10px; margin: 16px 0; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); color: var(--ink); font-size: 14px; line-height: 1.45; }
+.welcome-note .icon { flex-shrink: 0; margin-top: 1px; color: var(--accent-strong); }
+.welcome--after { margin-top: 26px; }
+.welcome--after .welcome-steps { margin-top: 0; }
 .welcome-about { margin: 8px 0 0; }
-.welcome-about summary { cursor: pointer; color: var(--green-deep); font-weight: 600; min-height: 44px; display: flex; align-items: center; }
-.welcome-about p { margin: 8px 0; }
-.booking-shell .welcome + h2 { margin-top: 28px; }
+.welcome-about summary { display: flex; align-items: center; min-height: 44px; color: var(--primary); font-weight: 600; cursor: pointer; }
+.usual { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; margin: 4px 0 8px; padding: 14px 16px; border: 1.5px solid var(--primary); border-radius: var(--radius); background: var(--primary-soft); text-align: left; box-shadow: var(--shadow-1); }
+.usual-text { display: grid; gap: 2px; min-width: 0; }
+.usual-text strong { color: var(--ink); font-size: 16px; }
+.usual-go { display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; color: var(--primary); font-size: 14px; font-weight: 700; }
+
+/* The bar that stays in reach while you scroll: what is chosen on the left, the next step on the right. */
+.action-bar { position: sticky; bottom: 0; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 14px; margin: 20px -16px 0; padding: 24px 16px calc(14px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, rgb(247 246 242 / 0), var(--paper) 18px); }
+.action-bar > .btn--block { flex: 1; }
+.action-bar .btn--lg { flex: 1 1 150px; padding-inline: 12px; }
+.action-summary { flex: 0 1 auto; max-width: 46%; }
+/* On a short screen (a phone on its side, or zoomed right in) a stuck bar would cover the page, so it stays where it is. */
+@media (max-height: 520px) { .action-bar { position: static; } }
+.action-summary { display: grid; gap: 1px; min-width: 0; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.3; }
+.action-summary b { color: var(--ink); font-size: 15px; }
+.action-summary b.figure { color: var(--primary); font-size: 24px; line-height: 1.1; }
+
+/* ---------- Review ---------- */
+.ticket { margin: 16px 0; padding: 0; overflow: hidden; border: 1px solid var(--hairline); border-left: 4px solid var(--accent); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); }
+.ticket-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 12px 14px 16px; }
+.ticket-when { margin: 0; font-size: 24px; line-height: 1.2; }
+.ticket-time { margin: 4px 0 0; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ticket-time span { margin-left: 4px; color: var(--muted); font-size: 13px; font-weight: 400; }
+.ticket-rows { margin: 0; border-top: 1px dashed var(--tile-border); }
+.ticket-rows > div { display: grid; grid-template-columns: 76px minmax(0, 1fr); align-items: center; gap: 8px; padding: 6px 8px 6px 16px; }
+.ticket-rows > div + div { border-top: 1px solid var(--hairline); }
+.ticket-rows dt { color: var(--muted); font-size: 13px; font-weight: 600; }
+.ticket-rows dd { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0; }
+.row-text { min-width: 0; overflow-wrap: anywhere; font-weight: 600; }
+.ticket--summary { padding: 16px 18px; border-left-width: 4px; }
+.summary-when { margin: 12px 0 4px; font: 600 20px/1.3 var(--font-display); font-variant-numeric: lining-nums; }
+.summary-line { margin: 4px 0; color: var(--ink-soft); font-size: 15px; }
+.summary-line strong { color: var(--ink); }
+.summary-sessions { margin: 10px 0; padding-left: 20px; color: var(--ink); font-weight: 500; }
+.summary-total { margin: 10px 0 4px; padding-top: 10px; border-top: 1px dashed var(--tile-border); font-weight: 600; }
+.summary-total .figure { color: var(--primary); font-size: 22px; }
+
+.more { margin: 12px 0; border: 1px solid var(--tile-border); border-radius: var(--radius); background: var(--surface); }
+.more > summary { display: flex; align-items: center; gap: 12px; min-height: 54px; padding: 0 16px; list-style: none; cursor: pointer; }
+.more > summary::-webkit-details-marker { display: none; }
+.more > summary::after { content: ''; flex-shrink: 0; width: 8px; height: 8px; margin: -3px 2px 0 0; border: solid var(--muted); border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform var(--dur) var(--ease); }
+.more[open] > summary::after { margin-top: 3px; transform: rotate(-135deg); }
+.more-title { font-weight: 600; }
+.more-hint { margin-left: auto; color: var(--muted); font-size: 13px; }
+.more-body { padding: 4px 16px 16px; border-top: 1px solid var(--hairline); }
+.more--flat { border: 0; border-radius: 0; background: none; }
+.more--flat > summary { padding-inline: 0; }
+.more--flat .more-body { padding-inline: 0; }
+.person + .person { margin-top: 16px; padding-top: 4px; border-top: 1px dashed var(--tile-border); }
+.booking-shell .person-title { margin: 14px 0 0; font: 600 17px/1.3 var(--font-display); }
+.preference-title { margin: 14px 0 8px; color: var(--accent-ink); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.preference-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.preference-chip { min-height: 44px; padding: 0 16px; border-radius: var(--radius-pill); border-color: var(--control-border); font-weight: 500; }
+.preference-chip[aria-pressed=true] { border-color: var(--primary); background: var(--primary); color: #fff; }
+.preference-chip[aria-pressed=true]::before { content: ''; width: 5px; height: 9px; margin: -2px 2px 0 -2px; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.addons { margin: 20px 0 8px; }
+.addons .section-title { margin: 0 0 8px; }
+.booking-shell .addon { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; margin: 8px 0; padding: 12px 14px; border: 1.5px solid var(--tile-border); border-radius: var(--radius); background: var(--surface); }
+.addon:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
+.addon-text b { display: block; font-weight: 600; }
+.addon-text small { display: block; color: var(--muted); font-size: 13px; font-weight: 400; line-height: 1.4; }
+.addon-price { color: var(--primary); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.prices { margin: 16px 0; }
+.prices > div { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 8px 0; border-bottom: 1px solid var(--hairline); }
+.prices dt { color: var(--ink-soft); }
+.prices dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; overflow-wrap: anywhere; }
+.prices > .prices-total { padding-top: 12px; border-bottom: 0; }
+.prices-total dt { color: var(--ink); font-weight: 700; }
+.prices-total dd { color: var(--primary); font-size: 28px; }
+.price-state { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 16px 0; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); }
+.price-state p { margin: 0; }
+.price-skeleton .skeleton { height: 112px; }
+
+/* ---------- Details, payment and confirmation ---------- */
+.gate .signin { margin-top: 18px; }
+.gate .signin > :not(summary) { margin-inline: 16px; }
+.gate .signin > form { margin-top: 4px; }
+.gate .signin > .actions { margin-bottom: 14px; }
+.gate-form { margin-top: 8px; }
+.reserved { display: flex; align-items: center; gap: 8px; margin: 4px 0 6px; color: var(--ok-ink); font-weight: 600; }
+.reserved-dot { flex-shrink: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--ok-rail); box-shadow: 0 0 0 4px var(--ok-bg); }
+.amount-card { margin: 16px 0; padding: 18px 20px; border-radius: var(--radius); background: var(--primary); color: #fff; box-shadow: var(--shadow-2); }
+.amount-card .eyebrow { color: rgb(255 255 255 / .82); }
+.amount { margin: 0; font-size: 46px; line-height: 1.1; letter-spacing: -.01em; }
+.bank-list { display: grid; margin: 8px 0; }
+.bank-list > div { display: grid; gap: 2px; padding: 10px 0; border-bottom: 1px solid var(--hairline); }
+.bank-list dt { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.bank-list dd { text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0; }
+.copy-value { font: 600 17px/1.3 var(--font-ui); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.copy-button { min-height: 44px; padding: 0 14px; border-radius: 10px; font-size: 14px; }
+.copy-failed { flex-basis: 100%; color: var(--danger); }
+.bank-reference { margin: 12px 0 4px; padding: 4px 14px; border-left: 4px solid var(--accent); border-radius: 12px; background: var(--accent-soft); }
+.bank-reference > div { border-bottom: 0; }
+.bank-card h3 { margin-top: 18px; }
+.steps-list { margin: 8px 0 0; padding-left: 22px; }
+.steps-list li { margin: 6px 0; }
+.switch-method { margin: 4px 0 0 -10px; }
+.terms-note { margin: 12px 0 4px; color: var(--ink-soft); font-size: 14px; }
+.terms { scroll-margin-bottom: 170px; padding: 12px 14px; border: 1.5px solid var(--tile-border); border-radius: var(--radius); background: var(--surface); }
+.terms:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
+.success-mark { display: grid; place-items: center; width: 64px; height: 64px; margin: 18px 0 2px; border-radius: 50%; background: var(--ok-bg); color: var(--ok-ink); animation: pop var(--dur) var(--ease) both; }
+.success-mark[data-status=cancelled] { background: var(--cancel-bg); color: var(--cancel-ink); }
+@keyframes pop { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
+.timeline { counter-reset: timeline; margin: 12px 0 8px; padding: 0; list-style: none; }
+.timeline li { position: relative; padding: 2px 0 18px 42px; counter-increment: timeline; }
+.timeline li::before { content: counter(timeline); position: absolute; left: 0; top: -2px; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); font-size: 14px; font-weight: 700; }
+.timeline li::after { content: ''; position: absolute; left: 13px; top: 30px; bottom: 2px; width: 2px; background: var(--tile-border); }
+.timeline li:last-child { padding-bottom: 4px; }
+.timeline li:last-child::after { display: none; }
+
+/* ---------- The "still booking?" prompt ---------- */
+.hold-dialog { width: min(420px, calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow: auto; padding: 24px; border: 0; border-radius: var(--radius-lg); background: var(--surface); color: var(--ink); box-shadow: var(--shadow-2); }
+.hold-dialog::backdrop { background: rgb(25 40 35 / .5); }
+.hold-dialog h2 { margin-top: 0; }
+.hold-dialog .actions { display: grid; gap: 10px; }
+.hold-dialog small { display: block; margin-top: 12px; color: var(--muted); line-height: 1.5; }
+
+/* ---------- More room on a bigger screen ---------- */
+@media (min-width: 560px) {
+  .tiles--areas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .booking-shell { padding-inline: 24px; }
+  .action-bar { margin-inline: -24px; padding-inline: 24px; }
+}
+@media (max-width: 359px) {
+  .two-columns { grid-template-columns: 1fr; gap: 0; }
+  .tiles--areas { grid-template-columns: 1fr; }
+  .ticket-rows > div { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .busy-bar.is-on::after { animation: none; left: 0; width: 100%; opacity: .5; }
+  .success-mark { animation: none; }
+}
+
+/* A second tap that lands just after a screen has changed is the first tap arriving twice, so for a moment the new screen takes no taps. */
+.booking-main.is-settling :is(button, a, input, select, textarea, summary, label) { pointer-events: none; }
+.field-problem { margin: -6px 0 10px; color: var(--danger); font-size: 14px; font-weight: 500; }

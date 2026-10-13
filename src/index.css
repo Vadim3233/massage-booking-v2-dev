@@ -1,7 +1,7 @@
 :root {
   --ink: #253b36;
   --ink-soft: #52625c;
-  --muted: #6d7a74;
+  --muted: #5e6b65;
   --paper: #f7f6f2;
   --surface: #ffffff;
   --line: #d8dfda;
@@ -17,12 +17,48 @@
   --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
   --font-ui: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
   color-scheme: light;
+
+  /* Surfaces, lines and fields. Field borders pass 3:1 against white; hairlines are decoration only. */
+  --surface-soft: #fbfaf7;
+  --hairline: #e4e7e1;
+  --field-border: #7d8e84;
+
+  /* Brand roles. Gold is for decoration and large type; --accent-ink is the gold that is safe for small text. */
+  --primary: #1e5646;
+  --primary-strong: #17443a;
+  --primary-soft: #e7f0ea;
+  --primary-line: #b9d0c3;
+  --accent: #b28342;
+  --accent-ink: #7a5420;
+  --accent-soft: #f8f1e4;
+  --accent-strong: #8a5f1f; /* gold that reads on the page at any size (5.2:1) */
+  --tile-border: #c3d0c7;
+  --control-border: #7d8e84; /* the border of anything you tap that has no other outline: 3.2:1 on the page */
+
+  /* Colour says whose turn it is: amber = you act, dashed = the client acts, green = settled. */
+  --needs-ink: #6b4200; --needs-bg: #fdebc8; --needs-rail: #b26b00;
+  --wait-ink: #5a5347; --wait-rail: #857d6b;
+  --ok-ink: #1b5a41; --ok-bg: #e2f0e7; --ok-rail: #2f7a5b;
+  --done-ink: #44544e; --done-bg: #e9eeea; --done-rail: #44544e;
+  --cancel-ink: #5b5752; --cancel-bg: #eceae6; --cancel-rail: #8a857e;
+  --noshow-ink: #7a2740; --noshow-bg: #f7e1e7; --noshow-rail: #b04566;
+  --alert-dot: #a8321f;
+
+  /* Shape, depth and motion. */
+  --radius-sm: 8px; --radius: 14px; --radius-lg: 20px; --radius-pill: 999px;
+  --shadow-1: 0 1px 2px rgb(37 59 54 / .06), 0 4px 12px rgb(37 59 54 / .05);
+  --shadow-2: 0 2px 4px rgb(37 59 54 / .08), 0 12px 32px rgb(37 59 54 / .14);
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --dur-fast: 120ms; --dur: 220ms;
+  --tap: 44px;
 }
 * { box-sizing: border-box; }
+/* Something focused or jumped to is never hidden behind a sticky bar. */
+html { scroll-padding-top: 76px; scroll-padding-bottom: 150px; }
 body { margin: 0; color: var(--ink); background: var(--paper); font-family: var(--font-ui); line-height: 1.55; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 button, input, textarea, select { font: inherit; }
 button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
-:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
 a { color: var(--green-deep); }
 ::selection { background: var(--green-soft); }
 /* Small, quiet feedback on anything pressable, switched off for people who ask for less motion. */

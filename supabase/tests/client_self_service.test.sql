@@ -100,8 +100,13 @@ select throws_ok($$select public.get_my_change_terms('00000000-0000-4000-8000-00
 -- Available times for changing a booking
 -- ---------------------------------------------------------------------------------------------
 select ok(exists (select 1 from public.get_my_booking_availability('00000000-0000-4000-8000-00000000b001', pg_temp.slot_date(interval '9 days'))), 'Times are offered on a free day');
-select ok(exists (select 1 from public.get_my_booking_availability('00000000-0000-4000-8000-00000000b001', pg_temp.slot_date(interval '5 days')) where start_minutes = pg_temp.slot_start(interval '5 days') + 60 + 60),
-  'On its own day the booking does not block itself');
+-- The booking sits at this time of day five days on, and the time checked is two hours after it (its length and its travel time), which
+-- must still end the same day: after about 21:30 there is no such time, so then the check is skipped rather than failed.
+select case when pg_temp.slot_start(interval '5 days') + 180 <= 1440
+  then ok(exists (select 1 from public.get_my_booking_availability('00000000-0000-4000-8000-00000000b001', pg_temp.slot_date(interval '5 days')) where start_minutes = pg_temp.slot_start(interval '5 days') + 60 + 60),
+    'On its own day the booking does not block itself')
+  else skip('Too late in the day for a free time two hours after the booking that still ends the same day', 1)
+end;
 select ok(not exists (select 1 from public.get_my_booking_availability('00000000-0000-4000-8000-00000000b001', pg_temp.slot_date(interval '0 days'))
   where ((pg_temp.slot_date(interval '0 days') + make_interval(mins => start_minutes)) at time zone 'Europe/London') < now() + interval '2 hours'),
   'Nothing is offered inside two hours of now');

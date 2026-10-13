@@ -10,24 +10,29 @@ export function whatsappNumber(phone) {
   return digits
 }
 
+// The way to the address the appointment is at, on Google Maps; nothing if no address is recorded.
+export function directionsLink(booking) {
+  const address = [booking.address_line_1_snapshot, booking.address_line_2_snapshot, booking.city_snapshot, booking.postcode_snapshot].filter(Boolean).join(', ')
+  return address ? { key: 'directions', icon: 'pin', label: 'Directions', href: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`, external: true } : null
+}
+
 export function contactLinks(booking) {
   const phone = booking.clients?.phone
   const email = booking.booking_email_snapshot || booking.clients?.email
   const number = whatsappNumber(phone)
-  const address = [booking.address_line_1_snapshot, booking.address_line_2_snapshot, booking.city_snapshot, booking.postcode_snapshot].filter(Boolean).join(', ')
   return [
-    phone && { key: 'call', label: 'Call', href: `tel:${String(phone).replace(/[^0-9+]/g, '')}` },
-    number && { key: 'whatsapp', label: 'WhatsApp', href: `https://wa.me/${number}`, external: true },
-    address && { key: 'directions', label: 'Directions', href: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`, external: true },
-    email && { key: 'email', label: 'Email', href: `mailto:${email}` },
+    phone && { key: 'call', icon: 'phone', label: 'Call', href: `tel:${String(phone).replace(/[^0-9+]/g, '')}` },
+    number && { key: 'whatsapp', icon: 'chat', label: 'WhatsApp', href: `https://wa.me/${number}`, external: true },
+    directionsLink(booking),
+    email && { key: 'email', icon: 'mail', label: 'Email', href: `mailto:${email}` },
   ].filter(Boolean)
 }
 
 export function clientContactLinks(client) {
   const number = whatsappNumber(client.phone)
   return [
-    client.phone && { key: 'call', label: 'Call', href: `tel:${String(client.phone).replace(/[^0-9+]/g, '')}` },
-    number && { key: 'whatsapp', label: 'WhatsApp', href: `https://wa.me/${number}`, external: true },
-    client.email && { key: 'email', label: 'Email', href: `mailto:${client.email}` },
+    client.phone && { key: 'call', icon: 'phone', label: 'Call', href: `tel:${String(client.phone).replace(/[^0-9+]/g, '')}` },
+    number && { key: 'whatsapp', icon: 'chat', label: 'WhatsApp', href: `https://wa.me/${number}`, external: true },
+    client.email && { key: 'email', icon: 'mail', label: 'Email', href: `mailto:${client.email}` },
   ].filter(Boolean)
 }

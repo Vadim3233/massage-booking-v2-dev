@@ -8,7 +8,17 @@ export function useBookingHistory(store, step) {
       url.searchParams.set('step', step)
       window.history.replaceState({ ...window.history.state, bookingStep: step }, '', url)
     }
-    const pop = () => store.navigate(Number(new URLSearchParams(window.location.search).get('step')) || 0)
+    const pop = () => {
+      const wanted = Number(new URLSearchParams(window.location.search).get('step')) || 0
+      store.navigate(wanted)
+      const { step: actual, draft } = store.getSnapshot()
+      if (actual === wanted) return
+      // A step that cannot be left (a reserved time has no way back) keeps the address true, and says why nothing happened.
+      const here = new URL(window.location.href)
+      here.searchParams.set('step', actual)
+      window.history.replaceState({ ...window.history.state, bookingStep: actual }, '', here)
+      if (draft.bookingId) store.setError(actual === 7 ? 'Your booking has been made, so there is no going back. To change or cancel it, use the links below.' : 'Your time is reserved, so there is no going back from here. To change the time or cancel, use the link at the bottom of the page.')
+    }
     const leave = (event) => {
       const { draft } = store.getSnapshot()
       if (draft.sessions.length && !draft.bookingId) { event.preventDefault(); event.returnValue = '' }

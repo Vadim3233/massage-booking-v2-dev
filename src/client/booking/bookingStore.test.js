@@ -3,6 +3,7 @@ import { createBookingStore } from './bookingStore.js'
 import { activeHold, allowedStep, browserClientKey, draftKey, durationOf, londonDate, newDraft, newSession, restoreDraft } from './bookingDraft.js'
 import { finalizeParams, quoteParams } from './bookingApi.js'
 import { paymentConfig } from './paymentConfig.js'
+import { GENERIC } from './friendlyError.js'
 
 const memory = () => { const data = new Map(); return { getItem: (key) => data.get(key), setItem: (key, value) => data.set(key, value) } }
 const quote = { total_gbp: 180, service_subtotal_gbp: 170, enhancements_total_gbp: 10, travel_fee_gbp: 0, congestion_fee_gbp: 0 }
@@ -57,12 +58,65 @@ describe('booking state transitions', () => {
   it('preserves old selection if release fails', async () => {
     const { store, api } = fixture(); api.release.mockRejectedValue(new Error('Release failed'))
     await store.changeSelection({ date: '2026-10-02' })
-    expect(store.getSnapshot().draft.date).toBe('2026-10-01'); expect(store.getSnapshot().error).toBe('Release failed')
+    expect(store.getSnapshot().draft.date).toBe('2026-10-01'); expect(store.getSnapshot().error).toBe(GENERIC)
   })
   it('lets the server atomically replace a slot and prevents overlapping clicks', async () => {
     const { store, api } = fixture(); await Promise.all([store.selectSlot(660), store.selectSlot(720)])
     expect(api.hold).toHaveBeenCalledTimes(1); expect(api.release).not.toHaveBeenCalled()
     expect(store.getSnapshot().draft.start).toBe(660)
+  })
+  it('saves the day with the time, and leaves a held time alone while other days are only looked at', async () => {
+    const { store, api } = fixture()
+    expect(store.getSnapshot().draft.hold).toMatchObject({ hold_id: 'hold' })
+    expect(api.hold).not.toHaveBeenCalled(); expect(api.release).not.toHaveBeenCalled()
+    api.hold.mockResolvedValue({ hold_id: 'hold-2', hold_token: 'token-2', expires_at: '2026-10-01T10:20:00Z' })
+    await store.selectSlot(660, '2026-10-05')
+    expect(api.hold).toHaveBeenCalledWith('2026-10-05', 660, 120, 'opaque-key')
+    expect(store.getSnapshot().draft).toMatchObject({ date: '2026-10-05', start: 660, hold: { hold_id: 'hold-2' } })
+  })
+  it('updates the price without locking the screen, and drops a price for choices that have changed', async () => {
+    const { store, api } = fixture()
+    let answer
+    api.quote.mockImplementationOnce(() => new Promise((resolve) => { answer = resolve }))
+    const pending = store.refreshQuote()
+    expect(store.getSnapshot().busy).toBe(false)
+    store.edit({ enhancementIds: [] })
+    answer({ ...quote, total_gbp: 999 }); await pending
+    expect(store.getSnapshot().quote).toBeNull()
+    await store.refreshQuote()
+    expect(store.getSnapshot().quote).toEqual(quote)
+  })
+  it('asks the server once for the same choices, and says in plain words when the price cannot be updated', async () => {
+    const { store, api } = fixture()
+    await Promise.all([store.refreshQuote(), store.refreshQuote()])
+    expect(api.quote).toHaveBeenCalledTimes(1)
+    api.quote.mockRejectedValue(new Error('connection to server at 10.0.0.1 failed'))
+    store.edit({ enhancementIds: [] })
+    await store.refreshQuote()
+    expect(store.getSnapshot().quoteError).toBe("I couldn't update the price just now.")
+    expect(JSON.stringify(store.getSnapshot())).not.toContain('10.0.0.1')
+    store.edit({ enhancementIds: ['extra'] })
+    expect(store.getSnapshot().quoteError).toBe('')
+  })
+  it('keeps the price when only a name or a preference changes, since neither changes it', async () => {
+    const { store } = fixture(); await store.loadQuote()
+    store.edit({ sessions: store.getSnapshot().draft.sessions.map((session, index) => ({ ...session, recipient_name: `Guest ${index + 1}`, preference_ids: ['firm'] })) })
+    expect(store.getSnapshot().quote).toEqual(quote)
+    store.edit({ sessions: [newSession(60), newSession(90)] }); expect(store.getSnapshot().quote).toBeNull()
+  })
+  it('tries the price again from a clean slate, without showing a technical message', async () => {
+    const { store, api } = fixture()
+    api.quote.mockRejectedValueOnce(new Error('connection to server at 10.0.0.1 failed'))
+    await store.refreshQuote()
+    expect(store.getSnapshot().quoteError).not.toBe('')
+    await store.retryQuote()
+    expect(store.getSnapshot()).toMatchObject({ quote, quoteError: '', error: '' })
+  })
+  it('never lets a technical error reach the screen', async () => {
+    const { store, api } = fixture()
+    api.release.mockRejectedValue(new Error('duplicate key value violates unique constraint "x"'))
+    await store.changeSelection({ date: '2026-10-02' })
+    expect(store.getSnapshot().error).toBe(GENERIC)
   })
   it('invalidates quotes on enhancement changes but not contact edits', async () => {
     const { store } = fixture(); await store.loadQuote(); store.edit({ note: 'hello' })
@@ -71,13 +125,13 @@ describe('booking state transitions', () => {
   })
   it('requires fresh price review when the price changes', async () => {
     const { store, api } = fixture(); await store.loadQuote(); api.quote.mockResolvedValue({ ...quote, total_gbp: 190 })
-    await store.finalize(); expect(api.finalize).not.toHaveBeenCalled(); expect(store.getSnapshot().error).toContain('refreshed price')
+    await store.finalize(); expect(api.finalize).not.toHaveBeenCalled(); expect(store.getSnapshot().error).toContain('price has changed')
   })
   it('shows no confirmation on a database failure and allows correction', async () => {
     const { store, api } = fixture(); await store.loadQuote()
     api.finalize.mockRejectedValue({ code: '23P01', message: 'Time slot is no longer available' })
     await store.finalize()
-    expect(store.getSnapshot()).toMatchObject({ result: null, error: 'Time slot is no longer available' })
+    expect(store.getSnapshot()).toMatchObject({ result: null, error: 'Sorry, that time has just been taken. Please choose another; your details are saved.' })
     expect(store.getSnapshot().draft).toMatchObject({ bookingId: null, pending: null })
   })
   it('persists ambiguous attempts and retries exactly the same payload after reload', async () => {
@@ -93,7 +147,7 @@ describe('booking state transitions', () => {
   })
   it('cannot finalize an expired hold', async () => {
     const { store, api } = fixture(); store.edit({ hold: { expires_at: '2000-01-01' } }); await store.finalize()
-    expect(api.finalize).not.toHaveBeenCalled(); expect(store.getSnapshot().error).toContain('expired')
+    expect(api.finalize).not.toHaveBeenCalled(); expect(store.getSnapshot().error).toContain('released')
   })
   it('does not write if durable attempt storage fails', async () => {
     const { store, api, storage } = fixture(); await store.loadQuote()
@@ -164,7 +218,7 @@ describe('hold continuation and draft recovery', () => {
     const f = fixture(); f.api.extend = vi.fn().mockRejectedValue(new Error('Network unavailable'))
     await f.store.extendHold()
     expect(f.store.getSnapshot().draft.hold).toEqual(f.draft.hold)
-    expect(f.store.getSnapshot().error).toBe('Network unavailable')
+    expect(f.store.getSnapshot().error).toBe('The connection dropped. Please check it and try again.')
   })
   it.each(['release', 'expiry'])('preserves all draft fields after %s and returns to time selection', async (action) => {
     const f = fixture()

@@ -1,0 +1,61 @@
+// An appointment as a calendar file (.ics), so it can go straight into the client's own calendar.
+const pad = number => String(number).padStart(2, '0')
+const escapeText = text => String(text).replaceAll('\\', '\\\\').replaceAll(';', '\\;').replaceAll(',', '\\,').replace(/\r?\n/g, '\\n')
+
+function addDay(date) {
+  const moved = new Date(`${date}T12:00:00Z`)
+  moved.setUTCDate(moved.getUTCDate() + 1)
+  return moved.toISOString().slice(0, 10)
+}
+// A time as the calendar writes it. An appointment can end at midnight, which is 00:00 on the next day, never 24:00.
+function clock(date, minutes) {
+  const day = minutes >= 1440 ? addDay(date) : date
+  const within = minutes % 1440
+  return `${day.replaceAll('-', '')}T${pad(Math.floor(within / 60))}${pad(within % 60)}00`
+}
+
+// Calendar files break lines at 75 bytes; the rest carries on after a leading space.
+function fold(line) {
+  const encoder = new TextEncoder()
+  const lines = []
+  let current = ''
+  let size = 0
+  for (const character of line) {
+    const bytes = encoder.encode(character).length
+    if (size + bytes > (lines.length ? 74 : 75)) { lines.push(current); current = ''; size = 0 }
+    current += character
+    size += bytes
+  }
+  lines.push(current)
+  return lines.map((text, index) => index ? ` ${text}` : text).join('\r\n')
+}
+
+const LONDON = [
+  'BEGIN:VTIMEZONE', 'TZID:Europe/London',
+  'BEGIN:DAYLIGHT', 'TZOFFSETFROM:+0000', 'TZOFFSETTO:+0100', 'TZNAME:BST', 'DTSTART:19700329T010000', 'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU', 'END:DAYLIGHT',
+  'BEGIN:STANDARD', 'TZOFFSETFROM:+0100', 'TZOFFSETTO:+0000', 'TZNAME:GMT', 'DTSTART:19701025T020000', 'RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU', 'END:STANDARD',
+  'END:VTIMEZONE',
+]
+
+// `origin` is the address of this site (https://booking.example.com), so the event can point back to the booking.
+export function buildCalendarFile(booking, now = new Date(), origin = '') {
+  const where = [booking.address_line_1_snapshot, booking.address_line_2_snapshot, booking.city_snapshot, booking.postcode_snapshot].filter(Boolean).join(', ')
+  const manage = origin ? `${origin}/account?booking=${booking.id}` : ''
+  const lines = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//VadMassage//Booking//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    ...LONDON,
+    'BEGIN:VEVENT',
+    `UID:${booking.id}@vadmassage.com`,
+    `DTSTAMP:${now.toISOString().replace(/[-:]|\.\d{3}/g, '')}`,
+    `DTSTART;TZID=Europe/London:${clock(booking.date, booking.start_minutes)}`,
+    `DTEND;TZID=Europe/London:${clock(booking.date, booking.start_minutes + booking.treatment_duration_minutes)}`,
+    'SUMMARY:Massage with Vad',
+    ...(where ? [`LOCATION:${escapeText(where)}`] : []),
+    `DESCRIPTION:${escapeText(`Booking reference: ${booking.booking_reference}${manage ? `\nTo change or cancel: ${manage}` : ''}`)}`,
+    ...(manage ? [`URL:${manage}`] : []),
+    'END:VEVENT', 'END:VCALENDAR',
+  ]
+  return `${lines.map(fold).join('\r\n')}\r\n`
+}
+
+export const calendarHref = text => `data:text/calendar;charset=utf-8,${encodeURIComponent(text)}`

@@ -45,8 +45,8 @@ export function ClientForm({ initial, withAddress, submitLabel, onSubmit, onCanc
     {problem && (details.first_name || details.phone || details.email) && <p role="alert" className="admin-field-error">{problem}</p>}
     {error && <p role="alert" className="admin-field-error">{error}</p>}
     <div className="admin-payment-buttons">
-      {onCancel && <button type="button" disabled={busy} onClick={onCancel}>Cancel</button>}
-      <button type="submit" disabled={busy || Boolean(problem)}>{busy ? 'Saving…' : submitLabel}</button>
+      {onCancel && <button type="button" className="btn--quiet" disabled={busy} onClick={onCancel}>Cancel</button>}
+      <button type="submit" className="btn--primary" disabled={busy || Boolean(problem)}>{busy ? 'Saving…' : submitLabel}</button>
     </div>
   </form>
 }
@@ -67,8 +67,8 @@ export function AddressForm({ initial, submitLabel, onSubmit, onCancel }) {
     {problem && address.address_line_1 && <p role="alert" className="admin-field-error">{problem}</p>}
     {error && <p role="alert" className="admin-field-error">{error}</p>}
     <div className="admin-payment-buttons">
-      <button type="button" disabled={busy} onClick={onCancel}>Cancel</button>
-      <button type="submit" disabled={busy || Boolean(problem)}>{busy ? 'Saving…' : submitLabel}</button>
+      <button type="button" className="btn--quiet" disabled={busy} onClick={onCancel}>Cancel</button>
+      <button type="submit" className="btn--primary" disabled={busy || Boolean(problem)}>{busy ? 'Saving…' : submitLabel}</button>
     </div>
   </form>
 }

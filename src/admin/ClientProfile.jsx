@@ -4,6 +4,7 @@ import { AddressForm, ClientForm } from './ClientForms.jsx'
 import { clientContactLinks } from './contactLinks.js'
 import { dateLabel, label, money, time } from './calendarPresentation.js'
 import ClientRepeats from './ClientRepeats.jsx'
+import CombinePicker from './CombinePicker.jsx'
 
 const PAGE = 15
 const stamp = value => new Date(value).toLocaleDateString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', year: 'numeric' })
@@ -46,7 +47,7 @@ function Addresses({ clientId, api, changed }) {
     {error && <p role="alert">{error}</p>}
     {!list && !error && <p role="status">Loading addresses…</p>}
     {list && !list.length && editing !== 'new' && <p>No saved addresses yet.</p>}
-    {list?.length > 0 && <ul className="admin-address-list">{list.map(item => <li key={item.id}>
+    {list?.length > 0 && <ul role="list" className="admin-address-list">{list.map(item => <li key={item.id}>
       {editing === item.id
         ? <AddressForm initial={item} submitLabel="Save address" onSubmit={address => api.updateAddress(item.id, address).then(refresh)} onCancel={() => setEditing(null)} />
         : <>
@@ -54,17 +55,17 @@ function Addresses({ clientId, api, changed }) {
           <p className="admin-detail-hint">{[item.label, item.is_default ? 'Default' : null].filter(Boolean).join(' · ')}</p>
           {removing === item.id
             ? <div role="alert" className="admin-conflicts"><p>Remove this address? Past bookings keep their own copy of it.</p>
-                <div className="admin-payment-buttons"><button onClick={() => setRemoving(null)}>Keep it</button><button onClick={() => act(() => api.deleteAddress(item.id))}>Yes, remove</button></div></div>
+                <div className="admin-payment-buttons"><button onClick={() => setRemoving(null)}>Keep it</button><button className="btn--danger-solid" onClick={() => act(() => api.deleteAddress(item.id))}>Yes, remove</button></div></div>
             : <div className="admin-payment-buttons">
-                <button onClick={() => setEditing(item.id)}>Change</button>
-                {!item.is_default && <button onClick={() => act(() => api.setDefaultAddress(clientId, item.id))}>Make default</button>}
-                <button onClick={() => setRemoving(item.id)}>Remove</button>
+                <button className="btn--small" onClick={() => setEditing(item.id)}>Change</button>
+                {!item.is_default && <button className="btn--small" onClick={() => act(() => api.setDefaultAddress(clientId, item.id))}>Make default</button>}
+                <button className="btn--small btn--danger" onClick={() => setRemoving(item.id)}>Remove</button>
               </div>}
         </>}
     </li>)}</ul>}
     {editing === 'new'
       ? <AddressForm submitLabel="Add address" onSubmit={address => api.addAddress(clientId, address).then(refresh)} onCancel={() => setEditing(null)} />
-      : <button onClick={() => setEditing('new')}>+ Add address</button>}
+      : <button className="btn--tonal" onClick={() => setEditing('new')}>+ Add address</button>}
   </section>
 }
 
@@ -92,11 +93,11 @@ function Notes({ clientId, api }) {
     <p className="admin-detail-hint">Only you see these: pressure, areas to focus on, access, anything worth remembering.</p>
     <form className="admin-note-form" onSubmit={add}>
       <label className="admin-field">Add a note<textarea rows={3} maxLength={2000} value={text} disabled={busy} onChange={event => setText(event.target.value)} /></label>
-      <button type="submit" disabled={busy || !text.trim()}>{busy ? 'Saving…' : 'Save note'}</button>
+      <button type="submit" className="btn--primary" disabled={busy || !text.trim()}>{busy ? 'Saving…' : 'Save note'}</button>
     </form>
     {error && <p role="alert">{error}</p>}
     {notes && !notes.length && <p>No notes yet.</p>}
-    {notes?.length > 0 && <ul className="admin-note-list">{notes.map(note => <li key={note.id}><p>{note.note}</p><small>{stamp(note.created_at)}</small><button aria-label={`Delete the note from ${stamp(note.created_at)}`} onClick={() => remove(note.id)}>Delete</button></li>)}</ul>}
+    {notes?.length > 0 && <ul role="list" className="admin-note-list">{notes.map(note => <li key={note.id}><p>{note.note}</p><small>{stamp(note.created_at)}</small><button aria-label={`Delete the note from ${stamp(note.created_at)}`} className="btn--small btn--danger" onClick={() => remove(note.id)}>Delete</button></li>)}</ul>}
   </section>
 }
 
@@ -114,19 +115,20 @@ function History({ clientId, api, openBooking, version }) {
     {error && <p role="alert">{error}</p>}
     {!rows && !error && <p role="status">Loading bookings…</p>}
     {rows && !rows.length && <p>No bookings yet.</p>}
-    {rows?.length > 0 && <ul className="admin-client-bookings">{rows.map(row => <li key={row.id}><button onClick={() => openBooking(row.id)}>
+    {rows?.length > 0 && <ul role="list" className="admin-client-bookings">{rows.map(row => <li key={row.id}><button onClick={() => openBooking(row.id)}>
       <strong>{dateLabel(row.date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })} · {time(row.start_minutes)}</strong>
       <span>{[...(row.booking_sessions || [])].sort((a, b) => a.position - b.position).map(item => item.service_name_snapshot).join(', ') || 'Massage'} · {row.treatment_duration_minutes} min · {money(row.total_gbp)}</span>
       <span className="admin-detail-hint">{label(row.booking_status)}{row.booking_payments ? ` · ${label(row.booking_payments.status)}` : ''}{row.late_fee_status === 'due' ? ` · Late fee ${money(row.late_fee_due_gbp)} due` : ''}{Number(row.refund_due_gbp) > 0 ? ` · Refund ${money(row.refund_due_gbp)} to send` : ''}</span>
     </button></li>)}</ul>}
-    {more && <button onClick={() => setPages(value => value + 1)}>Show more</button>}
+    {more && <button className="btn--tonal" onClick={() => setPages(value => value + 1)}>Show more</button>}
   </section>
 }
 
-export default function ClientProfile({ id, back, openBooking, newBooking, api = clientsApi }) {
+export default function ClientProfile({ id, back, openBooking, newBooking, openCombine, api = clientsApi }) {
   const [client, setClient] = useState(null)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(false)
+  const [combining, setCombining] = useState(false)
   const [version, setVersion] = useState(0)
   const [busy, setBusy] = useState(false)
   useEffect(() => {
@@ -147,18 +149,24 @@ export default function ClientProfile({ id, back, openBooking, newBooking, api =
     <h1 id="client-name">{fullName(client)}</h1>
     <p>{[client.phone, client.email].filter(Boolean).join(' · ') || 'No contact details'}</p>
     <nav className="admin-contact-actions" aria-label="Quick contact">{clientContactLinks(client).map(link => <a key={link.key} href={link.href} {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>{link.label}</a>)}</nav>
-    <div className="admin-payment-buttons"><button onClick={() => newBooking(client.id)}>+ New booking</button><button onClick={() => setEditing(!editing)}>{editing ? 'Close' : 'Edit details'}</button></div>
+    <div className="admin-payment-buttons"><button className="btn--primary" onClick={() => newBooking(client.id)}>+ New booking</button><button className="btn--tonal" onClick={() => setEditing(!editing)}>{editing ? 'Close' : 'Edit details'}</button></div>
     {editing && <section aria-label="Edit details"><ClientForm initial={client} submitLabel="Save details" onCancel={() => setEditing(false)} onSubmit={async details => { await api.update(id, details); setEditing(false); changed() }} /></section>}
     {error && <p role="alert">{error}</p>}
     <Summary clientId={id} api={api} version={version} />
+    <History clientId={id} api={api} openBooking={openBooking} version={version} />
+    <Notes clientId={id} api={api} />
     <ClientRepeats clientId={id} openBooking={openBooking} />
+    <Addresses clientId={id} api={api} changed={changed} />
     <section aria-labelledby="online-title"><h2 id="online-title">Online booking</h2>
       <p>{client.online_booking_enabled ? 'This client can book online.' : 'Online booking is switched off for this client. They cannot book on the website.'}</p>
-      <button disabled={busy} onClick={toggleOnline}>{client.online_booking_enabled ? 'Switch off online booking' : 'Switch on online booking'}</button>
+      <button className="btn--small" disabled={busy} onClick={toggleOnline}>{client.online_booking_enabled ? 'Switch off online booking' : 'Switch on online booking'}</button>
       <p className="admin-detail-hint">{client.auth_user_id ? 'Has an online account.' : 'No online account yet.'} Client since {stamp(client.created_at)}.</p>
     </section>
-    <Addresses clientId={id} api={api} changed={changed} />
-    <Notes clientId={id} api={api} />
-    <History clientId={id} api={api} openBooking={openBooking} version={version} />
+    {openCombine && <section aria-labelledby="same-title"><h2 id="same-title">Same person twice?</h2>
+      <p className="admin-detail-hint">If this client also appears as another entry, for example one made when they booked as a guest, you can look at the two side by side and combine them.</p>
+      {combining
+        ? <CombinePicker clientId={id} openCombine={openCombine} close={() => setCombining(false)} api={api} />
+        : <button className="btn--tonal" onClick={() => setCombining(true)}>Combine with another client…</button>}
+    </section>}
   </section>
 }

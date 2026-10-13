@@ -13,8 +13,7 @@ async function toAuth(page) {
   await page.goto('/?test=1')
   await page.getByRole('button', { name: /Integration area/ }).click()
   await page.getByRole('button', { name: /Integration massage/ }).click()
-  await page.getByRole('button', { name: 'Add 60 minutes', exact: true }).click()
-  await page.getByRole('button', { name: 'Choose date & time' }).click()
+  await page.getByRole('button', { name: /^60 minutes/ }).click()
   await page.getByLabel('Appointment date').fill(fixture.date)
   await page.getByRole('button', { name: '10:00', exact: true }).click()
   await page.getByRole('button', { name: 'Review booking', exact: true }).click()
@@ -62,6 +61,7 @@ test('New test client rotates the anonymous identity and preserves the booking h
 
 test('test-client identity rotation is never offered to a signed-in client', async ({ page }) => {
   await toAuth(page)
+  await page.getByText('Returning client? Sign in').click()
   await page.getByLabel('Email address', { exact: true }).fill(fixture.email)
   await page.getByLabel('Password', { exact: true }).fill(fixture.password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()

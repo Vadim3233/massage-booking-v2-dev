@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase.js'
-import { today } from './calendarPresentation.js'
+import { money, today } from './calendarPresentation.js'
 
 const PENDING = ['awaiting_transfer', 'awaiting_payment_verification', 'awaiting_cash_approval']
 const CONFLICT_CODES = ['PT409', '40001']
@@ -27,11 +27,21 @@ export const lifecycleLabels = {
   refund: 'Record refund sent', feeReceived: 'Mark fee received', feeWaive: 'Waive fee',
 }
 
+// The usual answers to "what late fee?", one tap each: no fee, the standard fee when it lies between, and the full price.
+// Anything else is typed. Only a cancellation and a no-show ask for a fee.
+export function feeChoices(kind, total, standardFee) {
+  if (kind !== 'cancel' && kind !== 'noShow') return []
+  const choices = [{ value: 0, text: 'No fee' }]
+  if (kind === 'cancel' && standardFee > 0 && standardFee < total) choices.push({ value: standardFee, text: `Standard fee ${money(standardFee)}` })
+  if (total > 0) choices.push({ value: total, text: `Full price ${money(total)}` })
+  return choices
+}
+
 function failure(error) {
   const known = SAFE_MESSAGES.has(error.message)
   const conflict = CONFLICT_CODES.includes(error.code) && !known
   const result = new Error(known ? error.message
-    : conflict ? 'This booking changed before the action was completed. Refreshing its current status.'
+    : conflict ? 'This booking changed before you could finish, so it has been reloaded. Please check it and try again.'
       : 'Could not complete the action. Refresh the booking before trying again.')
   result.conflict = conflict
   return result

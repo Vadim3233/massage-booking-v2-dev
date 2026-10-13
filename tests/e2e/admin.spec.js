@@ -41,8 +41,10 @@ for (const width of [320, 360, 390, 412]) test(`real calendar and exact persiste
   await expect(page.getByRole('dialog')).toContainText('Exact persisted note')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   expect(await page.getByRole('dialog').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true)
+  // The sheet slides in; it is measured once it has settled.
+  await expect.poll(async () => (await page.getByRole('dialog').boundingBox())?.y).toBeCloseTo(0, 0)
   const dialogBox = await page.getByRole('dialog').boundingBox()
-  expect(dialogBox).toMatchObject({ x: 0, y: 0, width, height: 844 })
+  expect(dialogBox).toMatchObject({ x: 0, y: expect.closeTo(0, 0), width, height: expect.closeTo(844, 0) })
   await expect(page.getByRole('dialog')).toContainText(f.bookings[0].address_line_1_snapshot)
   await expect(page.getByRole('dialog')).toContainText(`Session ${f.bookings[0].booking_reference}`)
   await page.getByRole('dialog').evaluate(dialog => { dialog.scrollTop = 400 })
@@ -120,7 +122,8 @@ test('agenda integrates holds and blocks; compact controls scroll and account si
   await expect(page.getByText('Working day ends', { exact: true })).toHaveCount(0)
   await expect(page.getByText('Working hours 10:00–22:00', { exact: true })).toBeVisible()
   await expect(page.getByText(/Free intervals are not bookable-slot suggestions/)).toHaveCount(0)
-  expect((await page.locator('.admin-card').first().boundingBox()).height).toBeLessThan(160)
+  // A long unbroken name wraps inside the card instead of stretching it; one line more or less (a font loading) is not what is being checked.
+  expect((await page.locator('.admin-card').first().boundingBox()).height).toBeLessThan(200)
   await page.screenshot({ path: 'test-results/admin-agenda-context.png', fullPage: true })
   await page.evaluate(() => { document.activeElement.blur(); window.scrollTo(0, 200) })
   await expect(page.locator('.admin-header')).toHaveClass(/is-hidden/)
@@ -135,7 +138,9 @@ test('desktop uses the same details component as a right-side panel and Escape r
   await f.authorize(); await page.setViewportSize({ width: 1280, height: 900 }); await login(page)
   await page.getByLabel('Calendar date', { exact: true }).fill(f.date)
   await expect(page.locator('.admin-card')).toHaveCount(2)
-  expect((await page.locator('.admin-shell').boundingBox()).width).toBe(936)
+  // A wide screen has the navigation as a rail on the left and the content in a readable column.
+  expect(await page.getByRole('navigation', { name: 'Admin navigation' }).boundingBox()).toMatchObject({ x: 0, width: 92 })
+  expect((await page.locator('.admin-content').boundingBox()).width).toBeLessThanOrEqual(800)
   await page.screenshot({ path: 'test-results/admin-agenda-desktop.png', fullPage: true })
   await page.locator('.admin-card').first().click()
   const dialog = page.getByRole('dialog')
