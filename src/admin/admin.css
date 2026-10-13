@@ -400,3 +400,27 @@
 .admin-combine-confirm { margin: 16px 0; }
 @media (max-width: 359px) { .admin-combine-cards { grid-template-columns: 1fr; } }
 .admin-combine-caution { margin: 10px 0; padding: 10px 14px; border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 12px 12px 0; font-size: 15px; }
+
+/* Receipts: the receipt as the client will read it, and the buttons to send it. */
+.admin-receipt-panel { display: grid; gap: 10px; margin-top: 12px; }
+.admin-details .admin-receipt { position: relative; display: grid; gap: 2px; padding: 16px 14px 14px; border-radius: var(--radius); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-strong), var(--shadow-1); }
+.admin-details .admin-receipt header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-right: 72px; }
+.admin-details .admin-receipt h4 { margin: 0; font: 600 26px/1.1 var(--font-display); letter-spacing: 0; text-transform: none; color: var(--ink); }
+.admin-receipt p, .admin-receipt dt, .admin-receipt-business span { margin: 0; overflow-wrap: anywhere; }
+.admin-receipt-number { font-size: 13px; font-weight: 600; color: var(--muted); }
+.admin-receipt-small { font-size: 13px; color: var(--muted); }
+.admin-receipt-business { display: grid; gap: 1px; margin: 8px 0 10px !important; }
+.admin-receipt-business span { font-size: 13px; color: var(--ink-soft); }
+.admin-receipt-address { white-space: pre-line; }
+.admin-receipt-label { margin-top: 8px !important; font: 700 11px/1.2 var(--font-ui); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.admin-receipt-lines { display: grid; gap: 4px; margin: 12px 0 8px; padding-top: 8px; border-top: 1px solid var(--hairline); }
+.admin-receipt-lines div { display: flex; justify-content: space-between; gap: 12px; }
+.admin-receipt-lines dt, .admin-receipt-lines dd { margin: 0; font-size: 15px; }
+.admin-receipt-lines dd { white-space: nowrap; font-variant-numeric: lining-nums; }
+.admin-receipt-lines .is-total { margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--hairline); font-weight: 600; }
+.admin-receipt-note { margin-top: 8px !important; font-size: 14px; white-space: pre-line; }
+.admin-receipt-edit { position: absolute; top: 8px; right: 8px; min-height: 40px; }
+.admin-receipt-warning { margin: 0; padding: 10px 14px; border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 12px 12px 0; font-size: 14px; }
+.admin-receipt-form { margin-top: 8px; }
+.admin-receipt-warning p { margin: 0; }
+.admin-receipt-warning button { margin-top: 8px; }
