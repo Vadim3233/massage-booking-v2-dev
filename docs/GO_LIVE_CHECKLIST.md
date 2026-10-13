@@ -1,6 +1,6 @@
 # Going live: what is built, what is left, and what only you can do
 
-Updated 2026-10-13. This is written for the owner, in plain words. Almost nothing here has been done on the real (hosted) Supabase project or on Vercel: the one exception, the database change for "Is this the same person?", is noted under step 3. Everything below was built and tested on a local copy.
+Updated 2026-10-13. This is written for the owner, in plain words. The website is live at booking.vadmassage.com (on Vercel), and every database change so far has been applied to the online Supabase project it uses, each one with the owner's say-so. Everything below was built and tested on a local copy first. What is left before real clients is under "What only you can do", with where each item stands.
 
 ## New in the design overhaul (2026-10-12)
 
@@ -74,12 +74,14 @@ Booking, payment, cancellation and rescheduling rules did not change for clients
 
 ## What only you can do before real clients use it
 
-1. **Telegram and email alerts** (about 30 minutes). Follow `docs/NOTIFICATIONS_SETUP.md`: the old bot's token and your chat ID, a Resend account with `vadmassage.com` verified, and the settings in Vercel. Alerts in the app work without any of this.
-2. **Vercel**: create or open the project, add `booking.vadmassage.com`, and put in the settings listed in the notifications notes. Also set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for the website to reach Supabase.
-3. **The real Supabase project**: the database changes (about 40 files in `supabase/migrations`) have only been applied to a local copy. They need rehearsing on a Supabase branch first, then applying to the dev project, then to production. Ask for this as its own step; I will not do it without you saying so. The one for "Is this the same person?", `20261022100000_same_person_clients.sql`, has been applied to the online project (2026-10-13); the screens that use it show a plain error on a project that does not have it. The next one, `20261023100000_booking_receipts.sql`, is what makes receipts work and has been applied online too (2026-10-13). The newest, `20261024100000_admin_any_time.sql`, is what makes "Show all times" work and has been applied online too (2026-10-13).
-4. **Your own details**: save your real bank details in More, Bank transfer details, and your business details for receipts in More, Receipt details; check the treatments, prices and areas in More; set your usual week in Working hours.
+1. **Telegram and email alerts**: done on 2026-10-12 (`docs/NOTIFICATIONS_SETUP.md` has the steps). The sender runs every minute. On 2026-10-13 the Telegram, in-app and email alerts were being delivered; the only emails that failed went to made-up test addresses (`example.com`), which email providers refuse.
+2. **Vercel**: done. The project `massage-booking-v2-dev` serves `booking.vadmassage.com`, and the live site and its alerts work. It is on the free Hobby plan: see step 7.
+3. **The online Supabase project**: done for every database change so far (the files in `supabase/migrations`; the newest, `20261024100000_admin_any_time.sql`, is what makes "Show all times" work). Each was applied only with your say-so, one file at a time after a dry run, and a new database change waits for you in the same way. The project is called `massage-booking-v2-dev` but it is the one the live site uses. The plan is to keep it as the real one once the test data is cleared (step 8); say if you would rather have a separate project for real clients.
+4. **Your own details**: your receipt details are saved (More, Receipt details). **Your bank details are not saved yet** (More, Bank transfer details): until they are, a client who chooses bank transfer is told the details are unavailable and cannot go on; cash still works. Also check the treatments, prices and areas in More, write your own text for the "Aftercare advice" extra (More, Extras), and set your usual week in Working hours.
 5. **Your own phone**: use it on an iPhone in Safari for a week with your own bookings before opening it to clients.
 6. **Fonts and privacy**: the pages load the Playfair Display and Inter fonts from Google Fonts. That sends visitors' addresses to Google. If you would rather not, say so and the fonts can be served from the site itself instead.
+7. **The plans you are on** (checked in the providers' own documentation on 2026-10-13): both services are on their free plans, and each has a limit that matters once real clients rely on the site. Vercel's free Hobby plan is for personal, non-commercial use only, so a business website belongs on its Pro plan ($20 per month per paid user at the time of writing). Supabase's free plan keeps no automatic backups and pauses a project after about a week with too little activity (it can be resumed for 90 days after that); its Pro plan ($25 per month) adds daily backups kept for 7 days and never pauses. Billing is yours to set up; I never enter payment details. If you stay on the free plans for a while, ask me now and then for a copy of the database.
+8. **Clearing the test data**: before real clients, the test data is cleared from the online project, only with your say-so and after I have taken a copy of the database. On 2026-10-13 it held 16 clients (10 marked "(test)"; the other 6 are not marked, so you tell me which, if any, are real people), 19 bookings (14 confirmed, 5 cancelled) and 1 receipt. Clearing it also starts receipt numbering again, so your first real receipt is number 1. Your working hours, treatments, extras, areas, bank details and receipt details stay.
 
 ## Known limits (worth knowing, not blockers)
 
@@ -97,4 +99,4 @@ Booking, payment, cancellation and rescheduling rules did not change for clients
 - There is no analytics or financial reporting, and no WhatsApp assistant. These were left out on purpose. Receipts are built but simple: no PDF, no VAT, and none for a cancelled booking or a missed appointment.
 - The waitlist never contacts anyone: it shows you who to message and when a time opens up.
 - Fees and refunds are records for you; the app does not take or send money.
-- The continuous-integration checks on GitHub have not run yet. Open a pull request to start them.
+- GitHub runs the build, the database tests, the unit tests and the lint check on every pull request. The browser tests (Playwright) run on my computer only, not on GitHub.
