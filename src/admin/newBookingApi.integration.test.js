@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { newBookingFixture } from '../../tests/newBookingFixture.js'
 import { unwrap } from '../client/booking/bookingApi.js'
 import { emptyAdminDraft } from './adminBookingDraft.js'
-import { shiftDate } from './calendarPresentation.js'
+import { shiftDate, today } from './calendarPresentation.js'
 import { bookingRequest, createAdminNewBookingApi } from './newBookingApi.js'
 
 describe('Admin New Booking adapter against local Supabase', () => {
@@ -133,6 +133,48 @@ describe('Admin New Booking adapter against local Supabase', () => {
       expect((await api.times(other, 60)).client_booking).toBe(false)
       await api.create(bookingRequest({ ...draft, date: other, start: 1080, anyTime: true }), crypto.randomUUID())
     } finally { await f.admin.from('working_hours_overrides').delete().eq('date', other) }
+  })
+
+  // An appointment that has already happened, recorded after the fact: completed if it is paid, confirmed if not, and nobody is emailed or alerted.
+  it('records an appointment that has already happened: completed when paid, confirmed when not, with nothing sent to anyone', async () => {
+    const day = shiftDate(today(), -9)
+    const toldAbout = async id => (await unwrap(f.admin.from('notification_deliveries').select('id, event_outbox!inner(aggregate_id)').eq('event_outbox.aggregate_id', id))).length
+    const paid = await api.create(bookingRequest({ ...draft, date: day, start: 600, past: true, payment: 'bank_received' }), crypto.randomUUID())
+    expect(paid).toMatchObject({ booking_status: 'completed', payment_status: 'paid' })
+    const stored = await unwrap(f.admin.from('bookings').select('booking_status,date,start_minutes,source_channel,booking_payments(method,status,paid_at)').eq('id', paid.booking_id).single())
+    expect(stored).toMatchObject({ booking_status: 'completed', date: day, start_minutes: 600, source_channel: 'admin', booking_payments: { method: 'bank_transfer', status: 'paid' } })
+    expect(Boolean(stored.booking_payments.paid_at)).toBe(true)
+    expect((await unwrap(f.admin.from('event_outbox').select('event_type,payload').eq('aggregate_id', paid.booking_id).order('event_type'))).map(row => row.event_type)).toEqual(['booking.completed', 'booking.created'])
+    expect(await toldAbout(paid.booking_id)).toBe(0)
+    const unpaid = await api.create(bookingRequest({ ...draft, date: day, start: 720, past: true, payment: 'bank_pending' }), crypto.randomUUID())
+    expect(unpaid).toMatchObject({ booking_status: 'confirmed', payment_status: 'awaiting_transfer' })
+    expect(await toldAbout(unpaid.booking_id)).toBe(0)
+    // The day's list shows what was in the diary, with the times that overlap it.
+    const times = await api.pastTimes(day, 60)
+    expect(times.booked.map(item => item.start)).toEqual([600, 720])
+    expect(times.slots.find(item => item.start === 630)).toMatchObject({ clash: true, usual: false })
+    expect(times.slots.find(item => item.start === 660)).toMatchObject({ clash: false })
+    expect(times.slots.every(item => item.usual === false)).toBe(true)
+    // Never on top of another appointment, and the plain wording of each refusal.
+    await expect(api.create(bookingRequest({ ...draft, date: day, start: 630, past: true }), crypto.randomUUID())).rejects.toThrow('That time overlaps another appointment, so it cannot be recorded. Choose another time.')
+    await expect(api.create(bookingRequest({ ...draft, date: f.date, start: 900, past: true }), crypto.randomUUID())).rejects.toThrow('That time has not happened yet.')
+    await expect(api.create(bookingRequest({ ...draft, date: shiftDate(today(), -400), start: 900, past: true }), crypto.randomUUID())).rejects.toThrow('Choose a date within the last 365 days')
+    // Without saying "past", a day that has gone is refused exactly as before.
+    await expect(api.create(bookingRequest({ ...draft, date: day, start: 900 }), crypto.randomUUID())).rejects.toThrow('Choose a date within the next 365 days')
+    // Not paid yet, to be paid in cash, is recorded as confirmed with the cash waiting, so that when it comes it is recorded as cash.
+    const cash = await api.create(bookingRequest({ ...draft, date: day, start: 900, past: true, payment: 'cash_appointment' }), crypto.randomUUID())
+    expect(cash).toMatchObject({ booking_status: 'confirmed', payment_status: 'approved' })
+    expect(await unwrap(f.admin.from('booking_payments').select('method,status').eq('booking_id', cash.booking_id).single())).toMatchObject({ method: 'cash', status: 'approved' })
+    expect(await toldAbout(cash.booking_id)).toBe(0)
+    // A repeat is never started in the past; a visitor cannot ask for the list.
+    await expect(api.createSeries(bookingRequest({ ...draft, date: day, start: 900, past: true }), null, crypto.randomUUID())).rejects.toThrow('A repeat cannot start with an appointment that has already happened')
+    await expect(createAdminNewBookingApi(f.publicClient).pastTimes(day, 60)).rejects.toBeDefined()
+    // The same request twice is one appointment.
+    const request = bookingRequest({ ...draft, date: day, start: 1080, past: true, payment: 'cash_received' })
+    const key = crypto.randomUUID()
+    const twice = await Promise.all([api.create(request, key), api.create(request, key)])
+    expect(twice[0]).toEqual(twice[1])
+    expect(await unwrap(f.admin.from('bookings').select('id').eq('client_id', f.recipient.id).eq('date', day).eq('start_minutes', 1080))).toHaveLength(1)
   })
 
   it('makes one booking when the same unusual request arrives twice, and refuses a second request for the same time as a double booking', async () => {

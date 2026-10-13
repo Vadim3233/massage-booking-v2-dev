@@ -23,6 +23,8 @@ export function bookingRequest(draft) {
     note: draft.note.trim() || null,
     // A time chosen from "Show all times" that is not one of the usual ones: the database then sets the usual rules aside, but never allows a double booking.
     ...(draft.anyTime ? { any_time: true } : {}),
+    // An appointment that has already happened, recorded on purpose: the database then records it as completed if it is paid, and tells no one.
+    ...(draft.past ? { past: true } : {}),
   }
 }
 
@@ -39,6 +41,8 @@ export function createAdminNewBookingApi(client) {
     availability: (date, duration) => unwrap(client.rpc('admin_booking_availability', { p_date: date, p_treatment_duration_minutes: duration })),
     // Every half hour of the day, what is booked, her working hours, and which times are usual or overlap another appointment.
     times: (date, duration) => unwrap(client.rpc('admin_booking_times', { p_date: date, p_treatment_duration_minutes: duration })),
+    // The same for a day that has gone: every half hour that has begun, and what was in the diary.
+    pastTimes: (date, duration) => unwrap(client.rpc('admin_past_booking_times', { p_date: date, p_treatment_duration_minutes: duration })),
     create: (request, requestId) => one(client.rpc('admin_create_booking', { p_request: request, p_request_id: requestId })),
     createSeries: (request, endDate, requestId) => one(client.rpc('admin_create_series', { p_request: request, p_end_date: endDate || null, p_request_id: requestId })),
   }

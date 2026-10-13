@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { adminNewBookingApi as api, bookingRequest } from './newBookingApi.js'
 import { useAdminBookingDraft } from './useAdminBookingDraft.js'
 import ClientStep from './newBooking/ClientStep.jsx'
-import { defaultsFromLast, emptyAddress } from './newBooking/presentation.js'
+import { clientLabel, defaultsFromLast, emptyAddress, isPaidArrangement, pastQuestion } from './newBooking/presentation.js'
 import TreatmentStep from './newBooking/TreatmentStep.jsx'
 import { DateTimeStep, PaymentStep, Summary } from './newBooking/BookingSteps.jsx'
 import { money } from './calendarPresentation.js'
@@ -72,11 +72,12 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
     return () => { live = false }
   }, [quoteKey, draft.areaId, draft.serviceId, duration, attempt])
   useEffect(() => {
-    if (!draft.date || !duration) return
+    // The usual times mean nothing for a day that has gone: an appointment that has already happened is checked by the database when it is recorded.
+    if (!draft.date || !duration || draft.past) return
     let live = true
     api.availability(draft.date, duration).then(slots => { if (live) setAvailabilityState({ key: availabilityKey, slots, error: '' }) }, failure => { if (live) setAvailabilityState({ key: availabilityKey, slots: [], error: message(failure) }) })
     return () => { live = false }
-  }, [availabilityKey, draft.date, duration])
+  }, [availabilityKey, draft.date, draft.past, duration])
   // When a client is chosen, fill the treatment, length, area and payment from their last booking.
   const clientId = draft.client?.id
   useEffect(() => {
@@ -146,8 +147,8 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
   function validation() {
     if (!draft.client || !draft.areaId || !draft.details.address_line_1?.trim() || !draft.details.city?.trim() || !draft.details.postcode?.trim()) return 'Choose a client, appointment address and service area.'
     if (!draft.serviceId || !draft.sessions.length || draft.sessions.length > 4 || duration > 240 || draft.sessions.some(session => !catalogue.prices.some(price => price.service_id === draft.serviceId && price.duration_minutes === session.duration_minutes))) return 'Choose a treatment and an available duration.'
-    // A time chosen from "Show all times" is checked by the database when the booking is made: it refuses a double booking.
-    if (!draft.date || draft.start === null || (!draft.anyTime && (!availability || availability.error || !availability.slots.some(slot => slot.start_minutes === draft.start)))) return 'Choose an available appointment time.'
+    // A time chosen from "Show all times", or for an appointment that has already happened, is checked by the database when the booking is made: it refuses a double booking.
+    if (!draft.date || draft.start === null || (!draft.anyTime && !draft.past && (!availability || availability.error || !availability.slots.some(slot => slot.start_minutes === draft.start)))) return draft.past ? 'Choose the day and time it happened.' : 'Choose an available appointment time.'
     return ''
   }
   async function create() {
@@ -156,9 +157,13 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
       const issue = validation()
       if (issue) { setError(issue); return }
       if (!quote) { setError('Wait for the current price, or retry loading it.'); return }
+      // A paid appointment that has already happened is completed for good (it cannot be cancelled or changed from here afterwards), so she is
+      // asked once more, with the client, the day and the year in front of her. (Not again when a booking is being retried after a dropped connection.)
+      if (draft.past && isPaidArrangement(draft.payment)
+        && !window.confirm(pastQuestion({ who: clientLabel(draft.client), date: draft.date, start: draft.start, minutes: duration, total: money(quote.total_gbp), payment: draft.payment }))) return
     }
     busyRef.current = true; setBusy(true); setError('')
-    const submission = draft.submission || { id: crypto.randomUUID(), payload: bookingRequest(draft), repeat: draft.repeat?.on && !draft.anyTime ? { endDate: draft.repeat.endDate || null } : null }
+    const submission = draft.submission || { id: crypto.randomUUID(), payload: bookingRequest(draft), repeat: draft.repeat?.on && !draft.anyTime && !draft.past ? { endDate: draft.repeat.endDate || null } : null }
     patch({ submission })
     try {
       const result = submission.repeat ? await api.createSeries(submission.payload, submission.repeat.endDate, submission.id) : await api.create(submission.payload, submission.id)
@@ -168,8 +173,9 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
       const definitive = /^[0-9A-Z]{5}$/.test(failure.code || '') && !['57014', '08000', '08006'].includes(failure.code)
       if (definitive) {
         patch({ submission: null })
-        if (/slot|available|occupied|past|hold|schedule|blocked/i.test(message(failure))) { patch({ start: null, submission: null }); setAvailabilityAttempt(value => value + 1) }
-        setError(message(failure))
+        if (/slot|available|occupied|past|hold|schedule|blocked|overlaps/i.test(message(failure))) { patch({ start: null, submission: null }); setAvailabilityAttempt(value => value + 1) }
+        // The database refuses a "past" request it does not know about only until its update is made: say that in words, not as a field name.
+        setError(draft.past && /Unsupported booking fields/.test(failure.message || '') ? 'Recording an appointment that has already happened is not ready yet.' : message(failure))
       } else setError('The connection dropped, so it is not clear whether this booking was saved. Press Retry creation to check: it will not book twice. Nothing you entered is lost.')
     } finally { busyRef.current = false; setBusy(false) }
   }
@@ -187,7 +193,7 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
       <section className="anb-block" aria-labelledby="anb-treatment-title"><h2 id="anb-treatment-title">Treatment</h2>
         <TreatmentStep draft={draft} patch={edit} catalogue={data} /></section>
       <section className="anb-block" aria-labelledby="anb-time-title"><h2 id="anb-time-title">Date and time</h2>
-        <DateTimeStep draft={draft} patch={edit} duration={duration} loadDay={loadDay} loadTimes={api.times} reloadKey={availabilityAttempt} /></section>
+        <DateTimeStep draft={draft} patch={edit} duration={duration} loadDay={loadDay} loadTimes={api.times} loadPastTimes={api.pastTimes} reloadKey={availabilityAttempt} /></section>
       <section className="anb-block" aria-labelledby="anb-payment-title"><h2 id="anb-payment-title">Payment, note and repeat</h2>
         <PaymentStep draft={draft} patch={edit} /></section>
     </fieldset>
@@ -195,6 +201,6 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
     {!quote && !quoteError && draft.serviceId && draft.areaId && <p role="status">Updating price…</p>}
     {quoteError && <><p role="alert">{quoteError}</p><button type="button" disabled={locked} onClick={() => setAttempt(value => value + 1)}>Retry price</button></>}
     <footer className="anb-footer"><span className="anb-footer-total">{quote ? <><span>Total</span> <b className="figure">{money(quote.total_gbp)}</b></> : 'Total to come'}</span>
-      <button type="button" className="btn--primary btn--lg" disabled={busy || clientBusy} onClick={create}>{busy ? 'Creating booking…' : draft.submission ? 'Retry creation' : 'Create booking'}</button></footer></>}
+      <button type="button" className="btn--primary btn--lg" disabled={busy || clientBusy} onClick={create}>{busy ? (draft.past ? 'Recording…' : 'Creating booking…') : draft.submission ? 'Retry creation' : draft.past ? 'Record booking' : 'Create booking'}</button></footer></>}
   </section>
 }

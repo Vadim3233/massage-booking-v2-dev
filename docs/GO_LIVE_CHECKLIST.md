@@ -205,6 +205,17 @@ The booking pages, a client's account pages and the whole Admin share one new lo
 - **Not changed, because it is set outside this site:** the sign-up and password emails that Supabase sends keep their own templates.
 - **To try it:** after this goes live, make a test booking with your own email address and look at the email that arrives (and open it on your phone). A client's Gmail, Outlook and Apple Mail may differ a little in small details such as rounded corners.
 
+## New: record an appointment that already happened (2026-10-13)
+
+Booking, payment, cancellation and rescheduling rules did not change for clients. It needs one database change, `20261027100000_admin_past_bookings.sql`, which has **not** been applied to the online Supabase project yet (I only do that with your say-so, after a dry run, and I will note it here once it is done). Until it is, the box below can be ticked but recording says it is "not ready yet" and nothing is saved.
+
+- **Where.** New booking, Date and time: tick **It has already happened**. Choose the **day it happened** (any day in the last year, up to today) and the time. If you press **+ New booking** while looking at a day that has gone, it starts like this for that day.
+- **Payment.** **Paid by bank transfer** or **Paid in cash**: it is recorded as **completed** straight away, so it counts as a visit and in what the client has paid, and you can make them a receipt. A completed appointment cannot be cancelled or changed from the app, so you are asked once more first; the question shows the client, the day (with the year), the time and the amount, so please read it. **Not paid yet — bank transfer** or **Not paid yet — cash**: it stays **confirmed**, with no question, and you receive the payment and complete it later like any appointment that has started.
+- **Nobody is told.** The client gets no email and you get no alert, whichever way it is paid, and not later either while it is still a day that has gone (cancelling it again, or a payment recorded afterwards). If you move it to a time still to come, the client is told, as for any appointment.
+- **What is checked.** Only that it does not overlap another appointment (a time that does is greyed and says what it clashes with). Your working hours, the usual gap and blocked time do not apply to something that has already happened. If a client is part-way through booking that same day, it asks you to try again in a few minutes.
+- **Not for these:** a repeating booking. Without the box ticked, a day or time that has gone is refused exactly as before.
+- **Two things to know.** A receipt shows the day you record the payment as the payment date, so a receipt for last week's appointment shows today (say if you would rather it showed the day of the appointment). And an appointment recorded for earlier today counts, like any earlier appointment that day, when the app works out the times clients are offered after it.
+
 ## What works now (tested locally)
 
 **For clients** (the website)
