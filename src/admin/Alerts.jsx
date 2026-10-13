@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { alertsApi, bookingIdFromLink, groupAlerts, groupByDay } from './alertsApi.js'
+import { adminPageFromLink, alertsApi, bookingIdFromLink, groupAlerts, groupByDay } from './alertsApi.js'
 import { useQuietRetry, useReturnRefresh } from './useReturnRefresh.js'
 
 // The day is in the heading above the card, so a card only needs the time.
@@ -36,8 +36,9 @@ export default function Alerts({ openBooking, openPage, changed, api = alertsApi
     const alert = group.head
     const id = bookingIdFromLink(alert.link_path)
     if (group.unreadIds.length) { try { await api.markRead(group.unreadIds); changed() } catch { /* Opening the booking still works. */ } }
+    const page = adminPageFromLink(alert.link_path)
     if (id) openBooking(id)
-    else if (/^\/admin\/[a-z/-]+$/.test(alert.link_path || '')) openPage?.(alert.link_path)
+    else if (page) openPage?.(page)
   }
   const unread = (alerts || []).filter(alert => !alert.read_at).length
   return <section className="admin-review" aria-labelledby="alerts-title">

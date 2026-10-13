@@ -20,6 +20,7 @@ const ShareLink = lazy(() => import('./ShareLink.jsx'))
 const Waitlist = lazy(() => import('./Waitlist.jsx'))
 const ExtrasSettings = lazy(() => import('./SettingsCatalogue.jsx').then(module => ({ default: module.ExtrasSettings })))
 const ClientProfile = lazy(() => import('./ClientProfile.jsx'))
+const CombineClients = lazy(() => import('./CombineClients.jsx'))
 const BookingDestination = lazy(() => import('./BookingDestination.jsx'))
 const AdminNewBooking = lazy(() => import('./AdminNewBooking.jsx'))
 
@@ -85,8 +86,12 @@ export default function AdminWorkspace({ signOut, ownerId }) {
   const surface = rawSurface === '/admin/day' ? '/admin' : rawSurface === '/admin' && !date ? '/admin/agenda' : rawSurface
   const clientParam = new URLSearchParams(context?.split('?')[1]).get('client') || undefined
   const profile = context?.split('?')[0].match(/^\/admin\/clients\/([0-9a-f-]{36})$/i)
+  // Two profiles to look at side by side: /admin/clients/combine?a=<id>&b=<id>
+  const pairParams = new URLSearchParams(context?.split('?')[1])
+  const [pairA, pairB] = [pairParams.get('a') || '', pairParams.get('b') || '']
+  const combining = surface === '/admin/clients/combine' && /^[0-9a-f-]{36}$/i.test(pairA) && /^[0-9a-f-]{36}$/i.test(pairB) && pairA.toLowerCase() !== pairB.toLowerCase()
   const calendarSurface = ['/admin', '/admin/agenda'].includes(surface)
-  const clientsSurface = surface === '/admin/clients' || Boolean(profile)
+  const clientsSurface = surface === '/admin/clients' || Boolean(profile) || combining
   function close() {
     if (route.background) window.history.back()
     else { window.history.replaceState({}, '', '/admin'); setRoute(readRoute()) }
@@ -111,7 +116,8 @@ export default function AdminWorkspace({ signOut, ownerId }) {
     window.scrollTo(0, 0)
   }
   const moreSurface = ['/admin/more', ...SETTINGS_PAGES].includes(surface)
-  const screen = creating ? 'New booking' : match ? 'Booking' : profile ? 'Client' : ({ '/admin': 'Day', '/admin/agenda': 'Agenda', '/admin/review': 'To check', '/admin/alerts': 'Alerts', '/admin/clients': 'Clients', '/admin/more': 'More', '/admin/waitlist': 'Waitlist', '/admin/schedule': 'Working hours' }[surface] || (SETTINGS_PAGES.includes(surface) ? SETTINGS_TITLES[surface] : 'Admin'))
+  const openCombine = (a, b) => navigate(`/admin/clients/combine?a=${a}&b=${b}`)
+  const screen = creating ? 'New booking' : match ? 'Booking' : profile ? 'Client' : combining ? 'Same person?' : ({ '/admin': 'Day', '/admin/agenda': 'Agenda', '/admin/review': 'To check', '/admin/alerts': 'Alerts', '/admin/clients': 'Clients', '/admin/more': 'More', '/admin/waitlist': 'Waitlist', '/admin/schedule': 'Working hours' }[surface] || (SETTINGS_PAGES.includes(surface) ? SETTINGS_TITLES[surface] : 'Admin'))
   const previousScreen = useRef(null)
   useEffect(() => {
     document.title = `${screen} \u00b7 Admin \u00b7 VadMassage`
@@ -145,8 +151,9 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {surface === '/admin/agenda' && <Agenda openBooking={openBooking} revision={revision} toCheck={toCheck} checked={() => { setRevision(value => value + 1); refreshToCheck() }} seeAll={() => navigate('/admin/review')} />}
       {creating && <AdminNewBooking initialDate={date} initialClientId={clientParam} ownerId={ownerId} registerGuard={registerGuard} onCancel={() => navigate(route.returnTo || '/admin')} onCreated={created} />}
       {surface === '/admin/review' && <PaymentReview openBooking={openBooking} revision={revision} changed={refreshToCheck} />}
-      {surface === '/admin/clients' && <Clients openClient={id => navigate(`/admin/clients/${id}`)} />}
-      {profile && <ClientProfile key={profile[1]} id={profile[1]} back={() => navigate('/admin/clients')} openBooking={openBooking} newBooking={clientId => newBooking(today(), clientId)} />}
+      {surface === '/admin/clients' && <Clients openClient={id => navigate(`/admin/clients/${id}`)} openCombine={openCombine} />}
+      {profile && <ClientProfile key={profile[1]} id={profile[1]} back={() => navigate('/admin/clients')} openBooking={openBooking} newBooking={clientId => newBooking(today(), clientId)} openCombine={openCombine} />}
+      {combining && <CombineClients key={`${pairA}:${pairB}`} a={pairA} b={pairB} back={() => navigate('/admin/clients')} openClient={id => navigate(`/admin/clients/${id}`)} resolved={refreshAlerts} />}
       {surface === '/admin/alerts' && <Alerts openBooking={openBooking} openPage={path => navigate(path)} changed={refreshAlerts} />}
       {surface === '/admin/more' && <section className="admin-review"><h1>More</h1>
         {MORE_GROUPS.map(([title, links]) => <section key={title} aria-label={title}><h2 className="admin-group-title">{title}</h2>
@@ -162,7 +169,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {surface === '/admin/settings/welcome' && <WelcomeSettings />}
       {surface === '/admin/settings/link' && <ShareLink />}
       {surface === '/admin/waitlist' && <Waitlist bookFor={request => newBooking(request.requested_date, request.client_id)} />}
-      {!creating && !match && !['/admin', '/admin/agenda', '/admin/review', '/admin/alerts', '/admin/more', '/admin/clients', ...SETTINGS_PAGES].includes(surface) && !profile && <section className="admin-review"><h1>Admin page not found</h1><a href="/admin">Back to Calendar</a></section>}
+      {!creating && !match && !['/admin', '/admin/agenda', '/admin/review', '/admin/alerts', '/admin/more', '/admin/clients', ...SETTINGS_PAGES].includes(surface) && !profile && !combining && <section className="admin-review"><h1>Admin page not found</h1><a href="/admin">Back to Calendar</a></section>}
       </main>
       {match && <BookingDestination key={match[1]} id={match[1]} close={close} returnFocus={opener} changed={() => setRevision(value => value + 1)} />}
     </Suspense>

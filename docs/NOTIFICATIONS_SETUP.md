@@ -11,7 +11,7 @@ Updated 2026-10-11. Nothing here has been connected to a real Telegram bot, emai
 3. Clients get a plain email when their booking is confirmed, cancelled, moved, or refunded (only if they gave an email address).
 4. The sender (`api/dispatch-notifications.js`) delivers the queued Telegram and email messages. A failed message is tried again after 2, 8, 18 and 32 minutes, then it is left marked failed so you can see it.
 
-You are alerted about: a new online booking, "I've paid", a cash request, and a client cancelling or moving. You are **not** alerted about things you did yourself.
+You are alerted about: a new online booking, "I've paid", a cash request, and a client cancelling or moving. You are **not** alerted about things you did yourself. One more alert is in the app only, with no Telegram message or email because nothing about it is urgent: "Is this the same person?", when two client profiles share an email or a phone number and one of them has a booking (see ADR-033).
 
 ## What you need to do
 

@@ -6,6 +6,9 @@ const SAFE_MESSAGES = new Set([
   'An existing client uses this email or phone. Select that client instead.',
   'Name and a valid email or phone are required',
   'Address, city and postcode are required',
+  'Two clients who each have their own login cannot be combined.',
+  'The client with the login is the one that stays.',
+  'One of these clients is no longer there. They may already have been combined.',
 ])
 const GENERIC = 'Could not complete that. Please check your connection and try again.'
 const failure = error => new Error(SAFE_MESSAGES.has(error?.message) ? error.message : GENERIC)
@@ -49,6 +52,11 @@ export function createClientsApi(client) {
     updateAddress: (id, address) => run(client.from('client_addresses').update(addressRow(address)).eq('id', id)),
     deleteAddress: id => run(client.from('client_addresses').delete().eq('id', id)),
     setDefaultAddress: (clientId, addressId) => run(client.rpc('admin_set_default_address', { p_client_id: clientId, p_address_id: addressId })),
+    // Two profiles that might be one person: the pairs the app has noticed, a side-by-side look at two, and the Admin's answer.
+    possibleDuplicates: () => run(client.rpc('admin_possible_duplicates')),
+    combinePreview: (a, b) => run(client.rpc('admin_combine_preview', { p_client_a: a, p_client_b: b })),
+    keepSeparate: (a, b) => run(client.rpc('admin_keep_clients_separate', { p_client_a: a, p_client_b: b })),
+    combine: (keepId, removeId, requestId) => run(client.rpc('admin_merge_clients', { p_keep_client_id: keepId, p_remove_client_id: removeId, p_request_id: requestId })),
     notes: id => run(client.from('client_notes').select('id,note,created_at').eq('client_id', id).order('created_at', { ascending: false }).limit(100)),
     async addNote(id, note) {
       const { data: user } = await client.auth.getUser()

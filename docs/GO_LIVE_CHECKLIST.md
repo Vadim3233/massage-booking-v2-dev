@@ -18,6 +18,17 @@ Both sides were redesigned as one product; the rules (availability, travel buffe
 - **Your booking link** (More): the address of the booking page to copy or send on WhatsApp, and a link that starts part-way through for one area, treatment and length (for example `/?area=chelsea&treatment=massage&minutes=60`).
 - **Home screen**: on an iPhone, open the booking page or the Admin in Safari, press Share, then Add to Home Screen. The Admin gets its own name ("Vad Admin") and icon and opens full screen.
 
+## New: "Is this the same person?" (2026-10-13)
+
+Booking, payment and cancellation rules did not change. This one needs a database change on the real Supabase project before it works there (step 3 below).
+
+- **A guest who registers later is no longer turned away.** Before, someone who had booked as a guest and then registered with the same email saw "This email is already linked to another client account" and could not carry on. Now they register normally and get a profile of their own.
+- **The app asks you before it combines anything.** When two profiles share an email or a phone number (07700 900123 and +44 7700 900123 count as the same number), the pair is listed under "Might be the same person" at the top of Clients. When there is something to combine (a booking on either profile) you also get one alert, "Is this the same person?". Two profiles that each have their own login are never offered: they are two real accounts.
+- **You decide, side by side.** The alert opens the two profiles next to each other: what each holds (bookings, notes, addresses) and how each is signed in. Choose "Yes, combine them" (it asks once more, because there is no undo), "No, different people" (the app remembers and never asks about that pair again) or "Decide later". If the first names differ, or only a phone number matches (a phone number typed when booking is never checked), the screen says so and "Yes" is no louder than "No".
+- **What combining does.** The profile with the login stays (with no login on either, you choose; the app suggests the one you added yourself). Its bookings keep their status, payment and fees exactly as they were; the other profile's bookings, weekly repeats, notes, addresses (one the client already had is not copied twice, and entry instructions are never lost) and waitlist requests move across, and any missing email, phone number or last name is filled in. A note on the profile says what was combined, and the old profile is saved whole in the database so a mistake can be put right by hand. A guest whose profile is combined will then see and change those bookings only by signing in.
+- **For pairs the app cannot spot** (a different email and phone), open the client and press "Combine with another client…" at the bottom of their page.
+- **A client who shares an email or phone with someone else can still be corrected** (a family on one phone, for example); only a new email or phone that another client already uses is refused.
+
 ## What works now (tested locally)
 
 **For clients** (the website)
@@ -44,14 +55,14 @@ Both sides were redesigned as one product; the rules (availability, travel buffe
 
 1. **Telegram and email alerts** (about 30 minutes). Follow `docs/NOTIFICATIONS_SETUP.md`: the old bot's token and your chat ID, a Resend account with `vadmassage.com` verified, and the settings in Vercel. Alerts in the app work without any of this.
 2. **Vercel**: create or open the project, add `booking.vadmassage.com`, and put in the settings listed in the notifications notes. Also set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for the website to reach Supabase.
-3. **The real Supabase project**: the database changes (about 40 files in `supabase/migrations`) have only been applied to a local copy. They need rehearsing on a Supabase branch first, then applying to the dev project, then to production. Ask for this as its own step; I will not do it without you saying so.
+3. **The real Supabase project**: the database changes (about 40 files in `supabase/migrations`) have only been applied to a local copy. They need rehearsing on a Supabase branch first, then applying to the dev project, then to production. Ask for this as its own step; I will not do it without you saying so. The newest one, `20261022100000_same_person_clients.sql`, is what makes "Is this the same person?" work: apply it before (or together with) merging the change that adds the screens, or the Clients note stays hidden and the combine screen shows a plain error.
 4. **Your own details**: save your real bank details in More, Bank transfer details; check the treatments, prices and areas in More; set your usual week in Working hours.
 5. **Your own phone**: use it on an iPhone in Safari for a week with your own bookings before opening it to clients.
 6. **Fonts and privacy**: the pages load the Playfair Display and Inter fonts from Google Fonts. That sends visitors' addresses to Google. If you would rather not, say so and the fonts can be served from the site itself instead.
 
 ## Known limits (worth knowing, not blockers)
 
-- A guest who books twice as a guest appears twice under Clients. This is on purpose: an email typed by a guest cannot be trusted, so it is never used to link them to an existing client. If it becomes annoying, a "merge clients" button can be added.
+- A guest who books twice as a guest, or a guest who registers later, appears as two profiles under Clients. This is on purpose: an email typed by a guest cannot be trusted, so it is never used to link them to an existing client by itself. The app asks you instead (see "Is this the same person?" above). A guest who comes back on a new phone or browser makes a new guest profile each time, so each one is a question to answer.
 - Text left over from setting up still shows to clients until you write your own: the extra "Aftercare advice" says "Describe this enhancement." (More, Extras). Check the treatments, extras and areas once as a client would see them.
 - The "New test client" helper (it fills in made-up details) exists only in development builds: the live booking page and its preview links never show it, whatever is added to the address.
 - A client's page shows "Upcoming" and "Next appointment" for an appointment earlier today until the day is over.

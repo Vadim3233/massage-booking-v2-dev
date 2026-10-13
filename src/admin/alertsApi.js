@@ -18,6 +18,10 @@ export const alertsApi = createAlertsApi(supabase)
 // The booking an alert points at, from its link. Alerts only ever link to pages inside this app.
 export const bookingIdFromLink = link => (/^\/admin\/bookings\/([0-9a-f-]{36})$/i.exec(link || '') || [])[1] || null
 
+// A page inside the Admin an alert points at (a client, the waitlist, two profiles to compare), with its query if it has one.
+// Alerts only ever link to pages inside this app; anything else is ignored.
+export const adminPageFromLink = link => (/^\/admin\/[a-z0-9/-]+(\?[a-z0-9=&-]+)?$/i.test(link || '') ? link : null)
+
 // A booking often raises two alerts at once (a new request, then "the transfer is made"). They read better as one card:
 // the newest on top, the others named beneath it. Alerts that point anywhere else stay on their own.
 export function groupAlerts(alerts) {
