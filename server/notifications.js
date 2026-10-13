@@ -1,13 +1,18 @@
 // Delivers queued Telegram and email notifications. The database writes every message; this only sends
 // them and records the outcome. Secrets come from the environment and never appear in results or errors.
+import { CALL_LIMIT_MS } from './telegramWebhook.js'
 
 const TELEGRAM_LIMIT = 4000
 
 export function readConfig(env) {
   const base = String(env.APP_BASE_URL || '').trim().replace(/\/+$/, '')
+  // The clients-only bot has a token of its own, pasted into a settings page (so it is trimmed); the Admin's bot is never accepted in its place.
+  const clientToken = String(env.TELEGRAM_CLIENT_BOT_TOKEN || '').trim()
   return {
     appBaseUrl: base,
     telegram: { token: env.TELEGRAM_BOT_TOKEN || '', chatId: env.ADMIN_TELEGRAM_CHAT_ID || '' },
+    // The clients-only bot: its own token, and a chat for each client who linked one (never the Admin's chat above).
+    telegramClient: { token: clientToken && clientToken !== String(env.TELEGRAM_BOT_TOKEN || '').trim() ? clientToken : '' },
     email: { apiKey: env.RESEND_API_KEY || '', from: env.EMAIL_FROM || '', adminTo: env.ADMIN_ALERT_EMAIL || '', replyTo: env.EMAIL_REPLY_TO || '' },
   }
 }
@@ -15,6 +20,7 @@ export function readConfig(env) {
 export function enabledChannels(config) {
   const channels = []
   if (config.telegram.token && config.telegram.chatId) channels.push('telegram')
+  if (config.telegramClient.token) channels.push('telegram_client')
   if (config.email.apiKey && config.email.from) channels.push('email')
   return channels
 }
@@ -39,6 +45,8 @@ function scrub(message, secrets) {
 }
 
 async function sendTelegram(row, message, config, fetchImpl) {
+  // This is the Admin's chat: a message for a client never goes here (client messages have their own channel and bot).
+  if (row.audience !== 'admin') throw new Error('Telegram: this message is not for the Admin')
   const text = `${message.title}\n\n${message.body}`.slice(0, TELEGRAM_LIMIT)
   const payload = { chat_id: config.telegram.chatId, text, disable_web_page_preview: true }
   // Telegram only accepts public https links on buttons.
@@ -48,6 +56,27 @@ async function sendTelegram(row, message, config, fetchImpl) {
   })
   const result = await response.json().catch(() => ({}))
   if (!response.ok || !result.ok) throw new Error(`Telegram: ${result.description || `HTTP ${response.status}`}`)
+}
+
+// A message to a client's own chat, with the clients-only bot. The recipient is the chat the client linked. A chat that has blocked the bot
+// (or no longer exists) is not tried again: its link is ended, so nothing more is queued for it, and the failure is recorded as usual.
+async function sendTelegramClient(row, message, config, fetchImpl, client) {
+  if (row.audience !== 'client') throw new Error('Telegram: this message is not for a client')
+  const chat = Number(row.recipient)
+  if (!Number.isSafeInteger(chat)) throw new Error('Telegram: no chat to send to')
+  const text = `${message.title}\n\n${message.body}`.slice(0, TELEGRAM_LIMIT)
+  // Cut off if Telegram does not answer, so one waiting call cannot hold up every message after it.
+  const response = await fetchImpl(`https://api.telegram.org/bot${config.telegramClient.token}/sendMessage`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ chat_id: chat, text, disable_web_page_preview: true }),
+    signal: AbortSignal.timeout(CALL_LIMIT_MS),
+  })
+  const result = await response.json().catch(() => ({}))
+  if (!response.ok || !result.ok) {
+    if (result.error_code === 403 || (result.error_code === 400 && /chat not found/i.test(result.description || ''))) {
+      await client.rpc('stop_client_telegram', { p_chat_id: chat }).then(() => {}, () => {})
+    }
+    throw new Error(`Telegram: ${result.description || `HTTP ${response.status}`}`)
+  }
 }
 
 async function sendEmail(row, message, config, fetchImpl) {
@@ -65,7 +94,7 @@ async function sendEmail(row, message, config, fetchImpl) {
 }
 
 export function createDispatcher({ client, config, fetchImpl = fetch }) {
-  const secrets = [config.telegram.token, config.email.apiKey]
+  const secrets = [config.telegram.token, config.telegramClient.token, config.email.apiKey]
   return {
     async dispatch({ limit = 10 } = {}) {
       const channels = enabledChannels(config)
@@ -78,6 +107,7 @@ export function createDispatcher({ client, config, fetchImpl = fetch }) {
         try {
           const message = composeMessage(row, config)
           if (row.channel === 'telegram') await sendTelegram(row, message, config, fetchImpl)
+          else if (row.channel === 'telegram_client') await sendTelegramClient(row, message, config, fetchImpl, client)
           else if (row.channel === 'email') await sendEmail(row, message, config, fetchImpl)
           else throw new Error('Unsupported channel')
         } catch (caught) { failure = scrub(caught?.message, secrets) }

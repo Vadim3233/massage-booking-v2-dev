@@ -50,6 +50,15 @@ Booking, payment, cancellation and rescheduling rules did not change for clients
 - **Clients see nothing different.** They are still offered only the usual times. After you book an unusual time, the rest of that day usually has no times left for clients, because the first and last appointments of a day set what is offered.
 - **Repeating bookings** are only offered at usual times: choosing an unusual time turns the repeat off for that booking. If a repeating client's time is kept free on that day, the screen warns that an unusual booking may stop that week's repeat. **Moving** an existing appointment still offers the usual times only; say if you want the same there.
 
+## New: Telegram updates for clients (2026-10-13)
+
+Booking, payment, cancellation and rescheduling rules did not change for clients. It needs one database change, `20261028100000_client_telegram.sql`, which has **not** been applied to the online Supabase project yet (I only do that with your say-so, after a dry run, and I will note it here once it is done), and a second Telegram bot that only you can make. Until both are done the box below is simply not shown, and nothing else changes.
+
+- **What clients see.** A box at the top of their confirmation page, and at the top of an open booking on their "Your appointment" page: **Get updates on Telegram**, with one button, **Open Telegram**. They press it, press **Start** in Telegram, and from then on every email about that booking is also sent to their Telegram chat in the same words (confirmed, payment received, moved, cancelled, refund sent). The bot greets them by first name; **/stop** in the chat turns it off. A guest without an account can do it too.
+- **Your own alerts do not change.** They still go to your Telegram chat from your own bot. This is a second bot, only for clients, and the two can never be mixed up.
+- **What you have to do** (about 20 minutes; the steps are in `docs/NOTIFICATIONS_SETUP.md`, step 6): make the bot in Telegram's BotFather and tell me only its username (never the token); put three settings into Vercel (the bot's token, a long secret you make up, and last the bot's username) and redeploy after changing them; open one web address once, in a private window. Then make a test booking and press the button to check.
+- **Things to know.** There are no reminders in Telegram yet, no receipts, and your screens do not show which clients have linked a chat. A message says what the email says, address included. If a client types a question, the bot points them to the link in their email and to you. A client whose profile you combine with another ("Is this the same person?") keeps their Telegram updates.
+
 ## What works now (tested locally)
 
 **For clients** (the website)
@@ -80,6 +89,7 @@ Booking, payment, cancellation and rescheduling rules did not change for clients
 4. **Your own details**: save your real bank details in More, Bank transfer details, and your business details for receipts in More, Receipt details; check the treatments, prices and areas in More; set your usual week in Working hours.
 5. **Your own phone**: use it on an iPhone in Safari for a week with your own bookings before opening it to clients.
 6. **Fonts and privacy**: the pages load the Playfair Display and Inter fonts from Google Fonts. That sends visitors' addresses to Google. If you would rather not, say so and the fonts can be served from the site itself instead.
+7. **The clients' Telegram bot** (optional, about 20 minutes): see "New: Telegram updates for clients" above and `docs/NOTIFICATIONS_SETUP.md`, step 6. Until you do it, clients simply do not see the Telegram box.
 
 ## Known limits (worth knowing, not blockers)
 
