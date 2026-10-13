@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase.js'
+import { dateLabel, shiftDate, today } from './calendarPresentation.js'
 
 export function createAlertsApi(client) {
   async function call(name, args) {
@@ -33,4 +34,27 @@ export function groupAlerts(alerts) {
     group.ids.push(alert.id)
   }
   return groups.map(group => ({ ...group, unreadIds: [group.head, ...group.older].filter(alert => !alert.read_at).map(alert => alert.id) }))
+}
+
+// The London date an alert was raised on.
+const londonDay = value => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(value))
+// What a day's heading says: Today and Yesterday by name, then the date.
+export function alertDayHeading(date, from = today()) {
+  const short = dateLabel(date, { weekday: 'short', day: 'numeric', month: 'short' })
+  if (date === from) return { name: 'Today', rest: short }
+  if (date === shiftDate(from, -1)) return { name: 'Yesterday', rest: short }
+  return { name: dateLabel(date, { weekday: 'short', day: 'numeric', month: 'short', ...(date.slice(0, 4) === from.slice(0, 4) ? {} : { year: 'numeric' }) }), rest: '' }
+}
+// The cards under the day they were raised on, newest day first, so a day can be found by scrolling and its heading stays in sight.
+// The cards come newest first, so each day's cards are together.
+export function groupByDay(groups, from = today()) {
+  const days = []
+  for (const group of groups) {
+    const date = londonDay(group.head.created_at)
+    let day = days.at(-1)
+    if (day?.date !== date) { day = { date, ...alertDayHeading(date, from), groups: [], unread: 0 }; days.push(day) }
+    day.groups.push(group)
+    if (group.unreadIds.length) day.unread += 1
+  }
+  return days
 }

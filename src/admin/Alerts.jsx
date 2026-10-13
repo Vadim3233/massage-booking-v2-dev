@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { alertsApi, bookingIdFromLink, groupAlerts } from './alertsApi.js'
+import { alertsApi, bookingIdFromLink, groupAlerts, groupByDay } from './alertsApi.js'
 import { useQuietRetry, useReturnRefresh } from './useReturnRefresh.js'
 
-const when = value => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
+// The day is in the heading above the card, so a card only needs the time.
+const clock = value => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
 
 export default function Alerts({ openBooking, openPage, changed, api = alertsApi }) {
   const [alerts, setAlerts] = useState(null)
@@ -47,13 +48,19 @@ export default function Alerts({ openBooking, openPage, changed, api = alertsApi
     {alerts && !alerts.length && <p>Nothing yet. New bookings and client changes will appear here.</p>}
     {alerts?.length > 0 && <>
       <div className="admin-payment-buttons"><button className="btn--tonal btn--small" disabled={!unread} onClick={markAll}>Mark all as read</button></div>
-      <ul role="list" className="admin-alerts">{groupAlerts(alerts).map(group => <li key={group.id} className={group.unreadIds.length ? 'is-unread' : 'is-read'}>
-        <button onClick={() => open(group)}>
-          <strong>{group.head.title}</strong><span>{group.head.body}</span>
-          {group.older.length > 0 && <span className="admin-alert-also">Also: {group.older.map(alert => alert.title).join(' · ')}</span>}
-          <small>{when(group.head.created_at)}{group.unreadIds.length ? ' · New' : ''}</small>
-        </button>
-      </li>)}</ul>
+      {groupByDay(groupAlerts(alerts)).map(day => <section key={day.date} className={`admin-alerts-day ${day.name === 'Today' ? 'is-today' : ''}`} aria-labelledby={`alerts-${day.date}`}>
+        <header className="admin-agenda-day-heading">
+          <h2 id={`alerts-${day.date}`}><span className="day-name">{day.name}</span>{day.rest ? ` · ${day.rest}` : ''}</h2>
+          <span>{day.groups.length} {day.groups.length === 1 ? 'alert' : 'alerts'}{day.unread ? ` · ${day.unread} new` : ''}</span>
+        </header>
+        <ul role="list" className="admin-alerts">{day.groups.map(group => <li key={group.id} className={group.unreadIds.length ? 'is-unread' : 'is-read'}>
+          <button onClick={() => open(group)}>
+            <strong>{group.head.title}</strong><span>{group.head.body}</span>
+            {group.older.length > 0 && <span className="admin-alert-also">Also: {group.older.map(alert => alert.title).join(' · ')}</span>}
+            <small>{clock(group.head.created_at)}{group.unreadIds.length ? ' · New' : ''}</small>
+          </button>
+        </li>)}</ul>
+      </section>)}
     </>}
   </section>
 }

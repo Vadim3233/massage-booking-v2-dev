@@ -366,3 +366,7 @@
 .admin-shell .admin-card-directions { position: absolute; right: 8px; bottom: 6px; z-index: 1; display: inline-flex; align-items: center; gap: 5px; min-height: 40px; padding: 0 10px 0 9px; border-radius: 20px; background: var(--primary-soft); color: var(--primary); font: 600 13px/1 var(--font-ui); text-decoration: none; }
 .admin-shell .admin-card-directions:hover { background: #d9e8df; }
 .admin-card-wrap.has-directions .admin-status { max-width: calc(100% - 108px); white-space: normal; border-radius: 16px; }
+
+/* Alerts sit under the day they were raised on, with the same day headings as the Agenda. */
+.admin-alerts-day .admin-alerts { margin: 6px 0 14px; }
+.admin-alerts-day.is-today .admin-agenda-day-heading { background: #e7f0ea; box-shadow: 0 1px 0 var(--primary-line); }
