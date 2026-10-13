@@ -212,7 +212,7 @@
 .admin-review-item { position: relative; padding: 16px 16px 16px 20px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); font-size: 15px; overflow: hidden; }
 .admin-review-item::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--needs-rail); }
 .admin-review-item.wait::before { background: var(--wait-rail); }
-.admin-review-item .admin-card-heading h2 { font: 650 19px/1.25 var(--font-ui); }
+.admin-review-item .admin-card-heading h3 { margin: 0; font: 650 19px/1.25 var(--font-ui); }
 .admin-review-item .admin-card-price { font-size: 22px; }
 .admin-review-item p { margin: 4px 0; color: var(--ink-soft); }
 .admin-review-item .admin-status { margin: 0 0 8px; }
@@ -370,3 +370,7 @@
 /* Alerts sit under the day they were raised on, with the same day headings as the Agenda. */
 .admin-alerts-day .admin-alerts { margin: 6px 0 14px; }
 .admin-alerts-day.is-today .admin-agenda-day-heading { background: #e7f0ea; box-shadow: 0 1px 0 var(--primary-line); }
+
+/* The payments to check sit under the day of their appointment, like the Agenda. */
+.admin-review-day .admin-review-list { margin: 6px 0 14px; }
+.admin-review-day.is-today .admin-agenda-day-heading { background: #e7f0ea; box-shadow: 0 1px 0 var(--primary-line); }

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { paymentReviewFixture } from '../paymentReviewFixture.js'
+import { dayHeading, shiftDate } from '../../src/admin/calendarPresentation.js'
 let f
 test.beforeEach(async () => { f = await paymentReviewFixture() })
 test.afterEach(async () => { await f?.cleanup() })
@@ -232,4 +233,21 @@ test('an older manual refresh cannot overwrite status fetched after a payment ac
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))
   await expect(page.getByRole('dialog').getByText('Confirmed · Paid', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Verify payment', exact: true })).toHaveCount(0)
+})
+
+test('payments to check sit under the day of their appointment, soonest first, with the time on each card', async ({ page }) => {
+  await f.authorize()
+  const later = shiftDate(f.bookings[1].date, 2)
+  const moved = await f.admin.from('bookings').update({ date: later }).eq('id', f.bookings[1].id)
+  expect(moved.error).toBeNull()
+  await login(page)
+  const days = page.locator('.admin-review-day')
+  await expect(days).toHaveCount(2)
+  await expect(days.nth(0).getByRole('heading', { level: 2 })).toContainText(dayHeading(f.bookings[0].date).name)
+  await expect(days.nth(1).getByRole('heading', { level: 2 })).toContainText(dayHeading(later).name)
+  await expect(days.nth(0).locator('.admin-review-item')).toHaveCount(1)
+  await expect(days.nth(1).locator('.admin-review-item')).toHaveCount(1)
+  // The day is in the heading, so a card says the time; the heading says what needs her that day.
+  await expect(days.nth(0).locator('.admin-review-when')).toHaveText(/^\d\d:\d\d · /)
+  await expect(days.nth(0).locator('.admin-agenda-day-heading > span')).toContainText(/needs? you · £/)
 })
