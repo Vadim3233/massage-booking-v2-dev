@@ -4,6 +4,7 @@ import { AddressForm, ClientForm } from './ClientForms.jsx'
 import { clientContactLinks } from './contactLinks.js'
 import { dateLabel, label, money, time } from './calendarPresentation.js'
 import ClientRepeats from './ClientRepeats.jsx'
+import CombinePicker from './CombinePicker.jsx'
 
 const PAGE = 15
 const stamp = value => new Date(value).toLocaleDateString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', year: 'numeric' })
@@ -123,10 +124,11 @@ function History({ clientId, api, openBooking, version }) {
   </section>
 }
 
-export default function ClientProfile({ id, back, openBooking, newBooking, api = clientsApi }) {
+export default function ClientProfile({ id, back, openBooking, newBooking, openCombine, api = clientsApi }) {
   const [client, setClient] = useState(null)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(false)
+  const [combining, setCombining] = useState(false)
   const [version, setVersion] = useState(0)
   const [busy, setBusy] = useState(false)
   useEffect(() => {
@@ -160,5 +162,11 @@ export default function ClientProfile({ id, back, openBooking, newBooking, api =
       <button className="btn--small" disabled={busy} onClick={toggleOnline}>{client.online_booking_enabled ? 'Switch off online booking' : 'Switch on online booking'}</button>
       <p className="admin-detail-hint">{client.auth_user_id ? 'Has an online account.' : 'No online account yet.'} Client since {stamp(client.created_at)}.</p>
     </section>
+    {openCombine && <section aria-labelledby="same-title"><h2 id="same-title">Same person twice?</h2>
+      <p className="admin-detail-hint">If this client also appears as another entry, for example one made when they booked as a guest, you can look at the two side by side and combine them.</p>
+      {combining
+        ? <CombinePicker clientId={id} openCombine={openCombine} close={() => setCombining(false)} api={api} />
+        : <button className="btn--tonal" onClick={() => setCombining(true)}>Combine with another client…</button>}
+    </section>}
   </section>
 }

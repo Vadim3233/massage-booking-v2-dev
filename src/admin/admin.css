@@ -374,3 +374,29 @@
 /* The payments to check sit under the day of their appointment, like the Agenda. */
 .admin-review-day .admin-review-list { margin: 6px 0 14px; }
 .admin-review-day.is-today .admin-agenda-day-heading { background: #e7f0ea; box-shadow: 0 1px 0 var(--primary-line); }
+
+/* "Is this the same person?": a quiet note on the Clients page, and the two profiles side by side. */
+.admin-same-person { margin: 14px 0 6px; padding: 12px 14px 10px; border-radius: var(--radius); background: #fffaf0; box-shadow: inset 4px 0 0 var(--needs-rail), var(--shadow-1); }
+.admin-same-person h2 { font: 600 19px/1.25 var(--font-display); }
+.admin-same-person ul { list-style: none; margin: 10px 0 4px; padding: 0; display: grid; gap: 8px; }
+.admin-shell .admin-same-person li button { display: grid; gap: 2px; width: 100%; min-height: 58px; padding: 10px 14px; justify-content: stretch; text-align: left; border: 0; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); color: var(--ink); font: 400 15px/1.35 var(--font-ui); }
+.admin-same-person li strong { font-size: 16px; font-weight: 650; overflow-wrap: anywhere; }
+.admin-same-person li span { font-size: 14px; color: var(--ink-soft); }
+.admin-combine-lede { color: var(--ink-soft); }
+.admin-combine-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 16px 0 14px; }
+.admin-combine-card { display: grid; align-content: start; gap: 2px; min-width: 0; padding: 12px 12px 12px; border-radius: var(--radius); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-strong); overflow-wrap: anywhere; }
+.admin-combine-card.is-keep { box-shadow: inset 0 0 0 2px var(--primary); }
+.admin-review .admin-combine-card p { margin: 0; }
+.admin-combine-tag { margin: 0 0 4px !important; font: 700 11px/1.2 var(--font-ui); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.admin-combine-card.is-keep .admin-combine-tag { color: var(--primary); }
+.admin-review .admin-combine-card h2 { margin: 0 0 4px; font: 600 19px/1.25 var(--font-display); }
+.admin-combine-contact { font-size: 14px; color: var(--ink-soft); }
+.admin-review .admin-combine-card .admin-combine-holds { display: grid; gap: 1px; margin-top: 10px; font-size: 14px; }
+.admin-combine-holds span { font-size: 13px; color: var(--ink-soft); }
+.admin-combine-card .chip, .admin-combine-card .admin-who-row { margin-top: 8px; justify-self: start; }
+.admin-combine-card .admin-who-row { font-size: 14px; }
+.admin-combine-note { font-size: 15px; }
+.admin-combine-actions { display: grid; gap: 10px; margin: 16px 0; }
+.admin-combine-confirm { margin: 16px 0; }
+@media (max-width: 359px) { .admin-combine-cards { grid-template-columns: 1fr; } }
+.admin-combine-caution { margin: 10px 0; padding: 10px 14px; border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 12px 12px 0; font-size: 15px; }

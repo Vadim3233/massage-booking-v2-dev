@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { alertDayHeading, bookingIdFromLink, groupAlerts, groupByDay } from './alertsApi.js'
+import { adminPageFromLink, alertDayHeading, bookingIdFromLink, groupAlerts, groupByDay } from './alertsApi.js'
 
 const A = '0b6c7f5e-1111-4222-8333-444455556666'
 const B = '9d1e2f3a-aaaa-4bbb-8ccc-ddddeeeeffff'
@@ -28,6 +28,19 @@ describe('alerts about the same booking', () => {
     expect(bookingIdFromLink(`/admin/bookings/${A}`)).toBe(A)
     expect(bookingIdFromLink('/admin/bookings/not-an-id')).toBeNull()
     expect(groupAlerts([])).toEqual([])
+  })
+})
+
+describe('the Admin pages an alert may open', () => {
+  it('allows a page, a client and two profiles to compare', () => {
+    expect(adminPageFromLink('/admin/waitlist')).toBe('/admin/waitlist')
+    expect(adminPageFromLink(`/admin/clients/${A}`)).toBe(`/admin/clients/${A}`)
+    expect(adminPageFromLink(`/admin/clients/combine?a=${A}&b=${B}`)).toBe(`/admin/clients/combine?a=${A}&b=${B}`)
+  })
+  it('refuses anything that leaves the Admin or carries more than a simple query', () => {
+    for (const link of [null, '', 'https://example.test/admin/x', '//example.test/admin/x', '/account', '/admin/../x?', '/admin/x?a=<script>', '/admin/x y', '/admin/clients?a=1;b=2']) {
+      expect(adminPageFromLink(link), String(link)).toBeNull()
+    }
   })
 })
 
