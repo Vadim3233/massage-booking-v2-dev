@@ -6,7 +6,7 @@ export function emptyAdminDraft(initialDate) {
     client: null,
     details: { savedAddressId: '', address_line_1: '', address_line_2: '', city: '', postcode: '', entry_instructions: '' },
     areaId: '', serviceId: '', sessions: [{ duration_minutes: 60, recipient_name: '', preference_ids: [] }],
-    enhancementIds: [], date: initialDate || today(), start: null, payment: 'bank_pending', note: '', repeat: { on: false, endDate: '' }, submission: null,
+    enhancementIds: [], date: initialDate || today(), start: null, anyTime: false, anyTimeNotes: [], payment: 'bank_pending', note: '', repeat: { on: false, endDate: '' }, submission: null,
   }
 }
 export function meaningfulDraft(draft) {
@@ -16,7 +16,10 @@ export function loadAdminDraft(ownerId, initialDate) {
   try {
     const saved = JSON.parse(sessionStorage.getItem(draftKey(ownerId)))
     if (saved?.version === 1 && Array.isArray(saved.draft?.sessions) && saved.draft?.details) {
-      return { ...emptyAdminDraft(initialDate), ...saved.draft }
+      const draft = { ...emptyAdminDraft(initialDate), ...saved.draft }
+      // A time outside the usual ones was chosen against the diary as it was then, with reasons written for it; it is chosen again rather than
+      // trusted (unless a booking is already being made, which keeps its own request).
+      return draft.anyTime && !draft.submission ? { ...draft, start: null, anyTime: false, anyTimeNotes: [] } : draft
     }
   } catch { /* Storage can be unavailable; the in-memory draft remains usable. */ }
   return emptyAdminDraft(initialDate)

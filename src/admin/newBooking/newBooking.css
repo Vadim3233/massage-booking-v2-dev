@@ -94,3 +94,15 @@
   .anb-footer { margin-inline: -24px; padding-inline: 24px; }
 }
 @media (prefers-reduced-motion: reduce) { .admin-new-booking * { scroll-behavior: auto; transition: none; } }
+
+/* "Show all times": every half hour of the day, for the times the booking page would not normally offer. Dashed times are not the usual ones,
+   grey times overlap another appointment (tapping one says what it clashes with), and the note under the times says what is being set aside. */
+.anb-alltimes { margin-top: 14px; }
+.anb-alltimes .anb-hint { margin-top: 6px; }
+.anb-alltimes .slots button[data-usual=no] { border-style: dashed; }
+.anb-alltimes .slots button[aria-disabled=true] { border-color: var(--hairline); background: transparent; opacity: .55; cursor: not-allowed; }
+.anb-alltimes .slots button[aria-pressed=true] { border-style: solid; }
+.anb-time-note { margin: 12px 0 0; padding: 10px 14px; border-left: 4px solid var(--accent); border-radius: 0 12px 12px 0; background: var(--accent-soft); font-size: 14px; line-height: 1.45; }
+.anb-time-note p { margin: 0; }
+.anb-time-note ul { margin: 4px 0 0; padding-left: 18px; }
+.anb-time-note--refused { border-left-color: var(--danger-line); background: var(--danger-soft); }
