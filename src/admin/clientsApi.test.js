@@ -42,3 +42,33 @@ describe('what is shown when something fails', () => {
     await expect(failing('permission denied for table clients').get('c1')).rejects.toThrow('Could not complete that.')
   })
 })
+
+describe('deleting a client', () => {
+  it('asks the database about the client, and deletes with a request key', async () => {
+    const calls = []
+    const api = createClientsApi({ rpc: async (name, args) => { calls.push([name, args]); return { data: { found: true }, error: null } } })
+    await api.deleteCheck('c1')
+    await api.deleteClient('c1', 'key-1', { addresses: 2, notes: 1, waitlist: 0, login: 'added' })
+    expect(calls).toEqual([
+      ['admin_client_delete_check', { p_client_id: 'c1' }],
+      ['admin_delete_client', { p_client_id: 'c1', p_request_id: 'key-1', p_expected: { addresses: 2, notes: 1, waitlist: 0, login: 'added' } }],
+    ])
+  })
+  it('keeps the plain refusals written by the server', async () => {
+    const failing = message => createClientsApi({ rpc: async () => ({ error: { message } }) })
+    for (const message of [
+      'This client has bookings, so they cannot be deleted. Bookings, payments and receipts are your records.',
+      'This client has a repeating booking, so they cannot be deleted.',
+      'Someone is in the middle of booking right now. Try again in a few minutes.',
+      'This client is signed in as an Admin, so they cannot be deleted here.',
+      'That client is no longer there. They may already have been deleted or combined.',
+      'Something changed while you were deciding. Please look at the question again.',
+    ]) await expect(failing(message).deleteClient('c1', 'key-1', {})).rejects.toThrow(message)
+  })
+  it('hides anything the server did not write for her', async () => {
+    const failing = message => createClientsApi({ rpc: async () => ({ error: { message } }) })
+    await expect(failing('Admin authorization required').deleteClient('c1', 'key-1', {})).rejects.toThrow('Could not complete that.')
+    await expect(failing('update or delete on table "clients" violates foreign key constraint "bookings_client_id_fkey" on table "bookings"').deleteClient('c1', 'key-1', {})).rejects.toThrow('Could not complete that.')
+    await expect(failing('permission denied for table users').deleteCheck('c1')).rejects.toThrow('Could not complete that.')
+  })
+})

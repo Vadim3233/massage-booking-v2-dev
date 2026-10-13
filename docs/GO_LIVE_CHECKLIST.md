@@ -50,6 +50,18 @@ Booking, payment, cancellation and rescheduling rules did not change for clients
 - **Clients see nothing different.** They are still offered only the usual times. After you book an unusual time, the rest of that day usually has no times left for clients, because the first and last appointments of a day set what is offered.
 - **Repeating bookings** are only offered at usual times: choosing an unusual time turns the repeat off for that booking. If a repeating client's time is kept free on that day, the screen warns that an unusual booking may stop that week's repeat. **Moving** an existing appointment still offers the usual times only; say if you want the same there.
 
+## New: delete a client (2026-10-13)
+
+Booking, payment, cancellation and rescheduling rules did not change. It needs one database change, `20261025100000_admin_delete_client.sql`, which has been applied to the local copy only and **not** to the online Supabase project (like the others, it is applied only with your say-so); until it is, the Delete section on a client's page shows a plain error there.
+
+- **Where.** At the bottom of a client's page: **Delete this client…**. It asks first, naming the client and what would go, with "Keep" as the choice that has focus.
+- **Who can be deleted.** Someone with no bookings and no weekly repeat: added by mistake, a profile made twice, a made-up test profile. What goes: their details, saved addresses and notes, the waiting-list requests they made, the alerts that name them, and their online account if they have one (so that email can register again). There is no undo.
+- **If anything changed while you were deciding** (an address or note added, a waiting-list request made, or the person signing up), nothing is deleted and you are asked again, so only what the question said goes.
+- **Who cannot.** A client with bookings, even cancelled ones: bookings, payments and receipts are your records, so they stay, and the page says so and points to switching off online booking. Also not your own profile. And while anyone is in the middle of booking, nothing can be deleted (a few minutes at most); the page says so and has a Check again button.
+- **What is not promised.** This does not erase every trace. An alert already sent to Telegram or email cannot be unsent, and database backups (on a paid plan) and Supabase's own logs may keep copies for a while.
+- **A record is kept** of each deletion (when, by you, how much went) and never of who the client was. It can be read from the Supabase dashboard only; nothing in the app shows it.
+- **Before real clients.** Test accounts that took bookings cannot be deleted from the page. Ask me to clear them with the rest of the test data; I take a copy of the database first.
+
 ## What works now (tested locally)
 
 **For clients** (the website)
