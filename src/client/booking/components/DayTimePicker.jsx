@@ -14,7 +14,7 @@ const monthWord = (date, options) => new Intl.DateTimeFormat('en-GB', { timeZone
 // Choosing a day and a time: five days at a time with a dot where there is room, the first free day already open,
 // the times of that day in short rows, and the calendar behind a field for anything further away.
 // Used for a new booking and for moving one, so both feel the same.
-export default function DayTimePicker({ horizonDays, dateLabel = 'Appointment date', loadDay, reloadKey = '', initialDate = '', selected, onPick, emptyMessage, renderEmpty }) {
+export default function DayTimePicker({ horizonDays, dateLabel = 'Appointment date', loadDay, reloadKey = '', initialDate = '', selected, onPick, emptyMessage, renderEmpty, renderFooter }) {
   const today = londonDate()
   const last = londonDate(horizonDays)
   const usable = (date) => Boolean(date) && date >= today && date <= last
@@ -143,5 +143,6 @@ export default function DayTimePicker({ horizonDays, dateLabel = 'Appointment da
       {nextFree && <button type="button" className="btn--tonal btn--block" onClick={goToNextFree}>Next free day: {dayParts(nextFree).long}</button>}
       {renderEmpty?.(viewDate)}
     </>}
+    {viewDate && renderFooter?.(viewDate)}
   </div>
 }

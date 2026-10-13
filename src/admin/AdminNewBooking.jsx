@@ -146,7 +146,8 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
   function validation() {
     if (!draft.client || !draft.areaId || !draft.details.address_line_1?.trim() || !draft.details.city?.trim() || !draft.details.postcode?.trim()) return 'Choose a client, appointment address and service area.'
     if (!draft.serviceId || !draft.sessions.length || draft.sessions.length > 4 || duration > 240 || draft.sessions.some(session => !catalogue.prices.some(price => price.service_id === draft.serviceId && price.duration_minutes === session.duration_minutes))) return 'Choose a treatment and an available duration.'
-    if (!draft.date || draft.start === null || !availability || availability.error || !availability.slots.some(slot => slot.start_minutes === draft.start)) return 'Choose an available appointment time.'
+    // A time chosen from "Show all times" is checked by the database when the booking is made: it refuses a double booking.
+    if (!draft.date || draft.start === null || (!draft.anyTime && (!availability || availability.error || !availability.slots.some(slot => slot.start_minutes === draft.start)))) return 'Choose an available appointment time.'
     return ''
   }
   async function create() {
@@ -157,7 +158,7 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
       if (!quote) { setError('Wait for the current price, or retry loading it.'); return }
     }
     busyRef.current = true; setBusy(true); setError('')
-    const submission = draft.submission || { id: crypto.randomUUID(), payload: bookingRequest(draft), repeat: draft.repeat?.on ? { endDate: draft.repeat.endDate || null } : null }
+    const submission = draft.submission || { id: crypto.randomUUID(), payload: bookingRequest(draft), repeat: draft.repeat?.on && !draft.anyTime ? { endDate: draft.repeat.endDate || null } : null }
     patch({ submission })
     try {
       const result = submission.repeat ? await api.createSeries(submission.payload, submission.repeat.endDate, submission.id) : await api.create(submission.payload, submission.id)
@@ -186,7 +187,7 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
       <section className="anb-block" aria-labelledby="anb-treatment-title"><h2 id="anb-treatment-title">Treatment</h2>
         <TreatmentStep draft={draft} patch={edit} catalogue={data} /></section>
       <section className="anb-block" aria-labelledby="anb-time-title"><h2 id="anb-time-title">Date and time</h2>
-        <DateTimeStep draft={draft} patch={edit} duration={duration} loadDay={loadDay} /></section>
+        <DateTimeStep draft={draft} patch={edit} duration={duration} loadDay={loadDay} loadTimes={api.times} reloadKey={availabilityAttempt} /></section>
       <section className="anb-block" aria-labelledby="anb-payment-title"><h2 id="anb-payment-title">Payment, note and repeat</h2>
         <PaymentStep draft={draft} patch={edit} /></section>
     </fieldset>
