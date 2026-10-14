@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { detailProblems, validDetails } from '../bookingDraft.js'
+import { addressFields, addressTyped, blankAddressFields, detailProblems, usualAddress, validDetails } from '../bookingDraft.js'
 import { friendlyError } from '../friendlyError.js'
 
 function buildTestClient() {
@@ -48,6 +48,9 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
         if (!profile.online_booking_enabled) { report(UNAVAILABLE); return }
         const details = { ...draft.details, email: user.email || draft.details.email || '' }
         for (const key of ['first_name', 'last_name', 'phone']) if (!details[key]) details[key] = profile[key] || ''
+        // The usual address is chosen straight away, so a returning client only has to press Continue. Not when they have already chosen or typed one.
+        const usual = usualAddress(rows)
+        if (usual && !details.savedAddressId && !addressTyped(details)) Object.assign(details, addressFields(usual), { savedAddressId: usual.id })
         edit({ details, ownerUserId: user.id })
       }).catch((error) => { if (live) report(friendlyError(error)) })
       .finally(() => { if (live) setLoading(false) })
@@ -117,7 +120,9 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
       {!guest && addresses.length > 0 && <label>Saved address<select value={details.savedAddressId} onChange={(event) => {
         const address = addresses.find((item) => item.id === event.target.value)
         setProblems((known) => ({ ...known, postcode: undefined }))
-        edit({ details: { ...details, ...(address ? Object.fromEntries(['address_line_1', 'address_line_2', 'city', 'postcode', 'entry_instructions'].map((key) => [key, address[key] || ''])) : {}), savedAddressId: event.target.value } })
+        // A saved address fills the boxes. Putting it down for "Enter an address" empties them, so nothing of it is left behind in the new address.
+        const boxes = address ? addressFields(address) : details.savedAddressId ? blankAddressFields() : {}
+        edit({ details: { ...details, ...boxes, savedAddressId: event.target.value } })
       }}><option value="">Enter an address</option>{addresses.map((address) => <option key={address.id} value={address.id}>{address.label} · {address.address_line_1}, {address.postcode}</option>)}</select></label>}
       <fieldset disabled={!guest && Boolean(details.savedAddressId)}>
         <label>Street address<input autoComplete="address-line1" maxLength={120} value={details.address_line_1} required onChange={(event) => field('address_line_1', event.target.value)} /></label>
