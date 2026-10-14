@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clock, createScheduleApi, daysBetween, groupBlocks, timeOptions, validateBlock, validateHours } from './scheduleApi.js'
+import { clock, createScheduleApi, daysBetween, groupBlocks, hoursLine, timeOptions, usualHoursFor, validateBlock, validateHours, weekdayOf } from './scheduleApi.js'
 
 describe('time choices', () => {
   it('offers whole and half hours, with midnight only as an end time', () => {
@@ -38,6 +38,34 @@ describe('checking hours before saving', () => {
     expect(validateBlock(block({ end_date: '2030-12-31' }))).toBe('The end date cannot be before the start date.')
     expect(validateBlock(block({ end_date: '2032-06-01' }))).toBe('A block can cover up to a year.')
     expect(daysBetween('2031-03-28', '2031-04-02')).toBe(5)
+  })
+})
+
+describe('a special day starts from the usual week', () => {
+  const week = [
+    { weekday: 1, available: true, start_minutes: 600, end_minutes: 1200, start_mode: 'flexible', fixed_start_minutes: null },
+    { weekday: 3, available: true, start_minutes: 720, end_minutes: 1260, start_mode: 'fixed', fixed_start_minutes: 900 },
+    { weekday: 4, available: false, start_minutes: null, end_minutes: null, start_mode: 'flexible', fixed_start_minutes: null },
+  ]
+  it('knows the weekday of a date, with Monday as 1 and Sunday as 7', () => {
+    expect(weekdayOf('2026-10-12')).toBe(1)
+    expect(weekdayOf('2026-10-14')).toBe(3)
+    expect(weekdayOf('2026-10-17')).toBe(6)
+    expect(weekdayOf('2026-10-18')).toBe(7)
+  })
+  it("gives that weekday's hours and first appointment", () => {
+    expect(usualHoursFor('2026-10-12', week)).toEqual({ available: true, start_minutes: 600, end_minutes: 1200, start_mode: 'flexible', fixed_start_minutes: null })
+    expect(usualHoursFor('2026-10-14', week)).toEqual({ available: true, start_minutes: 720, end_minutes: 1260, start_mode: 'fixed', fixed_start_minutes: 900 })
+  })
+  it('gives a day off for a weekday that is off or missing, and when the week is not known', () => {
+    expect(usualHoursFor('2026-10-15', week).available).toBe(false)
+    expect(usualHoursFor('2026-10-16', week).available).toBe(false)
+    expect(usualHoursFor('2026-10-14', null).available).toBe(false)
+  })
+  it('describes a day in one line, with the first appointment only when it is set to a time', () => {
+    expect(hoursLine({ available: false })).toBe('Day off')
+    expect(hoursLine(week[0])).toBe('10:00–20:00')
+    expect(hoursLine(week[1])).toBe('12:00–21:00, first appointment at 15:00')
   })
 })
 
