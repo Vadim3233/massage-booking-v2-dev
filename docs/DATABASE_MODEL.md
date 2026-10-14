@@ -182,6 +182,7 @@ Suggested columns:
 - `start_mode text` — `flexible` or `fixed`
 - `fixed_start_minutes integer null`
 - `anchor_release_minutes integer null` — 0–1439, only with `start_mode = 'fixed'`: if nobody has booked the first appointment by this time on the day before (London time), an empty day is offered as `flexible` from then on
+- `schedule_mode text not null default 'chain'` — `chain` or `flexible`: once there are appointments, `chain` offers only the two ends of the day's run and `flexible` also offers every half hour in the gaps that leaves room for travel on both sides
 - timestamps
 
 ### `working_hours_overrides`
@@ -195,6 +196,7 @@ Date-specific replacement/override.
 - `start_mode text`
 - `fixed_start_minutes integer null`
 - `anchor_release_minutes integer null` — as on `working_hours`; a date's own value replaces the usual week's, including when it has none
+- `schedule_mode text not null default 'chain'` — as on `working_hours`; a date's own value replaces the usual week's
 - timestamps
 
 The availability service resolves the effective day configuration before calling the Chain Mode rules.

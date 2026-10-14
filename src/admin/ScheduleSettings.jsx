@@ -5,8 +5,13 @@ import BlockDialog from './BlockDialog.jsx'
 
 const START_OPTIONS = timeOptions(false)
 const END_OPTIONS = timeOptions(true).filter(minutes => minutes > 0)
-const DEFAULT_HOURS = { available: true, start_minutes: 600, end_minutes: 1200, start_mode: 'flexible', fixed_start_minutes: null, anchor_release_minutes: null }
-const DAY_OFF = { available: false, start_minutes: null, end_minutes: null, start_mode: 'flexible', fixed_start_minutes: null, anchor_release_minutes: null }
+const DEFAULT_HOURS = { available: true, start_minutes: 600, end_minutes: 1200, start_mode: 'flexible', fixed_start_minutes: null, anchor_release_minutes: null, schedule_mode: 'chain' }
+const DAY_OFF = { available: false, start_minutes: null, end_minutes: null, start_mode: 'flexible', fixed_start_minutes: null, anchor_release_minutes: null, schedule_mode: 'chain' }
+// How a day fills up once someone has booked, said once where a day's hours are being set.
+const SCHEDULE_MODE_HINT = {
+  chain: "New bookings are added to the start or the end of the day's appointments, so the day stays in one run.",
+  flexible: 'Clients can also choose a time between two appointments, as long as there is room for your travel time on both sides. An empty day still follows the first appointment.',
+}
 // What "first appointment" means, said once where a day's hours are being set.
 const FIRST_APPOINTMENT_HINT = {
   flexible: 'Until someone books, clients can pick any usual time in your hours. The first booking then sets the day, and the other times are built around it.',
@@ -28,6 +33,13 @@ function HoursFields({ entry, onChange, disabled, prefix, explain = false }) {
   return <div className="admin-hours-fields">
     <TimeSelect label={`${prefix} start`} value={entry.start_minutes} options={START_OPTIONS} disabled={disabled} onChange={value => set({ start_minutes: value })} />
     <TimeSelect label={`${prefix} end`} value={entry.end_minutes} options={END_OPTIONS} disabled={disabled} onChange={value => set({ end_minutes: value })} />
+    <label className="admin-field">{`${prefix} schedule mode`}
+      <select value={entry.schedule_mode ?? 'chain'} disabled={disabled} onChange={event => set({ schedule_mode: event.target.value })}>
+        <option value="chain">Chain (the ends of the day)</option>
+        <option value="flexible">Flexible (any time that fits)</option>
+      </select>
+    </label>
+    {explain && <p className="admin-detail-hint">{SCHEDULE_MODE_HINT[entry.schedule_mode ?? 'chain']}</p>}
     <label className="admin-field">{`${prefix} first appointment`}
       <select value={entry.start_mode} disabled={disabled} onChange={event => set({ start_mode: event.target.value, fixed_start_minutes: event.target.value === 'fixed' ? (entry.fixed_start_minutes ?? entry.start_minutes) : null, anchor_release_minutes: event.target.value === 'fixed' ? (entry.anchor_release_minutes ?? null) : null })}>
         <option value="flexible">Any time in my hours</option>
@@ -72,6 +84,7 @@ function WeeklyHours({ api }) {
     <p className="admin-detail-hint">Your usual week. For a holiday, a few days away, or a few hours busy, use Block time under Special days.</p>
     <p className="admin-detail-hint">"First appointment" is where a day with no bookings yet should begin. "At a set time" offers clients only that time until someone books, so once that time has passed, or is too close for your notice period, that day shows no times. "Any time in my hours" lets the first client choose. Either way, once there is a booking the other times are built around it.</p>
     <p className="admin-detail-hint">A "release time" is for a first appointment at a set time: if nobody has booked it by then on the day before, the day opens to any usual time in your hours. Choose "Keep it until someone books" to never open it.</p>
+    <p className="admin-detail-hint">"Schedule mode" is how a day fills up once someone has booked. "Chain" adds new bookings to the start or the end of the day's appointments, so the day stays in one run. "Flexible" also offers times between appointments, as long as there is room for your travel time on both sides.</p>
     {rows.map((row, index) => <fieldset key={row.weekday} className="admin-weekday" disabled={busy}>
       <legend>{WEEKDAYS[row.weekday - 1]}</legend>
       <label className="admin-who-row"><input type="checkbox" checked={row.available}

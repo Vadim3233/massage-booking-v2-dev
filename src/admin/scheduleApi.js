@@ -29,17 +29,18 @@ export const weekdayOf = date => { const day = new Date(`${date}T12:00:00Z`).get
 // so only what is special about the day has to be changed.
 export function usualHoursFor(date, weekly) {
   const row = weekly?.find(item => item.weekday === weekdayOf(date))
-  if (!row?.available) return { available: false, start_minutes: null, end_minutes: null, start_mode: 'flexible', fixed_start_minutes: null, anchor_release_minutes: null }
-  return { available: true, start_minutes: row.start_minutes, end_minutes: row.end_minutes, start_mode: row.start_mode, fixed_start_minutes: row.fixed_start_minutes, anchor_release_minutes: row.anchor_release_minutes ?? null }
+  if (!row?.available) return { available: false, start_minutes: null, end_minutes: null, start_mode: 'flexible', fixed_start_minutes: null, anchor_release_minutes: null, schedule_mode: 'chain' }
+  return { available: true, start_minutes: row.start_minutes, end_minutes: row.end_minutes, start_mode: row.start_mode, fixed_start_minutes: row.fixed_start_minutes, anchor_release_minutes: row.anchor_release_minutes ?? null, schedule_mode: row.schedule_mode ?? 'chain' }
 }
 
 // A day's hours in one line, with its first appointment when that is set to a time.
 export function hoursLine(entry) {
   if (!entry.available) return 'Day off'
   const hours = `${clock(entry.start_minutes)}–${clock(entry.end_minutes)}`
-  if (entry.start_mode !== 'fixed') return hours
+  const mode = entry.schedule_mode === 'flexible' ? ', flexible schedule' : ''
+  if (entry.start_mode !== 'fixed') return `${hours}${mode}`
   const release = entry.anchor_release_minutes != null ? ` (released at ${clock(entry.anchor_release_minutes)} the day before)` : ''
-  return `${hours}, first appointment at ${clock(entry.fixed_start_minutes)}${release}`
+  return `${hours}, first appointment at ${clock(entry.fixed_start_minutes)}${release}${mode}`
 }
 
 // A block runs from a date and time to a later date and time, like an event in a phone calendar.
@@ -81,11 +82,12 @@ export function createScheduleApi(client) {
     start_mode: entry.available ? entry.start_mode : 'flexible',
     fixed_start_minutes: entry.available && entry.start_mode === 'fixed' ? entry.fixed_start_minutes : null,
     anchor_release_minutes: entry.available && entry.start_mode === 'fixed' ? (entry.anchor_release_minutes ?? null) : null,
+    schedule_mode: entry.available && entry.schedule_mode === 'flexible' ? 'flexible' : 'chain',
   })
   return {
-    weekly: () => run(client.from('working_hours').select('weekday,available,start_minutes,end_minutes,start_mode,fixed_start_minutes,anchor_release_minutes').order('weekday')),
+    weekly: () => run(client.from('working_hours').select('weekday,available,start_minutes,end_minutes,start_mode,fixed_start_minutes,anchor_release_minutes,schedule_mode').order('weekday')),
     saveWeekly: entries => run(client.from('working_hours').upsert(entries.map(entry => ({ weekday: entry.weekday, ...clean(entry) })), { onConflict: 'weekday' })),
-    overrides: from => run(client.from('working_hours_overrides').select('date,available,start_minutes,end_minutes,start_mode,fixed_start_minutes,anchor_release_minutes,note').gte('date', from).order('date').limit(200)),
+    overrides: from => run(client.from('working_hours_overrides').select('date,available,start_minutes,end_minutes,start_mode,fixed_start_minutes,anchor_release_minutes,schedule_mode,note').gte('date', from).order('date').limit(200)),
     saveOverride: entry => run(client.from('working_hours_overrides').upsert({ date: entry.date, note: entry.note?.trim() || null, ...clean(entry) }, { onConflict: 'date' })),
     deleteOverride: date => run(client.from('working_hours_overrides').delete().eq('date', date)),
     async conflicts(date, start, end) {

@@ -11,7 +11,10 @@ Written on 2026-10-14 from the owner's own description, checked against the book
 - **At a set time**: an empty day offers clients only that time. It can also have a **release time**, which opens the day up if nobody takes that time (see "Releasing a first appointment that nobody has booked" below).
 - **Any time in my hours**: an empty day offers every usual start inside the working hours.
 
-**The chain** answers "once bookings exist, how are new ones added?" New bookings are attached to the two ends of the day's run of appointments, never to little gaps in the middle. The chain is always on; it is not a setting.
+**The schedule mode** answers "once bookings exist, how are new ones added?" It is set for each day, and has two settings:
+
+- **Chain** (the default): new bookings are attached to the two ends of the day's run of appointments, never to little gaps in the middle.
+- **Flexible**: new bookings can also go into the gaps between appointments, as long as there is room for travel on both sides.
 
 On top of these, the app takes away whatever cannot work: the treatment length, 60 minutes of travel between appointments, bookings already made, a time a client is holding while they pay, blocked time, the notice you need, and how far ahead clients may book (the last two are set in Booking rules).
 
@@ -40,6 +43,16 @@ Wednesday, working 10:00 to 20:00, first appointment at 15:00, release time **17
 Once someone has booked 15:00, the set time has done its job and the day is worked out from the real bookings. With 60 minute treatments and 60 minutes of travel, a booking at 15:00 leaves 13:00 (before it) and 17:00 (after it). If 13:00 and 17:00 are then booked as well, the day runs 13:00, 15:00, 17:00 with travel in between, and the next offers are at the two ends again.
 
 Bookings that are waiting for payment or for your approval count as part of the chain, and so does a time that a client is holding while they pay.
+
+## Flexible days
+
+On a **Flexible** day, once there are appointments, clients are offered every half hour that leaves room for travel on both sides of every other appointment, gaps between appointments included. Take a Wednesday working 10:00 to 20:00, with 60 minute treatments and 60 minutes of travel. With one booking at 15:00, a chain day offers 13:00 and 17:00; a flexible day offers every half hour from 10:00 to 13:00 and from 17:00 to 19:00. With bookings at 10:00 and 18:00 a chain day offers nothing, because both ends of the day are already used, and a flexible day offers 12:00 to 16:00 in between.
+
+- **A flexible day always offers everything a chain day would**, and the gaps as well. Switching a day to flexible never takes a time away.
+- **An empty day is the same in both modes.** The first appointment (and its release time) decides what an empty day offers; the mode only matters once someone has booked.
+- **Blocked time** is never offered, and travel cannot run through it: a time is not offered if the treatment, or the travel into it from an appointment before it, overlaps blocked time. When it would be the first appointment of the day, the travel on to the next booking is checked instead. These are the same checks as at the two ends of a chain.
+- **Where it is set.** On a weekday of the usual week and on a special day. A special day starts from the usual week's mode, like its hours, and has its own mode from then on.
+- **Holds and moves work as in a chain.** A time a client is holding counts as an appointment, and a booking that is being moved is not in its own way.
 
 ## Your usual week
 

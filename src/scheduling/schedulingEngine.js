@@ -62,6 +62,7 @@ export function getAvailableTimes({
   anchor: setAnchor,
   date,
   anchorReleaseMinutes = null,
+  scheduleMode = 'chain',
   bookings = [],
   holds = [],
   blockedPeriods = [],
@@ -126,9 +127,6 @@ export function getAvailableTimes({
     return times
   }
 
-  // Existing chain:
-  // confirmed bookings and active holds both participate in the chain.
-  // Only the outer boundaries are exposed publicly; internal gaps remain hidden.
   const chainStarts = chainItems.map((item) =>
     timeToMinutes(item.start)
   )
@@ -136,6 +134,54 @@ export function getAvailableTimes({
     timeToMinutes(item.end)
   )
 
+  // Flexible day with appointments:
+  // every 30-minute start that leaves room for travel on both sides of every
+  // other appointment, gaps included. Blocked periods may not overlap the
+  // treatment, the travel into it from an appointment before it, or (when it
+  // would be the first appointment of the day) the travel on to the
+  // appointment after it: the same checks as at the two ends of a chain, so a
+  // flexible day always offers everything a chain day would.
+  if (scheduleMode === 'flexible') {
+    const firstStart = Math.min(...chainStarts)
+    const firstEnd = Math.min(...chainEnds)
+    const times = []
+
+    for (
+      let start = workingStart;
+      start + requestedDurationMinutes <= workingEnd;
+      start += 30
+    ) {
+      const end = start + requestedDurationMinutes
+
+      const roomForTravel = chainItems.every(
+        (item, index) =>
+          end + travelBufferMinutes <= chainStarts[index] ||
+          start >= chainEnds[index] + travelBufferMinutes
+      )
+
+      if (!roomForTravel) {
+        continue
+      }
+
+      const travelWindow =
+        start >= firstEnd
+          ? [start - travelBufferMinutes, start]
+          : [firstStart - travelBufferMinutes, firstStart]
+
+      if (
+        !overlapsBlockedPeriod(start, end, blockedPeriods) &&
+        !overlapsBlockedPeriod(travelWindow[0], travelWindow[1], blockedPeriods)
+      ) {
+        times.push(minutesToTime(start))
+      }
+    }
+
+    return times
+  }
+
+  // Existing chain:
+  // confirmed bookings and active holds both participate in the chain.
+  // Only the outer boundaries are exposed publicly; internal gaps remain hidden.
   const chainStart = Math.min(...chainStarts)
   const chainEnd = Math.max(...chainEnds)
 
