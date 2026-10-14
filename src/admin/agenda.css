@@ -8,6 +8,9 @@
 .admin-agenda-day-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .admin-agenda-day-heading h2 { margin: 0; font-size: 17px; line-height: 1.3; }
 .admin-agenda-day-heading span { color: #596b63; font-size: 12px; white-space: nowrap; }
+/* Day settings: a quiet button on each day. It drops below the heading when there is no room beside it. */
+.admin-agenda-day-heading { flex-wrap: wrap; row-gap: 2px; }
+.admin-agenda-day-heading .admin-day-settings-button { margin-left: auto; min-height: 44px; gap: 6px; color: var(--primary); font-size: 14px; font-weight: 600; white-space: nowrap; }
 .admin-agenda-load { width: 100%; margin: 8px 0; }
 .admin-agenda-range { margin: 10px 0 0; color: var(--muted); text-align: center; font-size: 12px; }
 
@@ -40,10 +43,12 @@
 .admin-agenda-quiet .what { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .admin-agenda-quiet li.is-special .what { color: var(--needs-ink); }
 .admin-agenda-quiet li.is-away .what, .admin-agenda-quiet li.is-away button { color: #2f5448; }
+/* The date of a free day opens that day's settings; it is underlined so it reads as pressable. */
+.admin-agenda-quiet-date { flex: 0 0 100px; justify-content: flex-start; min-height: 44px; margin: -3px 0 -3px -8px; padding: 4px 8px; border: 0; background: transparent; color: var(--primary); font-size: 13px; font-weight: 600; text-align: left; text-decoration: underline; text-underline-offset: 3px; }
 .admin-agenda-quiet-button { justify-content: flex-start; min-height: 44px; margin: -3px 0 -3px -8px; padding: 4px 8px; border: 0; background: transparent; color: var(--ink-soft); font-size: 13px; font-weight: 400; text-align: left; }
 @media (hover: hover) {
   .admin-agenda-away > button:hover { background: #d9e8df; }
-  .admin-agenda-quiet-button:hover { background: var(--primary-soft); }
+  .admin-agenda-quiet-button:hover, .admin-agenda-quiet-date:hover { background: var(--primary-soft); }
 }
 @media (prefers-reduced-motion: reduce) {
   .admin-agenda-switch input::before { transition: none; }

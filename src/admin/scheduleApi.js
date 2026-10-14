@@ -22,6 +22,25 @@ export function validateHours(entry) {
   }
   return ''
 }
+// A working day as a new one starts, and a day off, in the form the hours fields edit.
+export const DEFAULT_HOURS = { available: true, start_minutes: 600, end_minutes: 1200, start_mode: 'flexible', fixed_start_minutes: null, anchor_release_minutes: null, schedule_mode: 'chain' }
+export const DAY_OFF = { available: false, start_minutes: null, end_minutes: null, start_mode: 'flexible', fixed_start_minutes: null, anchor_release_minutes: null, schedule_mode: 'chain' }
+
+// What is sent to the database for a day: a day off carries no times, no first appointment, no release time and no schedule mode,
+// the first appointment time and release time only go with a set first appointment, and anything but flexible is a chain.
+export const cleanDay = entry => ({
+  available: Boolean(entry.available),
+  start_minutes: entry.available ? entry.start_minutes : null,
+  end_minutes: entry.available ? entry.end_minutes : null,
+  start_mode: entry.available ? entry.start_mode : 'flexible',
+  fixed_start_minutes: entry.available && entry.start_mode === 'fixed' ? entry.fixed_start_minutes : null,
+  anchor_release_minutes: entry.available && entry.start_mode === 'fixed' ? (entry.anchor_release_minutes ?? null) : null,
+  schedule_mode: entry.available && entry.schedule_mode === 'flexible' ? 'flexible' : 'chain',
+})
+
+// The parts of a date that are outside a day's working hours, which is where an existing booking would be left stranded.
+export const conflictRanges = entry => entry.available ? [[0, entry.start_minutes], [entry.end_minutes, 1440]].filter(([from, to]) => to > from) : [[0, 1440]]
+
 // The weekday of a date written as YYYY-MM-DD, counted as the usual week is stored: 1 is Monday and 7 is Sunday.
 export const weekdayOf = date => { const day = new Date(`${date}T12:00:00Z`).getUTCDay(); return day === 0 ? 7 : day }
 
@@ -75,20 +94,11 @@ export function createScheduleApi(client) {
     if (error) throw failure()
     return data
   }
-  const clean = entry => ({
-    available: Boolean(entry.available),
-    start_minutes: entry.available ? entry.start_minutes : null,
-    end_minutes: entry.available ? entry.end_minutes : null,
-    start_mode: entry.available ? entry.start_mode : 'flexible',
-    fixed_start_minutes: entry.available && entry.start_mode === 'fixed' ? entry.fixed_start_minutes : null,
-    anchor_release_minutes: entry.available && entry.start_mode === 'fixed' ? (entry.anchor_release_minutes ?? null) : null,
-    schedule_mode: entry.available && entry.schedule_mode === 'flexible' ? 'flexible' : 'chain',
-  })
   return {
     weekly: () => run(client.from('working_hours').select('weekday,available,start_minutes,end_minutes,start_mode,fixed_start_minutes,anchor_release_minutes,schedule_mode').order('weekday')),
-    saveWeekly: entries => run(client.from('working_hours').upsert(entries.map(entry => ({ weekday: entry.weekday, ...clean(entry) })), { onConflict: 'weekday' })),
+    saveWeekly: entries => run(client.from('working_hours').upsert(entries.map(entry => ({ weekday: entry.weekday, ...cleanDay(entry) })), { onConflict: 'weekday' })),
     overrides: from => run(client.from('working_hours_overrides').select('date,available,start_minutes,end_minutes,start_mode,fixed_start_minutes,anchor_release_minutes,schedule_mode,note').gte('date', from).order('date').limit(200)),
-    saveOverride: entry => run(client.from('working_hours_overrides').upsert({ date: entry.date, note: entry.note?.trim() || null, ...clean(entry) }, { onConflict: 'date' })),
+    saveOverride: entry => run(client.from('working_hours_overrides').upsert({ date: entry.date, note: entry.note?.trim() || null, ...cleanDay(entry) }, { onConflict: 'date' })),
     deleteOverride: date => run(client.from('working_hours_overrides').delete().eq('date', date)),
     async conflicts(date, start, end) {
       const rows = await run(client.rpc('admin_schedule_conflicts', { p_date: date, p_start_minutes: start, p_end_minutes: end }))

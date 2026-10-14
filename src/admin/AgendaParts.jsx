@@ -34,10 +34,12 @@ export function TimedBlock({ row, open }) {
 }
 
 // Days with nothing booked, one quiet line each. A line that stands for a block can be pressed to open it.
-export function QuietDays({ items, open }) {
+export function QuietDays({ items, open, openDay }) {
   return <ul role="list" className="admin-agenda-quiet" aria-label="Days without appointments">
     {items.map(item => <li key={item.id} className={`is-${item.kind}`}>
-      <span className="when">{dateLabel(item.date)}</span>
+      {openDay
+        ? <button type="button" className="admin-agenda-quiet-date" aria-label={`Day settings for ${dateLabel(item.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`} onClick={() => openDay(item.date)}>{dateLabel(item.date)}</button>
+        : <span className="when">{dateLabel(item.date)}</span>}
       {item.row
         ? <button type="button" className="admin-agenda-quiet-button" onClick={() => open(item.row)}>{item.text}</button>
         : <span className="what">{item.text}</span>}

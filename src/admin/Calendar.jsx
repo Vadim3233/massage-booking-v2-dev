@@ -14,7 +14,7 @@ function load(date, version) {
   const promise = api.loadCalendarRange(date, shiftDate(date, 1)).finally(() => { if (inFlight?.promise === promise) inFlight = null })
   inFlight = { key, promise }; return promise
 }
-export default function Calendar({ signOut, openBooking, revision, initialDate, onDate }) {
+export default function Calendar({ signOut, openBooking, openDay, revision, initialDate, onDate }) {
   const [date, setDate] = useState(() => initialDate || today())
   // The day last read stays on screen while it is read again, so a change never blanks the page or loses the place.
   const [loaded, setLoaded] = useState(null)
@@ -86,7 +86,10 @@ export default function Calendar({ signOut, openBooking, revision, initialDate, 
         <button aria-label="Next day" onClick={() => navigate(shiftDate(date, 1))}>›</button>
       </nav>
     </header>
-    <div className="admin-create-entry"><button className="admin-secondary-entry btn--small" onClick={() => setBlockDialog({ date })}>Block time</button></div>
+    <div className="admin-create-entry">
+      {openDay && <button className="admin-secondary-entry btn--small" onClick={() => openDay(date)}>Day settings</button>}
+      <button className="admin-secondary-entry btn--small" onClick={() => setBlockDialog({ date })}>Block time</button>
+    </div>
     <section className="admin-day" aria-label="Day appointments">
       <h1 className="admin-sr-only">Appointments for {dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h1>
       <p className="admin-day-caption">London time</p>

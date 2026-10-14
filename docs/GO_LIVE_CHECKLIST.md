@@ -78,6 +78,15 @@ Each day can now be set to **Flexible** instead of the usual **Chain**. Under **
 - **Special days** start from the usual week's mode, like their hours, and have their own from then on.
 - **Apply the database change online before this is deployed**, after the release-time one. The Working hours screens read and save the new column, so they show a plain "Could not save" error until it is applied. It is safe to apply first: every day stays Chain.
 
+## New: Day settings, one date on its own (2026-10-14)
+
+Press **Day settings** on any day in the Agenda, or in the Day view beside Block time, to change just that date. With **Show every day** on, the date of a free day opens it too. The page shows what the day is set to and why, then lets you change its hours, schedule mode (Chain or Flexible), first appointment and release time with one **Save this day** button, add or change blocked time, and open the day's bookings. **Use my usual week** puts the date back to normal.
+
+- **What is saved.** A special day, the same one the Special days list shows. Your usual week is not touched.
+- **Warns, never moves.** If different hours leave a booking outside them, you are told which and can save anyway. Nothing is moved or cancelled for you.
+- **A day that has passed** can be looked at but not changed.
+- **No database change of its own**, but saving a day writes the release time and schedule mode, so the two database changes above (`20261030100000_anchor_release.sql`, then `20261031100000_schedule_mode.sql`) must be applied online first, or saving shows "Could not save".
+
 ## What works now (tested locally)
 
 **For clients** (the website)

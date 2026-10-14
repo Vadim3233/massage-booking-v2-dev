@@ -81,7 +81,7 @@ function ToCheck({ toCheck, checked, seeAll }) {
   </section>
 }
 
-export default function Agenda({ openBooking, revision, toCheck, checked, seeAll }) {
+export default function Agenda({ openBooking, openDay, revision, toCheck, checked, seeAll }) {
   // What is on screen stays on screen while it is read again, so nothing flashes and the scroll position holds.
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
@@ -199,7 +199,7 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
       <div className="admin-agenda-days">
         {entries.map(entry => {
           if (entry.type === 'away') return <AwayBanner key={`away-${entry.group.key}`} group={entry.group} open={openBlock} />
-          if (entry.type === 'quiet') return <QuietDays key={entry.key} items={entry.items} open={openBlock} />
+          if (entry.type === 'quiet') return <QuietDays key={entry.key} items={entry.items} open={openBlock} openDay={openDay} />
           const group = entry
           const heading = dayHeading(group.date)
           const full = dateLabel(group.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
@@ -207,6 +207,7 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
             <header className="admin-agenda-day-heading">
               <h2 id={`agenda-${group.date}`}><span className="day-name">{heading.name}</span>{heading.rest ? ` · ${heading.rest}` : ''}</h2>
               <span>{daySummary(group.bookings)}</span>
+              {openDay && <button type="button" className="btn--quiet btn--small admin-day-settings-button" aria-label={`Day settings for ${full}`} onClick={() => openDay(group.date)}><Icon name="clock" size={16} /> Day settings</button>}
             </header>
             <DayNotes special={group.special} away={group.away} />
             {!group.bookings.length && <p className="admin-agenda-empty"><strong>{group.special?.available === false || group.away ? 'A day off.' : 'A free day.'}</strong>Nothing is booked.</p>}
