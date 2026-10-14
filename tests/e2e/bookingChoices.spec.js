@@ -97,7 +97,7 @@ test('the price follows the choices by itself, with no button to press', async (
   expect(await noSideways(page)).toBe(true)
 })
 
-test('signing in waits behind "Returning client?" so the guest way on is the plain one', async ({ page }) => {
+test('the guest way on is the big button, with signing in and creating an account plainly beside it', async ({ page }) => {
   await toDuration(page)
   await page.getByRole('button', { name: /^60 minutes/ }).click()
   await page.getByLabel('Appointment date').fill(fixture.date)
@@ -105,10 +105,19 @@ test('signing in waits behind "Returning client?" so the guest way on is the pla
   await page.getByRole('button', { name: 'Review booking', exact: true }).click()
   await page.getByRole('button', { name: 'Continue to your details' }).click()
   await expect(page.getByRole('button', { name: 'Continue as guest' })).toBeVisible()
-  await expect(page.getByLabel('Email address', { exact: true })).toBeHidden()
-  await page.getByText('Returning client? Sign in').click()
-  await expect(page.getByLabel('Email address', { exact: true })).toBeVisible()
+  // Both ways of having an account are in plain sight, but the forms stay closed until one is asked for.
+  await expect(page.getByRole('button', { name: 'Sign in with email' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Create an account', exact: true })).toBeVisible()
+  await expect(page.getByLabel('Email address', { exact: true })).toBeHidden()
+  await page.getByRole('button', { name: 'Sign in with email' }).click()
+  await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible()
+  await expect(page.getByLabel('Email address', { exact: true })).toBeVisible()
+  await expect(page.getByLabel('First name', { exact: true })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Create an account', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Create your account' })).toBeVisible()
+  await expect(page.getByLabel('First name', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Continue as guest' })).toBeVisible()
+  await page.getByRole('button', { name: 'Already registered? Sign in' }).click()
   await page.getByRole('button', { name: 'Forgot password?' }).click()
   await expect(page.getByRole('button', { name: 'Send reset link' })).toBeVisible()
   await expect(page.getByLabel('Password', { exact: true })).toHaveCount(0)

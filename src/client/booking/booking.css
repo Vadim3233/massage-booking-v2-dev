@@ -169,11 +169,14 @@
 .price-skeleton .skeleton { height: 112px; }
 
 /* ---------- Details, payment and confirmation ---------- */
-.gate .signin { margin-top: 18px; }
-.gate .signin > :not(summary) { margin-inline: 16px; }
-.gate .signin > form { margin-top: 4px; }
-.gate .signin > .actions { margin-bottom: 14px; }
-.gate-form { margin-top: 8px; }
+.gate-or { margin: 22px 0 12px; color: var(--muted); font-size: 14px; text-align: center; }
+.gate-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.gate-choices > button { min-height: 52px; }
+.gate-choices > button[aria-expanded='true'] { box-shadow: inset 0 0 0 2px var(--primary); }
+.gate-form { margin-top: 12px; }
+.gate-form > h2 { margin-bottom: 4px; font-size: 20px; }
+.guest-note { display: flex; flex-direction: column; align-items: flex-start; margin: 0 0 14px; padding: 10px 14px 2px; border-radius: 12px; background: var(--primary-soft); color: var(--ink-soft); font-size: 15px; }
+.guest-note > button { margin-left: -14px; }
 .reserved { display: flex; align-items: center; gap: 8px; margin: 4px 0 6px; color: var(--ok-ink); font-weight: 600; }
 .reserved-dot { flex-shrink: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--ok-rail); box-shadow: 0 0 0 4px var(--ok-bg); }
 .amount-card { margin: 16px 0; padding: 18px 20px; border-radius: var(--radius); background: var(--primary); color: #fff; box-shadow: var(--shadow-2); }

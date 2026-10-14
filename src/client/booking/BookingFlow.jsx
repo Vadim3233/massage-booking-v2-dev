@@ -124,6 +124,17 @@ export default function BookingFlow() {
     const { error: guestError } = await supabase.auth.signInAnonymously()
     if (guestError) throw guestError
   }
+  // A guest who changes their mind: the guest login is ended on this device and the choices come back with sign-in open. The booking so far
+  // (the choices, the held time, anything typed) stays in the draft, and a signed-in account takes it over when the details screen opens.
+  // This is only offered on the details screen, before any booking exists.
+  const [wantsAccount, setWantsAccount] = useState(false)
+  if (auth.session && wantsAccount) setWantsAccount(false)
+  async function leaveGuest() {
+    if (!isGuest || draft.bookingId) return
+    const { error: signOutError } = await supabase.auth.signOut()
+    if (signOutError) { store.setError(friendlyError(signOutError)); return }
+    setWantsAccount(true)
+  }
   async function startNewTestGuest(details) {
     if (!testMode || !auth.session?.user?.is_anonymous) {
       throw new Error('The test client helper is only available for an anonymous guest session.')
@@ -168,8 +179,8 @@ export default function BookingFlow() {
           {step === 3 && <TimeStep rules={rules} joinWaitlist={api.joinWaitlist} draft={draft} loadAvailability={store.availability} selectSlot={store.selectSlot} next={() => goWithQuote(4)} />}
           {step === 4 && <ReviewStep draft={draft} catalogue={catalogue} quote={quote} quoteError={quoteError} edit={store.edit} navigate={navigate} refreshQuote={store.refreshQuote} retryQuote={store.retryQuote} next={() => goWithQuote(5)} />}
           {!auth.ready && step >= 5 && <p role="status">Checking your account…</p>}
-          {auth.ready && (needsAuth || auth.recovery) && <AuthPanel client={supabase} recovery={auth.recovery} onRecovered={auth.finishRecovery} onGuest={startGuest} />}
-          {step === 5 && auth.session && !auth.recovery && <DetailsStep key={auth.session.user.id} draft={draft} user={auth.session.user} api={api} edit={store.edit} report={store.setError} guest={isGuest} newTestGuest={startNewTestGuest} next={() => goWithQuote(6)} />}
+          {auth.ready && (needsAuth || auth.recovery) && <AuthPanel client={supabase} recovery={auth.recovery} onRecovered={auth.finishRecovery} onGuest={startGuest} startOpen={wantsAccount} />}
+          {step === 5 && auth.session && !auth.recovery && <DetailsStep key={auth.session.user.id} draft={draft} user={auth.session.user} api={api} edit={store.edit} report={store.setError} guest={isGuest} onSwitchToAccount={isGuest && !draft.bookingId ? leaveGuest : undefined} newTestGuest={startNewTestGuest} next={() => goWithQuote(6)} />}
           {step === 6 && auth.session && !auth.recovery && <PaymentStep rules={rules} draft={draft} quote={quote} quoteError={quoteError} bank={bank} api={api} store={store} finalize={() => store.finalize(auth.session.user.id)} held={held} error={error} chooseTimeAgain={() => navigate(3)} />}
           {step === 7 && auth.session && !auth.recovery && <ConfirmationStep id={draft.bookingId} result={result} api={api} bank={bank} quote={quote} again={startAgain} />}
         </fieldset>
