@@ -124,6 +124,16 @@ export default function BookingFlow() {
     const { error: guestError } = await supabase.auth.signInAnonymously()
     if (guestError) throw guestError
   }
+  // Signing in from the top of any page, before anything is chosen: the details are then filled in later and the guest question never comes up.
+  // A guest can do the same until a booking is made; once there is a booking the page has no way back, as before.
+  const [signInOpen, setSignInOpen] = useState(false)
+  if (signInOpen && auth.session && !isGuest) setSignInOpen(false)
+  const signedInAccount = Boolean(auth.session) && !isGuest
+  async function signOut() {
+    const { error: signOutError } = await supabase.auth.signOut()
+    if (signOutError) store.setError(friendlyError(signOutError))
+  }
+  useEffect(() => { if (signInOpen) document.getElementById('gate-title')?.focus() }, [signInOpen])
   async function startNewTestGuest(details) {
     if (!testMode || !auth.session?.user?.is_anonymous) {
       throw new Error('The test client helper is only available for an anonymous guest session.')
@@ -140,8 +150,16 @@ export default function BookingFlow() {
   }
   const canGoBack = step > 0 && step < 7 && !draft.pending && !draft.bookingId
   const shown = Math.min(step, STEPS.length - 1)
+  // The gate on the details screen has its own sign-in, and once a booking exists there is no way back, so the top of the page offers neither then.
+  const showSignIn = signInOpen && !needsAuth && !auth.recovery && !signedInAccount && !draft.bookingId
+  const accountControl = !auth.ready || auth.recovery || draft.bookingId ? null
+    : signedInAccount ? <button type="button" className="btn--quiet btn--small" onClick={signOut}>Sign out</button>
+      : needsAuth ? null
+        : <button type="button" className="btn--quiet btn--small" aria-expanded={showSignIn} aria-controls={showSignIn ? 'header-sign-in' : undefined} onClick={() => setSignInOpen(open => !open)}>Sign in</button>
   return <div className="booking-shell">
-    <header className="brand"><a className="brand-link" href="/"><b className="brand-mark" aria-hidden="true">VM</b>VadMassage</a><a className="brand-aside" href="/account">Your bookings</a></header>
+    <header className="brand"><a className="brand-link" href="/"><b className="brand-mark" aria-hidden="true">VM</b>VadMassage</a>
+      <div className="brand-actions">{accountControl}<a className="brand-aside" href="/account">Your bookings</a><span className="sr-only" role="status">{signedInAccount ? 'You are signed in.' : ''}</span></div></header>
+    {showSignIn && <div className="header-sign-in" id="header-sign-in"><AuthPanel client={supabase} level={2} heading="Sign in" redirectTo={`${window.location.origin}${window.location.pathname}?step=${step}`} /></div>}
     <main className={`booking-main ${settling ? 'is-settling' : ''}`}>
       <nav className="stepper" aria-label="Booking progress">
         <div className="stepper-row">
