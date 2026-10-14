@@ -83,4 +83,20 @@ describe('schedule control against local Supabase', () => {
     await f.authorize()
     await expect(api.saveOverride({ date: DATE, available: true, start_minutes: 900, end_minutes: 600, start_mode: 'flexible' })).rejects.toThrow('Could not save')
   })
+
+  it('saves the schedule mode on the usual week and on a special day and reads it back, and the database refuses anything but chain or flexible', async () => {
+    await f.authorize()
+    const week = await api.weekly()
+    expect(week.every(day => ['chain', 'flexible'].includes(day.schedule_mode))).toBe(true)
+    await api.saveWeekly(week.map(day => day.weekday === 3 ? { ...day, available: true, start_minutes: 600, end_minutes: 1200, schedule_mode: 'flexible' } : day))
+    expect((await api.weekly()).find(day => day.weekday === 3)).toMatchObject({ schedule_mode: 'flexible' })
+    await api.saveOverride({ date: DATE, available: true, start_minutes: 600, end_minutes: 1200, start_mode: 'flexible', schedule_mode: 'flexible', note: 'Open day' })
+    expect((await api.overrides(DATE)).find(item => item.date === DATE)).toMatchObject({ schedule_mode: 'flexible', note: 'Open day' })
+    // A day off carries no schedule mode, so what the screen sends is always something the database accepts.
+    await api.saveOverride({ date: DATE, available: false, schedule_mode: 'flexible', note: 'Open day' })
+    expect((await api.overrides(DATE)).find(item => item.date === DATE)).toMatchObject({ available: false, schedule_mode: 'chain' })
+    // The database itself refuses anything but chain or flexible, even if the screen did not.
+    const refused = await f.admin.from('working_hours_overrides').upsert({ date: DATE, available: true, start_minutes: 600, end_minutes: 1200, start_mode: 'flexible', schedule_mode: 'loose' })
+    expect(refused.error?.code).toBe('23514')
+  })
 })
