@@ -52,6 +52,9 @@ export const usualAddress = (addresses) => addresses.find((address) => address.i
 // Whether the client has already put an address into the boxes themselves (the city starts as London, so it does not count).
 export const addressTyped = (details) => ['address_line_1', 'address_line_2', 'postcode', 'entry_instructions'].some((key) => details[key]?.trim())
 
+// Whether the name and phone are all there. A returning client's details are then shown locked, so nothing is changed by accident.
+export const contactComplete = (details) => ['first_name', 'last_name', 'phone'].every((key) => details[key]?.trim())
+
 export function allowedStep(draft, requested, now = Date.now()) {
   if (draft.bookingId) return draft.paymentComplete === false ? 6 : 7
   if (draft.pending) return 6

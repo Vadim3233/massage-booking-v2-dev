@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addressFields, addressTyped, blankAddressFields, detailProblems, usualAddress } from './bookingDraft.js'
+import { addressFields, addressTyped, blankAddressFields, contactComplete, detailProblems, usualAddress } from './bookingDraft.js'
 
 const details = (changes = {}) => ({ first_name: 'Ada', last_name: 'Lovelace', email: 'ada@example.test', phone: '07700 900123', address_line_1: '1 Test Road', address_line_2: '', city: 'London', postcode: 'SW3 1AA', savedAddressId: '', ...changes })
 
@@ -52,5 +52,22 @@ describe('the address boxes on the details screen', () => {
     expect(addressTyped({ ...blankAddressFields(), city: 'Leeds' })).toBe(false)
     expect(addressTyped({ ...blankAddressFields(), postcode: '   ' })).toBe(false)
     for (const key of ['address_line_1', 'address_line_2', 'postcode', 'entry_instructions']) expect(addressTyped({ ...blankAddressFields(), [key]: 'x' })).toBe(true)
+  })
+})
+
+describe("when a returning client's details can be shown locked", () => {
+  it('is when the name and the phone are all there', () => {
+    expect(contactComplete(details())).toBe(true)
+    expect(contactComplete(details({ phone: '+44 7700 900123' }))).toBe(true)
+  })
+  it('is not when any of the three is missing or only spaces, so the boxes stay open to fill in', () => {
+    for (const key of ['first_name', 'last_name', 'phone']) {
+      expect(contactComplete(details({ [key]: '' }))).toBe(false)
+      expect(contactComplete(details({ [key]: '   ' }))).toBe(false)
+      expect(contactComplete(details({ [key]: undefined }))).toBe(false)
+    }
+  })
+  it('does not depend on the address or the email', () => {
+    expect(contactComplete(details({ address_line_1: '', postcode: '', email: '' }))).toBe(true)
   })
 })

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { addressFields, addressTyped, blankAddressFields, detailProblems, usualAddress, validDetails } from '../bookingDraft.js'
+import { addressFields, addressTyped, blankAddressFields, contactComplete, detailProblems, usualAddress, validDetails } from '../bookingDraft.js'
 import { friendlyError } from '../friendlyError.js'
 
 function buildTestClient() {
@@ -28,6 +28,7 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
   const [testing, setTesting] = useState(false)
   const [switching, setSwitching] = useState(false)
   const [problems, setProblems] = useState({})
+  const [unlocked, setUnlocked] = useState(false)
   const showTestTools = import.meta.env.DEV
   useEffect(() => {
     let live = true
@@ -59,6 +60,13 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api, user.id, guest])
   const details = draft.details
+  // A returning client's name and phone are saved on their account, and pressing Continue saves what is here back to it. So they are locked until
+  // "Edit my details" is pressed, and nothing changes by accident. A guest, and anyone with something still missing, has open boxes.
+  const locked = !guest && !loading && !unlocked && contactComplete(details)
+  function unlock() {
+    setUnlocked(true)
+    requestAnimationFrame(() => document.getElementById('details-first-name')?.focus())
+  }
   function field(key, value) {
     if (problems[key]) setProblems((known) => ({ ...known, [key]: undefined }))
     edit({ details: { ...details, [key]: value } })
@@ -89,6 +97,8 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
     const found = detailProblems(details)
     if (Object.keys(found).length) {
       setProblems(found)
+      // A saved number that cannot be right has to be changeable, so the lock opens.
+      if (found.phone) setUnlocked(true)
       report('')
       const first = ['phone', 'postcode'].find((key) => found[key])
       requestAnimationFrame(() => document.getElementById(`details-${first}`)?.focus())
@@ -110,12 +120,17 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
     <p className="fine">Everything that is not marked optional is needed so I can find you.</p>
     <form onSubmit={submit}><fieldset disabled={loading || testing}>
       {showTestTools && guest && newTestGuest && <button type="button" className="btn--tonal btn--small" onClick={startNewTestClient}>{testing ? 'Creating test client…' : 'New test client'}</button>}
+      {locked && <div className="details-lock">
+        <p className="fine" id="details-lock-note">Your name and phone are saved on your account and locked, so nothing changes by accident. Your email is your sign-in and cannot be changed here.</p>
+        <button type="button" className="btn--tonal btn--small" aria-describedby="details-lock-note" onClick={unlock}>Edit my details</button>
+      </div>}
+      {!guest && !loading && unlocked && <p className="fine details-unlocked">You can change your name and phone now. They are saved to your account when you continue.</p>}
       <div className="two-columns">
-        <label>First name<input autoComplete="given-name" maxLength={60} value={details.first_name} required onChange={(event) => field('first_name', event.target.value)} /></label>
-        <label>Last name<input autoComplete="family-name" maxLength={60} value={details.last_name} required onChange={(event) => field('last_name', event.target.value)} /></label>
+        <label>First name<input id="details-first-name" readOnly={locked} autoComplete="given-name" maxLength={60} value={details.first_name} required onChange={(event) => field('first_name', event.target.value)} /></label>
+        <label>Last name<input readOnly={locked} autoComplete="family-name" maxLength={60} value={details.last_name} required onChange={(event) => field('last_name', event.target.value)} /></label>
       </div>
       <label>Email address<input type="email" inputMode="email" autoComplete="email" maxLength={120} value={guest ? details.email : (user.email || details.email)} readOnly={!guest} required onChange={(event) => guest && field('email', event.target.value)} /></label>
-      <label>Contact number<input id="details-phone" type="tel" inputMode="tel" autoComplete="tel" maxLength={30} aria-invalid={Boolean(problems.phone)} aria-describedby={problems.phone ? 'details-phone-problem' : undefined} value={details.phone} required onChange={(event) => field('phone', event.target.value)} /></label>
+      <label>Contact number<input id="details-phone" readOnly={locked} type="tel" inputMode="tel" autoComplete="tel" maxLength={30} aria-invalid={Boolean(problems.phone)} aria-describedby={problems.phone ? 'details-phone-problem' : undefined} value={details.phone} required onChange={(event) => field('phone', event.target.value)} /></label>
       {problems.phone && <p className="field-problem" id="details-phone-problem" role="alert">{problems.phone}</p>}
       {!guest && addresses.length > 0 && <label>Saved address<select value={details.savedAddressId} onChange={(event) => {
         const address = addresses.find((item) => item.id === event.target.value)
