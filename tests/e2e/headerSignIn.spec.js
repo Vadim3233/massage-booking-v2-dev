@@ -130,6 +130,37 @@ test('an account can be created from the top, and signs straight in', async ({ p
   await fixture.trackUser(data.users.find((user) => user.email === email).id)
 })
 
+test('an account created from the top, when the email has to be confirmed first, gets the same "Check your email" step', async ({ page }) => {
+  // The local test server has "Confirm email" switched off, so the sign-up answer is made up as the online project gives it.
+  let confirmed = false
+  const madeUpUser = { id: crypto.randomUUID(), aud: 'authenticated', role: '', email: fixture.email, identities: [{ provider: 'email' }], user_metadata: {}, app_metadata: { provider: 'email' }, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+  await page.route('**/auth/v1/signup*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(madeUpUser) }))
+  // Until the link has been opened the sign-in is refused; afterwards the real local server answers (the fixture's own account has the same email and password).
+  await page.route('**/auth/v1/token*', (route) => confirmed ? route.continue()
+    : route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ code: 400, error_code: 'email_not_confirmed', msg: 'Email not confirmed' }) }))
+  await page.goto('/')
+  await top(page).getByRole('button', { name: 'Sign in' }).click()
+  const panel = page.locator('#header-sign-in')
+  await panel.getByRole('button', { name: 'Create an account', exact: true }).click()
+  await panel.getByLabel('First name', { exact: true }).fill('Top')
+  await panel.getByLabel('Last name', { exact: true }).fill('Waiting')
+  await panel.getByLabel('Email address', { exact: true }).fill(fixture.email)
+  await panel.getByLabel('Password', { exact: true }).fill(fixture.password)
+  await panel.getByRole('button', { name: 'Register', exact: true }).click()
+  await expect(panel.getByRole('heading', { name: 'Check your email' })).toBeVisible()
+  await expect(panel.getByRole('alert').filter({ hasText: fixture.email })).toBeVisible()
+
+  // Pressing continue before the link has been opened says so, and the step stays.
+  await panel.getByRole('button', { name: "I've confirmed my email, continue" }).click()
+  await expect(panel.getByRole('alert').filter({ hasText: 'Please confirm your email first' })).toBeVisible()
+  await expect(panel.getByRole('heading', { name: 'Check your email' })).toBeVisible()
+
+  confirmed = true
+  await panel.getByRole('button', { name: "I've confirmed my email, continue" }).click()
+  await expect(top(page).getByRole('button', { name: 'Sign out' })).toBeVisible()
+  await expect(panel).toHaveCount(0)
+})
+
 test('the top of the page fits a 320px phone, with and without the sign-in panel open', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 })
   await page.goto('/')
