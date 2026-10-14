@@ -13,7 +13,7 @@ const AUTH_MESSAGES = [
 ]
 const authMessage = (error) => AUTH_MESSAGES.find(([pattern]) => pattern.test(error?.message || ''))?.[1] || GENERIC
 
-export default function AuthPanel({ client, recovery = false, onRecovered, onGuest, startOpen = false, heading: headingOverride, redirectTo: redirectOverride }) {
+export default function AuthPanel({ client, recovery = false, onRecovered, onGuest, startOpen = false, level = 1, heading: headingOverride, redirectTo: redirectOverride }) {
   const [mode, setMode] = useState('login')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
@@ -104,8 +104,10 @@ export default function AuthPanel({ client, recovery = false, onRecovered, onGue
       <button className="btn--quiet" type="button" disabled={busy} onClick={() => setWaiting(null)}>Use a different email</button>
     </div>
   </>
+  // Under the page header the panel is a section of the page, not its main heading.
+  const Heading = level === 2 ? 'h2' : 'h1'
   return <section className="gate" aria-labelledby="gate-title">
-    <h1 id="gate-title" tabIndex={-1}>{heading}</h1>
+    <Heading id="gate-title" tabIndex={-1}>{heading}</Heading>
     {guestable
       ? <p className="lede">Book as a guest in a minute, or use an account to keep your details for next time.</p>
       : mode === 'login' && !recovery ? <p className="lede">Sign in with the email you used to book.</p>

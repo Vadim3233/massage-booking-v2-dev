@@ -4,7 +4,11 @@
 /* ---------- Frame ---------- */
 .booking-shell { display: flex; flex-direction: column; max-width: 600px; min-height: 100dvh; margin: 0 auto; padding: 0 16px; }
 .booking-main { flex: 1 0 auto; padding-bottom: 32px; overflow-wrap: break-word; }
-.brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0 10px; }
+.brand { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 8px; padding: 14px 0 10px; }
+.brand-actions { display: flex; align-items: center; gap: 0 2px; margin-left: auto; }
+.brand-actions .btn--quiet { padding-inline: 6px; }
+.brand-actions .btn--quiet[aria-expanded='true'] { background: var(--primary-soft); }
+.header-sign-in .gate-form { margin: 0 0 8px; }
 .brand-link { display: inline-flex; align-items: center; gap: 10px; color: var(--primary); text-decoration: none; font: 600 22px/1 var(--font-display); letter-spacing: -.005em; }
 .brand-aside { padding: 10px 2px; color: var(--primary); font-size: 14px; font-weight: 600; text-decoration: none; }
 .brand-aside:hover { text-decoration: underline; }
