@@ -15,6 +15,7 @@ export function validateHours(entry) {
   if (!entry.available) return ''
   if (entry.start_minutes == null || entry.end_minutes == null) return 'Choose a start and an end time.'
   if (entry.start_minutes >= entry.end_minutes) return 'The end time must be after the start time.'
+  if (entry.anchor_release_minutes != null && entry.start_mode !== 'fixed') return 'A release time needs a first appointment at a set time.'
   if (entry.start_mode === 'fixed') {
     if (entry.fixed_start_minutes == null) return 'Choose the time of the first appointment.'
     if (entry.fixed_start_minutes < entry.start_minutes || entry.fixed_start_minutes >= entry.end_minutes) return 'The first appointment must be inside your working hours.'
@@ -28,15 +29,17 @@ export const weekdayOf = date => { const day = new Date(`${date}T12:00:00Z`).get
 // so only what is special about the day has to be changed.
 export function usualHoursFor(date, weekly) {
   const row = weekly?.find(item => item.weekday === weekdayOf(date))
-  if (!row?.available) return { available: false, start_minutes: null, end_minutes: null, start_mode: 'flexible', fixed_start_minutes: null }
-  return { available: true, start_minutes: row.start_minutes, end_minutes: row.end_minutes, start_mode: row.start_mode, fixed_start_minutes: row.fixed_start_minutes }
+  if (!row?.available) return { available: false, start_minutes: null, end_minutes: null, start_mode: 'flexible', fixed_start_minutes: null, anchor_release_minutes: null }
+  return { available: true, start_minutes: row.start_minutes, end_minutes: row.end_minutes, start_mode: row.start_mode, fixed_start_minutes: row.fixed_start_minutes, anchor_release_minutes: row.anchor_release_minutes ?? null }
 }
 
 // A day's hours in one line, with its first appointment when that is set to a time.
 export function hoursLine(entry) {
   if (!entry.available) return 'Day off'
   const hours = `${clock(entry.start_minutes)}–${clock(entry.end_minutes)}`
-  return entry.start_mode === 'fixed' ? `${hours}, first appointment at ${clock(entry.fixed_start_minutes)}` : hours
+  if (entry.start_mode !== 'fixed') return hours
+  const release = entry.anchor_release_minutes != null ? ` (released at ${clock(entry.anchor_release_minutes)} the day before)` : ''
+  return `${hours}, first appointment at ${clock(entry.fixed_start_minutes)}${release}`
 }
 
 // A block runs from a date and time to a later date and time, like an event in a phone calendar.
@@ -77,11 +80,12 @@ export function createScheduleApi(client) {
     end_minutes: entry.available ? entry.end_minutes : null,
     start_mode: entry.available ? entry.start_mode : 'flexible',
     fixed_start_minutes: entry.available && entry.start_mode === 'fixed' ? entry.fixed_start_minutes : null,
+    anchor_release_minutes: entry.available && entry.start_mode === 'fixed' ? (entry.anchor_release_minutes ?? null) : null,
   })
   return {
-    weekly: () => run(client.from('working_hours').select('weekday,available,start_minutes,end_minutes,start_mode,fixed_start_minutes').order('weekday')),
+    weekly: () => run(client.from('working_hours').select('weekday,available,start_minutes,end_minutes,start_mode,fixed_start_minutes,anchor_release_minutes').order('weekday')),
     saveWeekly: entries => run(client.from('working_hours').upsert(entries.map(entry => ({ weekday: entry.weekday, ...clean(entry) })), { onConflict: 'weekday' })),
-    overrides: from => run(client.from('working_hours_overrides').select('date,available,start_minutes,end_minutes,start_mode,fixed_start_minutes,note').gte('date', from).order('date').limit(200)),
+    overrides: from => run(client.from('working_hours_overrides').select('date,available,start_minutes,end_minutes,start_mode,fixed_start_minutes,anchor_release_minutes,note').gte('date', from).order('date').limit(200)),
     saveOverride: entry => run(client.from('working_hours_overrides').upsert({ date: entry.date, note: entry.note?.trim() || null, ...clean(entry) }, { onConflict: 'date' })),
     deleteOverride: date => run(client.from('working_hours_overrides').delete().eq('date', date)),
     async conflicts(date, start, end) {

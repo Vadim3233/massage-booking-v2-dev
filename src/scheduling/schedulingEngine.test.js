@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getAvailableTimes } from './schedulingEngine'
+import { anchorReleaseInstant, getAvailableTimes } from './schedulingEngine'
 
 describe('Chain Mode scheduling engine', () => {
   it('returns the anchor time for an empty anchored day', () => {
@@ -748,4 +748,62 @@ describe('Chain Mode scheduling engine', () => {
     ])
   })
 
+})
+
+describe('releasing a first appointment that nobody has booked', () => {
+  const emptyDay = {
+    workingHours: { start: '10:00', end: '14:00' },
+    anchor: '12:00',
+    date: '2031-05-07',
+    anchorReleaseMinutes: 17 * 60,
+    requestedDurationMinutes: 60,
+  }
+  const everyTime = ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00']
+
+  it('offers only the first appointment before the release time on the evening before', () => {
+    expect(getAvailableTimes({ ...emptyDay, currentTime: '2031-04-30T12:00:00+01:00' })).toEqual(['12:00'])
+    expect(getAvailableTimes({ ...emptyDay, currentTime: '2031-05-06T16:59:00+01:00' })).toEqual(['12:00'])
+  })
+
+  it('opens an empty day to every usual time from the release time on, even after the first appointment has passed', () => {
+    expect(getAvailableTimes({ ...emptyDay, currentTime: '2031-05-06T17:00:00+01:00' })).toEqual(everyTime)
+    expect(getAvailableTimes({ ...emptyDay, currentTime: '2031-05-07T16:00:00+01:00' })).toEqual(everyTime)
+  })
+
+  it('keeps the first appointment when there is no release time', () => {
+    expect(getAvailableTimes({ ...emptyDay, anchorReleaseMinutes: null, currentTime: '2031-05-07T09:00:00+01:00' })).toEqual(['12:00'])
+  })
+
+  it('does nothing without a date to count the evening before from', () => {
+    expect(getAvailableTimes({ ...emptyDay, date: undefined, currentTime: '2031-05-07T09:00:00+01:00' })).toEqual(['12:00'])
+  })
+
+  it('changes nothing on a day that has a booking, before or after the release time', () => {
+    const booked = {
+      ...emptyDay,
+      workingHours: { start: '10:00', end: '20:00' },
+      anchor: '15:00',
+      bookings: [{ start: '15:00', end: '16:00' }],
+    }
+    expect(getAvailableTimes({ ...booked, currentTime: '2031-05-06T16:59:00+01:00' })).toEqual(['13:00', '17:00'])
+    expect(getAvailableTimes({ ...booked, currentTime: '2031-05-06T17:00:00+01:00' })).toEqual(['13:00', '17:00'])
+  })
+
+  it('counts the evening before in London time, either side of the clocks changing', () => {
+    // The clocks went forward on 30 March 2031, so 17:00 in London is 16:00 UTC.
+    const spring = { ...emptyDay, date: '2031-03-31' }
+    expect(getAvailableTimes({ ...spring, currentTime: '2031-03-30T15:59:00Z' })).toEqual(['12:00'])
+    expect(getAvailableTimes({ ...spring, currentTime: '2031-03-30T16:00:00Z' })).toEqual(everyTime)
+    // The clocks went back on 26 October 2031, so 17:00 in London is 17:00 UTC.
+    const autumn = { ...emptyDay, date: '2031-10-27' }
+    expect(getAvailableTimes({ ...autumn, currentTime: '2031-10-26T16:59:00Z' })).toEqual(['12:00'])
+    expect(getAvailableTimes({ ...autumn, currentTime: '2031-10-26T17:00:00Z' })).toEqual(everyTime)
+  })
+
+  it('works out the moment of release directly', () => {
+    expect(new Date(anchorReleaseInstant('2031-05-07', 17 * 60)).toISOString()).toBe('2031-05-06T16:00:00.000Z')
+    expect(new Date(anchorReleaseInstant('2031-12-02', 17 * 60)).toISOString()).toBe('2031-12-01T17:00:00.000Z')
+    expect(new Date(anchorReleaseInstant('2031-05-07', 0)).toISOString()).toBe('2031-05-05T23:00:00.000Z')
+    expect(new Date(anchorReleaseInstant('2031-05-01', 23 * 60 + 59)).toISOString()).toBe('2031-04-30T22:59:00.000Z')
+  })
 })

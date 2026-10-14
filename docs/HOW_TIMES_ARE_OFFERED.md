@@ -8,7 +8,7 @@ Written on 2026-10-14 from the owner's own description, checked against the book
 
 **First appointment** (the "anchor") answers "if nobody has booked yet, where should this day begin?" It has two settings:
 
-- **At a set time**: an empty day offers clients only that time.
+- **At a set time**: an empty day offers clients only that time. It can also have a **release time**, which opens the day up if nobody takes that time (see "Releasing a first appointment that nobody has booked" below).
 - **Any time in my hours**: an empty day offers every usual start inside the working hours.
 
 **The chain** answers "once bookings exist, how are new ones added?" New bookings are attached to the two ends of the day's run of appointments, never to little gaps in the middle. The chain is always on; it is not a setting.
@@ -22,6 +22,18 @@ Wednesday, working 10:00 to 20:00, first appointment **At a set time** 15:00, no
 The same Wednesday with **Any time in my hours**: clients are offered 10:00, 10:30, 11:00 and so on, as far as the treatment length, travel, blocked time and the end of the day allow. The first client to book decides where the chain starts.
 
 So with a set time you decide where an empty day starts, and without one the first client does.
+
+## Releasing a first appointment that nobody has booked
+
+A first appointment **At a set time** keeps an empty day to that one time. If nobody takes it, a client who looks later sees nothing, even though the day has hours left. A **release time** fixes that. It is a time on the day before: if nobody has booked the first appointment by then, the day is offered as **Any time in my hours** from then on.
+
+Wednesday, working 10:00 to 20:00, first appointment at 15:00, release time **17:00 the day before**. Until 17:00 on Tuesday, an empty Wednesday offers only 15:00. From 17:00 on Tuesday, if nobody has booked, it offers 10:00, 10:30, 11:00 and so on, as for any day, as far as the treatment length, travel, blocked time and the end of the day allow. Your notice period still applies, as always.
+
+- **It only matters for an empty day.** Once someone has booked, the day is worked out from the bookings, release time or not. If that booking is cancelled and nobody else has booked, a day that is already past its release time is open again.
+- **Where it is set.** Wherever the first appointment is set: on a weekday of the usual week, and on a special day. A special day has its own release time, or none; it does not borrow the usual week's.
+- **London time.** "The day before" is counted in London time, so it stays right either side of the clocks changing.
+- **Keep it until someone books** (no release time) is the default and works as before.
+- **Only with a set time.** A day with **Any time in my hours**, or a day off, has no release time.
 
 ## The chain, once there is a booking
 
@@ -43,6 +55,6 @@ Adding a special day starts from what the usual week says for that weekday, so o
 
 ## Good to know
 
-- With **At a set time**, only that time is offered until someone books. If that time has already passed, or is inside your notice period, clients see **no times at all** that day, even though your hours run later. Tested on a local copy: with the set time already past, no times were offered; with it about three hours ahead, exactly that time; with **Any time in my hours**, every usual time from the notice period onwards. If you would still like to take bookings later that day, use **Any time in my hours** for that date.
+- With **At a set time**, only that time is offered until someone books. If that time has already passed, or is inside your notice period, clients see **no times at all** that day, even though your hours run later. Tested on a local copy: with the set time already past, no times were offered; with it about three hours ahead, exactly that time; with **Any time in my hours**, every usual time from the notice period onwards. If you would still like to take bookings later that day, use **Any time in my hours** for that date, or give the first appointment a **release time**, after which the day offers every usual time.
 - A set time has to fit: if the treatment would finish after your hours, or the time falls in blocked time, it is not offered.
 - A day off, or blocked time, always wins over the first appointment.
