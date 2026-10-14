@@ -10,6 +10,7 @@ test.afterEach(async () => {
   await f.admin.from('working_hours').upsert(originalWeek, { onConflict: 'weekday' })
   await f.admin.from('working_hours_overrides').delete().eq('date', f.bookings[0].date).is('note', null)
   await f.admin.from('working_hours_overrides').delete().eq('note', 'Family day')
+  await f.admin.from('working_hours_overrides').delete().eq('note', 'Late start')
   await f.admin.from('calendar_blocks').delete().eq('title', 'Dentist')
   await f.admin.from('calendar_blocks').delete().eq('title', 'Summer break')
   await f?.cleanup()
@@ -20,6 +21,14 @@ async function signIn(page, path) {
   await page.getByLabel('Email', { exact: true }).fill(f.email)
   await page.getByLabel('Password', { exact: true }).fill(f.password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+}
+const dayAhead = offset => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10)
+const isoWeekday = date => new Date(`${date}T12:00:00Z`).getUTCDay() || 7
+const usualFor = (date, patch) => f.admin.from('working_hours').upsert({ weekday: isoWeekday(date), available: true, start_minutes: 600, end_minutes: 1200, start_mode: 'flexible', fixed_start_minutes: null, ...patch }, { onConflict: 'weekday' })
+async function addSpecialDay(page) {
+  await signIn(page, '/admin/schedule')
+  await page.getByRole('tab', { name: 'Special days' }).click()
+  await page.getByRole('button', { name: 'Add a special day' }).click()
 }
 
 test('the usual week can be changed, checked before saving, and is saved', async ({ page }) => {
@@ -43,7 +52,7 @@ test('the usual week can be changed, checked before saving, and is saved', async
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
 })
 
-test('a day off over a live booking warns first, never moves the booking, and can be removed', async ({ page }) => {
+test('a day off over a live booking warns first, never moves the booking, and the date can go back to the usual week', async ({ page }) => {
   await f.authorize()
   await signIn(page, '/admin/schedule')
   await page.getByRole('tab', { name: 'Special days' }).click()
@@ -57,8 +66,66 @@ test('a day off over a live booking warns first, never moves the booking, and ca
   await expect(page.getByText('Saved.')).toBeVisible()
   await expect(page.getByRole('list').filter({ hasText: 'Family day' })).toContainText('Day off')
   expect((await f.admin.from('bookings').select('booking_status').eq('id', f.bookings[0].id).single()).data.booking_status).toBe('awaiting_payment_verification')
-  await page.getByRole('button', { name: 'Remove', exact: true }).click()
+  await page.getByRole('button', { name: /Use my usual week/ }).click()
   await expect(page.getByText('Removed. That day follows your usual week again.')).toBeVisible()
+})
+
+test("a special day starts from that weekday's usual hours, so only the first appointment needs choosing, and the list says so", async ({ page }) => {
+  await f.authorize()
+  const date = dayAhead(100)
+  await usualFor(date, { start_minutes: 720, end_minutes: 1260 })
+  await addSpecialDay(page)
+  await page.getByLabel('Date').fill(date)
+  await expect(page.getByText(/^Your usual \w+: 12:00–21:00\.$/)).toBeVisible()
+  await page.getByLabel('Different hours').check()
+  await expect(page.getByLabel('Special day start')).toHaveValue('720')
+  await expect(page.getByLabel('Special day end')).toHaveValue('1260')
+  await expect(page.getByText('Until someone books, clients can pick any usual time in your hours.')).toBeVisible()
+  await page.getByLabel('Special day first appointment').selectOption('fixed')
+  await expect(page.getByText('Until someone books, clients are offered only this time.')).toBeVisible()
+  await page.getByLabel('Special day first appointment time').selectOption('900')
+  await page.getByLabel('Note (only you see this)').fill('Late start')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(page.getByText('Saved.')).toBeVisible()
+  const item = page.locator('.admin-special-list li', { hasText: 'Late start' })
+  await expect(item).toContainText('12:00–21:00, first appointment at 15:00')
+  expect((await f.admin.from('working_hours_overrides').select('*').eq('date', date).single()).data)
+    .toMatchObject({ available: true, start_minutes: 720, end_minutes: 1260, start_mode: 'fixed', fixed_start_minutes: 900, note: 'Late start' })
+  // The usual week itself is untouched by a special day.
+  expect((await f.admin.from('working_hours').select('*').eq('weekday', isoWeekday(date)).single()).data).toMatchObject({ start_minutes: 720, end_minutes: 1260, start_mode: 'flexible' })
+  await item.getByRole('button', { name: /Use my usual week/ }).click()
+  await expect(page.getByText('Removed. That day follows your usual week again.')).toBeVisible()
+  expect((await f.admin.from('working_hours_overrides').select('date').eq('date', date)).data).toHaveLength(0)
+})
+
+test('a special day on a weekday that is normally off says so, and starts from ordinary hours', async ({ page }) => {
+  await f.authorize()
+  const date = dayAhead(101)
+  await usualFor(date, { available: false, start_minutes: null, end_minutes: null })
+  await addSpecialDay(page)
+  await page.getByLabel('Date').fill(date)
+  await expect(page.getByText(/^Your usual \w+: a day off\.$/)).toBeVisible()
+  await page.getByLabel('Different hours').check()
+  await expect(page.getByLabel('Special day start')).toHaveValue('600')
+  await expect(page.getByLabel('Special day end')).toHaveValue('1200')
+})
+
+test('the hours follow the date to its weekday until they are changed by hand, and are then kept', async ({ page }) => {
+  await f.authorize()
+  const first = dayAhead(100), second = dayAhead(101)
+  await usualFor(first, { start_minutes: 720, end_minutes: 1260 })
+  await usualFor(second, { start_minutes: 540, end_minutes: 1020 })
+  await addSpecialDay(page)
+  await page.getByLabel('Date').fill(first)
+  await page.getByLabel('Different hours').check()
+  await expect(page.getByLabel('Special day start')).toHaveValue('720')
+  await page.getByLabel('Date').fill(second)
+  await expect(page.getByLabel('Special day start')).toHaveValue('540')
+  await expect(page.getByLabel('Special day end')).toHaveValue('1020')
+  await page.getByLabel('Special day start').selectOption('570')
+  await page.getByLabel('Date').fill(first)
+  await expect(page.getByLabel('Special day start')).toHaveValue('570')
+  await expect(page.getByLabel('Special day end')).toHaveValue('1020')
 })
 
 test('time can be blocked from the calendar, with a warning about clashes, then changed and removed', async ({ page }) => {

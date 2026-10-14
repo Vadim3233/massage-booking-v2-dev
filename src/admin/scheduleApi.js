@@ -21,6 +21,24 @@ export function validateHours(entry) {
   }
   return ''
 }
+// The weekday of a date written as YYYY-MM-DD, counted as the usual week is stored: 1 is Monday and 7 is Sunday.
+export const weekdayOf = date => { const day = new Date(`${date}T12:00:00Z`).getUTCDay(); return day === 0 ? 7 : day }
+
+// What the usual week says for a date: its hours and its first appointment, or a day off. A special day starts from this,
+// so only what is special about the day has to be changed.
+export function usualHoursFor(date, weekly) {
+  const row = weekly?.find(item => item.weekday === weekdayOf(date))
+  if (!row?.available) return { available: false, start_minutes: null, end_minutes: null, start_mode: 'flexible', fixed_start_minutes: null }
+  return { available: true, start_minutes: row.start_minutes, end_minutes: row.end_minutes, start_mode: row.start_mode, fixed_start_minutes: row.fixed_start_minutes }
+}
+
+// A day's hours in one line, with its first appointment when that is set to a time.
+export function hoursLine(entry) {
+  if (!entry.available) return 'Day off'
+  const hours = `${clock(entry.start_minutes)}–${clock(entry.end_minutes)}`
+  return entry.start_mode === 'fixed' ? `${hours}, first appointment at ${clock(entry.fixed_start_minutes)}` : hours
+}
+
 // A block runs from a date and time to a later date and time, like an event in a phone calendar.
 export function validateBlock(block) {
   if (!block.start_date) return 'Choose a date.'

@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
-import { clock, groupBlocks, scheduleApi, timeOptions, validateHours, WEEKDAYS } from './scheduleApi.js'
+import { clock, groupBlocks, hoursLine, scheduleApi, timeOptions, usualHoursFor, validateHours, weekdayOf, WEEKDAYS } from './scheduleApi.js'
 import { dateLabel, today } from './calendarPresentation.js'
 import BlockDialog from './BlockDialog.jsx'
 
 const START_OPTIONS = timeOptions(false)
 const END_OPTIONS = timeOptions(true).filter(minutes => minutes > 0)
 const DEFAULT_HOURS = { available: true, start_minutes: 600, end_minutes: 1200, start_mode: 'flexible', fixed_start_minutes: null }
+// What "first appointment" means, said once where a day's hours are being set.
+const FIRST_APPOINTMENT_HINT = {
+  flexible: 'Until someone books, clients can pick any usual time in your hours. The first booking then sets the day, and the other times are built around it.',
+  fixed: 'Until someone books, clients are offered only this time. Once someone has booked, the other times are built around that booking, with your travel time. If this time has passed, or is too close for your notice period, clients see no times that day.',
+}
 
 function TimeSelect({ label, value, options, onChange, disabled }) {
   return <label className="admin-field">{label}
@@ -16,7 +21,7 @@ function TimeSelect({ label, value, options, onChange, disabled }) {
   </label>
 }
 
-function HoursFields({ entry, onChange, disabled, prefix }) {
+function HoursFields({ entry, onChange, disabled, prefix, explain = false }) {
   if (!entry.available) return null
   const set = patch => onChange({ ...entry, ...patch })
   return <div className="admin-hours-fields">
@@ -29,6 +34,7 @@ function HoursFields({ entry, onChange, disabled, prefix }) {
       </select>
     </label>
     {entry.start_mode === 'fixed' && <TimeSelect label={`${prefix} first appointment time`} value={entry.fixed_start_minutes} options={START_OPTIONS} disabled={disabled} onChange={value => set({ fixed_start_minutes: value })} />}
+    {explain && <p className="admin-detail-hint">{FIRST_APPOINTMENT_HINT[entry.start_mode]}</p>}
   </div>
 }
 
@@ -57,6 +63,7 @@ function WeeklyHours({ api }) {
   }
   return <form onSubmit={save} className="admin-week">
     <p className="admin-detail-hint">Your usual week. For a holiday, a few days away, or a few hours busy, use Block time under Special days.</p>
+    <p className="admin-detail-hint">"First appointment" is where a day with no bookings yet should begin. "At a set time" offers clients only that time until someone books, so once that time has passed, or is too close for your notice period, that day shows no times. "Any time in my hours" lets the first client choose. Either way, once there is a booking the other times are built around it.</p>
     {rows.map((row, index) => <fieldset key={row.weekday} className="admin-weekday" disabled={busy}>
       <legend>{WEEKDAYS[row.weekday - 1]}</legend>
       <label className="admin-who-row"><input type="checkbox" checked={row.available}
@@ -112,15 +119,27 @@ function SpecialDays({ api }) {
   const [form, setForm] = useState(null)
   const [busy, setBusy] = useState(false)
   const [conflicts, setConflicts] = useState(null)
+  const [usual, setUsual] = useState(null)
   const confirmed = useRef(false)
   useEffect(() => {
     let live = true
     api.overrides(today()).then(rows => { if (live) { setList(rows); setError('') } }, failure => { if (live) setError(failure.message) })
     return () => { live = false }
   }, [api, attempt])
+  // The usual week is only used to start a special day from it, so if it cannot be read the screen works as it did before.
+  useEffect(() => {
+    let live = true
+    api.weekly().then(rows => { if (live) setUsual(rows) }, () => {})
+    return () => { live = false }
+  }, [api])
   const open = entry => { setMessage(''); setConflicts(null); confirmed.current = false; setForm(entry) }
   const edit = patch => { setConflicts(null); confirmed.current = false; setForm({ ...form, ...patch }) }
   const problem = form ? (form.date ? (form.date < today() ? 'Choose a date from today onwards.' : validateHours(form)) : 'Choose a date.') : ''
+  const usualDay = form?.date && usual ? usualHoursFor(form.date, usual) : null
+  // Different hours start from that weekday's usual hours, so only what is special about the day has to be changed. Choosing another date
+  // moves them to that weekday, until the hours have been changed by hand.
+  const changeDate = date => edit(form.available && !form.touched && date && usual && usualHoursFor(date, usual).available ? { date, ...usualHoursFor(date, usual) } : { date })
+  const differentHours = () => edit(usualDay?.available ? { ...usualDay, touched: false } : { available: true, start_minutes: form.start_minutes ?? 600, end_minutes: form.end_minutes ?? 1200 })
 
   async function save(event) {
     event.preventDefault()
@@ -147,18 +166,19 @@ function SpecialDays({ api }) {
   return <section>
     <BlockedTime api={api} />
     <h3>Special days</h3>
-    <p className="admin-detail-hint">A day off, or different opening hours, for one date. These replace your usual week for that date. For a holiday over several days, or just a few hours, use Block time above.</p>
+    <p className="admin-detail-hint">A day off, or different opening hours, for one date. These replace your usual week for that date, including its first appointment, and "Use my usual week" puts the date back. For a holiday over several days, or just a few hours, use Block time above.</p>
     {message && <p role="status">{message}</p>}
     {error && <p role="alert">{error}</p>}
-    {!form && <button className="btn--tonal" onClick={() => open({ date: '', available: false, start_minutes: null, end_minutes: null, start_mode: 'flexible', fixed_start_minutes: null, note: '' })}>Add a special day</button>}
+    {!form && <button className="btn--tonal" onClick={() => open({ date: '', available: false, start_minutes: null, end_minutes: null, start_mode: 'flexible', fixed_start_minutes: null, note: '', touched: false })}>Add a special day</button>}
     {form && <form className="admin-special-form" onSubmit={save}>
       <h3>{list?.some(item => item.date === form.date) ? 'Change a special day' : 'Add a special day'}</h3>
-      <label className="admin-field">Date<input type="date" required min={today()} value={form.date} disabled={busy} onChange={event => edit({ date: event.target.value })} /></label>
+      <label className="admin-field">Date<input type="date" required min={today()} value={form.date} disabled={busy} onChange={event => changeDate(event.target.value)} /></label>
+      {usualDay && <p className="admin-detail-hint">Your usual {WEEKDAYS[weekdayOf(form.date) - 1]}: {usualDay.available ? hoursLine(usualDay) : 'a day off'}.</p>}
       <fieldset className="admin-who"><legend>What is happening?</legend>
         <label><input type="radio" name="special-kind" checked={!form.available} disabled={busy} onChange={() => edit({ available: false, start_minutes: null, end_minutes: null, start_mode: 'flexible', fixed_start_minutes: null })} /> Day off</label>
-        <label><input type="radio" name="special-kind" checked={form.available} disabled={busy} onChange={() => edit({ available: true, start_minutes: form.start_minutes ?? 600, end_minutes: form.end_minutes ?? 1200 })} /> Different hours</label>
+        <label><input type="radio" name="special-kind" checked={form.available} disabled={busy} onChange={differentHours} /> Different hours</label>
       </fieldset>
-      <HoursFields entry={form} prefix="Special day" onChange={setForm} disabled={busy} />
+      <HoursFields entry={form} prefix="Special day" onChange={entry => setForm({ ...entry, touched: true })} disabled={busy} explain />
       <label className="admin-field">Note (only you see this)<input value={form.note || ''} maxLength={200} disabled={busy} onChange={event => edit({ note: event.target.value })} /></label>
       {problem && <p role="alert" className="admin-field-error">{problem}</p>}
       {conflicts && <div role="alert" className="admin-conflicts"><strong>This clashes with {conflicts.length === 1 ? 'a booking' : `${conflicts.length} bookings`}:</strong>
@@ -173,8 +193,8 @@ function SpecialDays({ api }) {
     {list && !list.length && !form && <p>No special days coming up.</p>}
     {list?.length > 0 && <ul role="list" className="admin-special-list">{list.map(item => <li key={item.date}>
       <div><strong>{dateLabel(item.date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</strong>
-        <span>{item.available ? `${clock(item.start_minutes)}–${clock(item.end_minutes)}` : 'Day off'}{item.note ? ` · ${item.note}` : ''}</span></div>
-      <div className="admin-payment-buttons"><button className="btn--small" disabled={busy} onClick={() => open({ ...item, note: item.note || '' })}>Change</button><button className="btn--small btn--danger" disabled={busy} onClick={() => remove(item.date)}>Remove</button></div>
+        <span>{hoursLine(item)}{item.note ? ` · ${item.note}` : ''}</span></div>
+      <div className="admin-payment-buttons"><button className="btn--small" disabled={busy} onClick={() => open({ ...item, note: item.note || '', touched: true })}>Change</button><button className="btn--small" disabled={busy} aria-label={`Use my usual week for ${dateLabel(item.date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}`} onClick={() => remove(item.date)}>Use my usual week</button></div>
     </li>)}</ul>}
   </section>
 }
