@@ -11,6 +11,44 @@
 .admin-agenda-load { width: 100%; margin: 8px 0; }
 .admin-agenda-range { margin: 10px 0 0; color: var(--muted); text-align: center; font-size: 12px; }
 
+/* Show every day: a switch, drawn on a native checkbox so it has a name, a state and a focus ring without any script. */
+.admin-agenda-options { display: flex; justify-content: flex-end; margin: 0 0 2px; }
+.admin-agenda-switch { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 2px; color: var(--ink); font-size: 14px; font-weight: 500; cursor: pointer; }
+.admin-agenda-switch input { -webkit-appearance: none; appearance: none; position: relative; flex: 0 0 42px; width: 42px; height: 24px; margin: 0; border-radius: 12px; background: #6f7f77; cursor: pointer; }
+.admin-agenda-switch input::before { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform var(--dur-fast) var(--ease); }
+.admin-agenda-switch input:checked { background: var(--primary); }
+.admin-agenda-switch input:checked::before { transform: translateX(18px); }
+
+/* Time away: one calm banner for the whole block, which opens it to change or remove. */
+.admin-agenda-away { margin: 10px 0 4px; }
+.admin-agenda-away > button { display: flex; align-items: center; justify-content: flex-start; gap: 12px; width: 100%; min-height: 56px; padding: 10px 14px; border: 0; border-radius: 12px; background: var(--primary-soft); color: #17443a; text-align: left; }
+.admin-agenda-away-text { display: grid; gap: 2px; flex: 1 1 auto; min-width: 0; }
+.admin-agenda-away-text strong { font-size: 15px; font-weight: 600; }
+.admin-agenda-away-text span { font-size: 13px; font-weight: 400; color: #2f5448; }
+.admin-agenda-away-change { flex: 0 0 auto; font-size: 13px; font-weight: 600; }
+
+/* What is special about a day that has bookings, in words under its date. */
+.admin-agenda-notes { display: grid; gap: 4px; margin: 0 0 8px; padding: 0; list-style: none; }
+.admin-agenda-notes li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; background: var(--needs-bg); color: var(--needs-ink); font-size: 13px; }
+.admin-agenda-notes li.is-away { background: var(--primary-soft); color: #17443a; }
+.admin-agenda-notes li.is-off { background: var(--done-bg); color: var(--done-ink); }
+
+/* Days with nothing booked: one quiet line each, in smaller type. */
+.admin-agenda-quiet { margin: 0; padding: 4px 0; border-top: 1px solid var(--line); list-style: none; }
+.admin-agenda-quiet li { display: flex; align-items: baseline; gap: 12px; padding: 3px 0; color: var(--ink-soft); font-size: 13px; line-height: 1.4; }
+.admin-agenda-quiet .when { flex: 0 0 92px; font-weight: 500; }
+.admin-agenda-quiet .what { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.admin-agenda-quiet li.is-special .what { color: var(--needs-ink); }
+.admin-agenda-quiet li.is-away .what, .admin-agenda-quiet li.is-away button { color: #2f5448; }
+.admin-agenda-quiet-button { justify-content: flex-start; min-height: 44px; margin: -3px 0 -3px -8px; padding: 4px 8px; border: 0; background: transparent; color: var(--ink-soft); font-size: 13px; font-weight: 400; text-align: left; }
+@media (hover: hover) {
+  .admin-agenda-away > button:hover { background: #d9e8df; }
+  .admin-agenda-quiet-button:hover { background: var(--primary-soft); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-agenda-switch input::before { transition: none; }
+}
+
 @media (min-width: 360px) {
   .admin-calendar-views, .admin-agenda { padding-inline: 12px; }
 }
