@@ -21,11 +21,12 @@ function buildTestClient() {
 
 const UNAVAILABLE = "Online booking isn't available on this account just now. Please get in touch and I'll arrange your appointment."
 
-export default function DetailsStep({ draft, user, api, edit, next, report, newTestGuest, guest = false }) {
+export default function DetailsStep({ draft, user, api, edit, next, report, newTestGuest, onSwitchToAccount, guest = false }) {
   const [addresses, setAddresses] = useState([])
   const [loading, setLoading] = useState(!guest)
   const [saving, setSaving] = useState(false)
   const [testing, setTesting] = useState(false)
+  const [switching, setSwitching] = useState(false)
   const [problems, setProblems] = useState({})
   const showTestTools = import.meta.env.DEV
   useEffect(() => {
@@ -72,6 +73,13 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
       report(friendlyError(error))
     }
   }
+  // A guest who would rather sign in or register: the booking so far is kept, and this screen gives way to the choices.
+  async function switchToAccount() {
+    if (switching) return
+    setSwitching(true)
+    try { await onSwitchToAccount() } catch (error) { report(friendlyError(error)) }
+    finally { setSwitching(false) }
+  }
   async function submit(event) {
     event.preventDefault()
     if (saving) return
@@ -96,6 +104,8 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
     finally { setSaving(false) }
   }
   return <><h1 tabIndex={-1}>Your <em>details</em></h1><p className="lede">{guest ? 'No account is required. Share the details I need for your visit.' : 'Share the details I need for your visit.'} I only use them to arrange your appointment and to get in touch about it.</p>
+    {guest && onSwitchToAccount && <p className="guest-note"><span>You're booking as a guest.</span>
+      <button type="button" className="btn--quiet btn--small" disabled={saving || testing || switching} onClick={switchToAccount}>Sign in or create an account instead</button></p>}
     {loading && <p role="status">Loading your saved details…</p>}
     <p className="fine">Everything that is not marked optional is needed so I can find you.</p>
     <form onSubmit={submit}><fieldset disabled={loading || testing}>

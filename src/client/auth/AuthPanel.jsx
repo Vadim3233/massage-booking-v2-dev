@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { unwrap } from '../booking/bookingApi.js'
 import { GENERIC } from '../booking/friendlyError.js'
+import { signUpOutcome } from './signUpOutcome.js'
 
 // What the sign-in service says, in the words a client would use. Anything else stays out of sight.
 const AUTH_MESSAGES = [
@@ -12,17 +13,25 @@ const AUTH_MESSAGES = [
 ]
 const authMessage = (error) => AUTH_MESSAGES.find(([pattern]) => pattern.test(error?.message || ''))?.[1] || GENERIC
 
-export default function AuthPanel({ client, recovery = false, onRecovered, onGuest, level = 1, heading: headingOverride, redirectTo: redirectOverride }) {
+export default function AuthPanel({ client, recovery = false, onRecovered, onGuest, startOpen = false, level = 1, heading: headingOverride, redirectTo: redirectOverride }) {
   const [mode, setMode] = useState('login')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(startOpen)
+  // After a sign-up that needs the email confirmed, what was typed stays here (in memory only, never saved) so she can carry on from
+  // this same page once the link has been opened, even when it opened in another app or browser.
+  const [waiting, setWaiting] = useState(null)
   const redirectTo = redirectOverride || `${window.location.origin}${window.location.pathname}?step=5`
-  // Booking as a guest is the quick way on, so signing in waits behind "Returning client?" until it is asked for.
+  // Booking as a guest is the quick way on, so it is the big button; signing in and creating an account sit plainly beside it.
   const guestable = Boolean(onGuest) && !recovery
-  const expanded = !guestable || open
-  function go(next) { setMode(next); setOpen(true) }
+  function go(next) { setMode(next); setOpen(true); if (next !== 'register') setWaiting(null) }
+  // The two buttons under "or use an account": a second tap on the one that is showing closes it again.
+  function choose(next) {
+    const showing = open && (next === 'register' ? mode === 'register' : mode !== 'register')
+    if (showing) setOpen(false)
+    else go(next)
+  }
   async function act(action) {
     setBusy(true); setError(''); setMessage('')
     try { await action() } catch (err) { setError(authMessage(err)) }
@@ -38,14 +47,28 @@ export default function AuthPanel({ client, recovery = false, onRecovered, onGue
       if (mode === 'register') {
         const data = await unwrap(client.auth.signUp({ email: fields.email, password: fields.password,
           options: { emailRedirectTo: redirectTo, data: { first_name: fields.first_name, last_name: fields.last_name } } }))
-        if (!data.session) setMessage('Check your email to confirm your account, then come back to this page to carry on. Your choices are saved, but I can only hold your time for a short while.')
+        const outcome = signUpOutcome(data)
+        if (outcome === 'confirm-email') setWaiting({ email: fields.email, password: fields.password })
+        else if (outcome === 'already-registered') { setMode('login'); setError(authMessage({ message: 'already registered' })) }
       } else if (mode === 'reset') {
         await unwrap(client.auth.resetPasswordForEmail(fields.email, { redirectTo }))
         setMessage('Check your email for the password reset link.')
       } else await unwrap(client.auth.signInWithPassword({ email: fields.email, password: fields.password }))
     })
   }
-  const heading = headingOverride && mode === 'login' && !recovery ? headingOverride : recovery ? 'Choose a new password' : mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Complete your booking'
+  // The link in the email may open somewhere else, so this signs in with what was just typed once it has been confirmed.
+  function confirmed() {
+    act(async () => { await unwrap(client.auth.signInWithPassword({ email: waiting.email, password: waiting.password })) })
+  }
+  function sendAgain() {
+    act(async () => {
+      await unwrap(client.auth.resend({ type: 'signup', email: waiting.email, options: { emailRedirectTo: redirectTo } }))
+      setMessage("I've sent it again. Please look in your junk folder too.")
+    })
+  }
+  const panelTitle = mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Sign in'
+  const heading = guestable ? 'Complete your booking'
+    : headingOverride && mode === 'login' && !recovery ? headingOverride : recovery ? 'Choose a new password' : mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Complete your booking'
   const form = <>
     <form onSubmit={submit}>
       <fieldset disabled={busy}>
@@ -61,25 +84,51 @@ export default function AuthPanel({ client, recovery = false, onRecovered, onGue
         <button className="btn--primary btn--block" type="submit">{busy ? 'Please wait…' : recovery ? 'Save password' : mode === 'register' ? 'Register' : mode === 'reset' ? 'Send reset link' : 'Sign in'}</button>
       </fieldset>
     </form>
-    {!recovery && <div className="actions">
-      <button className="btn--quiet" disabled={busy} onClick={() => go(mode === 'register' ? 'login' : 'register')}>{mode === 'register' ? 'Already registered? Sign in' : 'Create an account'}</button>
-      <button className="btn--quiet" disabled={busy} onClick={() => go(mode === 'reset' ? 'login' : 'reset')}>{mode === 'reset' ? 'Back to sign in' : 'Forgot password?'}</button>
-    </div>}
+    {!recovery && (guestable
+      ? <div className="actions">
+        {mode === 'register'
+          ? <button className="btn--quiet" type="button" disabled={busy} onClick={() => go('login')}>Already registered? Sign in</button>
+          : <button className="btn--quiet" type="button" disabled={busy} onClick={() => go(mode === 'reset' ? 'login' : 'reset')}>{mode === 'reset' ? 'Back to sign in' : 'Forgot password?'}</button>}
+      </div>
+      : <div className="actions">
+        <button className="btn--quiet" type="button" disabled={busy} onClick={() => go(mode === 'register' ? 'login' : 'register')}>{mode === 'register' ? 'Already registered? Sign in' : 'Create an account'}</button>
+        <button className="btn--quiet" type="button" disabled={busy} onClick={() => go(mode === 'reset' ? 'login' : 'reset')}>{mode === 'reset' ? 'Back to sign in' : 'Forgot password?'}</button>
+      </div>)}
+  </>
+  const confirmation = waiting && <>
+    <h2>Check your email</h2>
+    <p role="alert" className="notice">I've sent a link to <b>{waiting.email}</b>. Open it, then come back to this page and press the button below.{guestable ? ' Your choices are saved here, but I can only hold your time for a short while.' : ''}</p>
+    <button className="btn--primary btn--block" type="button" disabled={busy} onClick={confirmed}>{busy ? 'Please wait…' : "I've confirmed my email, continue"}</button>
+    <div className="actions">
+      <button className="btn--quiet" type="button" disabled={busy} onClick={sendAgain}>Send the email again</button>
+      <button className="btn--quiet" type="button" disabled={busy} onClick={() => setWaiting(null)}>Use a different email</button>
+    </div>
   </>
   // Under the page header the panel is a section of the page, not its main heading.
   const Heading = level === 2 ? 'h2' : 'h1'
   return <section className="gate" aria-labelledby="gate-title">
     <Heading id="gate-title" tabIndex={-1}>{heading}</Heading>
-    {mode === 'login' && !recovery
-      ? <p className="lede">{onGuest ? 'Continue as a guest, or sign in if you already have an account.' : 'Sign in with the email you used to book.'}</p>
-      : recovery || guestable ? <p className="lede">Your choices will stay here while you continue.</p> : null}
-    {guestable && <button className="btn--primary btn--lg btn--block" type="button" disabled={busy} onClick={() => act(onGuest)}>
-      {busy ? 'Please wait…' : 'Continue as guest'}
-    </button>}
-    {guestable ? <details className="signin more" open={expanded} onToggle={(event) => setOpen(event.currentTarget.open)}>
-      <summary>Returning client? Sign in</summary>
-      {form}
-    </details> : <div className="panel gate-form">{form}</div>}
+    {guestable
+      ? <p className="lede">Book as a guest in a minute, or use an account to keep your details for next time.</p>
+      : mode === 'login' && !recovery ? <p className="lede">Sign in with the email you used to book.</p>
+        : recovery ? <p className="lede">Your choices will stay here while you continue.</p> : null}
+    {guestable ? <>
+      <button className="btn--primary btn--lg btn--block" type="button" disabled={busy} onClick={() => act(onGuest)}>
+        {busy ? 'Please wait…' : 'Continue as guest'}
+      </button>
+      <p className="gate-or">or use an account</p>
+      <div className="gate-choices">
+        <button className="btn--tonal" type="button" disabled={busy} aria-expanded={open && mode !== 'register'} aria-controls={open ? 'gate-form' : undefined} onClick={() => choose('login')}>Sign in with email</button>
+        <button className="btn--tonal" type="button" disabled={busy} aria-expanded={open && mode === 'register'} aria-controls={open ? 'gate-form' : undefined} onClick={() => choose('register')}>Create an account</button>
+      </div>
+      {open && <div className="panel gate-form" id="gate-form">
+        {waiting ? confirmation : <>
+          <h2>{panelTitle}</h2>
+          {(mode === 'register' || mode === 'reset') && <p className="fine">Your choices stay on this page while you do this.</p>}
+          {form}
+        </>}
+      </div>}
+    </> : <div className="panel gate-form">{waiting ? confirmation : form}</div>}
     {error && <p role="alert" className="error">{error}</p>}
     {message && <p role="alert" className="notice">{message}</p>}
   </section>

@@ -30,7 +30,7 @@ async function toDetails(page) {
   await page.getByRole('button', { name: 'Integration focus', exact: true }).first().click()
   await page.getByLabel('Anything I should know? (optional)').fill('Preserve my note')
   await page.getByRole('button', { name: 'Continue to your details' }).click()
-  await page.getByText('Returning client? Sign in').click()
+  await page.getByRole('button', { name: 'Sign in with email' }).click()
   await page.getByLabel('Email address', { exact: true }).fill(fixture.email)
   await page.getByLabel('Password', { exact: true }).fill(fixture.password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
@@ -59,7 +59,7 @@ test('mobile bank-transfer journey, browser Back, reload and real persisted resu
   await expect(page.getByLabel('Anything I should know? (optional)')).toHaveValue('Keep this note')
   await page.getByLabel(/Integration enhancement/).check()
   await page.getByRole('button', { name: 'Continue to your details' }).click()
-  await page.getByText('Returning client? Sign in').click()
+  await page.getByRole('button', { name: 'Sign in with email' }).click()
   await page.getByLabel('Email address', { exact: true }).fill(fixture.email)
   await page.getByLabel('Password', { exact: true }).fill(fixture.password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
@@ -124,7 +124,6 @@ test('real expired-hold rejection never shows a successful confirmation', async 
 test('email registration activates the canonical client and preserves the draft', async ({ page }) => {
   await toReview(page)
   await page.getByRole('button', { name: 'Continue to your details' }).click()
-  await page.getByText('Returning client? Sign in').click()
   await page.getByRole('button', { name: 'Create an account', exact: true }).click()
   const email = `browser-signup-${crypto.randomUUID()}@example.test`
   await page.getByLabel('First name', { exact: true }).fill('Browser')
