@@ -37,6 +37,22 @@ describe('schedule control against local Supabase', () => {
     expect((await api.overrides(DATE)).some(item => item.date === DATE)).toBe(false)
   })
 
+  it('saves a release time on the usual week and on a special day and reads it back, and the database refuses one without a set first appointment', async () => {
+    await f.authorize()
+    const week = await api.weekly()
+    expect(week.every(day => 'anchor_release_minutes' in day)).toBe(true)
+    await api.saveWeekly(week.map(day => day.weekday === 3 ? { ...day, available: true, start_minutes: 600, end_minutes: 1200, start_mode: 'fixed', fixed_start_minutes: 900, anchor_release_minutes: 1020 } : day))
+    expect((await api.weekly()).find(day => day.weekday === 3)).toMatchObject({ start_mode: 'fixed', fixed_start_minutes: 900, anchor_release_minutes: 1020 })
+    await api.saveOverride({ date: DATE, available: true, start_minutes: 600, end_minutes: 1200, start_mode: 'fixed', fixed_start_minutes: 900, anchor_release_minutes: 0, note: 'Early release' })
+    expect((await api.overrides(DATE)).find(item => item.date === DATE)).toMatchObject({ anchor_release_minutes: 0, note: 'Early release' })
+    // Taking the first appointment away takes the release time with it, so what the screen sends is always something the database accepts.
+    await api.saveOverride({ date: DATE, available: true, start_minutes: 600, end_minutes: 1200, start_mode: 'flexible', fixed_start_minutes: 900, anchor_release_minutes: 1020, note: 'Early release' })
+    expect((await api.overrides(DATE)).find(item => item.date === DATE)).toMatchObject({ start_mode: 'flexible', fixed_start_minutes: null, anchor_release_minutes: null })
+    // The database itself refuses a release time without a set first appointment, even if the screen did not.
+    const refused = await f.admin.from('working_hours_overrides').upsert({ date: DATE, available: true, start_minutes: 600, end_minutes: 1200, start_mode: 'flexible', anchor_release_minutes: 1020 })
+    expect(refused.error?.code).toBe('23514')
+  })
+
   it('manages blocked time and personal events, recording who made them', async () => {
     await f.authorize()
     const group = await api.saveBlock(null, { kind: 'personal_event', start_date: DATE, end_date: DATE, start_minutes: 600, end_minutes: 660, title: 'Dentist', notes: 'Bring forms' })
