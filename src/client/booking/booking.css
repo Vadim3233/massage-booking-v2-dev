@@ -181,6 +181,12 @@
 .gate-form > h2 { margin-bottom: 4px; font-size: 20px; }
 .guest-note { display: flex; flex-direction: column; align-items: flex-start; margin: 0 0 14px; padding: 10px 14px 2px; border-radius: 12px; background: var(--primary-soft); color: var(--ink-soft); font-size: 15px; }
 .guest-note > button { margin-left: -14px; }
+/* Saved details are locked until "Edit my details" is pressed, and the email always is. A locked box is readable but plainly not for typing in. */
+.booking-shell input[readonly] { background: var(--done-bg); border-color: var(--line); cursor: default; }
+.details-lock { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 12px; }
+.details-lock .fine { flex: 1 1 220px; margin: 0; }
+.details-lock button { flex: 0 0 auto; }
+.details-unlocked { margin: 0 0 12px; }
 .reserved { display: flex; align-items: center; gap: 8px; margin: 4px 0 6px; color: var(--ok-ink); font-weight: 600; }
 .reserved-dot { flex-shrink: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--ok-rail); box-shadow: 0 0 0 4px var(--ok-bg); }
 .amount-card { margin: 16px 0; padding: 18px 20px; border-radius: var(--radius); background: var(--primary); color: #fff; box-shadow: var(--shadow-2); }
