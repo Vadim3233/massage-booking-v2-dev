@@ -4,8 +4,9 @@ import { unwrap } from '../../src/client/booking/bookingApi.js'
 import { dateLabel, shiftDate, today } from '../../src/admin/calendarPresentation.js'
 
 let f
+const undo = []
 test.beforeEach(async () => { f = await adminFixture(5) })
-test.afterEach(async () => { await f?.cleanup() })
+test.afterEach(async () => { for (const step of undo.splice(0).reverse()) await step(); await f?.cleanup() })
 
 async function login(page) {
   await page.goto('/admin/agenda')
@@ -177,4 +178,105 @@ test('the Day view has the same Directions button on an appointment still to com
   await page.getByLabel('Calendar date', { exact: true }).fill(f.date)
   await expect(page.locator('.admin-card')).toHaveCount(2)
   await expect(page.getByRole('link', { name: /^Directions to/ })).toHaveCount(1)
+})
+
+// Blocked time and special days, put in for a test and taken out again afterwards.
+const daysFrom = (offset, count) => Array.from({ length: count }, (_, index) => shiftDate(today(), offset + index))
+function awayRows(dates, changes = {}) {
+  const group_id = crypto.randomUUID()
+  return dates.map(date => ({ group_id, kind: 'blocked', title: 'Agenda holiday', date, start_minutes: 0, end_minutes: 1440, ...changes }))
+}
+async function addBlock(rows) {
+  await unwrap(f.admin.from('calendar_blocks').insert(rows))
+  undo.push(() => f.admin.from('calendar_blocks').delete().eq('group_id', rows[0].group_id))
+}
+async function addSpecialDay(entry) {
+  const before = await unwrap(f.admin.from('working_hours_overrides').select('*').eq('date', entry.date))
+  await unwrap(f.admin.from('working_hours_overrides').upsert(entry))
+  undo.push(() => before.length ? f.admin.from('working_hours_overrides').upsert(before) : f.admin.from('working_hours_overrides').delete().eq('date', entry.date))
+}
+const daySection = (page, date) => page.locator('.admin-agenda-day', { has: page.locator(`[id="agenda-${date}"]`) })
+
+test('time away is one banner at its first day, the days inside it are not listed, and pressing it opens the block', async ({ page }) => {
+  const holiday = daysFrom(10, 5)
+  await addBlock(awayRows(holiday))
+  await f.authorize()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await login(page)
+  const banner = page.getByRole('button', { name: /Away · Agenda holiday/ })
+  await expect(banner).toHaveCount(1)
+  await expect(banner).toContainText('5 days')
+  for (const date of holiday) await expect(page.locator(`[id="agenda-${date}"]`)).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await banner.click()
+  await expect(page.getByRole('heading', { name: 'Change blocked time' })).toBeVisible()
+  await page.getByRole('button', { name: 'Go back' }).click()
+  await expect(page.getByRole('heading', { name: 'Change blocked time' })).toHaveCount(0)
+})
+
+test('a special day is said under its date, and a day off with nothing booked is a quiet line', async ({ page }) => {
+  await addSpecialDay({ date: shiftDate(today(), 20), available: false, start_minutes: null, end_minutes: null, start_mode: 'flexible', fixed_start_minutes: null, note: 'Agenda family day' })
+  await f.authorize()
+  await login(page)
+  // The fixture opens the day of its bookings with its own hours, so that day carries them in words.
+  await expect(daySection(page, f.date).locator('.admin-agenda-notes')).toContainText('Special hours 10:00–22:00')
+  await expect(page.locator('.admin-agenda-quiet li', { hasText: 'Agenda family day' })).toContainText('Day off')
+})
+
+test("a few hours blocked sit among the day's bookings in time order, and open to change", async ({ page }) => {
+  await addBlock(awayRows([f.date], { title: 'Agenda dentist', start_minutes: 660, end_minutes: 720 }))
+  await f.authorize()
+  await login(page)
+  const day = daySection(page, f.date)
+  await expect(day.getByRole('button', { name: /Agenda dentist/ })).toBeVisible()
+  expect(await day.locator('.admin-timeline-row .admin-time').evaluateAll(nodes => nodes.map(node => node.textContent.slice(0, 5)))).toEqual(['10:00', '11:00', '13:00'])
+  await day.getByRole('button', { name: /Agenda dentist/ }).click()
+  await expect(page.getByRole('heading', { name: 'Change blocked time' })).toBeVisible()
+})
+
+test('when today is inside time away, the banner stands above today, which is said to be a day off', async ({ page }) => {
+  await addBlock(awayRows(daysFrom(-2, 6)))
+  await f.authorize()
+  await login(page)
+  const banner = page.getByRole('button', { name: /Away · Agenda holiday/ })
+  await expect(banner).toHaveCount(1)
+  await expect(banner).toContainText('6 days')
+  const todaySection = page.locator('.admin-agenda-day.is-today')
+  await expect(todaySection).toContainText('A day off.')
+  await expect(todaySection.locator('.admin-agenda-notes')).toContainText('Away · Agenda holiday')
+  expect((await banner.boundingBox()).y).toBeLessThan((await todaySection.boundingBox()).y)
+})
+
+test('Show every day lists every date as a quiet line, works from the keyboard, is remembered, and still fits a 320px phone', async ({ page }) => {
+  await f.authorize()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await login(page)
+  const every = page.getByRole('switch', { name: 'Show every day' })
+  await expect(every).not.toBeChecked()
+  await expect(page.locator('.admin-agenda-quiet li.is-free')).toHaveCount(0)
+  await every.focus()
+  await page.keyboard.press('Space')
+  await expect(every).toBeChecked()
+  await expect(page.locator('.admin-agenda-quiet li.is-free').first()).toBeVisible()
+  expect(await page.locator('.admin-agenda-quiet li.is-free').count()).toBeGreaterThan(10)
+  // Days the usual week does not work are told apart from free days.
+  if ((await unwrap(f.admin.from('working_hours').select('weekday').eq('available', false))).length) {
+    await expect(page.locator('.admin-agenda-quiet li.is-closed').first()).toContainText('usual day off')
+  }
+  await page.reload()
+  await expect(page.getByRole('switch', { name: 'Show every day' })).toBeChecked()
+  await page.setViewportSize({ width: 320, height: 640 })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.getByRole('switch', { name: 'Show every day' }).uncheck()
+  await expect(page.locator('.admin-agenda-quiet li.is-free')).toHaveCount(0)
+})
+
+test('scrolling to the end of the list reaches time away eleven weeks ahead without pressing Load more', async ({ page }) => {
+  await addBlock(awayRows(daysFrom(75, 3), { title: 'Agenda far holiday' }))
+  await f.authorize()
+  await login(page)
+  await expect(page.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible()
+  // The list reads on by itself as its end comes into view, through empty months, as far as there is something to show.
+  await page.getByRole('button', { name: 'Load more upcoming appointments' }).scrollIntoViewIfNeeded()
+  await expect(page.getByRole('button', { name: /Away · Agenda far holiday/ })).toBeVisible({ timeout: 20000 })
 })

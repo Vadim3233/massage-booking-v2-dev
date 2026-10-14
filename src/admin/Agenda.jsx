@@ -1,16 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { createCalendarApi } from './calendarApi.js'
 import PaymentActions from './PaymentActions.jsx'
 import Icon from '../ui/icons.jsx'
 import { reanchored } from './agendaRange.js'
+import { agendaDays, mergeExtras } from './agendaDays.js'
+import { AwayBanner, DayNotes, QuietDays, TimedBlock } from './AgendaParts.jsx'
 import { useQuietRetry, useReturnRefresh } from './useReturnRefresh.js'
 import BookingCard from './BookingCard.jsx'
 import { clientName, dateLabel, dayHeading, daySummary, money, nextUp, shiftDate, time, today } from './calendarPresentation.js'
 
+const BlockDialog = lazy(() => import('./BlockDialog.jsx'))
 const api = createCalendarApi(supabase)
+const SHOW_EVERY_KEY = 'vad-admin-agenda-show-every'
 const CHUNK_DAYS = 31
 const AUTO_LOAD_UNTIL_DAYS = 186
+// The list reads on by itself this far ahead however little is there, so time away and special days a few months off are seen without pressing
+// anything. After that it goes on only while each month it reads has something in it.
+const MIN_HORIZON_DAYS = 93
 const pending = new Map()
 const daysBetween = (from, to) => Math.round((Date.parse(to) - Date.parse(from)) / 86400000)
 
@@ -31,23 +38,28 @@ function loadSpan(start, end, version) {
   return Promise.all(parts).then(lists => lists.flat())
 }
 
-function groupByDate(bookings) {
-  const groups = []
-  for (const booking of bookings) {
-    const previous = groups.at(-1)
-    if (previous?.date === booking.date) previous.bookings.push(booking)
-    else groups.push({ date: booking.date, bookings: [booking] })
-  }
-  return groups
+// Blocked time and special days are read the same way, a month at a time, and the usual week once, so the Agenda can say what changes the diary.
+function loadExtrasRange(start, end, version) {
+  const key = `extras:${start}:${end}:${version}`
+  if (!pending.has(key)) pending.set(key, api.loadAgendaExtras(start, end).finally(() => pending.delete(key)))
+  return pending.get(key)
 }
-
-// Today is always shown, even when nothing is booked, so there is always a fixed point to scroll from.
-function withToday(groups, start) {
-  const day = today()
-  if (day < start || groups.some(group => group.date === day)) return groups
-  const index = groups.findIndex(group => group.date > day)
-  const empty = { date: day, bookings: [] }
-  return index === -1 ? [...groups, empty] : [...groups.slice(0, index), empty, ...groups.slice(index)]
+function loadExtrasSpan(start, end, version) {
+  const parts = []
+  for (let from = start; from < end; from = shiftDate(from, CHUNK_DAYS)) {
+    const to = shiftDate(from, CHUNK_DAYS)
+    parts.push(loadExtrasRange(from, to < end ? to : end, version))
+  }
+  return Promise.all(parts).then(mergeExtras)
+}
+function loadWeekly(version) {
+  const key = `weekly:${version}`
+  if (!pending.has(key)) pending.set(key, api.loadWeeklyHours().finally(() => pending.delete(key)))
+  return pending.get(key)
+}
+// Whether "Show every day" was left on, on this device. Unreadable storage just means off.
+function readShowEvery() {
+  try { return localStorage.getItem(SHOW_EVERY_KEY) === '1' } catch { return false }
 }
 
 // What needs the Admin, first thing: declared transfers and cash requests, each one tap and a confirmation away.
@@ -79,6 +91,8 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
   const [pagingError, setPagingError] = useState('')
   const [lastChunk, setLastChunk] = useState(1)
   const [now, setNow] = useState(Date.now)
+  const [showEvery, setShowEvery] = useState(readShowEvery)
+  const [blockDialog, setBlockDialog] = useState(null)
   const shown = useRef(null)
   const anchor = useRef(null)
   const sentinel = useRef(null)
@@ -96,15 +110,16 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
     const day = today()
     // Left open past midnight and never scrolled back, the list starts again from today.
     const { start, end } = reanchored(base, anchor.current, day) ?? { start: day, end: shiftDate(day, CHUNK_DAYS) }
-    loadSpan(start, end, `${attempt}:${revision}`).then(bookings => {
+    const version = `${attempt}:${revision}`
+    Promise.all([loadSpan(start, end, version), loadExtrasSpan(start, end, version), loadWeekly(version)]).then(([bookings, extras, weekly]) => {
       if (!live) return
       // More was scrolled into view while this was being read: the range on show has moved, so read it again.
       const current = shown.current
       if (base && current && (current.start !== base.start || current.end !== base.end)) { reread(); return }
       anchor.current = day
       quiet.succeeded()
-      setData({ start, end, bookings })
-      if (first) setLastChunk(bookings.length || 1)
+      setData({ start, end, bookings, ...extras, weekly })
+      if (first) setLastChunk(bookings.length + extras.blocks.length + extras.overrides.length || 1)
       setError('')
       setRefreshing(false)
     }, failure => {
@@ -118,7 +133,7 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
   }, [attempt, revision, reread, quiet])
   useReturnRefresh(reread)
 
-  const groups = data ? withToday(groupByDate(data.bookings), data.start) : []
+  const entries = data ? agendaDays({ bookings: data.bookings, blocks: data.blocks, overrides: data.overrides, weekly: data.weekly, start: data.start, end: data.end, day: today(), showEvery }) : []
   const upNext = data ? nextUp(data.bookings, new Date(now)) : null
 
   async function extend(direction) {
@@ -128,13 +143,15 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
     setPaging(direction)
     setPagingError('')
     try {
-      const bookings = await loadRange(start, end, `${attempt}:${revision}`)
-      if (direction === 'newer') setLastChunk(bookings.length)
+      const version = `${attempt}:${revision}`
+      const [bookings, extras] = await Promise.all([loadRange(start, end, version), loadExtrasRange(start, end, version)])
+      if (direction === 'newer') setLastChunk(bookings.length + extras.blocks.length + extras.overrides.length)
       setData(previous => {
         if (!previous) return previous
+        const more = mergeExtras([previous, extras])
         return direction === 'older'
-          ? { ...previous, start, bookings: [...bookings, ...previous.bookings] }
-          : { ...previous, end, bookings: [...previous.bookings, ...bookings] }
+          ? { ...previous, ...more, start, bookings: [...bookings, ...previous.bookings] }
+          : { ...previous, ...more, end, bookings: [...previous.bookings, ...bookings] }
       })
     } catch {
       setPagingError('Could not load more appointments. Please retry.')
@@ -145,7 +162,7 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
 
   // Keep scrolling: the next month loads as the end of the list comes into view, for as long as it is likely to hold something.
   const horizonDays = data ? daysBetween(today(), data.end) : 0
-  const canAutoLoad = Boolean(data) && !paging && !pagingError && horizonDays < AUTO_LOAD_UNTIL_DAYS && (lastChunk > 0 || horizonDays < 62)
+  const canAutoLoad = Boolean(data) && !paging && !pagingError && horizonDays < AUTO_LOAD_UNTIL_DAYS && (lastChunk > 0 || horizonDays < MIN_HORIZON_DAYS)
   useEffect(() => {
     const node = sentinel.current
     if (!node || !canAutoLoad || typeof IntersectionObserver === 'undefined') return undefined
@@ -155,6 +172,14 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
     // extend closes over the current range and is recreated with it.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canAutoLoad, data?.end, paging])
+
+  function toggleShowEvery(event) {
+    const on = event.target.checked
+    setShowEvery(on)
+    try { localStorage.setItem(SHOW_EVERY_KEY, on ? '1' : '0') } catch { /* A convenience only: a phone that will not keep it is not told. */ }
+  }
+  // A block, wherever it is shown, opens as in the Day view; what is changed or removed there is read again.
+  const openBlock = row => setBlockDialog({ date: row.date, block: row })
 
   return <section className="admin-agenda" aria-labelledby="agenda-title">
     <h1 id="agenda-title" className="sr-only">Agenda</h1>
@@ -168,8 +193,14 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
         <button className="btn--quiet btn--small admin-agenda-earlier" disabled={Boolean(paging)} onClick={() => extend('older')}>{paging === 'older' ? 'Loading earlier…' : 'Earlier appointments'}</button>
         <button className="btn--quiet btn--small" disabled={refreshing} onClick={() => { quiet.asked(); setRefreshing(true); reread() }}><Icon name="refresh" size={18} />{refreshing ? ' Refreshing…' : ' Refresh'}</button>
       </div>
+      <div className="admin-agenda-options">
+        <label className="admin-agenda-switch"><input type="checkbox" role="switch" checked={showEvery} onChange={toggleShowEvery} />Show every day</label>
+      </div>
       <div className="admin-agenda-days">
-        {groups.map(group => {
+        {entries.map(entry => {
+          if (entry.type === 'away') return <AwayBanner key={`away-${entry.group.key}`} group={entry.group} open={openBlock} />
+          if (entry.type === 'quiet') return <QuietDays key={entry.key} items={entry.items} open={openBlock} />
+          const group = entry
           const heading = dayHeading(group.date)
           const full = dateLabel(group.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
           return <section className={`admin-agenda-day ${group.date === today() ? 'is-today' : ''}`} key={group.date} aria-labelledby={`agenda-${group.date}`}>
@@ -177,9 +208,10 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
               <h2 id={`agenda-${group.date}`}><span className="day-name">{heading.name}</span>{heading.rest ? ` · ${heading.rest}` : ''}</h2>
               <span>{daySummary(group.bookings)}</span>
             </header>
-            {!group.bookings.length && <p className="admin-agenda-empty"><strong>A free day.</strong>Nothing is booked.</p>}
-            {group.bookings.length > 0 && <ol role="list" className="admin-timeline" aria-label={`Appointments for ${full}`}>
-              {group.bookings.map(booking => <li key={booking.id} className="admin-timeline-row admin-timeline-booking">
+            <DayNotes special={group.special} away={group.away} />
+            {!group.bookings.length && <p className="admin-agenda-empty"><strong>{group.special?.available === false || group.away ? 'A day off.' : 'A free day.'}</strong>Nothing is booked.</p>}
+            {group.rows.length > 0 && <ol role="list" className="admin-timeline" aria-label={`Appointments${group.rows.some(row => row.kind === 'block') ? ' and blocked time' : ''} for ${full}`}>
+              {group.rows.map(({ kind, booking, row: blocked }) => kind === 'block' ? <TimedBlock key={`block-${blocked.id}`} row={blocked} open={openBlock} /> : <li key={booking.id} className="admin-timeline-row admin-timeline-booking">
                 <time className="admin-time"><span className="figure">{time(booking.start_minutes)}</span><small>{booking.treatment_duration_minutes} min</small>{upNext?.id === booking.id && <em className="admin-next-tag">{upNext.now ? 'Now' : 'Next'}</em>}</time>
                 <BookingCard booking={booking} open={() => openBooking(booking.id)} now={new Date(now)} />
               </li>)}
@@ -192,5 +224,6 @@ export default function Agenda({ openBooking, revision, toCheck, checked, seeAll
       <button className="admin-agenda-load btn--quiet" disabled={Boolean(paging)} onClick={() => extend('newer')}>{paging === 'newer' ? 'Loading more…' : 'Load more upcoming appointments'}</button>
       <p className="admin-agenda-range">Showing {dateLabel(data.start, { day: 'numeric', month: 'short', year: 'numeric' })} to {dateLabel(shiftDate(data.end, -1), { day: 'numeric', month: 'short', year: 'numeric' })}</p>
     </>}
+    {blockDialog && <Suspense fallback={null}><BlockDialog date={blockDialog.date} block={blockDialog.block} close={() => setBlockDialog(null)} saved={() => { setBlockDialog(null); reread() }} /></Suspense>}
   </section>
 }
