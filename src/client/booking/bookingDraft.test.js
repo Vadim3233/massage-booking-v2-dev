@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detailProblems } from './bookingDraft.js'
+import { addressFields, addressTyped, blankAddressFields, detailProblems, usualAddress } from './bookingDraft.js'
 
 const details = (changes = {}) => ({ first_name: 'Ada', last_name: 'Lovelace', email: 'ada@example.test', phone: '07700 900123', address_line_1: '1 Test Road', address_line_2: '', city: 'London', postcode: 'SW3 1AA', savedAddressId: '', ...changes })
 
@@ -17,5 +17,40 @@ describe('what is plainly wrong with the details a client typed', () => {
   it('leaves empty fields to be asked for, and does not judge the postcode of a saved address', () => {
     expect(detailProblems(details({ phone: '', postcode: '' }))).toEqual({})
     expect(detailProblems(details({ postcode: 'ZZZ', savedAddressId: 'a1' }))).toEqual({})
+  })
+})
+
+const saved = (changes = {}) => ({ id: 'a1', label: 'Home', address_line_1: '12 Edith Road', address_line_2: 'West Drayton', city: 'London', postcode: 'UB7 7LG', entry_instructions: 'Ring twice', is_default: false, ...changes })
+
+describe('the address a returning client is offered straight away', () => {
+  it('is the one marked as their default, in whatever order they come', () => {
+    const other = saved({ id: 'a2', label: 'Saved address' })
+    const home = saved({ id: 'a1', is_default: true })
+    expect(usualAddress([other, home])).toBe(home)
+    expect(usualAddress([home, other])).toBe(home)
+  })
+  it('is their only address when none is marked', () => {
+    const only = saved()
+    expect(usualAddress([only])).toBe(only)
+  })
+  it('is nothing when there are several and none is marked, or none at all', () => {
+    expect(usualAddress([saved(), saved({ id: 'a2' })])).toBeNull()
+    expect(usualAddress([])).toBeNull()
+  })
+})
+
+describe('the address boxes on the details screen', () => {
+  it('a saved address fills them, and what it does not have is left empty', () => {
+    expect(addressFields(saved())).toEqual({ address_line_1: '12 Edith Road', address_line_2: 'West Drayton', city: 'London', postcode: 'UB7 7LG', entry_instructions: 'Ring twice' })
+    expect(addressFields(saved({ address_line_2: null, entry_instructions: null }))).toMatchObject({ address_line_2: '', entry_instructions: '' })
+  })
+  it('start empty, with London as the city, and can be put back to that', () => {
+    expect(blankAddressFields()).toEqual({ address_line_1: '', address_line_2: '', city: 'London', postcode: '', entry_instructions: '' })
+  })
+  it('count as typed once anything but the city is in them', () => {
+    expect(addressTyped(blankAddressFields())).toBe(false)
+    expect(addressTyped({ ...blankAddressFields(), city: 'Leeds' })).toBe(false)
+    expect(addressTyped({ ...blankAddressFields(), postcode: '   ' })).toBe(false)
+    for (const key of ['address_line_1', 'address_line_2', 'postcode', 'entry_instructions']) expect(addressTyped({ ...blankAddressFields(), [key]: 'x' })).toBe(true)
   })
 })

@@ -42,6 +42,16 @@ export function validDetails(details) {
     (Boolean(details.savedAddressId) || ['address_line_1', 'city', 'postcode'].every((key) => details[key].trim()))
 }
 
+// A saved address fills these boxes on the details screen; "Enter an address" leaves them empty, as they start.
+const ADDRESS_BOXES = ['address_line_1', 'address_line_2', 'city', 'postcode', 'entry_instructions']
+export const addressFields = (address) => Object.fromEntries(ADDRESS_BOXES.map((key) => [key, address[key] || '']))
+export const blankAddressFields = () => Object.fromEntries(ADDRESS_BOXES.map((key) => [key, emptyDetails[key]]))
+// The address a client is offered straight away: the one marked as theirs by default (the first they booked, kept as "Home"), or their only
+// address when none is marked. With several and none marked, nothing is chosen for them.
+export const usualAddress = (addresses) => addresses.find((address) => address.is_default) || (addresses.length === 1 ? addresses[0] : null)
+// Whether the client has already put an address into the boxes themselves (the city starts as London, so it does not count).
+export const addressTyped = (details) => ['address_line_1', 'address_line_2', 'postcode', 'entry_instructions'].some((key) => details[key]?.trim())
+
 export function allowedStep(draft, requested, now = Date.now()) {
   if (draft.bookingId) return draft.paymentComplete === false ? 6 : 7
   if (draft.pending) return 6
