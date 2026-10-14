@@ -3,6 +3,11 @@ import { unwrap } from '../src/client/booking/bookingApi.js'
 import { shiftDate } from '../src/admin/calendarPresentation.js'
 export async function adminFixture(offset = 35) {
   const f = await localFixture(offset)
+  // One booking is on the day after the fixture's own date, and the lifecycle tests move it around, so that day has to be open whatever weekday it is:
+  // on a Wednesday it is a Saturday, closed in the usual week, and the Reschedule picker then has no times. It is opened as localFixture opens its own date.
+  const nextDay = shiftDate(f.date, 1)
+  const nextDayBefore = await unwrap(f.admin.from('working_hours_overrides').select('date,available,start_minutes,end_minutes,start_mode,fixed_start_minutes,note').eq('date', nextDay))
+  await unwrap(f.admin.from('working_hours_overrides').upsert({ date: nextDay, available: true, start_minutes: 600, end_minutes: 1320, start_mode: 'flexible', fixed_start_minutes: null }))
   const user = (await f.client.auth.getUser()).data.user
   const other = await unwrap(f.admin.from('clients').insert({ first_name: 'Alexandra'.repeat(12), last_name: 'Calendar', email: 'canonical@example.test', phone: '+447700900002' }).select().single())
   const base = { client_id: other.id, service_area_id: f.ids.area, date: f.date, start_minutes: 600, treatment_duration_minutes: 60, booking_status: 'confirmed', source_channel: 'web', address_line_1_snapshot: 'VeryLongStreet'.repeat(16), city_snapshot: 'London', postcode_snapshot: 'SW1A1AA', service_area_name_snapshot: 'Test area', service_subtotal_gbp: 85, total_gbp: 85, booking_email_snapshot: 'booking@example.test', client_note: 'Exact persisted note' }
@@ -17,6 +22,11 @@ export async function adminFixture(offset = 35) {
   }
   return { ...f, bookings, user,
     async authorize() { await unwrap(f.admin.from('admin_users').insert({ user_id: user.id })) },
-    async cleanup() { await unwrap(f.admin.from('bookings').delete().eq('client_id', other.id)); await unwrap(f.admin.from('clients').delete().eq('id', other.id)); await f.cleanup() },
+    async cleanup() {
+      await unwrap(f.admin.from('bookings').delete().eq('client_id', other.id)); await unwrap(f.admin.from('clients').delete().eq('id', other.id))
+      if (nextDayBefore.length) await unwrap(f.admin.from('working_hours_overrides').upsert(nextDayBefore))
+      else await unwrap(f.admin.from('working_hours_overrides').delete().eq('date', nextDay))
+      await f.cleanup()
+    },
   }
 }
