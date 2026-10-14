@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { paymentReviewFixture } from '../../tests/paymentReviewFixture.js'
+import { unwrap } from '../client/booking/bookingApi.js'
 import { createLifecycleApi } from './bookingLifecycleApi.js'
 import { createPaymentReviewApi } from './paymentReviewApi.js'
 
@@ -30,14 +31,23 @@ describe('Admin booking lifecycle against local Supabase', () => {
   it('reschedules into free time, ignoring the booking itself, and records the move', async () => {
     await f.authorize()
     const b = await fresh(f.bookings[2].id)
-    const withItself = await api.availability(b.date, b.treatment_duration_minutes, null)
-    const times = await api.availability(b.date, b.treatment_duration_minutes, b.id)
-    expect(times.length).toBeGreaterThan(withItself.length)
-    const target = times[1]
-    await api.act('reschedule', b, crypto.randomUUID(), { date: b.date, start: target, initiatedBy: 'admin' })
-    const moved = await fresh(b.id)
-    expect(moved.start_minutes).toBe(target)
-    expect((await api.history(b.id)).some(event => event.kind === 'schedule' && event.to_start_minutes === target)).toBe(true)
+    // This booking is on the day after the fixture's day, which has no hours of its own. On a Saturday, a closed day, there would be
+    // no times at all, so give the day hours for this test and put it back as it was.
+    const hours = await unwrap(f.admin.from('working_hours_overrides').select().eq('date', b.date))
+    await unwrap(f.admin.from('working_hours_overrides').upsert({ date: b.date, available: true, start_minutes: 600, end_minutes: 1320, start_mode: 'flexible', fixed_start_minutes: null }))
+    try {
+      const withItself = await api.availability(b.date, b.treatment_duration_minutes, null)
+      const times = await api.availability(b.date, b.treatment_duration_minutes, b.id)
+      expect(times.length).toBeGreaterThan(withItself.length)
+      const target = times[1]
+      await api.act('reschedule', b, crypto.randomUUID(), { date: b.date, start: target, initiatedBy: 'admin' })
+      const moved = await fresh(b.id)
+      expect(moved.start_minutes).toBe(target)
+      expect((await api.history(b.id)).some(event => event.kind === 'schedule' && event.to_start_minutes === target)).toBe(true)
+    } finally {
+      if (hours.length) await unwrap(f.admin.from('working_hours_overrides').upsert(hours))
+      else await unwrap(f.admin.from('working_hours_overrides').delete().eq('date', b.date))
+    }
   })
 
   it('refuses a clash with another booking and explains it, without raw errors', async () => {
