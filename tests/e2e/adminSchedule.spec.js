@@ -66,7 +66,8 @@ test('a day off over a live booking warns first, never moves the booking, and th
   await expect(page.getByText('Saved.')).toBeVisible()
   await expect(page.getByRole('list').filter({ hasText: 'Family day' })).toContainText('Day off')
   expect((await f.admin.from('bookings').select('booking_status').eq('id', f.bookings[0].id).single()).data.booking_status).toBe('awaiting_payment_verification')
-  await page.getByRole('button', { name: /Use my usual week/ }).click()
+  // Other special days may be in the list (the fixture opens the day after its own, on a Saturday), so this is the one it just made.
+  await page.getByRole('listitem').filter({ hasText: 'Family day' }).getByRole('button', { name: /Use my usual week/ }).click()
   await expect(page.getByText('Removed. That day follows your usual week again.')).toBeVisible()
 })
 
