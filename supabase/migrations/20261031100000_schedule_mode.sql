@@ -11,6 +11,19 @@
 -- week for its date, mode included, so a special day that was saved without a mode is a chain day. Every existing day stays Chain.
 -- The mode only means something on a working day; a day off keeps the default.
 
+-- This builds on 20261030100000_anchor_release.sql: the availability function below also reads the release time. If that change has not been
+-- applied yet, stop here with a plain message, rather than leave the booking page with a function that cannot run.
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'working_hours' and column_name = 'anchor_release_minutes'
+  ) then
+    raise exception 'Apply 20261030100000_anchor_release.sql first: this change builds on it.';
+  end if;
+end;
+$$;
+
 alter table public.working_hours
   add column schedule_mode text not null default 'chain',
   add constraint working_hours_schedule_mode_valid check (schedule_mode in ('chain', 'flexible'));
