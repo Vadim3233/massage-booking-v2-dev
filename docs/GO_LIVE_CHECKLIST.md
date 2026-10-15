@@ -168,7 +168,7 @@ Press **Day settings** on any day in the Agenda, or in the Day view beside Block
 ## Known limits (worth knowing, not blockers)
 
 - A guest who books twice as a guest, or a guest who registers later, appears as two profiles under Clients. This is on purpose: an email typed by a guest cannot be trusted, so it is never used to link them to an existing client by itself. The app asks you instead (see "Is this the same person?" above). A guest who comes back on a new phone or browser makes a new guest profile each time, so each one is a question to answer.
-- Text left over from setting up: the extra "Aftercare advice" still has the placeholder text "Describe this enhancement." It is switched off, so clients do not see it; write your own text before you switch it on (More, Extras). Check the treatments, extras and areas once as a client would see them.
+- The extra "Aftercare advice" from setting up is switched off and has no text, so clients do not see it. If you switch it on, write its text first (More, Extras). Check the treatments, extras and areas once as a client would see them.
 - The "New test client" helper (it fills in made-up details) exists only in development builds: the live booking page and its preview links never show it, whatever is added to the address.
 - A client's page shows "Upcoming" and "Next appointment" for an appointment earlier today until the day is over.
 
