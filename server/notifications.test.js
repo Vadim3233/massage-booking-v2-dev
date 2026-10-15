@@ -206,7 +206,8 @@ describe('the private link in a client\'s email', () => {
     expect(calls.every(call => !JSON.stringify(call).includes('#key'))).toBe(true)
   })
   it('makes no code for a client message that is not an email, or where there is no public address to put the link on', async () => {
-    const telegram = await send([clientRow({ id: 't', channel: 'telegram' })])
+    // A client's Telegram message goes out on the clients-only channel, with that bot's own token (the Admin's bot refuses client messages).
+    const telegram = await send([clientRow({ id: 't', channel: 'telegram_client', recipient: '424242' })], mint, undefined, readConfig({ ...env, TELEGRAM_CLIENT_BOT_TOKEN: '777:CLIENT-BOT-TOKEN' }))
     expect(telegram.client.minted).toEqual([])
     expect(telegram.calls.length).toBe(1)
     expect(JSON.stringify(telegram.calls)).not.toContain('#key')

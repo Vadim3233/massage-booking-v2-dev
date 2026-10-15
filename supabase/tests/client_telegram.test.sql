@@ -326,7 +326,7 @@ reset role;
 select is((select count(*)::integer from public.clients where id = '00000000-0000-4000-8000-00000000f205'), 0, 'Mia''s profile is gone');
 select results_eq($$select chat_id, stopped_at is null from public.client_telegram_links where client_id = '00000000-0000-4000-8000-00000000f202' and chat_id in (777001, 777002, 777003, 111003) order by chat_id$$,
   $$values (111003::bigint, true), (777001::bigint, true), (777002::bigint, false), (777003::bigint, true)$$,
-  'Her chats moved to Rita: a live one is live, a stopped one stays stopped, the one Rita had stopped is on again because Mia had it on, and the one Rita had on stays on although Mia had stopped it');
+  'Mia''s chats moved to Rita: a live one is live, a stopped one stays stopped, the one Rita had stopped is on again because Mia had it on, and the one Rita had on stays on although Mia had stopped it');
 select is((select count(*)::integer from public.client_telegram_links where client_id = '00000000-0000-4000-8000-00000000f205'), 0, 'Nothing is left under the profile that went');
 select is((select count(*)::integer from public.client_telegram_links where chat_id in (777001, 777002, 777003, 111003) and client_id = '00000000-0000-4000-8000-00000000f202'), 4, 'and no chat was added twice');
 

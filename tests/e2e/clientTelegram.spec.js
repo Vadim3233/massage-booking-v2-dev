@@ -55,7 +55,7 @@ async function bookAsGuest(page) {
 // The usual journey for a returning client, ending on the confirmation page ("I've received your booking").
 async function book(page) {
   await toDetails(page)
-  await page.getByText('Returning client? Sign in').click()
+  await page.getByRole('button', { name: 'Sign in with email' }).click()
   await page.getByLabel('Email address', { exact: true }).fill(fixture.email)
   await page.getByLabel('Password', { exact: true }).fill(fixture.password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
