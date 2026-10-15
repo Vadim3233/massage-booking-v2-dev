@@ -27,6 +27,11 @@ export default function DaySettings({ date, revision, openBooking, changed, api 
   const [conflicts, setConflicts] = useState(null)
   const [blockDialog, setBlockDialog] = useState(null)
   const confirmed = useRef(false)
+  // Putting a day back to the usual week removes its own settings, so it is asked first. The question takes focus, on the safe answer.
+  const [confirmingUsual, setConfirmingUsual] = useState(false)
+  const keepButton = useRef(null)
+  const usualButton = useRef(null)
+  useEffect(() => { if (confirmingUsual) keepButton.current?.focus() }, [confirmingUsual])
   const heading = useRef(null)
   // A screen that loads a moment after it is opened is read out from its heading. The Admin's own move of focus can land on the page it
   // replaced, which is still there, hidden, while this one loads, so the heading takes focus itself once it is on screen.
@@ -57,7 +62,7 @@ export default function DaySettings({ date, revision, openBooking, changed, api 
   const weekday = WEEKDAYS[weekdayOf(date) - 1]
   const full = dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
-  const edit = entry => { setError(''); setMessage(''); setConflicts(null); confirmed.current = false; setEdits(entry) }
+  const edit = entry => { setError(''); setMessage(''); setConflicts(null); setConfirmingUsual(false); confirmed.current = false; setEdits(entry) }
   const setWorking = on => edit(on ? workingDay(state.usual, form.note) : { ...DAY_OFF, note: form.note })
 
   async function save(event) {
@@ -88,7 +93,7 @@ export default function DaySettings({ date, revision, openBooking, changed, api 
       refresh({ special: false, saved: { ...state.usual, note: '' } })
       changed?.()
     } catch (failure) { setError(failure.message) }
-    finally { setBusy(false) }
+    finally { setBusy(false); setConfirmingUsual(false) }
   }
   const blocksChanged = () => { setBlockDialog(null); read().then(setData, () => {}); changed?.() }
 
@@ -118,15 +123,24 @@ export default function DaySettings({ date, revision, openBooking, changed, api 
         <HoursFields entry={form} prefix="This day" onChange={edit} disabled={busy || past} explain />
         <label className="admin-field">Note (only you see this)<input value={form.note || ''} maxLength={200} disabled={busy || past} onChange={event => edit({ ...form, note: event.target.value })} /></label>
         {problem && <p role="alert" className="admin-field-error">{problem}</p>}
-        {conflicts && <div role="alert" className="admin-conflicts"><strong>This clashes with {conflicts.length === 1 ? 'a booking' : `${conflicts.length} bookings`}:</strong>
-          <ul>{conflicts.map(item => <li key={item.booking_id}>{item.client_name}, {clock(item.start_minutes)} ({item.booking_status.replaceAll('_', ' ')})</li>)}</ul>
+        {conflicts && <div role="alert" className="admin-conflicts"><strong>{form.available
+          ? `${conflicts.length === 1 ? 'This booking would be' : `These ${conflicts.length} bookings would be`} outside your new hours, ${clock(form.start_minutes)}–${clock(form.end_minutes)}:`
+          : `You are making this a day off, but it has ${conflicts.length === 1 ? 'a booking' : `${conflicts.length} bookings`}:`}</strong>
+          <ul>{conflicts.map(item => <li key={item.booking_id}>{item.client_name}, {clock(item.start_minutes)}–{clock(item.start_minutes + item.treatment_duration_minutes)} ({item.booking_status.replaceAll('_', ' ')})</li>)}</ul>
           <p>Those appointments will not be moved or cancelled for you. Save again if you still want to make this change.</p></div>}
         {error && <p role="alert">{error}</p>}
         {message && !dirty && <p role="status">{message}</p>}
         {dirty && !busy && <p role="status" className="admin-detail-hint">You have changes that are not saved yet.</p>}
         {!past && <div className="admin-day-settings-actions">
-          <button type="submit" className="btn--primary btn--lg btn--block" disabled={busy || !dirty || Boolean(problem)}>{busy ? 'Saving…' : conflicts ? 'Save anyway' : 'Save this day'}</button>
-          {state.special && <button type="button" className="btn--quiet btn--block" disabled={busy} onClick={useUsualWeek}>Use my usual week</button>}
+          <button type="submit" className="btn--primary btn--lg btn--block" disabled={busy || !dirty || Boolean(problem) || confirmingUsual}>{busy ? 'Saving…' : conflicts ? 'Save anyway' : 'Save this day'}</button>
+          {state.special && <button ref={usualButton} type="button" className="btn--quiet btn--block" disabled={busy || confirmingUsual} onClick={() => { setMessage(''); setError(''); setConfirmingUsual(true) }}>Use my usual week</button>}
+        </div>}
+        {!past && state.special && confirmingUsual && <div role="alert" className="admin-conflicts">
+          <p>Put {full} back to your usual {weekday}? That is {state.usual.available ? hoursLine(state.usual) : 'a day off'}. This day's own settings{saved.note ? ` and its note ("${saved.note}")` : ''} are removed. Bookings are not moved or cancelled.</p>
+          <div className="admin-payment-buttons">
+            <button ref={keepButton} type="button" disabled={busy} onClick={() => { setConfirmingUsual(false); requestAnimationFrame(() => usualButton.current?.focus()) }}>Keep this day's settings</button>
+            <button type="button" className="btn--danger-solid" disabled={busy} onClick={useUsualWeek}>{busy ? 'Putting back…' : 'Yes, use my usual week'}</button>
+          </div>
         </div>}
       </form>
 
