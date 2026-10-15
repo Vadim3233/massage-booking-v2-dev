@@ -1,0 +1,38 @@
+name: Site check
+
+# Visits the live site every half hour and fails, so that GitHub emails the owner, when something stops answering.
+# It makes ordinary public requests only (no keys, no logins) and changes nothing. See docs/SAFETY_NET.md.
+on:
+  schedule:
+    - cron: '7,37 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: The four public addresses answer
+        shell: bash
+        run: |
+          failed=0
+          # check "what it is" "address" "answers that mean it is alive"
+          check() {
+            local name="$1" url="$2" good="$3" code=""
+            for attempt in 1 2 3; do
+              code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$url" || true)
+              case " $good " in *" $code "*) echo "OK    $name answered $code"; return 0 ;; esac
+              echo "      $name answered '${code:-nothing}' (try $attempt of 3)"
+              if [ "$attempt" -lt 3 ]; then sleep 20; fi
+            done
+            echo "::error title=$name::no good answer from $url (last answer: ${code:-nothing})"
+            failed=1
+          }
+          check "Booking page"    "https://booking.vadmassage.com/"                          "200"
+          check "Admin page"      "https://booking.vadmassage.com/admin"                     "200"
+          # The sender and the database keep their doors locked, so a locked door (401) is how a healthy one answers.
+          check "Reminder sender" "https://booking.vadmassage.com/api/dispatch-notifications" "401"
+          check "Database"        "https://jxmnfwoeqglnhruadbhp.supabase.co/auth/v1/health"  "401"
+          exit $failed
