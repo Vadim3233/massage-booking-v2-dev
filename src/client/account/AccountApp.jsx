@@ -7,6 +7,7 @@ import AuthPanel from '../auth/AuthPanel.jsx'
 import { dateLabel, londonDate, money, timeLabel } from '../booking/bookingDraft.js'
 import DayTimePicker from '../booking/components/DayTimePicker.jsx'
 import BookingSummary from '../booking/components/BookingSummary.jsx'
+import TelegramBox from '../booking/components/TelegramBox.jsx'
 import { accountApi, createAccountApi, LINK_INVALID } from './accountApi.js'
 import { useBookingRules } from '../bookingRules.js'
 import '../booking/booking.css'
@@ -157,6 +158,8 @@ function Manage({ id, rules, close, changed, api, linked = false }) {
     <h1 tabIndex={-1}>{HEADING[booking.booking_status]}</h1>
     {message && <p role="alert" className="account-note">{message}</p>}
     {mode === 'view' && <>
+      {/* Linking Telegram is done as the signed-in client, so it is not offered on a page opened from the email link, where nobody has signed in. */}
+      {open && !linked && <TelegramBox />}
       <BookingSummary booking={booking} />
       {owes && <p className="account-note account-note--fee">A late fee of {money(booking.late_fee_due_gbp)} is due for this appointment. I will be in touch about it.</p>}
       {booking.booking_status === 'cancelled' && Number(booking.refund_due_gbp) > 0 && <p className="account-note">A refund of {money(booking.refund_due_gbp)} is due to you. I'll send it soon.</p>}

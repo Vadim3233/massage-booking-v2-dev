@@ -8,11 +8,13 @@ const row = (overrides = {}) => ({ id: 'd1', channel: 'telegram', audience: 'adm
 
 function fakeClient(rows, failRepeats = false, failReminders = false, mint = null) {
   const completed = []
+  const stopped = []
   const minted = []
-  return { completed, minted, async rpc(name, args) {
+  return { completed, stopped, minted, async rpc(name, args) {
     if (name === 'mint_booking_access_token') { minted.push(args); if (!mint) throw new Error('unexpected mint_booking_access_token'); return mint(args.p_booking_id, minted.length) }
     if (name === 'claim_notification_deliveries') { this.claimArgs = args; return { data: rows.filter(r => args.p_channels.includes(r.channel)), error: null } }
     if (name === 'complete_notification_delivery') { completed.push(args); return { error: null } }
+    if (name === 'stop_client_telegram') { stopped.push(args); return { data: 1, error: null } }
     if (name === 'run_series_maintenance') return failRepeats ? { data: null, error: { message: 'boom' } } : { data: { made: 2, clashes: 0, ended: 0 }, error: null }
     if (name === 'plan_day_of_reminders') return failReminders ? { data: null, error: { message: 'boom' } } : { data: 2, error: null }
     throw new Error(`unexpected ${name}`)
@@ -26,6 +28,94 @@ describe('configuration', () => {
     expect(enabledChannels(readConfig({ ...env, TELEGRAM_BOT_TOKEN: '' }))).toEqual(['email'])
     expect(enabledChannels(readConfig({ ...env, EMAIL_FROM: '' }))).toEqual(['telegram'])
     expect(enabledChannels(readConfig({}))).toEqual([])
+  })
+})
+
+describe('the clients-only Telegram bot', () => {
+  const clientEnv = { ...env, TELEGRAM_CLIENT_BOT_TOKEN: '777:CLIENT-BOT-TOKEN' }
+  const message = (overrides = {}) => row({ id: 'k1', channel: 'telegram_client', audience: 'client', recipient: '424242', title: 'Your appointment is confirmed',
+    body: 'Thank you. Your appointment is confirmed for Mon 5 May at 14:30.\n\nTo change or cancel, use the link in your email, or contact Vad.', link_path: null, ...overrides })
+  it('is switched on by its own token only, and the Admin channels do not depend on it', () => {
+    expect(enabledChannels(readConfig(clientEnv))).toEqual(['telegram', 'telegram_client', 'email'])
+    expect(enabledChannels(readConfig({ ...clientEnv, TELEGRAM_BOT_TOKEN: '', ADMIN_TELEGRAM_CHAT_ID: '' }))).toEqual(['telegram_client', 'email'])
+    expect(enabledChannels(readConfig(env))).not.toContain('telegram_client')
+    expect(enabledChannels(readConfig({ TELEGRAM_CLIENT_BOT_TOKEN: '777:x' }))).toEqual(['telegram_client'])
+  })
+  it('has its token trimmed, and never accepts the Admin bot as the clients-only bot', () => {
+    expect(readConfig({ ...env, TELEGRAM_CLIENT_BOT_TOKEN: '  777:CLIENT-BOT-TOKEN \n' }).telegramClient.token).toBe('777:CLIENT-BOT-TOKEN')
+    const same = readConfig({ ...env, TELEGRAM_CLIENT_BOT_TOKEN: env.TELEGRAM_BOT_TOKEN })
+    expect(same.telegramClient.token).toBe('')
+    expect(enabledChannels(same)).not.toContain('telegram_client')
+    expect(readConfig({ ...env, TELEGRAM_CLIENT_BOT_TOKEN: `${env.TELEGRAM_BOT_TOKEN}\n` }).telegramClient.token).toBe('')
+  })
+  it('does not wait for ever for Telegram: the call is cut off after a few seconds', async () => {
+    const signals = []
+    await createDispatcher({ client: fakeClient([message()]), config: readConfig(clientEnv), fetchImpl: async (url, init) => { signals.push(init.signal); return okResponse({ ok: true }) } }).dispatch()
+    expect(signals).toHaveLength(1)
+    expect(signals[0]).toBeInstanceOf(AbortSignal)
+    expect(signals[0].aborted).toBe(false)
+  })
+  it('sends to the chat the client linked, with the clients-only bot, and records success', async () => {
+    const calls = []
+    const client = fakeClient([message()])
+    const result = await createDispatcher({ client, config: readConfig(clientEnv), fetchImpl: async (url, init) => { calls.push([url, JSON.parse(init.body)]); return okResponse({ ok: true }) } }).dispatch()
+    expect(result).toMatchObject({ claimed: 1, sent: 1, failed: 0 })
+    expect(client.claimArgs.p_channels).toContain('telegram_client')
+    expect(calls).toHaveLength(1)
+    expect(calls[0][0]).toBe('https://api.telegram.org/bot777:CLIENT-BOT-TOKEN/sendMessage')
+    expect(calls[0][1]).toEqual({ chat_id: 424242, text: 'Your appointment is confirmed\n\nThank you. Your appointment is confirmed for Mon 5 May at 14:30.\n\nTo change or cancel, use the link in your email, or contact Vad.', disable_web_page_preview: true })
+    expect(client.completed).toEqual([{ p_id: 'k1', p_ok: true, p_error: null }])
+  })
+  it('never sends a client message to the Admin chat, or with the Admin bot', async () => {
+    const calls = []
+    await createDispatcher({ client: fakeClient([message(), message({ id: 'k2', recipient: '99' })]), config: readConfig(clientEnv), fetchImpl: async (url, init) => { calls.push([url, JSON.parse(init.body)]); return okResponse({ ok: true }) } }).dispatch()
+    expect(calls.map(([url]) => url).every(url => url.includes('777:CLIENT-BOT-TOKEN'))).toBe(true)
+    expect(calls.map(([, body]) => body.chat_id)).toEqual([424242, 99])
+    expect(JSON.stringify(calls)).not.toContain('123:SECRET-TOKEN')
+    expect(calls.map(([, body]) => body.chat_id)).not.toContain(555)
+  })
+  it('keeps the two audiences apart even if a row is on the wrong channel', async () => {
+    const calls = []
+    // (The database refuses an Admin row on the client channel, so this is a second line of defence: even one that gets there with a real chat
+    // number as its recipient is not sent.)
+    const client = fakeClient([row({ id: 'wrong1', channel: 'telegram', audience: 'client', recipient: '424242' }), message({ id: 'wrong2', audience: 'admin', recipient: 'admin' }),
+      message({ id: 'wrong3', audience: 'admin', recipient: '424242' })])
+    const result = await createDispatcher({ client, config: readConfig(clientEnv), fetchImpl: async (url, init) => { calls.push([url, JSON.parse(init.body)]); return okResponse({ ok: true }) } }).dispatch()
+    expect(calls).toEqual([])
+    expect(result).toMatchObject({ claimed: 3, sent: 0, failed: 3 })
+    expect(client.completed.map(item => item.p_ok)).toEqual([false, false, false])
+  })
+  it('will not send to something that is not a chat', async () => {
+    const calls = []
+    const client = fakeClient([message({ recipient: 'not-a-number' })])
+    const result = await createDispatcher({ client, config: readConfig(clientEnv), fetchImpl: async () => { calls.push(1); return okResponse({ ok: true }) } }).dispatch()
+    expect(calls).toEqual([])
+    expect(result).toMatchObject({ sent: 0, failed: 1 })
+  })
+  it('ends the link of a chat that has blocked the bot or is gone, and records why, without the token', async () => {
+    for (const [code, description] of [[403, 'Forbidden: bot was blocked by the user'], [400, 'Bad Request: chat not found']]) {
+      const client = fakeClient([message()])
+      const result = await createDispatcher({ client, config: readConfig(clientEnv), fetchImpl: async () => ({ ok: false, status: code, json: async () => ({ ok: false, error_code: code, description }) }) }).dispatch()
+      expect(result).toMatchObject({ sent: 0, failed: 1 })
+      expect(client.stopped).toEqual([{ p_chat_id: 424242 }])
+      expect(client.completed[0]).toEqual({ p_id: 'k1', p_ok: false, p_error: `Telegram: ${description}` })
+    }
+  })
+  it('leaves the link alone for an ordinary failure, and scrubs the token out of network errors', async () => {
+    const refused = fakeClient([message()])
+    await createDispatcher({ client: refused, config: readConfig(clientEnv), fetchImpl: async () => ({ ok: false, status: 429, json: async () => ({ ok: false, error_code: 429, description: 'Too Many Requests: retry later' }) }) }).dispatch()
+    expect(refused.stopped).toEqual([])
+    expect(refused.completed[0].p_error).toBe('Telegram: Too Many Requests: retry later')
+    // A message Telegram will not take for another reason (too long, say) is not a reason to end the link either.
+    const tooLong = fakeClient([message()])
+    await createDispatcher({ client: tooLong, config: readConfig(clientEnv), fetchImpl: async () => ({ ok: false, status: 400, json: async () => ({ ok: false, error_code: 400, description: 'Bad Request: message is too long' }) }) }).dispatch()
+    expect(tooLong.stopped).toEqual([])
+    expect(tooLong.completed[0].p_error).toBe('Telegram: Bad Request: message is too long')
+    const down = fakeClient([message()])
+    await createDispatcher({ client: down, config: readConfig(clientEnv), fetchImpl: async url => { throw new Error(`connect ECONNRESET ${url}`) } }).dispatch()
+    expect(down.completed[0].p_error).not.toContain('CLIENT-BOT-TOKEN')
+    expect(down.completed[0].p_error).toContain('[hidden]')
+    expect(down.stopped).toEqual([])
   })
 })
 
@@ -116,7 +206,8 @@ describe('the private link in a client\'s email', () => {
     expect(calls.every(call => !JSON.stringify(call).includes('#key'))).toBe(true)
   })
   it('makes no code for a client message that is not an email, or where there is no public address to put the link on', async () => {
-    const telegram = await send([clientRow({ id: 't', channel: 'telegram' })])
+    // A client's Telegram message goes out on the clients-only channel, with that bot's own token (the Admin's bot refuses client messages).
+    const telegram = await send([clientRow({ id: 't', channel: 'telegram_client', recipient: '424242' })], mint, undefined, readConfig({ ...env, TELEGRAM_CLIENT_BOT_TOKEN: '777:CLIENT-BOT-TOKEN' }))
     expect(telegram.client.minted).toEqual([])
     expect(telegram.calls.length).toBe(1)
     expect(JSON.stringify(telegram.calls)).not.toContain('#key')
