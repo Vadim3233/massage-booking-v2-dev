@@ -23,10 +23,10 @@ Where each piece stands is tracked in the pull requests that add them; this page
 1. In Supabase, open your project and press **Connect** at the top. Choose **Session pooler** and copy the connection string. It looks like `postgresql://postgres.xxxx:[YOUR-PASSWORD]@aws-0-eu-west-1.pooler.supabase.com:5432/postgres`. Use the Session pooler one: the other kind only works on a network with IPv6 and often fails at home.
 2. The string has `[YOUR-PASSWORD]` where the database password goes. If you do not know the password: **Project Settings, Database, Reset database password**. Choose letters and numbers only. The live website does not use this password (it uses its own keys), so changing it does not affect the site; it only affects tools that connect directly with the old one.
 3. Save the whole string, with the real password in place of `[YOUR-PASSWORD]`, as the **first line of a plain text file** called `db-url.txt` in the folder `C:\Users\<you>\.vad-backup\` (make the folder if it is not there). This file can read and change your whole database: never put it in the project folder, an email or a chat, and do not paste it to me. This is the one step only you can do.
-4. From the project folder, run the installer once:
+4. Run the installer once (from anywhere, as long as `-ProjectDir` is the project folder that has `node_modules`):
 
    ```
-   powershell -ExecutionPolicy Bypass -File scripts\install-backup-task.ps1
+   powershell -ExecutionPolicy Bypass -File scripts\install-backup-task.ps1 -ProjectDir <the project folder>
    ```
 
    It copies the tool to `C:\Users\<you>\VadMassage-Backups\tool\` and creates two Windows scheduled tasks, "Vad Massage - database backup" and "Vad Massage - backup check". Add `-WhatIf` to see what it would do without doing it. `-Remove` takes the two tasks away again (backups already made are kept). `-Time 20:00` changes the hour.

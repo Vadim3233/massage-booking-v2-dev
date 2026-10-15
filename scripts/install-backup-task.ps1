@@ -1,12 +1,14 @@
 # Sets up the daily database backup on this PC (see docs/SAFETY_NET.md). Needs no administrator rights.
 #   powershell -ExecutionPolicy Bypass -File scripts\install-backup-task.ps1             install or update
 #   powershell -ExecutionPolicy Bypass -File scripts\install-backup-task.ps1 -Remove     take the two scheduled tasks away (backups already made are kept)
+# -ProjectDir  the project folder that has node_modules (default: the folder this script sits in)
 # -ToolDir  where the tool is copied to (default: VadMassage-Backups\tool in your user folder)
 # -Time     when the daily backup runs (default 21:30)
 # -NoTask   copy the tool and write the launchers, but create no scheduled tasks
 # -WhatIf   show what would happen without doing any of it
 [CmdletBinding(SupportsShouldProcess)]
 param(
+  [string]$ProjectDir = (Split-Path -Parent $PSScriptRoot),
   [string]$ToolDir = (Join-Path $env:USERPROFILE 'VadMassage-Backups\tool'),
   [string]$Time = '21:30',
   [switch]$NoTask,
@@ -26,9 +28,8 @@ if ($Remove) {
 }
 
 # The tool runs the Supabase command that is already installed in this project's node_modules.
-$repo = Split-Path -Parent $PSScriptRoot
-$cli = Join-Path $repo 'node_modules\supabase\dist\supabase.js'
-if (-not (Test-Path -LiteralPath $cli)) { throw "Cannot find $cli. Run this from the project folder that has node_modules." }
+$cli = Join-Path $ProjectDir 'node_modules\supabase\dist\supabase.js'
+if (-not (Test-Path -LiteralPath $cli)) { throw "Cannot find $cli. Add -ProjectDir <the project folder that has node_modules>." }
 $node = (Get-Command node -ErrorAction Stop).Source
 
 New-Item -ItemType Directory -Force -Path $ToolDir | Out-Null
