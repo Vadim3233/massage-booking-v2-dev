@@ -44,29 +44,29 @@
 .admin-agenda-sentinel { height: 1px; }
 
 /* The strip that says what needs the Admin, first thing */
-.admin-tocheck { margin: 8px 0 14px; padding: 16px; border-radius: var(--radius); background: var(--needs-bg); box-shadow: inset 0 0 0 1.5px rgb(178 107 0 / .28); }
-.admin-tocheck .eyebrow { color: var(--needs-ink); }
-.admin-tocheck h2 { font: 600 22px/1.2 var(--font-display); font-variant-numeric: lining-nums; color: #3f2700; }
-.admin-tocheck ul { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
-.admin-tocheck li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; padding: 12px; border-radius: 12px; background: rgb(255 255 255 / .82); }
-.admin-tocheck li strong { font-size: 16px; }
-.admin-tocheck li .when { grid-column: 1; color: var(--ink-soft); font-size: 14px; }
-.admin-tocheck li .admin-payment-actions { grid-column: 2; grid-row: 1 / span 2; }
-.admin-tocheck-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.admin-tocheck-head .more { display: inline-flex; align-items: center; min-height: 44px; margin: -14px -6px -14px 0; padding: 0 6px; font-weight: 600; color: #3f2700; }
+/* Needs you: one short header, then a row for each payment with "Not yet" beside the button that settles it. A row's buttons drop under its words on a very narrow phone. */
+.admin-tocheck { margin: 6px 0 10px; padding: 8px 12px 4px; border-radius: var(--radius); background: var(--needs-bg); box-shadow: inset 0 0 0 1.5px rgb(178 107 0 / .28); }
+.admin-tocheck h2 { margin: 0; font: 600 16px/1.3 var(--font-display); font-variant-numeric: lining-nums; color: #3f2700; }
+.admin-tocheck ul { list-style: none; margin: 4px 0 0; padding: 0; }
+.admin-tocheck li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; padding: 6px 0; border-top: 1px solid rgb(178 107 0 / .25); }
+.admin-tocheck li:first-child { border-top: 0; }
+.admin-tocheck-who { display: grid; flex: 1 1 110px; gap: 1px; min-width: 0; }
+.admin-tocheck-who strong { font-size: 15.5px; overflow-wrap: anywhere; }
+.admin-tocheck .when { color: var(--ink-soft); font-size: 12.5px; line-height: 1.3; }
+.admin-tocheck .admin-payment-actions { flex: 0 0 auto; margin-left: auto; }
+.admin-tocheck-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.admin-tocheck-head .more { display: inline-flex; align-items: center; min-height: 44px; margin: -8px -6px -8px 0; padding: 0 6px; font-size: 14px; font-weight: 600; white-space: nowrap; color: #3f2700; }
 
 /* ---------- Day and agenda rows ---------- */
 .admin-timeline { list-style: none; padding: 0; margin: 0; }
-.admin-timeline-row { display: grid; grid-template-columns: 58px minmax(0, 1fr); column-gap: 12px; align-items: start; margin: 10px 0; }
+/* One column: every row is as wide as the screen allows, and each says its own time inside it (a card, a block, a gap). */
+.admin-timeline-row { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; margin: 8px 0; }
 .admin-row-body { display: grid; gap: 8px; min-width: 0; }
-.admin-time { display: grid; align-content: start; justify-items: start; gap: 2px; padding-top: 12px; font: 600 15px/1.1 var(--font-ui); font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; }
-.admin-time .figure { font: 600 21px/1 var(--font-display); font-variant-numeric: lining-nums; letter-spacing: -.01em; }
-.admin-time small { color: var(--muted); font: 500 12px/1 var(--font-ui); }
 .share-link { margin: 12px 0; }
 .share-link input { font-size: 15px; text-overflow: ellipsis; }
 .share-more { margin-top: 18px; }
 .admin-next-tag { margin-top: 4px; padding: 3px 7px; border-radius: 6px; background: var(--accent-soft); color: var(--accent-ink); font: 700 10px/1 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; font-style: normal; }
-.admin-shell .admin-card { --rail: var(--ok-rail); position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; justify-content: stretch; align-items: start; justify-items: stretch; width: 100%; gap: 3px 10px; padding: 13px 14px 13px 19px; border: 0; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); color: var(--ink); font: 400 15px/1.35 var(--font-ui); text-align: left; overflow: hidden; }
+.admin-shell .admin-card { --rail: var(--ok-rail); position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; justify-content: stretch; align-items: start; justify-items: stretch; width: 100%; gap: 2px 10px; padding: 8px 12px 6px 17px; border: 0; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); color: var(--ink); font: 400 15px/1.35 var(--font-ui); text-align: left; overflow: hidden; }
 .admin-shell .admin-card:not(:disabled):hover { background: #fcfdfb; box-shadow: var(--shadow-2); }
 .admin-card::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--rail); }
 .admin-card[data-chip="needs"] { --rail: var(--needs-rail); background: #fffaf0; }
@@ -75,16 +75,29 @@
 .admin-card[data-chip="noshow"] { --rail: var(--noshow-rail); }
 .admin-card[data-chip="cancel"] { --rail: var(--cancel-rail); }
 .admin-card-heading { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: baseline; }
-.admin-card-heading strong { min-width: 0; font: 650 17px/1.25 var(--font-ui); }
+.admin-card-heading strong { min-width: 0; overflow-wrap: anywhere; font: 650 17px/1.25 var(--font-ui); }
 .admin-card-price { font: 600 19px/1 var(--font-display); font-variant-numeric: lining-nums; white-space: nowrap; }
-.admin-card-treatment, .admin-card-postcode { color: var(--ink-soft); font-size: 14px; }
-.admin-card-treatment { grid-column: 1; min-width: 0; }
-.admin-card-postcode { grid-column: 2; align-self: baseline; color: var(--muted); font-size: 13px; letter-spacing: .02em; white-space: nowrap; max-width: 12ch; overflow: hidden; text-overflow: ellipsis; }
-.admin-card .admin-status { grid-column: 1 / -1; justify-self: start; margin-top: 4px; }
-.admin-shell .admin-card.cancelled { gap: 1px 10px; padding-block: 9px; background: var(--cancel-bg); box-shadow: none; color: var(--cancel-ink); }
+/* A little thinner on the Calendar: smaller name and price than the same words get on the review screens, which share these classes. */
+.admin-card .admin-card-heading strong { font-size: 16px; }
+.admin-card .admin-card-price { font-size: 17px; }
+/* The top of a card: when the treatment starts and ends, an optional Now or Next tag, and how long it is, over a thin divider. */
+.admin-card-when { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; margin-bottom: 4px; padding-bottom: 5px; border-bottom: 1px solid var(--hairline); }
+.admin-card-times { font: 650 18px/1.2 var(--font-display); font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.01em; white-space: nowrap; }
+.admin-card-length { margin-left: auto; color: var(--muted); font: 500 13px/1.2 var(--font-ui); white-space: nowrap; }
+.admin-card-when .admin-next-tag { margin: 0; }
+/* Treatment and postcode on one line under the name; the postcode never breaks, the treatment wraps if it must. */
+.admin-card-meta { grid-column: 1 / -1; display: flex; flex-wrap: wrap; column-gap: 6px; min-width: 0; color: var(--ink-soft); font-size: 13px; }
+.admin-card-treatment { min-width: 0; overflow-wrap: anywhere; }
+.admin-card-postcode { color: var(--muted); letter-spacing: .02em; white-space: nowrap; }
+.admin-card-foot { grid-column: 1 / -1; display: flex; align-items: center; min-width: 0; margin-top: 2px; }
+.admin-shell .admin-card.cancelled { gap: 1px 10px; padding-block: 6px; background: var(--cancel-bg); box-shadow: none; color: var(--cancel-ink); }
+.admin-card.cancelled .admin-card-when { margin-bottom: 4px; padding-bottom: 5px; border-bottom-color: #d9d6d0; }
+.admin-card.cancelled .admin-card-times { font-size: 16px; font-weight: 500; }
+.admin-card.cancelled .admin-card-length { color: var(--cancel-ink); }
 .admin-card.cancelled .admin-card-heading strong { font-weight: 500; text-decoration: line-through; text-decoration-thickness: 1px; }
 .admin-card.cancelled .admin-card-price { font-size: 15px; text-decoration: line-through; color: var(--cancel-ink); }
-.admin-card.cancelled .admin-card-treatment, .admin-card.cancelled .admin-card-postcode { font-size: 13px; }
+.admin-card.cancelled .admin-card-meta { font-size: 13px; }
+.admin-card.cancelled .admin-card-postcode { color: var(--cancel-ink); }
 .admin-card-action { display: flex; flex-wrap: wrap; gap: 8px; }
 .admin-card-action .admin-payment-buttons { margin: 0; }
 
@@ -96,8 +109,6 @@
 .admin-timeline-entry.block { border-left: 4px solid #7e8a8d; background: #e9edec; color: #3f4f52; }
 .admin-timeline-entry.free { padding-block: 8px; border-radius: 0; border-top: 1.5px dashed #cfd7cf; background: transparent; color: var(--muted); }
 .admin-timeline-entry.buffer { padding-block: 3px; border-radius: 0; color: var(--muted); border-left: 2px solid #d2d9d1; font-size: 13px; }
-.admin-timeline-buffer .admin-time, .admin-timeline-free .admin-time { padding-top: 7px; color: var(--muted); font-size: 12px; font-weight: 500; }
-.admin-timeline-buffer .admin-time, .admin-timeline-free .admin-time { font-family: var(--font-ui); }
 .admin-block-button { width: 100%; text-align: left; display: grid; gap: 2px; }
 .admin-shell .admin-timeline-entry.block.admin-block-button { min-height: 52px; border: 0; border-left: 4px solid #7e8a8d; border-radius: 10px; justify-content: flex-start; align-items: flex-start; flex-direction: column; font-weight: 600; background: #e9edec; color: #3f4f52; }
 
@@ -244,10 +255,13 @@
 .admin-weekday { border: 0; border-radius: var(--radius); padding: 12px 16px 16px; margin: 0; display: grid; gap: 8px; background: var(--surface); box-shadow: var(--shadow-1); }
 .admin-weekday legend { font: 600 18px/1.2 var(--font-display); padding: 0; float: left; width: 100%; margin-bottom: 4px; }
 .admin-hours-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.admin-hours-fields label:nth-child(n+3) { grid-column: 1 / -1; }
+.admin-hours-fields label:nth-child(n+3), .admin-hours-fields > .admin-detail-hint { grid-column: 1 / -1; }
+.admin-hours-fields > .admin-detail-hint { margin: 0; }
 .admin-who-row { display: flex; align-items: center; gap: 10px; min-height: 48px; font-weight: 500; }
-.admin-conflicts { padding: 12px 14px; border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 12px 12px 0; }
+.admin-conflicts { padding: 12px 14px; border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 12px 12px 0; overflow-wrap: anywhere; }
 .admin-conflicts ul { margin: 6px 0; padding-left: 18px; }
+/* The buttons that ask before deleting a client carry their name, so a long one wraps instead of pushing the page sideways. */
+.admin-delete-choices button { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 
 .admin-special-list, .admin-setting-list, .admin-waitlist, .admin-client-list, .admin-client-bookings, .admin-address-list, .admin-note-list { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 10px; }
 .admin-special-list li, .admin-setting, .admin-waitlist-item, .admin-address-list li, .admin-note-list li, .admin-repeat { display: grid; gap: 8px; padding: 14px 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); }
@@ -295,7 +309,6 @@
   .admin-details { left: auto; width: min(600px, 100vw); box-shadow: var(--shadow-2); }
   .admin-agenda, .admin-day, .admin-review { padding-inline: 8px; }
   .admin-shell .admin-calendar-views { margin-inline: 8px; max-width: 360px; }
-  .admin-timeline-row { grid-template-columns: 70px minmax(0, 1fr); }
   .toast-host { bottom: 32px; }
 }
 
@@ -318,8 +331,12 @@
 .admin-details .close-x { font-size: 22px; line-height: 1; margin-right: 2px; }
 .admin-review-item > a { gap: 2px; }
 .admin-review-item .admin-payment-actions { margin: 8px 0 2px; }
-.admin-tocheck .admin-payment-buttons { margin: 0; }
-.admin-tocheck .btn--small { min-height: 48px; padding-inline: 18px; }
+.admin-tocheck .admin-payment-buttons { flex-wrap: nowrap; gap: 8px; margin: 0; }
+.admin-tocheck .btn--small { min-height: 44px; padding-inline: 14px; }
+/* "Not yet": an amber outline, quieter than the button that settles the payment and clearly not the one that cancels it. */
+:is(.booking-shell, .admin-shell) .btn--later { border-color: #8a6a2c; background: transparent; color: var(--needs-ink); }
+:is(.booking-shell, .admin-shell) .btn--later:not(:disabled):hover { background: rgb(178 107 0 / .12); }
+.admin-review-item .btn--later { grid-column: 1 / -1; }
 @media (max-width: 767px) {
   .admin-confirm .admin-payment-buttons { flex-direction: column; }
 }
@@ -332,9 +349,6 @@
 .admin-fab .fab-label { display: inline-block; max-width: 160px; overflow: hidden; white-space: nowrap; transition: max-width var(--dur) var(--ease), opacity var(--dur) var(--ease); }
 .admin-fab.is-compact { padding: 0 18px; }
 .admin-fab.is-compact .fab-label { max-width: 0; opacity: 0; }
-.admin-tocheck li { padding: 10px 12px; }
-.admin-tocheck li .when { font-size: 13px; line-height: 1.35; }
-.admin-tocheck h2 { font-size: 21px; }
 .admin-review-item .admin-payment-buttons { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; }
 .admin-review-item .admin-payment-buttons:has(> :only-child) { grid-template-columns: 1fr; }
 .admin-review-item { padding-bottom: 8px; }
@@ -363,9 +377,13 @@
 
 /* A Directions button sits beside the status of an appointment still to come: a control of its own, next to the card and not inside it. */
 .admin-card-wrap { position: relative; min-width: 0; }
-.admin-shell .admin-card-directions { position: absolute; right: 8px; bottom: 6px; z-index: 1; display: inline-flex; align-items: center; gap: 5px; min-height: 40px; padding: 0 10px 0 9px; border-radius: 20px; background: var(--primary-soft); color: var(--primary); font: 600 13px/1 var(--font-ui); text-decoration: none; }
+.admin-shell .admin-card-directions { position: absolute; right: 8px; bottom: 3px; z-index: 1; display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 0 10px 0 9px; border-radius: 20px; background: var(--primary-soft); color: var(--primary); font: 600 13px/1 var(--font-ui); text-decoration: none; }
 .admin-shell .admin-card-directions:hover { background: #d9e8df; }
+.admin-shell .admin-card-directions::after { content: ''; position: absolute; inset: -4px; }
 .admin-card-wrap.has-directions .admin-status { max-width: calc(100% - 108px); white-space: normal; border-radius: 16px; }
+/* The status and Directions share one band at the foot of the card, so they line up and neither covers the text above. */
+.admin-shell .admin-card-wrap.has-directions .admin-card { padding-bottom: 3px; }
+.admin-card-wrap.has-directions .admin-card-foot { min-height: 36px; margin-top: 0; }
 
 /* Alerts sit under the day they were raised on, with the same day headings as the Agenda. */
 .admin-alerts-day .admin-alerts { margin: 6px 0 14px; }

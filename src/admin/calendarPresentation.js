@@ -57,6 +57,15 @@ export function nextUp(bookings, now = new Date()) {
   const next = live.find(booking => booking.date > date || (booking.date === date && booking.start_minutes > minutes))
   return next ? { id: next.id, now: false } : null
 }
+// When the treatment ends: its start plus the treatment's own length, as everywhere else in the Admin. The travel time either side of an
+// appointment is kept apart (travel_buffer_minutes) and is not part of it, so it is never added here.
+export const bookingEnd = booking => booking.start_minutes + booking.treatment_duration_minutes
+// What the treatment is called on a card; its length is shown on its own, so it is not repeated here.
+export function treatmentName(booking) {
+  const sessions = booking.booking_sessions || []
+  if (sessions.length === 1) return sessions[0].service_name_snapshot
+  return sessions.length ? `${sessions.length} sessions` : 'Appointment'
+}
 export function sessionSummary(booking) {
   const sessions = booking.booking_sessions || []
   if (sessions.length === 1) return `${sessions[0].service_name_snapshot} · ${sessions[0].duration_minutes} min`

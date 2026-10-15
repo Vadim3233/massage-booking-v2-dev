@@ -4,7 +4,11 @@
 /* ---------- Frame ---------- */
 .booking-shell { display: flex; flex-direction: column; max-width: 600px; min-height: 100dvh; margin: 0 auto; padding: 0 16px; }
 .booking-main { flex: 1 0 auto; padding-bottom: 32px; overflow-wrap: break-word; }
-.brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 0 10px; }
+.brand { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0 8px; padding: 14px 0 10px; }
+.brand-actions { display: flex; align-items: center; gap: 0 2px; margin-left: auto; }
+.brand-actions .btn--quiet { padding-inline: 6px; }
+.brand-actions .btn--quiet[aria-expanded='true'] { background: var(--primary-soft); }
+.header-sign-in .gate-form { margin: 0 0 8px; }
 .brand-link { display: inline-flex; align-items: center; gap: 10px; color: var(--primary); text-decoration: none; font: 600 22px/1 var(--font-display); letter-spacing: -.005em; }
 .brand-aside { padding: 10px 2px; color: var(--primary); font-size: 14px; font-weight: 600; text-decoration: none; }
 .brand-aside:hover { text-decoration: underline; }
@@ -169,11 +173,20 @@
 .price-skeleton .skeleton { height: 112px; }
 
 /* ---------- Details, payment and confirmation ---------- */
-.gate .signin { margin-top: 18px; }
-.gate .signin > :not(summary) { margin-inline: 16px; }
-.gate .signin > form { margin-top: 4px; }
-.gate .signin > .actions { margin-bottom: 14px; }
-.gate-form { margin-top: 8px; }
+.gate-or { margin: 22px 0 12px; color: var(--muted); font-size: 14px; text-align: center; }
+.gate-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.gate-choices > button { min-height: 52px; }
+.gate-choices > button[aria-expanded='true'] { box-shadow: inset 0 0 0 2px var(--primary); }
+.gate-form { margin-top: 12px; }
+.gate-form > h2 { margin-bottom: 4px; font-size: 20px; }
+.guest-note { display: flex; flex-direction: column; align-items: flex-start; margin: 0 0 14px; padding: 10px 14px 2px; border-radius: 12px; background: var(--primary-soft); color: var(--ink-soft); font-size: 15px; }
+.guest-note > button { margin-left: -14px; }
+/* Saved details are locked until "Edit my details" is pressed, and the email always is. A locked box is readable but plainly not for typing in. */
+.booking-shell input[readonly] { background: var(--done-bg); border-color: var(--line); cursor: default; }
+.details-lock { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 12px; }
+.details-lock .fine { flex: 1 1 220px; margin: 0; }
+.details-lock button { flex: 0 0 auto; }
+.details-unlocked { margin: 0 0 12px; }
 .reserved { display: flex; align-items: center; gap: 8px; margin: 4px 0 6px; color: var(--ok-ink); font-weight: 600; }
 .reserved-dot { flex-shrink: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--ok-rail); box-shadow: 0 0 0 4px var(--ok-bg); }
 .amount-card { margin: 16px 0; padding: 18px 20px; border-radius: var(--radius); background: var(--primary); color: #fff; box-shadow: var(--shadow-2); }

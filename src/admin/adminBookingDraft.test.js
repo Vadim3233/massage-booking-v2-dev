@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { emptyAdminDraft, loadAdminDraft, saveAdminDraft } from './adminBookingDraft.js'
+import { emptyAdminDraft, forgetDraftFor, loadAdminDraft, saveAdminDraft } from './adminBookingDraft.js'
 
 const store = new Map()
 beforeEach(() => {
@@ -23,6 +23,25 @@ describe('a New booking draft kept across a reload', () => {
     const submission = { id: 'request-1', payload: { start_minutes: 960, any_time: true }, repeat: null }
     saveAdminDraft('owner', draft({ start: 960, anyTime: true, anyTimeNotes: ['x'], submission }))
     expect(loadAdminDraft('owner', '2026-10-19')).toMatchObject({ start: 960, anyTime: true, submission })
+  })
+  it('drops a client who has just been deleted, and keeps a draft that was for anyone else', () => {
+    saveAdminDraft('owner', draft({ client: { id: 'c-deleted', first_name: 'Hugo' } }))
+    forgetDraftFor('owner', 'c-other')
+    expect(loadAdminDraft('owner', '2026-10-19').client).toMatchObject({ id: 'c-deleted' })
+    forgetDraftFor('owner', 'c-deleted')
+    expect(loadAdminDraft('owner', '2026-10-19').client).toBeNull()
+    expect(store.size).toBe(0)
+  })
+  it('only forgets for the owner whose draft it is, and does nothing when there is nothing to forget', () => {
+    saveAdminDraft('owner', draft({ client: { id: 'c-deleted' } }))
+    forgetDraftFor('someone-else', 'c-deleted')
+    expect(store.size).toBe(1)
+    forgetDraftFor('owner', undefined)
+    expect(store.size).toBe(1)
+    store.set('admin-new-booking:v1:broken', 'not json at all')
+    expect(() => forgetDraftFor('broken', 'c-deleted')).not.toThrow()
+    store.clear()
+    expect(() => forgetDraftFor('owner', 'c-deleted')).not.toThrow()
   })
   it('fills in what an older draft did not have', () => {
     const { anyTime, anyTimeNotes, ...older } = draft()

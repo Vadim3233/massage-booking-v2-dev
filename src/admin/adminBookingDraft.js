@@ -30,3 +30,10 @@ export function saveAdminDraft(ownerId, draft) {
 export function clearAdminDraft(ownerId) {
   try { sessionStorage.removeItem(draftKey(ownerId)) } catch { /* Storage may be disabled. */ }
 }
+// A client who has just been deleted must not linger in a half-made booking: a saved draft for that client is dropped.
+export function forgetDraftFor(ownerId, clientId) {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(draftKey(ownerId)))
+    if (clientId && saved?.draft?.client?.id === clientId) sessionStorage.removeItem(draftKey(ownerId))
+  } catch { /* Storage may be unavailable, or hold something else; there is nothing to forget. */ }
+}

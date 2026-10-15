@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { dayParts } from '../booking/dateStrip.js'
 import Icon from '../../ui/icons.jsx'
 import { supabase } from '../../lib/supabase.js'
@@ -8,7 +8,7 @@ import { dateLabel, londonDate, money, timeLabel } from '../booking/bookingDraft
 import DayTimePicker from '../booking/components/DayTimePicker.jsx'
 import BookingSummary from '../booking/components/BookingSummary.jsx'
 import TelegramBox from '../booking/components/TelegramBox.jsx'
-import { accountApi } from './accountApi.js'
+import { accountApi, createAccountApi, LINK_INVALID } from './accountApi.js'
 import { useBookingRules } from '../bookingRules.js'
 import '../booking/booking.css'
 import './account.css'
@@ -23,6 +23,18 @@ const CHIP = {
 const HEADING = { ...STATUS_TEXT, confirmed: 'Your appointment is confirmed', completed: 'Your appointment is complete', cancelled: 'Your appointment is cancelled', no_show: 'This appointment was missed' }
 const OPEN = ['awaiting_transfer', 'awaiting_payment_verification', 'awaiting_cash_approval', 'confirmed']
 const londonStamp = value => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
+
+// The private link in a booking email is /account?booking=<id>#key=<code>. The code is kept for this tab only (so a reload still works)
+// and is taken out of the address bar, so a copied address or a screenshot does not carry it.
+const keptCode = id => `vad-booking-link:${id}`
+function readLink() {
+  const booking = new URLSearchParams(window.location.search).get('booking')
+  if (!booking) return { booking: null, key: '' }
+  // A mail app can add a full stop or a bracket after an address it shows as text, so only the letters and digits of a code count.
+  let key = (new URLSearchParams(window.location.hash.replace(/^#/, '')).get('key') || '').match(/^[0-9a-f]*/)[0]
+  if (!key) { try { key = sessionStorage.getItem(keptCode(booking)) || '' } catch { /* Storage can be unavailable. */ } }
+  return { booking, key }
+}
 
 // "Massage, Massage" reads better as "Massage × 2".
 function servicesLabel(text) {
@@ -40,7 +52,7 @@ function Terms({ terms, action }) {
     : <p className="account-note" role="status">No charge. Changes are free until {londonStamp(terms.free_until)}.</p>
 }
 
-function CancelPanel({ booking, terms, done, back, refresh }) {
+function CancelPanel({ booking, terms, done, back, refresh, api }) {
   const [reason, setReason] = useState('')
   const [agreed, setAgreed] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -53,7 +65,7 @@ function CancelPanel({ booking, terms, done, back, refresh }) {
     setBusy(true); setError('')
     const key = JSON.stringify([booking.id, fee, reason])
     if (request.current?.key !== key) request.current = { key, id: crypto.randomUUID() }
-    try { done(await accountApi.cancel(booking.id, request.current.id, fee, reason.trim())) }
+    try { done(await api.cancel(booking.id, request.current.id, fee, reason.trim())) }
     catch (failure) { setError(failure.message); if (failure.refresh) { setAgreed(false); refresh() } }
     finally { setBusy(false) }
   }
@@ -70,7 +82,7 @@ function CancelPanel({ booking, terms, done, back, refresh }) {
   </form>
 }
 
-function ReschedulePanel({ booking, terms, rules, done, back, refresh }) {
+function ReschedulePanel({ booking, terms, rules, done, back, refresh, api }) {
   const [chosen, setChosen] = useState(null)
   const [agreed, setAgreed] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -83,14 +95,14 @@ function ReschedulePanel({ booking, terms, rules, done, back, refresh }) {
     setBusy(true); setError('')
     const key = JSON.stringify([booking.id, chosen.date, chosen.start, fee])
     if (request.current?.key !== key) request.current = { key, id: crypto.randomUUID() }
-    try { done(await accountApi.reschedule(booking.id, request.current.id, chosen.date, chosen.start, fee)) }
+    try { done(await api.reschedule(booking.id, request.current.id, chosen.date, chosen.start, fee)) }
     catch (failure) { setError(failure.message); if (failure.refresh) { setAgreed(false); refresh() } }
     finally { setBusy(false) }
   }
   return <form className="panel" onSubmit={submit}>
     <h2 tabIndex={-1}>Choose a new time</h2>
     <Terms terms={terms} action="reschedule" />
-    <DayTimePicker key={booking.id} horizonDays={rules.horizonDays} dateLabel="New date" loadDay={(date) => accountApi.availability(booking.id, date)}
+    <DayTimePicker key={booking.id} horizonDays={rules.horizonDays} dateLabel="New date" loadDay={(date) => api.availability(booking.id, date)}
       selected={chosen} onPick={(date, start) => { setChosen({ date, start }); setError('') }} emptyMessage="There are no times on that day. Please try another date." />
     {chosen && <p className="account-note" role="status">New time: <strong>{dayParts(chosen.date).long}, {timeLabel(chosen.start)}–{timeLabel(chosen.start + booking.treatment_duration_minutes)}</strong></p>}
     {fee > 0 && <label className="check"><input type="checkbox" checked={agreed} disabled={busy} onChange={event => setAgreed(event.target.checked)} />I understand a late fee of {money(fee)} will apply.</label>}
@@ -102,7 +114,9 @@ function ReschedulePanel({ booking, terms, rules, done, back, refresh }) {
   </form>
 }
 
-function Manage({ id, rules, close, changed }) {
+// One booking, with what can be done to it. `linked` means it was opened from the private link in an email, with no sign-in: there is
+// no list of other bookings to go back to then.
+function Manage({ id, rules, close, changed, api, linked = false }) {
   const [booking, setBooking] = useState(null)
   const [terms, setTerms] = useState(null)
   const [mode, setMode] = useState('view')
@@ -118,25 +132,34 @@ function Manage({ id, rules, close, changed }) {
   const load = useCallback(() => setReload(value => value + 1), [])
   useEffect(() => {
     let live = true
-    accountApi.booking(id).then(async fresh => {
-      const next = OPEN.includes(fresh.booking_status) ? await accountApi.terms(id) : { can_change: false }
+    api.booking(id).then(async fresh => {
+      const next = OPEN.includes(fresh.booking_status) ? await api.terms(id) : { can_change: false }
       if (live) { setBooking(fresh); setTerms(next); setError('') }
     }).catch(failure => { if (live) setError(failure.message) })
     return () => { live = false }
-  }, [id, reload])
+  }, [api, id, reload])
   function done(result, text) {
     setMode('view'); setMessage(result ? text : '')
     load(); changed()
   }
-  if (!booking) return <section className="panel">{error ? <><p role="alert" className="error">{error}</p><button onClick={load}>Try again</button></> : <p role="status">Loading your appointment…</p>}<button onClick={close}>Back to your bookings</button></section>
+  const signIn = linked && <p className="fine">If you have an account, you can <a href="/account">sign in</a> to see all your bookings.</p>
+  if (!booking) return <>
+    <h1 tabIndex={-1}>Your <em>appointment</em></h1>
+    <section className="panel">
+      {error ? <><p role="alert" className="error">{error}</p>{error !== LINK_INVALID && <button onClick={load}>Try again</button>}</> : <p role="status">Loading your appointment…</p>}
+      {linked ? <p><a href="https://vadmassage.com">Contact Vad</a></p> : <button onClick={close}>Back to your bookings</button>}
+    </section>
+    {error && signIn}
+  </>
   const open = OPEN.includes(booking.booking_status)
   const owes = Number(booking.late_fee_due_gbp) > 0 && booking.late_fee_status === 'due'
   return <section>
-    <button className="btn--quiet btn--small account-back" onClick={close}><Icon name="left" size={20} />Your bookings</button>
+    {!linked && <button className="btn--quiet btn--small account-back" onClick={close}><Icon name="left" size={20} />Your bookings</button>}
     <h1 tabIndex={-1}>{HEADING[booking.booking_status]}</h1>
     {message && <p role="alert" className="account-note">{message}</p>}
     {mode === 'view' && <>
-      {open && <TelegramBox />}
+      {/* Linking Telegram is done as the signed-in client, so it is not offered on a page opened from the email link, where nobody has signed in. */}
+      {open && !linked && <TelegramBox />}
       <BookingSummary booking={booking} />
       {owes && <p className="account-note account-note--fee">A late fee of {money(booking.late_fee_due_gbp)} is due for this appointment. I will be in touch about it.</p>}
       {booking.booking_status === 'cancelled' && Number(booking.refund_due_gbp) > 0 && <p className="account-note">A refund of {money(booking.refund_due_gbp)} is due to you. I'll send it soon.</p>}
@@ -146,9 +169,10 @@ function Manage({ id, rules, close, changed }) {
       </>}
       {open && terms && !terms.can_change && <p>This appointment can no longer be changed online. Please contact Vad.</p>}
     </>}
-    {mode === 'cancel' && terms && <CancelPanel booking={booking} terms={terms} back={() => setMode('view')} refresh={load} done={result => done(result, 'Your appointment is cancelled.')} />}
-    {mode === 'reschedule' && terms && <ReschedulePanel booking={booking} terms={terms} rules={rules} back={() => setMode('view')} refresh={load} done={result => done(result, 'Your appointment has been moved.')} />}
+    {mode === 'cancel' && terms && <CancelPanel api={api} booking={booking} terms={terms} back={() => setMode('view')} refresh={load} done={result => done(result, 'Your appointment is cancelled.')} />}
+    {mode === 'reschedule' && terms && <ReschedulePanel api={api} booking={booking} terms={terms} rules={rules} back={() => setMode('view')} refresh={load} done={result => done(result, 'Your appointment has been moved.')} />}
     <p><a href="https://vadmassage.com">Contact Vad</a></p>
+    {signIn}
   </section>
 }
 
@@ -182,7 +206,24 @@ function BookingList({ open }) {
 
 export default function AccountApp() {
   const auth = useClientAuth(supabase)
-  const [selected, setSelected] = useState(() => new URLSearchParams(window.location.search).get('booking'))
+  const [start, setStart] = useState(readLink)
+  const [selected, setSelected] = useState(start.booking)
+  // A second link opened in this same tab changes only the part after the #, which does not reload the page: take the new code up.
+  useEffect(() => {
+    const changed = () => { if (new URLSearchParams(window.location.hash.replace(/^#/, '')).get('key')) setStart(readLink()) }
+    window.addEventListener('hashchange', changed)
+    return () => window.removeEventListener('hashchange', changed)
+  }, [])
+  // Opened from the private link in an email: that one booking, on any device, with no sign-in (and whoever happens to be signed in here is ignored).
+  const linked = Boolean(start.booking && start.key)
+  const linkApi = useMemo(() => (linked ? createAccountApi(supabase, { bookingId: start.booking, key: start.key }) : null), [linked, start])
+  useEffect(() => {
+    if (!linked) return
+    // The code leaves the address only once it is kept for this tab. Where storage is unavailable it stays, so a reload still opens the booking.
+    let kept = false
+    try { sessionStorage.setItem(keptCode(start.booking), start.key); kept = true } catch { /* Storage can be unavailable. */ }
+    if (kept && window.location.hash) window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`)
+  }, [linked, start])
   const opened = useRef(false)
   useEffect(() => {
     const before = document.title
@@ -202,11 +243,18 @@ export default function AccountApp() {
   return <div className="booking-shell">
     <header className="brand"><a className="brand-link" href="/"><b className="brand-mark" aria-hidden="true">VM</b>VadMassage</a><a className="brand-aside" href="/">Book a treatment</a></header>
     <main className="booking-main">
-    {!auth.ready && <p role="status">Checking your account…</p>}
-    {auth.ready && !auth.session && <AuthPanel client={supabase} heading="Sign in to see your bookings" redirectTo={`${window.location.origin}/account`} />}
-    {auth.ready && auth.session && (selected
-      ? <Manage key={selected} id={selected} rules={rules} close={() => select(null)} changed={() => setRevision(value => value + 1)} />
-      : <><h1 tabIndex={-1}>Your <em>bookings</em></h1><BookingList key={revision} open={select} /></>)}
+    {linked
+      ? <Manage key={`${start.booking}:${start.key}`} id={start.booking} api={linkApi} linked rules={rules} close={() => {}} changed={() => setRevision(value => value + 1)} />
+      : <>
+        {!auth.ready && <p role="status">Checking your account…</p>}
+        {auth.ready && !auth.session && <>
+          {selected && <p className="notice">Booked as a guest? There is no password to enter. Use the link in your latest confirmation email, or the phone you booked on. If you have an account, sign in below.</p>}
+          <AuthPanel client={supabase} heading="Sign in to see your bookings" redirectTo={`${window.location.origin}/account`} />
+        </>}
+        {auth.ready && auth.session && (selected
+          ? <Manage key={selected} id={selected} api={accountApi} rules={rules} close={() => select(null)} changed={() => setRevision(value => value + 1)} />
+          : <><h1 tabIndex={-1}>Your <em>bookings</em></h1><BookingList key={revision} open={select} /></>)}
+      </>}
     </main>
     <footer>Personal treatments, thoughtfully arranged. <a href="https://vadmassage.com">Contact Vad</a></footer>
   </div>
