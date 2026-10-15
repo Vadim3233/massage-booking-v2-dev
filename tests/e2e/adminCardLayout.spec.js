@@ -20,11 +20,11 @@ async function login(page, path = '/admin/agenda') {
   await page.getByLabel('Password', { exact: true }).fill(f.password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
 }
-async function openAgenda(page, width = 390) {
+async function openAgenda(page, width = 390, cards = 3) {
   await f.authorize()
   await page.setViewportSize({ width, height: 844 })
   await login(page)
-  await expect(page.locator('.admin-card')).toHaveCount(3)
+  await expect(page.locator('.admin-card')).toHaveCount(cards)
 }
 const noSideways = page => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)
 const box = locator => locator.evaluate(node => { const r = node.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height } })
@@ -53,7 +53,7 @@ test('the time is inside the card, from when the treatment starts to when it end
   await expect(first(page).locator('.admin-card-times')).toContainText('11:00')
   await expect(first(page).locator('.admin-card-length')).toHaveText('60 min')
   // Said in words for a screen reader, not as two numbers with a dash between them.
-  await expect(page.getByRole('button', { name: /10:00 to 11:00/ })).toHaveCount(1)
+  await expect(first(page)).toHaveAccessibleName(/10:00 to 11:00/)
   // The treatment's name is no longer followed by its length, which is on its own at the top.
   await expect(first(page).locator('.admin-card-treatment')).not.toContainText('min')
   await expect(first(page).locator('.admin-card-postcode')).toHaveText('SW1A 1AA')
@@ -76,11 +76,10 @@ test('a cancelled card is grey and quiet, with its name and price struck through
   await openAgenda(page)
   const cancelled = page.locator('.admin-card.cancelled')
   await expect(cancelled).toHaveCount(1)
-  const style = node => getComputedStyle(node)
-  expect(await cancelled.locator('.admin-card-heading strong').evaluate(node => style(node).textDecorationLine)).toContain('line-through')
-  expect(await cancelled.locator('.admin-card-price').evaluate(node => style(node).textDecorationLine)).toContain('line-through')
+  expect(await cancelled.locator('.admin-card-heading strong').evaluate(node => getComputedStyle(node).textDecorationLine)).toContain('line-through')
+  expect(await cancelled.locator('.admin-card-price').evaluate(node => getComputedStyle(node).textDecorationLine)).toContain('line-through')
   // Not struck through: when it was, which is still worth reading.
-  expect(await cancelled.locator('.admin-card-times').evaluate(node => style(node).textDecorationLine)).not.toContain('line-through')
+  expect(await cancelled.locator('.admin-card-times').evaluate(node => getComputedStyle(node).textDecorationLine)).not.toContain('line-through')
   const grey = await cancelled.evaluate(node => getComputedStyle(node).backgroundColor)
   const white = await first(page).evaluate(node => getComputedStyle(node).backgroundColor)
   expect(grey).not.toBe(white)
@@ -115,28 +114,36 @@ test('Directions sits beside the status at the foot of the card, at least 44px t
 })
 
 // Every state a booking can be in keeps the same card: time at the top, name and price, treatment and postcode, then its status in words.
+// The database does not let a confirmed booking be moved straight to a waiting state, so each is made as a new booking at 15:00.
 const STATES = [
-  { status: 'awaiting_cash_approval', payment: 'awaiting_approval', words: 'Awaiting cash approval' },
-  { status: 'awaiting_transfer', payment: 'awaiting_transfer', words: 'Awaiting transfer' },
-  { status: 'awaiting_payment_verification', payment: 'awaiting_verification', words: 'Awaiting payment verification' },
-  { status: 'completed', payment: 'approved', words: 'Completed · Approved' },
-  { status: 'no_show', payment: 'approved', words: 'No show · Approved' },
+  { status: 'awaiting_cash_approval', method: 'cash', payment: 'awaiting_approval', words: 'Awaiting cash approval' },
+  { status: 'awaiting_transfer', method: 'bank_transfer', payment: 'awaiting_transfer', words: 'Awaiting transfer' },
+  { status: 'awaiting_payment_verification', method: 'bank_transfer', payment: 'awaiting_verification', words: 'Awaiting payment verification' },
+  { status: 'completed', method: 'bank_transfer', payment: 'paid', words: 'Completed · Paid' },
+  { status: 'no_show', method: 'bank_transfer', payment: 'paid', words: 'No show · Paid' },
 ]
 for (const state of STATES) {
   test(`a booking that is ${state.words.toLowerCase()} has the same card, with nothing clipped or overlapping`, async ({ page }) => {
-    const booking = f.bookings[0]
-    await unwrap(f.admin.from('bookings').update({ booking_status: state.status }).eq('id', booking.id))
-    await unwrap(f.admin.from('booking_payments').update({ status: state.payment }).eq('booking_id', booking.id))
-    await openAgenda(page, 320)
-    const card = first(page)
+    const { id, created_at, updated_at, ...copy } = f.bookings[0]
+    void id; void created_at; void updated_at
+    const made = await unwrap(f.admin.from('bookings').insert({ ...copy, start_minutes: 900, booking_status: state.status, booking_reference: `STATE-${crypto.randomUUID()}` }).select().single())
+    await unwrap(f.admin.from('booking_sessions').insert({ booking_id: made.id, position: 1, service_id: f.ids.service, duration_minutes: 60, service_name_snapshot: 'State session', unit_price_gbp: 85 }))
+    await unwrap(f.admin.from('booking_payments').insert({ booking_id: made.id, method: state.method, status: state.payment, amount_gbp: 85, ...(state.payment === 'paid' ? { paid_at: new Date().toISOString() } : {}) }))
+    await openAgenda(page, 320, 4)
+    const card = page.locator('.admin-card', { hasText: '15:00' })
+    await expect(card).toHaveCount(1)
     await expect(card.locator('.admin-status')).toHaveText(state.words)
     for (const part of ['.admin-card-when', '.admin-card-heading', '.admin-card-meta']) await expect(card.locator(part)).toBeVisible()
     expect(await card.locator('.admin-status').evaluate(chip => chip.scrollWidth <= chip.clientWidth + 1)).toBe(true)
     expect(await noSideways(page)).toBe(true)
-    const wrap = page.locator('.admin-card-wrap').first()
+    const wrap = page.locator('.admin-card-wrap', { has: card })
     const links = wrap.getByRole('link', { name: /^Directions to/ })
-    if (await links.count()) expect(overlap(await box(links), await box(wrap.locator('.admin-card-meta')))).toBe(false)
-    await page.screenshot({ path: `test-results/card-layout-${state.status}.png`, fullPage: true })
+    if (await links.count()) {
+      expect(overlap(await box(links), await box(wrap.locator('.admin-card-meta')))).toBe(false)
+      expect(overlap(await box(links), await box(wrap.locator('.admin-status')))).toBe(false)
+    }
+    await card.scrollIntoViewIfNeeded()
+    await wrap.screenshot({ path: `test-results/card-layout-${state.status}.png` })
   })
 }
 
