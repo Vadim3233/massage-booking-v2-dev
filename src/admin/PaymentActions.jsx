@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { actionLabels, paymentActions, paymentReviewApi } from './paymentReviewApi.js'
+import { actionLabels, needsYou, paymentActions, paymentReviewApi } from './paymentReviewApi.js'
+import { activeReminder, clearReminder, reminderChoices, reminderWhen, setReminder, useReminders } from './paymentReminders.js'
+import ReminderDialog from './ReminderDialog.jsx'
 import { clientName, dateLabel, money, time } from './calendarPresentation.js'
 import { acquireBodyScrollLock } from './dialogScrollLock.js'
 import { toast } from '../ui/toast.js'
@@ -62,12 +64,16 @@ function buttonClass(action, booking) {
 }
 
 // `short` shows one word on each button (Verify, Cancel) where the card around it already says whose booking it is.
-export default function PaymentActions({ booking, refresh, only, compact = false, short = compact }) {
+// `later` adds "Not yet" to a payment that needs the Admin: it puts the payment off until a time she chooses (see paymentReminders.js).
+// `onReminded` is called once that is done, so the screen can decide where focus goes when the payment has left it.
+export default function PaymentActions({ booking, refresh, only, compact = false, short = compact, later = false, onReminded }) {
   const [confirmation, setConfirmation] = useState(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState(null)
   const locked = useRef(false)
   const request = useRef(null)
+  const reminders = useReminders()
+  const [choices, setChoices] = useState(null)
   async function submit() {
     if (locked.current) return
     locked.current = true; setBusy(true); setMessage(null)
@@ -87,10 +93,21 @@ export default function PaymentActions({ booking, refresh, only, compact = false
     } finally { locked.current = false; setBusy(false) }
   }
   const available = paymentActions(booking).filter(action => !only || only.includes(action))
-  if (!available.length && !message && !confirmation) return null
+  const offerLater = later && needsYou(booking)
+  const reminder = offerLater ? activeReminder(booking, reminders) : null
+  function remind(choice) {
+    setReminder(booking, choice.until)
+    setChoices(null)
+    toast(`Reminder set · ${clientName(booking)} · back ${reminderWhen(choice.until)}`, { action: { label: 'Undo', run: () => clearReminder(booking.id) } })
+    onReminded?.()
+  }
+  // The same button is "Not yet" and then "Check now", so a keyboard user's focus stays where it was when a reminder is set.
+  const laterButton = offerLater && <button key="later" type="button" className={`btn--later ${compact ? 'btn--small' : ''}`} aria-label={compact ? `${reminder ? 'Check now' : 'Not yet'}, ${clientName(booking)} ${money(booking.total_gbp)}` : undefined} disabled={busy} onClick={() => { if (reminder) clearReminder(booking.id); else { setMessage(null); setChoices(reminderChoices(booking)) } }}>{reminder ? 'Check now' : 'Not yet'}</button>
+  if (!available.length && !offerLater && !message && !confirmation) return null
   return <div className={`admin-payment-actions ${compact ? 'is-compact' : ''}`}>
-    <div className="admin-payment-buttons">{available.map(action => <button key={action} className={`${buttonClass(action, booking)} ${compact ? 'btn--small' : ''}`} aria-label={compact ? `${actionLabels[action]}, ${clientName(booking)} ${money(booking.total_gbp)}` : short ? actionLabels[action] : undefined} disabled={busy} onClick={() => { setMessage(null); setConfirmation(action) }}>{short ? SHORT[action] : actionLabels[action]}</button>)}</div>
+    <div className="admin-payment-buttons">{compact && laterButton}{available.map(action => <button key={action} className={`${buttonClass(action, booking)} ${compact ? 'btn--small' : ''}`} aria-label={compact ? `${actionLabels[action]}, ${clientName(booking)} ${money(booking.total_gbp)}` : short ? actionLabels[action] : undefined} disabled={busy} onClick={() => { setMessage(null); setConfirmation(action) }}>{short ? SHORT[action] : actionLabels[action]}</button>)}{!compact && laterButton}</div>
     {message && <p role={message.error ? 'alert' : 'status'}>{message.text}</p>}
     {confirmation && <Confirmation action={confirmation} booking={booking} cancel={() => setConfirmation(null)} confirm={submit} busy={busy} />}
+    {choices && <ReminderDialog booking={booking} choices={choices} cancel={() => setChoices(null)} choose={remind} />}
   </div>
 }

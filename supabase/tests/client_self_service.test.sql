@@ -17,9 +17,10 @@ insert into public.clients(id, auth_user_id, first_name, last_name, email) value
 create function pg_temp.slot_date(p_offset interval) returns date language sql as $$
   select ((now() at time zone 'Europe/London') + p_offset)::date;
 $$;
+-- A start on the half hour that always fits in its day (a 60-minute booking at 23:30 would run past midnight, which the database refuses).
 create function pg_temp.slot_start(p_offset interval) returns integer language sql as $$
-  select (floor((extract(hour from (now() at time zone 'Europe/London') + p_offset) * 60
-    + extract(minute from (now() at time zone 'Europe/London') + p_offset)) / 30) * 30)::integer;
+  select least((floor((extract(hour from (now() at time zone 'Europe/London') + p_offset) * 60
+    + extract(minute from (now() at time zone 'Europe/London') + p_offset)) / 30) * 30)::integer, 1380);
 $$;
 create function pg_temp.new_booking(p_id uuid, p_client uuid, p_status text, p_offset interval, p_method text, p_payment text,
   p_created_ago interval default interval '3 days') returns void language plpgsql as $$

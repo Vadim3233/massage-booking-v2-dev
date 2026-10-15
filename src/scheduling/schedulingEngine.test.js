@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getAvailableTimes } from './schedulingEngine'
+import { anchorReleaseInstant, getAvailableTimes } from './schedulingEngine'
 
 describe('Chain Mode scheduling engine', () => {
   it('returns the anchor time for an empty anchored day', () => {
@@ -748,4 +748,159 @@ describe('Chain Mode scheduling engine', () => {
     ])
   })
 
+})
+
+describe('releasing a first appointment that nobody has booked', () => {
+  const emptyDay = {
+    workingHours: { start: '10:00', end: '14:00' },
+    anchor: '12:00',
+    date: '2031-05-07',
+    anchorReleaseMinutes: 17 * 60,
+    requestedDurationMinutes: 60,
+  }
+  const everyTime = ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00']
+
+  it('offers only the first appointment before the release time on the evening before', () => {
+    expect(getAvailableTimes({ ...emptyDay, currentTime: '2031-04-30T12:00:00+01:00' })).toEqual(['12:00'])
+    expect(getAvailableTimes({ ...emptyDay, currentTime: '2031-05-06T16:59:00+01:00' })).toEqual(['12:00'])
+  })
+
+  it('opens an empty day to every usual time from the release time on, even after the first appointment has passed', () => {
+    expect(getAvailableTimes({ ...emptyDay, currentTime: '2031-05-06T17:00:00+01:00' })).toEqual(everyTime)
+    expect(getAvailableTimes({ ...emptyDay, currentTime: '2031-05-07T16:00:00+01:00' })).toEqual(everyTime)
+  })
+
+  it('keeps the first appointment when there is no release time', () => {
+    expect(getAvailableTimes({ ...emptyDay, anchorReleaseMinutes: null, currentTime: '2031-05-07T09:00:00+01:00' })).toEqual(['12:00'])
+  })
+
+  it('does nothing without a date to count the evening before from', () => {
+    expect(getAvailableTimes({ ...emptyDay, date: undefined, currentTime: '2031-05-07T09:00:00+01:00' })).toEqual(['12:00'])
+  })
+
+  it('changes nothing on a day that has a booking, before or after the release time', () => {
+    const booked = {
+      ...emptyDay,
+      workingHours: { start: '10:00', end: '20:00' },
+      anchor: '15:00',
+      bookings: [{ start: '15:00', end: '16:00' }],
+    }
+    expect(getAvailableTimes({ ...booked, currentTime: '2031-05-06T16:59:00+01:00' })).toEqual(['13:00', '17:00'])
+    expect(getAvailableTimes({ ...booked, currentTime: '2031-05-06T17:00:00+01:00' })).toEqual(['13:00', '17:00'])
+  })
+
+  it('counts the evening before in London time, either side of the clocks changing', () => {
+    // The clocks went forward on 30 March 2031, so 17:00 in London is 16:00 UTC.
+    const spring = { ...emptyDay, date: '2031-03-31' }
+    expect(getAvailableTimes({ ...spring, currentTime: '2031-03-30T15:59:00Z' })).toEqual(['12:00'])
+    expect(getAvailableTimes({ ...spring, currentTime: '2031-03-30T16:00:00Z' })).toEqual(everyTime)
+    // The clocks went back on 26 October 2031, so 17:00 in London is 17:00 UTC.
+    const autumn = { ...emptyDay, date: '2031-10-27' }
+    expect(getAvailableTimes({ ...autumn, currentTime: '2031-10-26T16:59:00Z' })).toEqual(['12:00'])
+    expect(getAvailableTimes({ ...autumn, currentTime: '2031-10-26T17:00:00Z' })).toEqual(everyTime)
+  })
+
+  it('works out the moment of release directly', () => {
+    expect(new Date(anchorReleaseInstant('2031-05-07', 17 * 60)).toISOString()).toBe('2031-05-06T16:00:00.000Z')
+    expect(new Date(anchorReleaseInstant('2031-12-02', 17 * 60)).toISOString()).toBe('2031-12-01T17:00:00.000Z')
+    expect(new Date(anchorReleaseInstant('2031-05-07', 0)).toISOString()).toBe('2031-05-05T23:00:00.000Z')
+    expect(new Date(anchorReleaseInstant('2031-05-01', 23 * 60 + 59)).toISOString()).toBe('2031-04-30T22:59:00.000Z')
+  })
+})
+
+describe('a flexible schedule', () => {
+  const clock = (minutes) => `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
+  const range = (from, to) => {
+    const times = []
+    for (let minutes = from; minutes <= to; minutes += 30) times.push(clock(minutes))
+    return times
+  }
+  const booking = (start, minutes = 60) => ({ start: clock(start), end: clock(start + minutes) })
+  const block = (start, end) => ({ start: clock(start), end: clock(end) })
+  const day = { workingHours: { start: '10:00', end: '20:00' }, anchor: null, requestedDurationMinutes: 60, travelBufferMinutes: 60 }
+  const chain = (extra) => getAvailableTimes({ ...day, ...extra })
+  const flexible = (extra) => getAvailableTimes({ ...day, scheduleMode: 'flexible', ...extra })
+
+  it('is a chain unless the day says flexible', () => {
+    expect(getAvailableTimes({ ...day, bookings: [booking(900)] })).toEqual(['13:00', '17:00'])
+    expect(getAvailableTimes({ ...day, scheduleMode: 'chain', bookings: [booking(900)] })).toEqual(['13:00', '17:00'])
+  })
+
+  it('offers every half hour with room for travel on both sides of a booking, where a chain offers only the two ends', () => {
+    expect(flexible({ bookings: [booking(900)] })).toEqual([...range(600, 780), ...range(1020, 1140)])
+  })
+
+  it('offers the gap between two bookings, which a chain does not', () => {
+    const bookings = [booking(600), booking(1080)]
+    expect(chain({ bookings })).toEqual([])
+    expect(flexible({ bookings })).toEqual(range(720, 960))
+  })
+
+  it('offers a gap that has exactly an hour of travel on each side', () => {
+    const bookings = [booking(600), booking(840)]
+    expect(chain({ bookings })).toEqual(['16:00'])
+    expect(flexible({ bookings })).toEqual(['12:00', ...range(960, 1140)])
+  })
+
+  it('does not depend on the order the bookings are listed in', () => {
+    expect(flexible({ bookings: [booking(840), booking(600)] })).toEqual(flexible({ bookings: [booking(600), booking(840)] }))
+  })
+
+  it('treats a time a client is holding as an appointment, and ignores a hold that has run out', () => {
+    const now = '2031-01-01T00:00:00Z'
+    const active = { ...booking(900), expiresAt: '2031-12-31T00:00:00Z' }
+    const expired = { ...booking(900), expiresAt: '2030-12-31T00:00:00Z' }
+    expect(flexible({ holds: [active], currentTime: now })).toEqual([...range(600, 780), ...range(1020, 1140)])
+    expect(flexible({ holds: [expired], currentTime: now })).toEqual(range(600, 1140))
+  })
+
+  it('uses the travel time it is given', () => {
+    expect(flexible({ bookings: [booking(900)], travelBufferMinutes: 30 })).toEqual([...range(600, 810), ...range(990, 1140)])
+    expect(flexible({ bookings: [booking(900)], travelBufferMinutes: 0 })).toEqual([...range(600, 840), ...range(960, 1140)])
+  })
+
+  it('keeps a treatment inside the working hours', () => {
+    // A two-hour treatment after the 10:00 booking and an hour of travel can start at 12:00, and the last start that finishes by 20:00 is 18:00.
+    expect(flexible({ bookings: [booking(600)], requestedDurationMinutes: 120 })).toEqual(range(720, 1080))
+  })
+
+  it('never offers a time that overlaps blocked time, and keeps the travel to and from a booking clear of it', () => {
+    // Lunch from 13:00 to 14:00 before a 15:00 booking.
+    expect(flexible({ bookings: [booking(900)], blockedPeriods: [block(780, 840)] })).toEqual([...range(600, 720), ...range(1020, 1140)])
+    // A dentist from 12:00 to 13:00 after a 10:00 booking: 13:00 and 13:30 would need the travel to run through the dentist.
+    expect(flexible({ bookings: [booking(600)], blockedPeriods: [block(720, 780)] })).toEqual(range(840, 1140))
+    // A gym from 13:00 to 13:30 in the hour of travel before a 14:00 booking: nothing can go before that booking.
+    expect(flexible({ bookings: [booking(840)], blockedPeriods: [block(780, 810)] })).toEqual(range(960, 1140))
+  })
+
+  it('lets a first appointment start as blocked time ends, because there is no travel into it', () => {
+    expect(flexible({ bookings: [booking(1080)], blockedPeriods: [block(600, 660)] })).toEqual(range(660, 960))
+  })
+
+  it('still follows the first appointment and its release time on a day with no bookings', () => {
+    const empty = { workingHours: { start: '10:00', end: '14:00' }, anchor: '12:00', date: '2031-05-07', anchorReleaseMinutes: 17 * 60 }
+    expect(flexible({ ...empty, currentTime: '2031-05-06T16:59:00+01:00' })).toEqual(['12:00'])
+    expect(flexible({ ...empty, currentTime: '2031-05-06T17:00:00+01:00' })).toEqual(['10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00'])
+    // With a booking, the first appointment no longer matters.
+    expect(flexible({ ...empty, workingHours: { start: '10:00', end: '20:00' }, bookings: [booking(900)], currentTime: '2031-05-06T16:59:00+01:00' }))
+      .toEqual([...range(600, 780), ...range(1020, 1140)])
+  })
+
+  it('always offers everything a chain day would, over many combinations of bookings, blocked time, treatment length and travel', () => {
+    const bookingSets = [[], [900], [600], [1140], [600, 1080], [600, 840], [780, 900], [660, 840, 1020]]
+    const blockSets = [[], [[780, 840]], [[720, 780]], [[780, 810]], [[600, 660]], [[1080, 1140]], [[720, 780], [1020, 1080]]]
+    let compared = 0
+    for (const starts of bookingSets) {
+      for (const blocks of blockSets) {
+        for (const requestedDurationMinutes of [60, 90, 120]) {
+          for (const travelBufferMinutes of [0, 30, 60]) {
+            const input = { bookings: starts.map((start) => booking(start)), blockedPeriods: blocks.map(([from, to]) => block(from, to)), requestedDurationMinutes, travelBufferMinutes }
+            expect(flexible(input), JSON.stringify(input)).toEqual(expect.arrayContaining(chain(input)))
+            compared += 1
+          }
+        }
+      }
+    }
+    expect(compared).toBe(8 * 7 * 3 * 3)
+  })
 })

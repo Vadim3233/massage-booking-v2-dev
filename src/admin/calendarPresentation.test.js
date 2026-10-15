@@ -1,5 +1,17 @@
 import { expect, it } from 'vitest'
-import { canNavigateTo, dayContext, daySummary, nextUp, postcode, shiftDate } from './calendarPresentation.js'
+import { bookingEnd, canNavigateTo, dayContext, daySummary, nextUp, postcode, shiftDate, treatmentName } from './calendarPresentation.js'
+
+it('a booking ends when its treatment ends, never counting the travel time either side', () => {
+  expect(bookingEnd({ start_minutes: 870, treatment_duration_minutes: 60, travel_buffer_minutes: 60 })).toBe(930)
+  // Two sessions of one booking: the end is the whole treatment (90 + 60), whatever each session's own length.
+  expect(bookingEnd({ start_minutes: 600, treatment_duration_minutes: 150, travel_buffer_minutes: 45 })).toBe(750)
+})
+it('names the treatment on a card without repeating its length', () => {
+  expect(treatmentName({ booking_sessions: [{ service_name_snapshot: 'Deep Tissue', duration_minutes: 60 }] })).toBe('Deep Tissue')
+  expect(treatmentName({ booking_sessions: [{ service_name_snapshot: 'A' }, { service_name_snapshot: 'B' }] })).toBe('2 sessions')
+  expect(treatmentName({ booking_sessions: [] })).toBe('Appointment')
+  expect(treatmentName({})).toBe('Appointment')
+})
 it('handles London calendar dates across DST and month boundaries', () => {
   expect(shiftDate('2026-03-29', 1)).toBe('2026-03-30')
   expect(shiftDate('2026-10-31', 1)).toBe('2026-11-01')
