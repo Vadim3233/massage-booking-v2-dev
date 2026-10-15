@@ -8,6 +8,8 @@ const child = spawn(process.execPath, ['node_modules/vite/bin/vite.js', '--host'
     VITE_SUPABASE_URL: config.API_URL, VITE_SUPABASE_ANON_KEY: config.ANON_KEY,
     // Deliberately fictitious and restricted to the localhost test server.
     VITE_BANK_ACCOUNT_NAME: 'LOCAL TEST ONLY', VITE_BANK_SORT_CODE: '00-00-00', VITE_BANK_ACCOUNT_NUMBER: '00000000',
+    // A made-up bot name, so the Telegram box shows on the test site. It does not exist.
+    VITE_TELEGRAM_CLIENT_BOT_USERNAME: 'vad_test_clients_bot',
   },
 })
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => child.kill())
