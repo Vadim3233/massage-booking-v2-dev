@@ -260,6 +260,8 @@
 .admin-who-row { display: flex; align-items: center; gap: 10px; min-height: 48px; font-weight: 500; }
 .admin-conflicts { padding: 12px 14px; border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 12px 12px 0; overflow-wrap: anywhere; }
 .admin-conflicts ul { margin: 6px 0; padding-left: 18px; }
+/* The buttons that ask before deleting a client carry their name, so a long one wraps instead of pushing the page sideways. */
+.admin-delete-choices button { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 
 .admin-special-list, .admin-setting-list, .admin-waitlist, .admin-client-list, .admin-client-bookings, .admin-address-list, .admin-note-list { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 10px; }
 .admin-special-list li, .admin-setting, .admin-waitlist-item, .admin-address-list li, .admin-note-list li, .admin-repeat { display: grid; gap: 8px; padding: 14px 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); }
