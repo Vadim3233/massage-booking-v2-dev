@@ -101,6 +101,18 @@ test('different hours that leave a booking outside them are warned about once, a
   expect(await override(f.date)).toMatchObject({ start_minutes: 660, schedule_mode: 'flexible' })
 })
 
+test('shortening the end of a day does not warn about a booking that is well inside it, even though the booking starts as the day opens', async ({ page }) => {
+  await f.authorize()
+  await login(page)
+  await dayButton(page, f.date).click()
+  // The booking is at 10:00 for an hour on a day that opens at 10:00, so its hour of travel before it falls before the day opens. That is not a clash.
+  await page.getByLabel('This day end').selectOption('1200')
+  await save(page).click()
+  await expect(page.getByText('Saved. This day now has its own settings.')).toBeVisible()
+  await expect(page.getByRole('alert').filter({ hasText: 'This clashes' })).toHaveCount(0)
+  expect(await override(f.date)).toMatchObject({ start_minutes: 600, end_minutes: 1200 })
+})
+
 test('a day can be switched off, switched on again from its usual hours, and put back to the usual week', async ({ page }) => {
   await f.authorize()
   const date = shiftDate(f.date, 21)
