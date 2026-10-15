@@ -37,5 +37,24 @@ export function createCalendarApi(client) {
       await authorized()
       return read(client.from('bookings').select(bookingFields, { count: 'exact' }).gte('date', start).lt('date', end).order('date').order('start_minutes'))
     },
+    // What else is in the diary for the Agenda: blocked time and special days. A block over several days is read whole, so its length can be told
+    // even where it runs past the days asked for.
+    async loadAgendaExtras(start, end) {
+      validateRange(start, end)
+      await authorized()
+      const bounded = (table, columns) => client.from(table).select(columns, { count: 'exact' }).gte('date', start).lt('date', end)
+      const blockColumns = 'id,group_id,kind,title,notes,date,start_minutes,end_minutes'
+      const [inRange, overrides] = await Promise.all([
+        read(bounded('calendar_blocks', blockColumns).in('kind', ['blocked', 'personal_event']).order('date')),
+        read(bounded('working_hours_overrides', 'date,available,start_minutes,end_minutes,start_mode,fixed_start_minutes,note').order('date')),
+      ])
+      const groups = [...new Set(inRange.map(row => row.group_id).filter(Boolean))]
+      const whole = groups.length ? await read(client.from('calendar_blocks').select(blockColumns).in('group_id', groups).order('date')) : []
+      return { blocks: [...whole, ...inRange.filter(row => !row.group_id)], overrides }
+    },
+    async loadWeeklyHours() {
+      await authorized()
+      return read(client.from('working_hours').select('weekday,available,start_minutes,end_minutes,start_mode,fixed_start_minutes').order('weekday'))
+    },
   }
 }

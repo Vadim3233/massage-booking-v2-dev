@@ -1,0 +1,14 @@
+/* Day settings: one date on its own. It uses the Admin's own cards, fields and buttons; these rules only space it out. */
+.admin-day-settings { padding-bottom: 32px; }
+.admin-day-settings-date { margin: 0 0 12px; color: var(--ink-soft); font-size: 16px; }
+.admin-day-glance { display: grid; gap: 4px; padding: 14px 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); }
+.admin-day-glance p { margin: 0; overflow-wrap: anywhere; }
+.admin-day-glance-main { font-weight: 600; }
+.admin-day-settings-form { margin-top: 20px; }
+.admin-day-settings-form h2, .admin-day-settings-section h2 { margin: 0; }
+.admin-day-settings-form > p { margin: 0; }
+.admin-day-settings-actions { display: grid; gap: 8px; margin-top: 4px; }
+.admin-day-settings-section { margin-top: 28px; display: grid; gap: 10px; }
+.admin-day-settings-section > p { margin: 0; }
+.admin-day-settings-section .admin-special-list { margin: 0; }
+.admin-day-settings-section > .btn--tonal { justify-self: start; min-height: 48px; }

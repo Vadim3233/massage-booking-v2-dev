@@ -6,8 +6,8 @@ Updated 2026-10-13. This is written for the owner, in plain words. Almost nothin
 
 Both sides were redesigned as one product; the rules (availability, travel buffers, payments, cancellation) did not change and nothing in the database changed.
 
-- **Booking page**: tap a length and you go straight to choosing a time; the time page opens on the first day with room and shows the days before it as full; looking at other days never lets go of a time that is held; the review is a ticket with preferences and extras tucked away and a price that updates by itself; "Continue as guest" is the plain way on and signing in waits behind "Returning client?"; a confirmed appointment can be added to a phone's calendar; a regular client is offered "Book your usual"; "Book another appointment" starts afresh.
-- **Admin**: a tab bar at the bottom (a rail on a wide screen) with a number on To check and Alerts; the Agenda opens with a "Needs you" strip where Verify and Approve are one tap and one confirmation away; the next appointment is tagged Now or Next; alerts about one booking are one card; New booking is one numbered page where treatment and length are tapped; clients show their initials; more buttons say what they do ("Cancel unpaid booking").
+- **Booking page**: tap a length and you go straight to choosing a time; the time page opens on the first day with room and shows the days before it as full; looking at other days never lets go of a time that is held; the review is a ticket with preferences and extras tucked away and a price that updates by itself; "Continue as guest" is the big button, with "Sign in with email" and "Create an account" plainly under it, and a guest can change their mind on the details screen; a confirmed appointment can be added to a phone's calendar; a regular client is offered "Book your usual"; "Book another appointment" starts afresh.
+- **Admin**: a tab bar at the bottom (a rail on a wide screen) with a number on To check and Alerts; the Agenda opens with a short "Needs you" strip where Verify and Approve are one tap and one confirmation away, and **Not yet** puts a payment you cannot settle off until a time you choose; the next appointment is tagged Now or Next; alerts about one booking are one card; New booking is one numbered page where treatment and length are tapped; clients show their initials; more buttons say what they do ("Cancel unpaid booking").
 - **Directions from the Agenda**: every appointment still to come, in the Agenda and the Day view, has a Directions button beside its status that opens the way to the address in Google Maps. Cancelled and finished appointments do not.
 - **Alerts by day**: alerts sit under the day they came in (Today, Yesterday, then the date) with the day heading in sight while you scroll, and each card shows just the time.
 - **To check by day**: payments to check sit under the day of their appointment (Today, Tomorrow, then the date), soonest first, and each day's heading says how much needs you that day.
@@ -62,6 +62,53 @@ Booking, payment, cancellation and rescheduling rules did not change. It needs o
 - **A record is kept** of each deletion (when, by you, how much went) and never of who the client was. It can be read from the Supabase dashboard only; nothing in the app shows it.
 - **Before real clients.** Test accounts that took bookings cannot be deleted from the page. Ask me to clear them with the rest of the test data; I take a copy of the database first.
 
+## New: a reminder on the morning of the appointment (2026-10-14)
+
+Clients get one more email, on the morning of a confirmed appointment. It needs one database change, `20261029100000_day_of_reminders.sql` (only on a local copy so far; step 3 below), and the sender running at least once a day after 08:00 London time (`docs/NOTIFICATIONS_SETUP.md`, step 4). Booking, payment and cancellation rules did not change.
+
+- **What it says.** "Hi Ava, a quick reminder: your appointment is today at 14:30, at 12 Edith Road. I'm looking forward to seeing you! You can see or change your booking here: …", then your usual "Warm wishes, Vad".
+- **Who gets it.** Confirmed appointments today only (not ones still waiting for payment or cash approval, and not cancelled ones), with an email address, at least an hour away, from 08:00 London time. Once per booking and date, so running the sender again never repeats it. A client emailed about that booking earlier the same day (booked, confirmed or moved) is not reminded as well, and a booking moved to another day is reminded on its new day.
+- **When.** The time is the setting `client_reminder_minutes` (minutes after midnight, 480 is 08:00). There is no screen for it yet.
+- **Telegram.** Not in this change. A reminder is an ordinary client email in the queue, so it follows the other client emails when clients can link Telegram.
+- **Needs email sending to be switched on** (step 1 below). Until then no client email of any kind goes out, reminders included.
+
+## New: release a first appointment that nobody has booked (2026-10-14)
+
+A day whose first appointment is "At a set time" can now open up on its own. Under **Working hours**, on a weekday or on a special day, a new field **Release time** appears beside the first appointment time. It needs one database change, `20261030100000_anchor_release.sql` (applied to the online project and checked there on 2026-10-15; step 3 below). Booking, payment and cancellation rules did not change, and nothing changes for a day until you pick a release time.
+
+- **What it does.** If nobody has booked the first appointment by the release time on the day before (for example 17:00 the day before), the day is offered to clients as "Any time in my hours" from then on. Without a release time, a first appointment that nobody booked can leave a client with no times at all once it has passed.
+- **Once someone has booked**, the day is built around the bookings as always; the release time changes nothing.
+- **Special days** have their own release time (or none), starting from the usual week's.
+- **The database change is already online** (applied and checked on 2026-10-15). The Working hours screens read and save the new column, so on a project without it they show a plain "Could not save" error. The change adds two empty columns and the same availability calculation with one extra rule that only does anything once a release time is set.
+
+## New: a flexible schedule for a day (2026-10-14)
+
+Each day can now be set to **Flexible** instead of the usual **Chain**. Under **Working hours**, on a weekday or on a special day, a new field **Schedule mode** appears under the end time. It needs one database change, `20261031100000_schedule_mode.sql` (applied to the online project and checked there on 2026-10-15; step 3 below), which builds on the release-time one above, so apply them in that order. Booking, payment and cancellation rules did not change, and every day stays Chain until you change it.
+
+- **What it does.** Once a day has appointments, a Chain day offers clients only the two ends of the day's run (just before the first appointment or just after the last), as before. A Flexible day also offers every half hour in the gaps between appointments, as long as there is room for travel on both sides. It never takes away a time that a chain day would have offered.
+- **An empty day is the same in both.** The first appointment (and its release time) still decides what an empty day offers.
+- **Special days** start from the usual week's mode, like their hours, and have their own from then on.
+- **The database change is already online** (applied after the release-time one and checked on 2026-10-15). The Working hours screens read and save the new column, so on a project without it they show a plain "Could not save" error. Every day stays Chain.
+
+## New: Day settings, one date on its own (2026-10-14)
+
+Press **Day settings** on any day in the Agenda, or in the Day view beside Block time, to change just that date. With **Show every day** on, each free day's whole line opens it, and **Day settings for a date**, beside that switch, opens any date, booked or not. The page shows what the day is set to and why, then lets you change its hours, schedule mode (Chain or Flexible), first appointment and release time with one **Save this day** button, add or change blocked time, and open the day's bookings. **Use my usual week** puts the date back to normal; it asks first, because it removes the date's own settings.
+
+- **What is saved.** A special day, the same one the Special days list shows. Your usual week is not touched.
+- **Warns, never moves.** If different hours leave a booking outside them, you are told which and can save anyway. Nothing is moved or cancelled for you.
+- **A day that has passed** can be looked at but not changed.
+- **No database change of its own.** Saving a day writes the release time and schedule mode, so it needs the two database changes above (`20261030100000_anchor_release.sql`, then `20261031100000_schedule_mode.sql`), which are already online (2026-10-15). On a project without them, saving shows "Could not save".
+
+## New: Not yet, and a tighter Agenda (2026-10-15)
+
+**Not yet** sits beside Verify or Approve in the Needs you box and on the To check page. Press it, choose when to be reminded (in 3 hours, tomorrow morning, or the morning before the appointment) and the payment leaves the box and the number on To check until then. It waits on the To check page as "Reminder set", with **Check now** to bring it back at once, and Undo in the message that appears.
+
+- **Nothing else changes.** The booking keeps its time, the client is told nothing, and nothing is cancelled or confirmed. A payment you can already settle can still be verified or approved from To check while it is put off.
+- **It comes back by itself** when its time comes, and at once if the booking or its payment changes (the client declaring again, say).
+- **Kept on the phone you used.** No database change. Another device (a laptop) does not know about it and still shows the payment as needing you; if a phone ever forgets, the payment simply comes back.
+- **It does not buzz your phone.** The reminder shows the next time you open the Admin.
+- **Thinner Agenda.** Booking cards use the full width with their time inside, and are a little thinner; each day's heading is one line with a clock icon that opens Day settings (it stays pinned at the top while you scroll, so it was cut from 102px to 48px); the Needs you box is about a third shorter.
+
 ## What works now (tested locally)
 
 **For clients** (the website)
@@ -88,10 +135,11 @@ Booking, payment, cancellation and rescheduling rules did not change. It needs o
 
 1. **Telegram and email alerts** (about 30 minutes). Follow `docs/NOTIFICATIONS_SETUP.md`: the old bot's token and your chat ID, a Resend account with `vadmassage.com` verified, and the settings in Vercel. Alerts in the app work without any of this.
 2. **Vercel**: create or open the project, add `booking.vadmassage.com`, and put in the settings listed in the notifications notes. Also set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for the website to reach Supabase.
-3. **The real Supabase project**: the database changes (about 40 files in `supabase/migrations`) have only been applied to a local copy. They need rehearsing on a Supabase branch first, then applying to the dev project, then to production. Ask for this as its own step; I will not do it without you saying so. The one for "Is this the same person?", `20261022100000_same_person_clients.sql`, has been applied to the online project (2026-10-13); the screens that use it show a plain error on a project that does not have it. The next one, `20261023100000_booking_receipts.sql`, is what makes receipts work and has been applied online too (2026-10-13). The newest, `20261024100000_admin_any_time.sql`, is what makes "Show all times" work and has been applied online too (2026-10-13).
+3. **The real Supabase project**: the database changes (about 40 files in `supabase/migrations`) have only been applied to a local copy. They need rehearsing on a Supabase branch first, then applying to the dev project, then to production. Ask for this as its own step; I will not do it without you saying so. The one for "Is this the same person?", `20261022100000_same_person_clients.sql`, has been applied to the online project (2026-10-13); the screens that use it show a plain error on a project that does not have it. The next one, `20261023100000_booking_receipts.sql`, is what makes receipts work and has been applied online too (2026-10-13). The newest, `20261024100000_admin_any_time.sql`, is what makes "Show all times" work and has been applied online too (2026-10-13). The one after that, `20261029100000_day_of_reminders.sql`, is what makes the morning reminder work. It has only been applied to a local copy so far. Until it is applied online, the sender reports the reminder step as failed and carries on exactly as before, so the new sender code can be deployed first. The newest, `20261030100000_anchor_release.sql`, is what makes release times work. It has been applied online too (2026-10-15), which the screens needed before they were deployed (see "New: release a first appointment", above). The one after that, `20261031100000_schedule_mode.sql`, is what makes the flexible schedule work. It has been applied online too (2026-10-15), after the release-time one, which the screens needed before they were deployed (see "New: a flexible schedule for a day", above).
 4. **Your own details**: save your real bank details in More, Bank transfer details, and your business details for receipts in More, Receipt details; check the treatments, prices and areas in More; set your usual week in Working hours.
 5. **Your own phone**: use it on an iPhone in Safari for a week with your own bookings before opening it to clients.
 6. **Fonts and privacy**: the pages load the Playfair Display and Inter fonts from Google Fonts. That sends visitors' addresses to Google. If you would rather not, say so and the fonts can be served from the site itself instead.
+7. **Sign-in settings in Supabase** (about 10 minutes, on the project the website uses; the Authentication menu). Switch **Allow anonymous sign-ins** on (Sign In / Providers), because "Continue as guest" cannot work without it: with it off, the button shows "Something went wrong". Leave **Confirm email** on, because the app uses a confirmed email to recognise a returning client. Under Emails, SMTP Settings, set up your own email sender (the Resend account from step 1 can do it): Supabase's built-in sender only delivers to people on your Supabase team, so clients would never get the sign-up or "Forgot password?" email. Under URL Configuration, make the Site URL the address of the booking page and add it, and the `/account` page, to the Redirect URLs, so the link in the email comes back to the right place. Leave bot protection (CAPTCHA) off for now: the booking page does not send the check yet, so with it on, guests and sign-up would be refused. Google is switched on in the project, but the app does not offer it yet.
 
 ## Known limits (worth knowing, not blockers)
 

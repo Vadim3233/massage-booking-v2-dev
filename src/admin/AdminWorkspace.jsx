@@ -11,6 +11,7 @@ const Agenda = lazy(() => import('./Agenda.jsx'))
 const PaymentReview = lazy(() => import('./PaymentReview.jsx'))
 const Alerts = lazy(() => import('./Alerts.jsx'))
 const ScheduleSettings = lazy(() => import('./ScheduleSettings.jsx'))
+const DaySettings = lazy(() => import('./DaySettings.jsx'))
 const Clients = lazy(() => import('./Clients.jsx'))
 const ServicesSettings = lazy(() => import('./SettingsCatalogue.jsx').then(module => ({ default: module.ServicesSettings })))
 const AreasSettings = lazy(() => import('./SettingsCatalogue.jsx').then(module => ({ default: module.AreasSettings })))
@@ -93,6 +94,8 @@ export default function AdminWorkspace({ signOut, ownerId }) {
   const [pairA, pairB] = [pairParams.get('a') || '', pairParams.get('b') || '']
   const combining = surface === '/admin/clients/combine' && /^[0-9a-f-]{36}$/i.test(pairA) && /^[0-9a-f-]{36}$/i.test(pairB) && pairA.toLowerCase() !== pairB.toLowerCase()
   const calendarSurface = ['/admin', '/admin/agenda'].includes(surface)
+  const daySettingsSurface = surface === '/admin/day-settings'
+  const daySettingsBack = (!match && route.returnTo) || (date ? `/admin?date=${date}` : '/admin')
   const clientsSurface = surface === '/admin/clients' || Boolean(profile) || combining
   function close() {
     if (route.background) window.history.back()
@@ -102,6 +105,12 @@ export default function AdminWorkspace({ signOut, ownerId }) {
   const newBooking = (date, clientId) => {
     const returnTo = clientId ? `/admin/clients/${clientId}` : surface === '/admin/agenda' ? surface : `/admin?date=${date}`
     window.history.pushState({ adminReturnTo: returnTo }, '', `/admin/bookings/new?date=${date}${clientId ? `&client=${clientId}` : ''}`)
+    setRoute(readRoute())
+    window.scrollTo(0, 0)
+  }
+  // One date's settings, a page of its own with the date in the address. Back goes to where it was opened from.
+  const openDaySettings = (day, returnTo) => {
+    window.history.pushState({ adminReturnTo: returnTo }, '', `/admin/day-settings?date=${day}`)
     setRoute(readRoute())
     window.scrollTo(0, 0)
   }
@@ -119,7 +128,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
   }
   const moreSurface = ['/admin/more', ...SETTINGS_PAGES].includes(surface)
   const openCombine = (a, b) => navigate(`/admin/clients/combine?a=${a}&b=${b}`)
-  const screen = creating ? 'New booking' : match ? 'Booking' : profile ? 'Client' : combining ? 'Same person?' : ({ '/admin': 'Day', '/admin/agenda': 'Agenda', '/admin/review': 'To check', '/admin/alerts': 'Alerts', '/admin/clients': 'Clients', '/admin/more': 'More', '/admin/waitlist': 'Waitlist', '/admin/schedule': 'Working hours' }[surface] || (SETTINGS_PAGES.includes(surface) ? SETTINGS_TITLES[surface] : 'Admin'))
+  const screen = creating ? 'New booking' : match ? 'Booking' : profile ? 'Client' : combining ? 'Same person?' : ({ '/admin': 'Day', '/admin/agenda': 'Agenda', '/admin/review': 'To check', '/admin/alerts': 'Alerts', '/admin/clients': 'Clients', '/admin/more': 'More', '/admin/waitlist': 'Waitlist', '/admin/schedule': 'Working hours', '/admin/day-settings': 'Day settings' }[surface] || (SETTINGS_PAGES.includes(surface) ? SETTINGS_TITLES[surface] : 'Admin'))
   const previousScreen = useRef(null)
   const headingFocusWanted = useRef(false)
   useEffect(() => {
@@ -131,18 +140,24 @@ export default function AdminWorkspace({ signOut, ownerId }) {
     headingFocusWanted.current = false
     if (before === null || before === screen) return
     if (!headingWanted && (before === 'Booking' || screen === 'Booking')) return
-    const focusHeading = (tries = 0) => {
-      const heading = document.querySelector('#admin-main h1')
+    // Most pages load a moment after they are opened, and the page being left stays in place, hidden, until then. So the heading to take focus is
+    // the first one that can be seen, and the wait for it is measured in time, because a phone on a slow connection can take seconds to fetch a page.
+    const started = performance.now()
+    let stopped = false
+    const focusHeading = () => {
+      if (stopped) return
+      const heading = [...document.querySelectorAll('#admin-main h1')].find(item => item.getClientRects().length > 0)
       if (heading) { heading.setAttribute('tabindex', '-1'); heading.focus({ preventScroll: true }) }
-      else if (tries < 30) requestAnimationFrame(() => focusHeading(tries + 1))
+      else if (performance.now() - started < 8000) requestAnimationFrame(focusHeading)
     }
     focusHeading()
+    return () => { stopped = true }
   }, [screen])
   const needsYou = toCheck.needs.length
   return <>
     <a className="skip-link" href="#admin-main">Skip to the page</a>
     {!creating && <nav inert={Boolean(match)} className="admin-primary-nav" aria-label="Admin navigation">
-      <AdminLink href="/admin" navigate={navigate} aria-current={calendarSurface ? 'page' : undefined}><Icon name="calendar" /><span>Calendar</span></AdminLink>
+      <AdminLink href="/admin" navigate={navigate} aria-current={calendarSurface || daySettingsSurface ? 'page' : undefined}><Icon name="calendar" /><span>Calendar</span></AdminLink>
       <AdminLink href="/admin/review" navigate={navigate} aria-current={surface === '/admin/review' ? 'page' : undefined}><Icon name="check" /><span>To check</span>{needsYou > 0 && <small className="admin-badge admin-badge--needs" aria-label={`${needsYou} to check`}>{needsYou > 99 ? '99+' : needsYou}</small>}</AdminLink>
       <AdminLink href="/admin/alerts" navigate={navigate} aria-current={surface === '/admin/alerts' ? 'page' : undefined}><Icon name="bell" /><span>Alerts</span>{unreadAlerts > 0 && <small className="admin-badge" aria-label={`${unreadAlerts} unread`}>{unreadAlerts > 99 ? '99+' : unreadAlerts}</small>}</AdminLink>
       <AdminLink href="/admin/clients" navigate={navigate} aria-current={clientsSurface ? 'page' : undefined}><Icon name="users" /><span>Clients</span></AdminLink>
@@ -154,8 +169,10 @@ export default function AdminWorkspace({ signOut, ownerId }) {
         <AdminLink href="/admin/day" navigate={navigate} aria-current={surface === '/admin' ? 'page' : undefined}>Day</AdminLink>
         <AdminLink href="/admin/agenda" navigate={navigate} aria-current={surface === '/admin/agenda' ? 'page' : undefined}>Agenda</AdminLink>
       </nav>}
-      {surface === '/admin' && <Calendar key={date || 'today'} initialDate={date} signOut={signOut} openBooking={openBooking} revision={revision} onDate={rememberDay} />}
-      {surface === '/admin/agenda' && <Agenda openBooking={openBooking} revision={revision} toCheck={toCheck} checked={() => { setRevision(value => value + 1); refreshToCheck() }} seeAll={() => navigate('/admin/review')} />}
+      {surface === '/admin' && <Calendar key={date || 'today'} initialDate={date} signOut={signOut} openBooking={openBooking} openDay={day => openDaySettings(day, `/admin?date=${day}`)} revision={revision} onDate={rememberDay} />}
+      {daySettingsSurface && <AdminLink className="admin-back-link" href={daySettingsBack} navigate={navigate}>← {daySettingsBack === '/admin/agenda' ? 'Agenda' : 'Day'}</AdminLink>}
+      {daySettingsSurface && <DaySettings key={date} date={date} revision={revision} openBooking={openBooking} changed={() => setRevision(value => value + 1)} />}
+      {surface === '/admin/agenda' && <Agenda openBooking={openBooking} openDay={day => openDaySettings(day, '/admin/agenda')} revision={revision} toCheck={toCheck} checked={() => { setRevision(value => value + 1); refreshToCheck() }} seeAll={() => navigate('/admin/review')} />}
       {creating && <AdminNewBooking initialDate={date} initialClientId={clientParam} ownerId={ownerId} registerGuard={registerGuard} onCancel={() => navigate(route.returnTo || '/admin')} onCreated={created} />}
       {surface === '/admin/review' && <PaymentReview openBooking={openBooking} revision={revision} changed={refreshToCheck} />}
       {surface === '/admin/clients' && <Clients openClient={id => navigate(`/admin/clients/${id}`)} openCombine={openCombine} />}
@@ -177,7 +194,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {surface === '/admin/settings/welcome' && <WelcomeSettings />}
       {surface === '/admin/settings/link' && <ShareLink />}
       {surface === '/admin/waitlist' && <Waitlist bookFor={request => newBooking(request.requested_date, request.client_id)} />}
-      {!creating && !match && !['/admin', '/admin/agenda', '/admin/review', '/admin/alerts', '/admin/more', '/admin/clients', ...SETTINGS_PAGES].includes(surface) && !profile && !combining && <section className="admin-review"><h1>Admin page not found</h1><a href="/admin">Back to Calendar</a></section>}
+      {!creating && !match && !['/admin', '/admin/agenda', '/admin/day-settings', '/admin/review', '/admin/alerts', '/admin/more', '/admin/clients', ...SETTINGS_PAGES].includes(surface) && !profile && !combining && <section className="admin-review"><h1>Admin page not found</h1><a href="/admin">Back to Calendar</a></section>}
       </main>
       {match && <BookingDestination key={match[1]} id={match[1]} close={close} returnFocus={opener} changed={() => setRevision(value => value + 1)} openPage={path => { headingFocusWanted.current = true; navigate(path) }} />}
     </Suspense>

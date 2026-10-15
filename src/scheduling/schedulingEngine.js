@@ -36,9 +36,33 @@ function overlapsBlockedPeriod(start, end, blockedPeriods) {
   )
 }
 
+// The offset of London from UTC, in minutes, at a moment in time (60 in summer, 0 in winter).
+function londonOffsetMinutes(utcMilliseconds) {
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/London', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+    }).formatToParts(new Date(utcMilliseconds)).map((part) => [part.type, part.value])
+  )
+  const wallAsUtc = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute))
+  return Math.round((wallAsUtc - utcMilliseconds) / 60000)
+}
+
+// The moment a first appointment is released: the release time on the day before the date, in London time.
+// The date is written YYYY-MM-DD and the release time is in minutes after midnight.
+export function anchorReleaseInstant(date, releaseMinutes) {
+  const [year, month, day] = date.split('-').map(Number)
+  const wall = Date.UTC(year, month - 1, day - 1, 0, releaseMinutes)
+  // The offset is looked up twice so that the hour either side of the clocks changing still lands on the right moment.
+  const first = wall - londonOffsetMinutes(wall) * 60000
+  return wall - londonOffsetMinutes(first) * 60000
+}
+
 export function getAvailableTimes({
   workingHours,
-  anchor,
+  anchor: setAnchor,
+  date,
+  anchorReleaseMinutes = null,
+  scheduleMode = 'chain',
   bookings = [],
   holds = [],
   blockedPeriods = [],
@@ -48,6 +72,16 @@ export function getAvailableTimes({
 }) {
   const workingStart = timeToMinutes(workingHours.start)
   const workingEnd = timeToMinutes(workingHours.end)
+
+  // A first appointment that nobody has booked is released the day before: from then on an empty day is offered as if it had
+  // none, so every usual time is available. Once there are bookings the day is a chain and the release changes nothing.
+  const now = currentTime ? Date.parse(currentTime) : Date.now()
+  const released =
+    Boolean(setAnchor) &&
+    anchorReleaseMinutes !== null &&
+    Boolean(date) &&
+    now >= anchorReleaseInstant(date, anchorReleaseMinutes)
+  const anchor = released ? null : setAnchor
 
   const activeHolds = holds.filter((hold) =>
     isHoldActive(hold, currentTime)
@@ -93,9 +127,6 @@ export function getAvailableTimes({
     return times
   }
 
-  // Existing chain:
-  // confirmed bookings and active holds both participate in the chain.
-  // Only the outer boundaries are exposed publicly; internal gaps remain hidden.
   const chainStarts = chainItems.map((item) =>
     timeToMinutes(item.start)
   )
@@ -103,6 +134,54 @@ export function getAvailableTimes({
     timeToMinutes(item.end)
   )
 
+  // Flexible day with appointments:
+  // every 30-minute start that leaves room for travel on both sides of every
+  // other appointment, gaps included. Blocked periods may not overlap the
+  // treatment, the travel into it from an appointment before it, or (when it
+  // would be the first appointment of the day) the travel on to the
+  // appointment after it: the same checks as at the two ends of a chain, so a
+  // flexible day always offers everything a chain day would.
+  if (scheduleMode === 'flexible') {
+    const firstStart = Math.min(...chainStarts)
+    const firstEnd = Math.min(...chainEnds)
+    const times = []
+
+    for (
+      let start = workingStart;
+      start + requestedDurationMinutes <= workingEnd;
+      start += 30
+    ) {
+      const end = start + requestedDurationMinutes
+
+      const roomForTravel = chainItems.every(
+        (item, index) =>
+          end + travelBufferMinutes <= chainStarts[index] ||
+          start >= chainEnds[index] + travelBufferMinutes
+      )
+
+      if (!roomForTravel) {
+        continue
+      }
+
+      const travelWindow =
+        start >= firstEnd
+          ? [start - travelBufferMinutes, start]
+          : [firstStart - travelBufferMinutes, firstStart]
+
+      if (
+        !overlapsBlockedPeriod(start, end, blockedPeriods) &&
+        !overlapsBlockedPeriod(travelWindow[0], travelWindow[1], blockedPeriods)
+      ) {
+        times.push(minutesToTime(start))
+      }
+    }
+
+    return times
+  }
+
+  // Existing chain:
+  // confirmed bookings and active holds both participate in the chain.
+  // Only the outer boundaries are exposed publicly; internal gaps remain hidden.
   const chainStart = Math.min(...chainStarts)
   const chainEnd = Math.max(...chainEnds)
 
