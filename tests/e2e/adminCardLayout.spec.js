@@ -99,14 +99,19 @@ test('a very long name wraps inside the card, away from the price, and nothing g
   expect(price.right).toBeLessThanOrEqual(card.right)
 })
 
-test('Directions sits beside the status at the foot of the card, at least 44px tall, over nothing else', async ({ page }) => {
+test('Directions sits beside the status at the foot of the card, looks 36px tall and is 44px to press, over nothing else', async ({ page }) => {
   await openAgenda(page)
   const wrap = page.locator('.admin-card-wrap.has-directions').first()
   const directions = await box(wrap.getByRole('link', { name: /^Directions to/ }))
   const status = await box(wrap.locator('.admin-status'))
   const card = await box(wrap.locator('.admin-card'))
-  expect(directions.height).toBeGreaterThanOrEqual(44)
+  expect(directions.height).toBeGreaterThanOrEqual(36)
   expect(directions.bottom).toBeLessThanOrEqual(card.bottom)
+  // Pressing three pixels above or below the pill still presses it, so the target is 44px tall, not just the 36px that shows.
+  const centre = (directions.left + directions.right) / 2
+  for (const y of [directions.top - 3, directions.bottom + 3]) {
+    expect(await page.evaluate(([x, top]) => document.elementFromPoint(x, top)?.closest('a')?.getAttribute('aria-label') ?? '', [centre, y])).toMatch(/^Directions to/)
+  }
   expect(overlap(directions, status)).toBe(false)
   for (const part of ['.admin-card-when', '.admin-card-heading', '.admin-card-meta']) expect(overlap(directions, await box(wrap.locator(part))), part).toBe(false)
   // Level with the status, not above or below it.
@@ -200,4 +205,53 @@ test('a card works from the keyboard and still opens the booking', async ({ page
   expect(ring.width).toBeGreaterThanOrEqual(2)
   await page.keyboard.press('Enter')
   await expect(page.getByRole('dialog')).toContainText(f.bookings[0].booking_reference)
+})
+
+// The heading of each day is one line, because it stays pinned at the top while you scroll through the day and every pixel of it is a pixel
+// the cards do not get. The notes about special hours or time away sit in a slim strip under it.
+const daySection = (page, date) => page.locator('.admin-agenda-day', { has: page.locator(`[id="agenda-${date}"]`) })
+const longDate = date => dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+
+test('a day heading is one line: the date, what the day is worth, and an icon that opens its settings', async ({ page }) => {
+  await openAgenda(page)
+  const day = daySection(page, f.date)
+  const heading = day.locator('.admin-agenda-day-heading')
+  const bar = await box(heading)
+  expect(bar.height, 'one short line').toBeLessThanOrEqual(56)
+  const title = await box(heading.locator('h2'))
+  const summary = await box(heading.locator('> span'))
+  expect(Math.abs((title.top + title.bottom) / 2 - (summary.top + summary.bottom) / 2), 'date and summary level').toBeLessThanOrEqual(4)
+  await expect(heading.locator('> span')).toContainText('1 booking')
+  // The button is an icon with a name for a screen reader and a tooltip, and 44 by 44 to press.
+  const button = day.getByRole('button', { name: `Day settings for ${longDate(f.date)}` })
+  await expect(button).toHaveAttribute('title', 'Day settings')
+  expect((await button.innerText()).trim()).toBe('')
+  const target = await box(button)
+  expect(target.width).toBeGreaterThanOrEqual(44)
+  expect(target.height).toBeGreaterThanOrEqual(44)
+  expect(target.right, 'inside the screen').toBeLessThanOrEqual(390)
+  // Pinned while scrolling, and short.
+  expect(await heading.evaluate(node => { const style = getComputedStyle(node); return `${style.position} ${style.top}` })).toBe('sticky 0px')
+  // The special hours are a slim strip of their own under it.
+  const note = day.locator('.admin-agenda-notes li')
+  await expect(note).toContainText('Special hours 10:00')
+  expect((await box(note)).height).toBeLessThanOrEqual(30)
+  await button.click()
+  await expect(page).toHaveURL(new RegExp('/admin/day-settings[?]date=' + f.date + '$'))
+})
+
+test("today's band and a long summary keep to one tidy heading, even at 320px", async ({ page }) => {
+  // A day worth over a million pounds is the worst a summary can be; it wraps inside its own space and never pushes the icon away.
+  await unwrap(f.admin.from('bookings').update({ total_gbp: 1234567.89 }).eq('id', f.bookings[0].id))
+  await openAgenda(page, 320)
+  const heading = daySection(page, f.date).locator('.admin-agenda-day-heading')
+  const bar = await box(heading)
+  expect(bar.height).toBeLessThanOrEqual(72)
+  const button = await box(heading.getByRole('button'))
+  expect(button.right).toBeLessThanOrEqual(320)
+  expect(await noSideways(page)).toBe(true)
+  const today = page.locator('.admin-agenda-day.is-today .admin-agenda-day-heading')
+  expect((await box(today)).height).toBeLessThanOrEqual(56)
+  await expect(today.locator('h2')).toContainText('Today')
+  await page.screenshot({ path: 'test-results/card-layout-heading-320.png', fullPage: false })
 })

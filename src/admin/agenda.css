@@ -11,6 +11,17 @@
 /* Day settings: a quiet button on each day. It drops below the heading when there is no room beside it. */
 .admin-agenda-day-heading { flex-wrap: wrap; row-gap: 2px; }
 .admin-agenda-day-heading .admin-day-settings-button { margin-left: auto; min-height: 44px; gap: 6px; color: var(--primary); font-size: 14px; font-weight: 600; white-space: nowrap; }
+
+/* One line: the date, what the day is worth, and an icon that opens the day's settings. This heading stays pinned while you scroll through the day,
+   so it is kept short; the notes about special hours or time away sit in a slim strip under it. */
+.admin-agenda-days > .admin-agenda-day { padding: 6px 0 10px; }
+.admin-agenda-days > .admin-agenda-day > .admin-agenda-day-heading { display: flex; flex-wrap: nowrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; padding: 2px 8px 2px 16px; }
+.admin-agenda-days > .admin-agenda-day > .admin-agenda-day-heading h2 { flex: 0 0 auto; font-size: 20px; line-height: 1.2; white-space: nowrap; }
+.admin-agenda-days > .admin-agenda-day.is-today > .admin-agenda-day-heading h2 { font-size: 21px; }
+.admin-agenda-days > .admin-agenda-day > .admin-agenda-day-heading > span { flex: 1 1 0; min-width: 0; font-size: 12.5px; text-align: right; white-space: normal; }
+.admin-agenda-days > .admin-agenda-day > .admin-agenda-day-heading > .admin-day-settings-button { flex: 0 0 auto; justify-content: center; width: 44px; min-width: 44px; height: 44px; min-height: 44px; margin: 0; padding: 0; }
+.admin-agenda-days > .admin-agenda-day > .admin-agenda-notes { margin: 0 0 6px; }
+.admin-agenda-days > .admin-agenda-day > .admin-agenda-notes li { padding: 3px 10px; font-size: 12.5px; }
 .admin-agenda-load { width: 100%; margin: 8px 0; }
 .admin-agenda-range { margin: 10px 0 0; color: var(--muted); text-align: center; font-size: 12px; }
 

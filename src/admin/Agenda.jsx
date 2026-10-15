@@ -210,7 +210,7 @@ export default function Agenda({ openBooking, openDay, revision, toCheck, checke
             <header className="admin-agenda-day-heading">
               <h2 id={`agenda-${group.date}`}><span className="day-name">{heading.name}</span>{heading.rest ? ` · ${heading.rest}` : ''}</h2>
               <span>{daySummary(group.bookings)}</span>
-              {openDay && <button type="button" className="btn--quiet btn--small admin-day-settings-button" aria-label={`Day settings for ${full}`} onClick={() => openDay(group.date)}><Icon name="clock" size={16} /> Day settings</button>}
+              {openDay && <button type="button" className="btn--quiet btn--small admin-day-settings-button" aria-label={`Day settings for ${full}`} title="Day settings" onClick={() => openDay(group.date)}><Icon name="clock" size={20} /></button>}
             </header>
             <DayNotes special={group.special} away={group.away} />
             {!group.bookings.length && <p className="admin-agenda-empty"><strong>{group.special?.available === false || group.away ? 'A day off.' : 'A free day.'}</strong>Nothing is booked.</p>}
