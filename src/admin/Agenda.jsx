@@ -216,8 +216,7 @@ export default function Agenda({ openBooking, openDay, revision, toCheck, checke
             {!group.bookings.length && <p className="admin-agenda-empty"><strong>{group.special?.available === false || group.away ? 'A day off.' : 'A free day.'}</strong>Nothing is booked.</p>}
             {group.rows.length > 0 && <ol role="list" className="admin-timeline" aria-label={`Appointments${group.rows.some(row => row.kind === 'block') ? ' and blocked time' : ''} for ${full}`}>
               {group.rows.map(({ kind, booking, row: blocked }) => kind === 'block' ? <TimedBlock key={`block-${blocked.id}`} row={blocked} open={openBlock} /> : <li key={booking.id} className="admin-timeline-row admin-timeline-booking">
-                <time className="admin-time"><span className="figure">{time(booking.start_minutes)}</span><small>{booking.treatment_duration_minutes} min</small>{upNext?.id === booking.id && <em className="admin-next-tag">{upNext.now ? 'Now' : 'Next'}</em>}</time>
-                <BookingCard booking={booking} open={() => openBooking(booking.id)} now={new Date(now)} />
+                <BookingCard booking={booking} open={() => openBooking(booking.id)} now={new Date(now)} tag={upNext?.id === booking.id ? (upNext.now ? 'Now' : 'Next') : null} />
               </li>)}
             </ol>}
           </section>

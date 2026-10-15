@@ -2,7 +2,7 @@
 .admin-calendar-views a { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; min-width: 88px; padding: 4px 14px; border: 1px solid #cfd8d1; border-radius: 999px; color: var(--ink); text-decoration: none; background: white; font-size: 14px; font-weight: 600; }
 .admin-calendar-views a[aria-current="page"] { background: var(--ink); border-color: var(--ink); color: white; }
 
-.admin-agenda { padding: 8px 8px 28px; }
+.admin-agenda { padding: 8px 16px 28px; }
 .admin-agenda-days { margin: 8px 0; }
 .admin-agenda-day { padding: 14px 0 18px; border-top: 1px solid var(--line); }
 .admin-agenda-day-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
@@ -65,7 +65,7 @@
 }
 
 @media (min-width: 360px) {
-  .admin-calendar-views, .admin-agenda { padding-inline: 12px; }
+  .admin-calendar-views { padding-inline: 12px; }
 }
 
 @media (min-width: 768px) {

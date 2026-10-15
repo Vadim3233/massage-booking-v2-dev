@@ -57,16 +57,14 @@
 
 /* ---------- Day and agenda rows ---------- */
 .admin-timeline { list-style: none; padding: 0; margin: 0; }
-.admin-timeline-row { display: grid; grid-template-columns: 58px minmax(0, 1fr); column-gap: 12px; align-items: start; margin: 10px 0; }
+/* One column: every row is as wide as the screen allows, and each says its own time inside it (a card, a block, a gap). */
+.admin-timeline-row { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; margin: 10px 0; }
 .admin-row-body { display: grid; gap: 8px; min-width: 0; }
-.admin-time { display: grid; align-content: start; justify-items: start; gap: 2px; padding-top: 12px; font: 600 15px/1.1 var(--font-ui); font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; }
-.admin-time .figure { font: 600 21px/1 var(--font-display); font-variant-numeric: lining-nums; letter-spacing: -.01em; }
-.admin-time small { color: var(--muted); font: 500 12px/1 var(--font-ui); }
 .share-link { margin: 12px 0; }
 .share-link input { font-size: 15px; text-overflow: ellipsis; }
 .share-more { margin-top: 18px; }
 .admin-next-tag { margin-top: 4px; padding: 3px 7px; border-radius: 6px; background: var(--accent-soft); color: var(--accent-ink); font: 700 10px/1 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; font-style: normal; }
-.admin-shell .admin-card { --rail: var(--ok-rail); position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; justify-content: stretch; align-items: start; justify-items: stretch; width: 100%; gap: 3px 10px; padding: 13px 14px 13px 19px; border: 0; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); color: var(--ink); font: 400 15px/1.35 var(--font-ui); text-align: left; overflow: hidden; }
+.admin-shell .admin-card { --rail: var(--ok-rail); position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; justify-content: stretch; align-items: start; justify-items: stretch; width: 100%; gap: 3px 10px; padding: 11px 14px 13px 19px; border: 0; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); color: var(--ink); font: 400 15px/1.35 var(--font-ui); text-align: left; overflow: hidden; }
 .admin-shell .admin-card:not(:disabled):hover { background: #fcfdfb; box-shadow: var(--shadow-2); }
 .admin-card::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--rail); }
 .admin-card[data-chip="needs"] { --rail: var(--needs-rail); background: #fffaf0; }
@@ -75,16 +73,26 @@
 .admin-card[data-chip="noshow"] { --rail: var(--noshow-rail); }
 .admin-card[data-chip="cancel"] { --rail: var(--cancel-rail); }
 .admin-card-heading { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: baseline; }
-.admin-card-heading strong { min-width: 0; font: 650 17px/1.25 var(--font-ui); }
+.admin-card-heading strong { min-width: 0; overflow-wrap: anywhere; font: 650 17px/1.25 var(--font-ui); }
 .admin-card-price { font: 600 19px/1 var(--font-display); font-variant-numeric: lining-nums; white-space: nowrap; }
-.admin-card-treatment, .admin-card-postcode { color: var(--ink-soft); font-size: 14px; }
-.admin-card-treatment { grid-column: 1; min-width: 0; }
-.admin-card-postcode { grid-column: 2; align-self: baseline; color: var(--muted); font-size: 13px; letter-spacing: .02em; white-space: nowrap; max-width: 12ch; overflow: hidden; text-overflow: ellipsis; }
-.admin-card .admin-status { grid-column: 1 / -1; justify-self: start; margin-top: 4px; }
-.admin-shell .admin-card.cancelled { gap: 1px 10px; padding-block: 9px; background: var(--cancel-bg); box-shadow: none; color: var(--cancel-ink); }
+/* The top of a card: when the treatment starts and ends, an optional Now or Next tag, and how long it is, over a thin divider. */
+.admin-card-when { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; margin-bottom: 6px; padding-bottom: 8px; border-bottom: 1px solid var(--hairline); }
+.admin-card-times { font: 650 20px/1.2 var(--font-display); font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.01em; white-space: nowrap; }
+.admin-card-length { margin-left: auto; color: var(--muted); font: 500 13px/1.2 var(--font-ui); white-space: nowrap; }
+.admin-card-when .admin-next-tag { margin: 0; }
+/* Treatment and postcode on one line under the name; the postcode never breaks, the treatment wraps if it must. */
+.admin-card-meta { grid-column: 1 / -1; display: flex; flex-wrap: wrap; column-gap: 6px; min-width: 0; color: var(--ink-soft); font-size: 14px; }
+.admin-card-treatment { min-width: 0; overflow-wrap: anywhere; }
+.admin-card-postcode { color: var(--muted); letter-spacing: .02em; white-space: nowrap; }
+.admin-card-foot { grid-column: 1 / -1; display: flex; align-items: center; min-width: 0; margin-top: 4px; }
+.admin-shell .admin-card.cancelled { gap: 1px 10px; padding-block: 8px 9px; background: var(--cancel-bg); box-shadow: none; color: var(--cancel-ink); }
+.admin-card.cancelled .admin-card-when { margin-bottom: 4px; padding-bottom: 6px; border-bottom-color: #d9d6d0; }
+.admin-card.cancelled .admin-card-times { font-size: 17px; font-weight: 500; }
+.admin-card.cancelled .admin-card-length { color: var(--cancel-ink); }
 .admin-card.cancelled .admin-card-heading strong { font-weight: 500; text-decoration: line-through; text-decoration-thickness: 1px; }
 .admin-card.cancelled .admin-card-price { font-size: 15px; text-decoration: line-through; color: var(--cancel-ink); }
-.admin-card.cancelled .admin-card-treatment, .admin-card.cancelled .admin-card-postcode { font-size: 13px; }
+.admin-card.cancelled .admin-card-meta { font-size: 13px; }
+.admin-card.cancelled .admin-card-postcode { color: var(--cancel-ink); }
 .admin-card-action { display: flex; flex-wrap: wrap; gap: 8px; }
 .admin-card-action .admin-payment-buttons { margin: 0; }
 
@@ -96,8 +104,6 @@
 .admin-timeline-entry.block { border-left: 4px solid #7e8a8d; background: #e9edec; color: #3f4f52; }
 .admin-timeline-entry.free { padding-block: 8px; border-radius: 0; border-top: 1.5px dashed #cfd7cf; background: transparent; color: var(--muted); }
 .admin-timeline-entry.buffer { padding-block: 3px; border-radius: 0; color: var(--muted); border-left: 2px solid #d2d9d1; font-size: 13px; }
-.admin-timeline-buffer .admin-time, .admin-timeline-free .admin-time { padding-top: 7px; color: var(--muted); font-size: 12px; font-weight: 500; }
-.admin-timeline-buffer .admin-time, .admin-timeline-free .admin-time { font-family: var(--font-ui); }
 .admin-block-button { width: 100%; text-align: left; display: grid; gap: 2px; }
 .admin-shell .admin-timeline-entry.block.admin-block-button { min-height: 52px; border: 0; border-left: 4px solid #7e8a8d; border-radius: 10px; justify-content: flex-start; align-items: flex-start; flex-direction: column; font-weight: 600; background: #e9edec; color: #3f4f52; }
 
@@ -296,7 +302,6 @@
   .admin-details { left: auto; width: min(600px, 100vw); box-shadow: var(--shadow-2); }
   .admin-agenda, .admin-day, .admin-review { padding-inline: 8px; }
   .admin-shell .admin-calendar-views { margin-inline: 8px; max-width: 360px; }
-  .admin-timeline-row { grid-template-columns: 70px minmax(0, 1fr); }
   .toast-host { bottom: 32px; }
 }
 
@@ -364,9 +369,12 @@
 
 /* A Directions button sits beside the status of an appointment still to come: a control of its own, next to the card and not inside it. */
 .admin-card-wrap { position: relative; min-width: 0; }
-.admin-shell .admin-card-directions { position: absolute; right: 8px; bottom: 6px; z-index: 1; display: inline-flex; align-items: center; gap: 5px; min-height: 40px; padding: 0 10px 0 9px; border-radius: 20px; background: var(--primary-soft); color: var(--primary); font: 600 13px/1 var(--font-ui); text-decoration: none; }
+.admin-shell .admin-card-directions { position: absolute; right: 8px; bottom: 4px; z-index: 1; display: inline-flex; align-items: center; gap: 5px; min-height: 44px; padding: 0 10px 0 9px; border-radius: 20px; background: var(--primary-soft); color: var(--primary); font: 600 13px/1 var(--font-ui); text-decoration: none; }
 .admin-shell .admin-card-directions:hover { background: #d9e8df; }
 .admin-card-wrap.has-directions .admin-status { max-width: calc(100% - 108px); white-space: normal; border-radius: 16px; }
+/* The status and Directions share one 44px band at the foot of the card, so they line up and neither covers the text above. */
+.admin-shell .admin-card-wrap.has-directions .admin-card { padding-bottom: 4px; }
+.admin-card-wrap.has-directions .admin-card-foot { min-height: 44px; margin-top: 0; }
 
 /* Alerts sit under the day they were raised on, with the same day headings as the Agenda. */
 .admin-alerts-day .admin-alerts { margin: 6px 0 14px; }

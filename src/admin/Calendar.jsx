@@ -100,13 +100,12 @@ export default function Calendar({ signOut, openBooking, openDay, revision, init
         {!data.bookings.length && <p className="admin-day-note">No appointments for this day.</p>}
         <ol role="list" className="admin-timeline" aria-label="Day timeline">
           {timeline.rows.map(row => <li key={`${row.kind}-${row.id}`} className={`admin-timeline-row admin-timeline-${row.kind}`} data-start={row.start}>
-            <time className="admin-time">{row.kind === 'booking' ? <><span className="figure">{time(row.start)}</span><small>{row.booking.treatment_duration_minutes} min</small></> : time(row.start)}</time>
             {row.kind === 'booking' ? <BookingCard booking={row.booking} open={() => openBooking(row.booking.id)} now={new Date(now)} /> : row.kind === 'block' && row.block.kind !== 'series_hold' ? <button className="admin-timeline-entry block admin-block-button" onClick={() => setBlockDialog({ date, block: row.block })}>
                 <span>{row.title}</span>
-                <small>Until {time(row.end)} · tap to change</small>
+                <small>{time(row.start)} – {time(row.end)} · tap to change</small>
             </button> : <div className={`admin-timeline-entry ${row.kind}`}>
                 <span>{row.kind === 'free' ? 'Free' : row.kind === 'buffer' ? 'Travel / buffer' : row.kind === 'hold' ? 'Temporary hold' : row.title}</span>
-                <small>Until {time(row.end)}{row.kind === 'free' ? ` · ${row.end - row.start} min` : ''}</small>
+                <small>{time(row.start)} – {time(row.end)}{row.kind === 'free' ? ` · ${row.end - row.start} min` : ''}</small>
             </div>}
           </li>)}
         </ol>

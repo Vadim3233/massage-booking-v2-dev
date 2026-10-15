@@ -25,10 +25,9 @@ export function DayNotes({ special, away }) {
 // A few hours blocked on a day, among its bookings. It looks and works as it does in the Day view.
 export function TimedBlock({ row, open }) {
   return <li className="admin-timeline-row admin-timeline-block">
-    <time className="admin-time">{time(row.start_minutes)}</time>
     <button type="button" className="admin-timeline-entry block admin-block-button" onClick={() => open(row)}>
       <span>{blockTitle(row)}</span>
-      <small>Until {time(row.end_minutes)} · tap to change</small>
+      <small>{time(row.start_minutes)} – {time(row.end_minutes)} · tap to change</small>
     </button>
   </li>
 }

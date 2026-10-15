@@ -229,7 +229,8 @@ test("a few hours blocked sit among the day's bookings in time order, and open t
   await login(page)
   const day = daySection(page, f.date)
   await expect(day.getByRole('button', { name: /Agenda dentist/ })).toBeVisible()
-  expect(await day.locator('.admin-timeline-row .admin-time').evaluateAll(nodes => nodes.map(node => node.textContent.slice(0, 5)))).toEqual(['10:00', '11:00', '13:00'])
+  // Each row now says its own time inside it (a card at its top, a block under its title); the first time in each row is its start.
+  expect(await day.locator('.admin-timeline-row').evaluateAll(rows => rows.map(row => row.textContent.match(/\d\d:\d\d/)[0]))).toEqual(['10:00', '11:00', '13:00'])
   await day.getByRole('button', { name: /Agenda dentist/ }).click()
   await expect(page.getByRole('heading', { name: 'Change blocked time' })).toBeVisible()
 })

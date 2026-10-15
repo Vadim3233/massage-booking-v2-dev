@@ -160,7 +160,6 @@ export default function DaySettings({ date, revision, openBooking, changed, api 
         <h2 id="day-bookings-title">Bookings</h2>
         {data.bookings.length > 0
           ? <ol role="list" className="admin-timeline" aria-label={`Bookings for ${full}`}>{data.bookings.map(booking => <li key={booking.id} className="admin-timeline-row admin-timeline-booking">
-            <time className="admin-time"><span className="figure">{time(booking.start_minutes)}</span><small>{booking.treatment_duration_minutes} min</small></time>
             <BookingCard booking={booking} open={() => openBooking(booking.id)} now={new Date()} />
           </li>)}</ol>
           : <p>No bookings on this day.</p>}
