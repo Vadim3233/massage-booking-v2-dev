@@ -23,7 +23,7 @@ describe('London times, either side of the clocks changing', () => {
   })
 })
 
-describe('when she can be reminded', () => {
+describe('when a reminder can be set', () => {
   it('offers three times for an appointment days away, each in the future and before it starts', () => {
     const choices = reminderChoices(booking('2026-10-20', 690), now)
     expect(choices.map(choice => choice.key)).toEqual(['hours', 'tomorrow', 'before'])
