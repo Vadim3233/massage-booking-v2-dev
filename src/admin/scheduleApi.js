@@ -84,9 +84,12 @@ export function createScheduleApi(client) {
     overrides: from => run(client.from('working_hours_overrides').select('date,available,start_minutes,end_minutes,start_mode,fixed_start_minutes,note').gte('date', from).order('date').limit(200)),
     saveOverride: entry => run(client.from('working_hours_overrides').upsert({ date: entry.date, note: entry.note?.trim() || null, ...clean(entry) }, { onConflict: 'date' })),
     deleteOverride: date => run(client.from('working_hours_overrides').delete().eq('date', date)),
+    // The bookings that a change to a day's hours would leave in time that is no longer working time. The database counts the travel time around every
+    // booking (right for blocked time), but working hours only have to hold the treatments: the first booking of a day often starts as the hours do,
+    // with its travel before them. So only a booking that is itself in the time asked about is a clash.
     async conflicts(date, start, end) {
       const rows = await run(client.rpc('admin_schedule_conflicts', { p_date: date, p_start_minutes: start, p_end_minutes: end }))
-      return rows
+      return (rows || []).filter(row => row.start_minutes < end && row.start_minutes + row.treatment_duration_minutes > start)
     },
     // One command saves every day of a block together; groupId replaces an existing block.
     saveBlock: (groupId, block) => run(client.rpc('admin_save_block_range', { p_group_id: groupId || null, p_kind: block.kind, p_title: block.title.trim() || null, p_notes: block.notes?.trim() || null,

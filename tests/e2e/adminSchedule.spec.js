@@ -71,6 +71,38 @@ test('a day off over a live booking warns first, never moves the booking, and th
   await expect(page.getByText('Removed. That day follows your usual week again.')).toBeVisible()
 })
 
+test("hours that hold a booking are not a clash just because its travel time falls outside them", async ({ page }) => {
+  await f.authorize()
+  await signIn(page, '/admin/schedule')
+  await page.getByRole('tab', { name: 'Special days' }).click()
+  await page.getByRole('button', { name: 'Add a special day' }).click()
+  await page.getByLabel('Date').fill(f.bookings[0].date)
+  await page.getByLabel('Different hours').check()
+  // The booking is at 10:00 for an hour, so a day that opens at 10:00 holds it, and its hour of travel before it falls before the day opens.
+  await page.getByLabel('Special day start').selectOption('600')
+  await page.getByLabel('Special day end').selectOption('1200')
+  await page.getByLabel('Note (only you see this)').fill('Family day')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(page.getByText('Saved.')).toBeVisible()
+  await expect(page.getByRole('alert').filter({ hasText: 'This clashes with' })).toHaveCount(0)
+  expect((await f.admin.from('working_hours_overrides').select('start_minutes,end_minutes').eq('date', f.bookings[0].date).eq('note', 'Family day').single()).data).toEqual({ start_minutes: 600, end_minutes: 1200 })
+})
+
+test('hours that start after a booking do leave it outside them, and that is still said before anything is saved', async ({ page }) => {
+  await f.authorize()
+  await signIn(page, '/admin/schedule')
+  await page.getByRole('tab', { name: 'Special days' }).click()
+  await page.getByRole('button', { name: 'Add a special day' }).click()
+  await page.getByLabel('Date').fill(f.bookings[0].date)
+  await page.getByLabel('Different hours').check()
+  await page.getByLabel('Special day start').selectOption('660')
+  await page.getByLabel('Special day end').selectOption('1200')
+  await page.getByLabel('Note (only you see this)').fill('Family day')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
+  await expect(page.getByRole('alert').filter({ hasText: 'This clashes with a booking' })).toBeVisible()
+  expect((await f.admin.from('working_hours_overrides').select('date').eq('date', f.bookings[0].date).eq('note', 'Family day')).data).toHaveLength(0)
+})
+
 test("a special day starts from that weekday's usual hours, so only the first appointment needs choosing, and the list says so", async ({ page }) => {
   await f.authorize()
   const date = dayAhead(100)
