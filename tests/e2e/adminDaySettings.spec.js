@@ -197,6 +197,53 @@ test('with Show every day on, the date of a free day opens that day', async ({ p
   await expect(page.getByText('No bookings on this day.')).toBeVisible()
 })
 
+test('any date can be chosen from the Agenda, whether or not anything is booked on it or shown for it', async ({ page }) => {
+  await f.authorize()
+  await login(page)
+  const pick = page.getByLabel('Day settings for a date', { exact: true })
+  // A day that has a booking.
+  await pick.fill(f.date)
+  await expect(page).toHaveURL(new RegExp(`/admin/day-settings\\?date=${f.date}$`))
+  await expect(page.getByRole('region', { name: 'This day at a glance' })).toContainText('1 booking')
+  await page.getByRole('link', { name: '← Agenda' }).click()
+  // A day the Agenda does not list at all, because nothing is booked or special about it.
+  const free = shiftDate(f.date, 40)
+  await expect(page.getByRole('button', { name: new RegExp(`^Day settings for ${long(free)}`) })).toHaveCount(0)
+  await pick.fill(free)
+  await expect(page).toHaveURL(new RegExp(`/admin/day-settings\\?date=${free}$`))
+  await expect(page.getByText('No bookings on this day.')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'This day at a glance' })).toContainText('Follows your usual')
+  // Back is to the Agenda, and the same control is there again.
+  await page.getByRole('link', { name: '← Agenda' }).click()
+  await expect(pick).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+})
+
+test('the whole line of a free day opens it, wherever it is pressed, and a line for time away still opens the block by its words', async ({ page }) => {
+  await f.authorize()
+  // Two days away: the banner stands for the first day, and the second is a line of its own when every day is shown.
+  const away = shiftDate(today(), 10)
+  const second = shiftDate(away, 1)
+  const group = crypto.randomUUID()
+  await f.admin.from('calendar_blocks').insert([away, second].map(date => ({ date, start_minutes: 0, end_minutes: 1440, kind: 'blocked', title: 'Dentist', group_id: group })))
+  await login(page)
+  await page.getByRole('switch', { name: 'Show every day' }).check()
+  const free = shiftDate(today(), 1)
+  const row = page.locator('.admin-agenda-quiet li', { hasText: dateLabel(free) })
+  // The words of the line, not its date.
+  await row.locator('.what').click()
+  await expect(page).toHaveURL(new RegExp(`/admin/day-settings\\?date=${free}$`))
+  await page.getByRole('link', { name: '← Agenda' }).click()
+  // The line for the second day away has two things to press: its date opens the day and its words open the block.
+  await page.getByRole('switch', { name: 'Show every day' }).check()
+  const blocked = page.locator('.admin-agenda-quiet li', { hasText: 'day 2 of 2' })
+  await blocked.getByRole('button', { name: /^Away · Dentist · day 2 of 2/ }).click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await blocked.getByRole('button', { name: /^Day settings for/ }).click()
+  await expect(page).toHaveURL(new RegExp(`/admin/day-settings\\?date=${second}$`))
+})
+
 test('the screen fits a small phone', async ({ page }) => {
   await f.authorize()
   await page.setViewportSize({ width: 320, height: 640 })

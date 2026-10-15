@@ -36,13 +36,23 @@ export function TimedBlock({ row, open }) {
 // Days with nothing booked, one quiet line each. A line that stands for a block can be pressed to open it.
 export function QuietDays({ items, open, openDay }) {
   return <ul role="list" className="admin-agenda-quiet" aria-label="Days without appointments">
-    {items.map(item => <li key={item.id} className={`is-${item.kind}`}>
-      {openDay
-        ? <button type="button" className="admin-agenda-quiet-date" aria-label={`Day settings for ${dateLabel(item.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`} onClick={() => openDay(item.date)}>{dateLabel(item.date)}</button>
-        : <span className="when">{dateLabel(item.date)}</span>}
-      {item.row
-        ? <button type="button" className="admin-agenda-quiet-button" onClick={() => open(item.row)}>{item.text}</button>
-        : <span className="what">{item.text}</span>}
-    </li>)}
+    {items.map(item => {
+      const named = dateLabel(item.date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+      // A plain free day is one line that opens that day's settings wherever it is pressed.
+      if (openDay && !item.row) return <li key={item.id} className={`is-${item.kind}`}>
+        <button type="button" className="admin-agenda-quiet-day" aria-label={`Day settings for ${named}, ${item.text}`} onClick={() => openDay(item.date)}>
+          <span className="when">{dateLabel(item.date)}</span><span className="what">{item.text}</span><Icon name="right" size={14} />
+        </button>
+      </li>
+      // A line that stands for a block has two things to press: its date opens the day, and its words open the block.
+      return <li key={item.id} className={`is-${item.kind}`}>
+        {openDay
+          ? <button type="button" className="admin-agenda-quiet-date" aria-label={`Day settings for ${named}`} onClick={() => openDay(item.date)}>{dateLabel(item.date)}</button>
+          : <span className="when">{dateLabel(item.date)}</span>}
+        {item.row
+          ? <button type="button" className="admin-agenda-quiet-button" onClick={() => open(item.row)}>{item.text}</button>
+          : <span className="what">{item.text}</span>}
+      </li>
+    })}
   </ul>
 }

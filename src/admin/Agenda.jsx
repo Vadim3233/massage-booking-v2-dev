@@ -194,6 +194,9 @@ export default function Agenda({ openBooking, openDay, revision, toCheck, checke
         <button className="btn--quiet btn--small" disabled={refreshing} onClick={() => { quiet.asked(); setRefreshing(true); reread() }}><Icon name="refresh" size={18} />{refreshing ? ' Refreshing…' : ' Refresh'}</button>
       </div>
       <div className="admin-agenda-options">
+        {openDay && <label className="admin-agenda-pick"><Icon name="calendar" size={18} /><span>Day settings for a date</span>
+          <input type="date" value="" onChange={event => { if (event.target.value) openDay(event.target.value) }} onClick={event => { try { event.currentTarget.showPicker?.() } catch { /* Native date entry remains available. */ } }} />
+        </label>}
         <label className="admin-agenda-switch"><input type="checkbox" role="switch" checked={showEvery} onChange={toggleShowEvery} />Show every day</label>
       </div>
       <div className="admin-agenda-days">

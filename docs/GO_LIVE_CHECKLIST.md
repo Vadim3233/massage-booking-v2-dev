@@ -80,7 +80,7 @@ Each day can now be set to **Flexible** instead of the usual **Chain**. Under **
 
 ## New: Day settings, one date on its own (2026-10-14)
 
-Press **Day settings** on any day in the Agenda, or in the Day view beside Block time, to change just that date. With **Show every day** on, the date of a free day opens it too. The page shows what the day is set to and why, then lets you change its hours, schedule mode (Chain or Flexible), first appointment and release time with one **Save this day** button, add or change blocked time, and open the day's bookings. **Use my usual week** puts the date back to normal.
+Press **Day settings** on any day in the Agenda, or in the Day view beside Block time, to change just that date. With **Show every day** on, each free day's whole line opens it, and **Day settings for a date**, beside that switch, opens any date, booked or not. The page shows what the day is set to and why, then lets you change its hours, schedule mode (Chain or Flexible), first appointment and release time with one **Save this day** button, add or change blocked time, and open the day's bookings. **Use my usual week** puts the date back to normal.
 
 - **What is saved.** A special day, the same one the Special days list shows. Your usual week is not touched.
 - **Warns, never moves.** If different hours leave a booking outside them, you are told which and can save anyway. Nothing is moved or cancelled for you.

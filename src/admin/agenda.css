@@ -15,7 +15,11 @@
 .admin-agenda-range { margin: 10px 0 0; color: var(--muted); text-align: center; font-size: 12px; }
 
 /* Show every day: a switch, drawn on a native checkbox so it has a name, a state and a focus ring without any script. */
-.admin-agenda-options { display: flex; justify-content: flex-end; margin: 0 0 2px; }
+.admin-agenda-options { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; margin: 0 0 2px; }
+/* Day settings for any date, even one the list does not show: a native date field laid invisibly over a button-looking label. */
+.admin-agenda-pick { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid #cfd8d1; border-radius: 999px; background: var(--surface); color: var(--primary); font-size: 14px; font-weight: 600; cursor: pointer; }
+.admin-agenda-pick input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.admin-agenda-pick:has(:focus-visible) { outline: 3px solid var(--primary); outline-offset: 2px; }
 .admin-agenda-switch { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 2px; color: var(--ink); font-size: 14px; font-weight: 500; cursor: pointer; }
 .admin-agenda-switch input { -webkit-appearance: none; appearance: none; position: relative; flex: 0 0 42px; width: 42px; height: 24px; margin: 0; border-radius: 12px; background: #6f7f77; cursor: pointer; }
 .admin-agenda-switch input::before { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform var(--dur-fast) var(--ease); }
@@ -45,10 +49,16 @@
 .admin-agenda-quiet li.is-away .what, .admin-agenda-quiet li.is-away button { color: #2f5448; }
 /* The date of a free day opens that day's settings; it is underlined so it reads as pressable. */
 .admin-agenda-quiet-date { flex: 0 0 100px; justify-content: flex-start; min-height: 44px; margin: -3px 0 -3px -8px; padding: 4px 8px; border: 0; background: transparent; color: var(--primary); font-size: 13px; font-weight: 600; text-align: left; text-decoration: underline; text-underline-offset: 3px; }
+/* A plain free day is one pressable line: the date, what it is, and an arrow. */
+.admin-agenda-quiet li:has(> .admin-agenda-quiet-day) { padding: 0; }
+.admin-agenda-quiet-day { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 44px; margin: 0; padding: 4px 4px 4px 0; border: 0; background: transparent; color: var(--ink-soft); font-size: 13px; font-weight: 400; line-height: 1.4; text-align: left; }
+.admin-agenda-quiet-day .when { flex: 0 0 92px; color: var(--primary); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.admin-agenda-quiet-day .what { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.admin-agenda-quiet-day svg { flex: 0 0 auto; color: var(--primary); }
 .admin-agenda-quiet-button { justify-content: flex-start; min-height: 44px; margin: -3px 0 -3px -8px; padding: 4px 8px; border: 0; background: transparent; color: var(--ink-soft); font-size: 13px; font-weight: 400; text-align: left; }
 @media (hover: hover) {
   .admin-agenda-away > button:hover { background: #d9e8df; }
-  .admin-agenda-quiet-button:hover, .admin-agenda-quiet-date:hover { background: var(--primary-soft); }
+  .admin-agenda-quiet-button:hover, .admin-agenda-quiet-date:hover, .admin-agenda-quiet-day:hover { background: var(--primary-soft); }
 }
 @media (prefers-reduced-motion: reduce) {
   .admin-agenda-switch input::before { transition: none; }
