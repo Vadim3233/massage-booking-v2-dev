@@ -61,7 +61,7 @@ test('New test client rotates the anonymous identity and preserves the booking h
 
 test('test-client identity rotation is never offered to a signed-in client', async ({ page }) => {
   await toAuth(page)
-  await page.getByText('Returning client? Sign in').click()
+  await page.getByRole('button', { name: 'Sign in with email' }).click()
   await page.getByLabel('Email address', { exact: true }).fill(fixture.email)
   await page.getByLabel('Password', { exact: true }).fill(fixture.password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()

@@ -14,7 +14,7 @@ function load(date, version) {
   const promise = api.loadCalendarRange(date, shiftDate(date, 1)).finally(() => { if (inFlight?.promise === promise) inFlight = null })
   inFlight = { key, promise }; return promise
 }
-export default function Calendar({ signOut, openBooking, revision, initialDate, onDate }) {
+export default function Calendar({ signOut, openBooking, openDay, revision, initialDate, onDate }) {
   const [date, setDate] = useState(() => initialDate || today())
   // The day last read stays on screen while it is read again, so a change never blanks the page or loses the place.
   const [loaded, setLoaded] = useState(null)
@@ -86,7 +86,10 @@ export default function Calendar({ signOut, openBooking, revision, initialDate, 
         <button aria-label="Next day" onClick={() => navigate(shiftDate(date, 1))}>›</button>
       </nav>
     </header>
-    <div className="admin-create-entry"><button className="admin-secondary-entry btn--small" onClick={() => setBlockDialog({ date })}>Block time</button></div>
+    <div className="admin-create-entry">
+      {openDay && <button className="admin-secondary-entry btn--small" onClick={() => openDay(date)}>Day settings</button>}
+      <button className="admin-secondary-entry btn--small" onClick={() => setBlockDialog({ date })}>Block time</button>
+    </div>
     <section className="admin-day" aria-label="Day appointments">
       <h1 className="admin-sr-only">Appointments for {dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h1>
       <p className="admin-day-caption">London time</p>
@@ -97,13 +100,12 @@ export default function Calendar({ signOut, openBooking, revision, initialDate, 
         {!data.bookings.length && <p className="admin-day-note">No appointments for this day.</p>}
         <ol role="list" className="admin-timeline" aria-label="Day timeline">
           {timeline.rows.map(row => <li key={`${row.kind}-${row.id}`} className={`admin-timeline-row admin-timeline-${row.kind}`} data-start={row.start}>
-            <time className="admin-time">{row.kind === 'booking' ? <><span className="figure">{time(row.start)}</span><small>{row.booking.treatment_duration_minutes} min</small></> : time(row.start)}</time>
             {row.kind === 'booking' ? <BookingCard booking={row.booking} open={() => openBooking(row.booking.id)} now={new Date(now)} /> : row.kind === 'block' && row.block.kind !== 'series_hold' ? <button className="admin-timeline-entry block admin-block-button" onClick={() => setBlockDialog({ date, block: row.block })}>
                 <span>{row.title}</span>
-                <small>Until {time(row.end)} · tap to change</small>
+                <small>{time(row.start)} – {time(row.end)} · tap to change</small>
             </button> : <div className={`admin-timeline-entry ${row.kind}`}>
                 <span>{row.kind === 'free' ? 'Free' : row.kind === 'buffer' ? 'Travel / buffer' : row.kind === 'hold' ? 'Temporary hold' : row.title}</span>
-                <small>Until {time(row.end)}{row.kind === 'free' ? ` · ${row.end - row.start} min` : ''}</small>
+                <small>{time(row.start)} – {time(row.end)}{row.kind === 'free' ? ` · ${row.end - row.start} min` : ''}</small>
             </div>}
           </li>)}
         </ol>

@@ -7,6 +7,9 @@ booking_payments(*),booking_enhancements(*)`
 const queueFields = `id,booking_reference,date,start_minutes,treatment_duration_minutes,total_gbp,booking_status,created_at,updated_at,
 clients!bookings_client_id_fkey(first_name,last_name),booking_sessions(service_name_snapshot,duration_minutes),
 booking_payments(method,status,updated_at)`
+// What needs the Admin right now: transfers the client says they made, and cash requests to decide.
+export const NEEDS_YOU = ['awaiting_verification', 'awaiting_approval']
+export const needsYou = booking => NEEDS_YOU.includes(booking.booking_payments?.status)
 export const paymentActions = booking => {
   const payment = booking.booking_payments
   // A booking waiting for payment is never cancelled automatically: the Admin confirms the payment or removes it.
