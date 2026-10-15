@@ -64,7 +64,7 @@ function buttonClass(action, booking) {
 }
 
 // `short` shows one word on each button (Verify, Cancel) where the card around it already says whose booking it is.
-// `later` adds "Not yet" to a payment that needs the Admin: it puts the payment off until a time she chooses (see paymentReminders.js).
+// `later` adds "Not yet" to a payment that needs the Admin: it puts the payment off until a time the Admin chooses (see paymentReminders.js).
 // `onReminded` is called once that is done, so the screen can decide where focus goes when the payment has left it.
 export default function PaymentActions({ booking, refresh, only, compact = false, short = compact, later = false, onReminded }) {
   const [confirmation, setConfirmation] = useState(null)

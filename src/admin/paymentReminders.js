@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { dateLabel, shiftDate } from './calendarPresentation.js'
 
-// "Not yet": a payment the Admin cannot settle yet is put off until a time she chooses. Nothing about the booking or the client changes, so the
+// "Not yet": a payment the Admin cannot settle yet is put off until a time the Admin chooses. Nothing about the booking or the client changes, so the
 // reminder is kept on this device only. If the device ever forgets it, the payment simply comes back into "Needs you", which is the safe way to be wrong.
 const KEY = 'vad-admin-payment-reminders'
 const MORNING = 9 * 60
@@ -25,7 +25,7 @@ const shortDate = date => dateLabel(date, { weekday: 'short', day: 'numeric', mo
 // When the appointment starts.
 export const startOf = booking => londonInstant(booking.date, booking.start_minutes)
 
-// When she can be reminded: in three hours, tomorrow morning, or the morning before the appointment. Never after the appointment has started,
+// When a reminder can be set: in three hours, tomorrow morning, or the morning before the appointment. Never after the appointment has started,
 // because that is when the decision matters, and only the choices that are still ahead.
 export function reminderChoices(booking, now = Date.now()) {
   const starts = startOf(booking)

@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase.js'
 
 // Messages written for the Admin on the server. Anything else becomes a generic line.
-const SAFE_MESSAGES = new Set([
+export const SAFE_MESSAGES = new Set([
   'Another client already uses this email or phone.',
   'An existing client uses this email or phone. Select that client instead.',
   'Name and a valid email or phone are required',
@@ -9,6 +9,13 @@ const SAFE_MESSAGES = new Set([
   'Two clients who each have their own login cannot be combined.',
   'The client with the login is the one that stays.',
   'One of these clients is no longer there. They may already have been combined.',
+  // Deleting a client
+  'That client is no longer there. They may already have been deleted or combined.',
+  'This client has bookings, so they cannot be deleted. Bookings, payments and receipts are your records.',
+  'This client has a repeating booking, so they cannot be deleted.',
+  'Someone is in the middle of booking right now. Try again in a few minutes.',
+  'This client is signed in as an Admin, so they cannot be deleted here.',
+  'Something changed while you were deciding. Please look at the question again.',
 ])
 const GENERIC = 'Could not complete that. Please check your connection and try again.'
 const failure = error => new Error(SAFE_MESSAGES.has(error?.message) ? error.message : GENERIC)
@@ -57,6 +64,10 @@ export function createClientsApi(client) {
     combinePreview: (a, b) => run(client.rpc('admin_combine_preview', { p_client_a: a, p_client_b: b })),
     keepSeparate: (a, b) => run(client.rpc('admin_keep_clients_separate', { p_client_a: a, p_client_b: b })),
     combine: (keepId, removeId, requestId) => run(client.rpc('admin_merge_clients', { p_keep_client_id: keepId, p_remove_client_id: removeId, p_request_id: requestId })),
+    // Deleting a client who has no bookings: what the database says about it first, then the deletion itself, which carries what the
+    // question said would go (see deleteScope) and is refused if anything about that changed in between.
+    deleteCheck: id => run(client.rpc('admin_client_delete_check', { p_client_id: id })),
+    deleteClient: (id, requestId, expected) => run(client.rpc('admin_delete_client', { p_client_id: id, p_request_id: requestId, p_expected: expected })),
     notes: id => run(client.from('client_notes').select('id,note,created_at').eq('client_id', id).order('created_at', { ascending: false }).limit(100)),
     async addNote(id, note) {
       const { data: user } = await client.auth.getUser()

@@ -3,6 +3,7 @@ import Calendar from './Calendar.jsx'
 import { useUnreadAlerts } from './useUnreadAlerts.js'
 import { useToCheck } from './useToCheck.js'
 import { today } from './calendarPresentation.js'
+import { forgetDraftFor } from './adminBookingDraft.js'
 import Icon from '../ui/icons.jsx'
 import ToastHost from '../ui/ToastHost.jsx'
 import './agenda.css'
@@ -175,7 +176,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {creating && <AdminNewBooking initialDate={date} initialClientId={clientParam} ownerId={ownerId} registerGuard={registerGuard} onCancel={() => navigate(route.returnTo || '/admin')} onCreated={created} />}
       {surface === '/admin/review' && <PaymentReview openBooking={openBooking} revision={revision} changed={refreshToCheck} />}
       {surface === '/admin/clients' && <Clients openClient={id => navigate(`/admin/clients/${id}`)} openCombine={openCombine} />}
-      {profile && <ClientProfile key={profile[1]} id={profile[1]} back={() => navigate('/admin/clients')} openBooking={openBooking} newBooking={clientId => newBooking(today(), clientId)} openCombine={openCombine} />}
+      {profile && <ClientProfile key={profile[1]} id={profile[1]} back={() => navigate('/admin/clients')} openBooking={openBooking} newBooking={clientId => newBooking(today(), clientId)} openCombine={openCombine} onDeleted={deletedId => { forgetDraftFor(ownerId, deletedId); refreshAlerts() }} />}
       {combining && <CombineClients key={`${pairA}:${pairB}`} a={pairA} b={pairB} back={() => navigate('/admin/clients')} openClient={id => navigate(`/admin/clients/${id}`)} resolved={refreshAlerts} />}
       {surface === '/admin/alerts' && <Alerts openBooking={openBooking} openPage={path => navigate(path)} changed={refreshAlerts} />}
       {surface === '/admin/more' && <section className="admin-review"><h1>More</h1>
