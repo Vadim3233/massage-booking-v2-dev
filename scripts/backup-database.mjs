@@ -47,7 +47,8 @@ function readDbUrl() {
   if (fromSetting) return fromSetting
   const file = path.join(os.homedir(), '.vad-backup', 'db-url.txt')
   if (!existsSync(file)) throw new Error(`No connection string found. Save it as the first line of ${file} (the steps are in docs/SAFETY_NET.md).`)
-  const line = readFileSync(file, 'utf8').split(/\r?\n/).map(l => l.trim()).find(l => l && !l.startsWith('#'))
+  // Older Notepad versions can put an invisible byte-order mark at the start of a saved file.
+  const line = readFileSync(file, 'utf8').replace(/^﻿/, '').split(/\r?\n/).map(l => l.trim()).find(l => l && !l.startsWith('#'))
   if (!line) throw new Error(`${file} is empty.`)
   return line
 }

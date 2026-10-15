@@ -29,6 +29,10 @@ export function parseDbUrl(raw) {
   if (/\[YOUR-PASSWORD\]|\[PASSWORD\]|<password>/i.test(text)) {
     throw new Error('The connection string still has the [YOUR-PASSWORD] placeholder. Put the real database password in its place.')
   }
+  // Supabase writes the placeholder as [YOUR-PASSWORD]; keeping the brackets around the real password is an easy mistake.
+  if (/^[a-z][a-z0-9+.-]*:\/\/[^:/@\s]*:\[.*\]@/i.test(text)) {
+    throw new Error('The password is still inside square brackets [ ]. The brackets belong to the [YOUR-PASSWORD] placeholder, not to the password: remove them and keep only the password.')
+  }
   let url
   try {
     url = new URL(text)

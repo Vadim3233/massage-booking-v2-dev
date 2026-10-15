@@ -46,6 +46,20 @@ describe('parseDbUrl', () => {
     expect(() => parseDbUrl('postgresql://postgres.abc:[YOUR-PASSWORD]@host.example:5432/postgres')).toThrow(/placeholder/)
   })
 
+  it('tells the owner when the real password is still wrapped in the placeholder brackets, without printing it', () => {
+    const wrapped = 'postgresql://postgres.abcdefgh:[s3cretpass]@aws-0-eu-west-1.pooler.supabase.com:5432/postgres'
+    expect(() => parseDbUrl(wrapped)).toThrow(/square brackets/)
+    try {
+      parseDbUrl(wrapped)
+    } catch (error) {
+      expect(error.message).not.toContain('s3cretpass')
+    }
+  })
+
+  it('does not mistake a password that merely contains a bracket for the wrapped mistake', () => {
+    expect(parseDbUrl('postgresql://postgres.abcdefgh:pa[ss@aws-0-eu-west-1.pooler.supabase.com:5432/postgres').password).toBe('pa[ss')
+  })
+
   it.each([
     ['', /empty/],
     ['   ', /empty/],
