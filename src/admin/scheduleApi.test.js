@@ -184,3 +184,32 @@ describe('what is sent to the database', () => {
     await expect(createScheduleApi(client).weekly()).rejects.toThrow('Could not save. Please check your connection and try again.')
   })
 })
+
+describe('the bookings that a change to the hours would leave outside them', () => {
+  // The database counts the travel time around every booking, an hour either side. For the hours of a day that is too strict: the first booking
+  // often starts as the hours do, with its travel before them, and that is not a clash. Only a booking that is itself in the time asked about is.
+  const booking = (start, minutes, extra = {}) => ({ booking_id: `b-${start}`, client_name: 'Ava CO', start_minutes: start, treatment_duration_minutes: minutes, booking_status: 'confirmed', ...extra })
+  const ask = (rows, from, to) => createScheduleApi({ rpc: async () => ({ data: rows, error: null }) }).conflicts('2031-01-02', from, to)
+
+  it('does not count the travel around a booking that is itself inside the hours', async () => {
+    // 14:30 for an hour, in hours of 14:30 to 17:00: its travel before it (13:30) and after it (16:30) is outside, the booking is not.
+    expect(await ask([booking(870, 60)], 0, 870)).toEqual([])
+    expect(await ask([booking(870, 60)], 1020, 1440)).toEqual([])
+  })
+  it('counts a booking that is itself in the time asked about, including when it only touches its edge from inside', async () => {
+    expect(await ask([booking(870, 60)], 0, 900)).toHaveLength(1)
+    expect(await ask([booking(870, 60)], 900, 1440)).toHaveLength(1)
+    expect(await ask([booking(0, 60)], 0, 1440)).toHaveLength(1)
+  })
+  it('does not count a booking that ends exactly where the time asked about begins, or begins exactly where it ends', async () => {
+    expect(await ask([booking(870, 60)], 930, 1440)).toEqual([])
+    expect(await ask([booking(870, 60)], 0, 870)).toEqual([])
+  })
+  it('keeps the bookings that are really outside, in order, and drops only the ones counted for their travel', async () => {
+    const rows = [booking(540, 60), booking(870, 60, { booking_id: 'inside' })]
+    expect((await ask(rows, 0, 870)).map(row => row.booking_id)).toEqual(['b-540'])
+  })
+  it('says nothing is in the way when the database finds nothing', async () => {
+    expect(await ask([], 0, 1440)).toEqual([])
+  })
+})
