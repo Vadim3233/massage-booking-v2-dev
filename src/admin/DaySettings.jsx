@@ -6,6 +6,8 @@ import { bookingsLine, dayState, hoursChanged, isDate, isDirty, settingsLine, wo
 import { blockTitle } from './agendaDays.js'
 import { HoursFields } from './HoursFields.jsx'
 import BookingCard from './BookingCard.jsx'
+import CancelledToggle from './CancelledToggle.jsx'
+import { listedBookings, useShowCancelled } from './cancelledBookings.js'
 import { dateLabel, shiftDate, time, today } from './calendarPresentation.js'
 import './daySettings.css'
 
@@ -26,6 +28,7 @@ export default function DaySettings({ date, revision, openBooking, changed, api 
   const [message, setMessage] = useState('')
   const [conflicts, setConflicts] = useState(null)
   const [blockDialog, setBlockDialog] = useState(null)
+  const [showCancelled, setShowCancelled] = useShowCancelled()
   const confirmed = useRef(false)
   // Putting a day back to the usual week removes its own settings, so it is asked first. The question takes focus, on the safe answer.
   const [confirmingUsual, setConfirmingUsual] = useState(false)
@@ -158,11 +161,12 @@ export default function DaySettings({ date, revision, openBooking, changed, api 
 
       <section aria-labelledby="day-bookings-title" className="admin-day-settings-section">
         <h2 id="day-bookings-title">Bookings</h2>
-        {data.bookings.length > 0
-          ? <ol role="list" className="admin-timeline" aria-label={`Bookings for ${full}`}>{data.bookings.map(booking => <li key={booking.id} className="admin-timeline-row admin-timeline-booking">
+        {listedBookings(data.bookings, showCancelled).length > 0
+          ? <ol role="list" className="admin-timeline" aria-label={`Bookings for ${full}`}>{listedBookings(data.bookings, showCancelled).map(booking => <li key={booking.id} className="admin-timeline-row admin-timeline-booking">
             <BookingCard booking={booking} open={() => openBooking(booking.id)} now={new Date()} />
           </li>)}</ol>
           : <p>No bookings on this day.</p>}
+        <CancelledToggle bookings={data.bookings} on={showCancelled} change={setShowCancelled} />
       </section>
     </>}
     {blockDialog && <Suspense fallback={null}><BlockDialog date={blockDialog.date} block={blockDialog.block} close={() => setBlockDialog(null)} saved={blocksChanged} /></Suspense>}

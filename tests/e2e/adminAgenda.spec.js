@@ -9,6 +9,8 @@ test.beforeEach(async () => { f = await adminFixture(5) })
 test.afterEach(async () => { for (const step of undo.splice(0).reverse()) await step(); await f?.cleanup() })
 
 async function login(page) {
+  // These tests are about the cards, so cancelled bookings are asked for here (the Agenda leaves them out unless they are); the default is tested in adminCancelledSwitch.spec.js.
+  await page.addInitScript(() => localStorage.setItem('vad-admin-agenda-show-cancelled', '1'))
   await page.goto('/admin/agenda')
   await page.getByLabel('Email', { exact: true }).fill(f.email)
   await page.getByLabel('Password', { exact: true }).fill(f.password)

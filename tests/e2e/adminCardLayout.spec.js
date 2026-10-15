@@ -15,6 +15,8 @@ test.afterEach(async () => {
 })
 
 async function login(page, path = '/admin/agenda') {
+  // These tests are about the cards, so cancelled bookings are asked for here (the Agenda leaves them out unless they are); the default is tested in adminCancelledSwitch.spec.js.
+  await page.addInitScript(() => localStorage.setItem('vad-admin-agenda-show-cancelled', '1'))
   await page.goto(path)
   await page.getByLabel('Email', { exact: true }).fill(f.email)
   await page.getByLabel('Password', { exact: true }).fill(f.password)

@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase.js'
 import { createCalendarApi } from './calendarApi.js'
 import { useQuietRetry, useReturnRefresh } from './useReturnRefresh.js'
 import BookingCard from './BookingCard.jsx'
+import CancelledToggle from './CancelledToggle.jsx'
+import { listedBookings, useShowCancelled } from './cancelledBookings.js'
 import { dateLabel, dayTimeline, shiftDate, time, today } from './calendarPresentation.js'
 const BlockDialog = lazy(() => import('./BlockDialog.jsx'))
 const api = createCalendarApi(supabase)
@@ -27,6 +29,7 @@ export default function Calendar({ signOut, openBooking, openDay, revision, init
   const [headerHidden, setHeaderHidden] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   const [blockDialog, setBlockDialog] = useState(null)
+  const [showCancelled, setShowCancelled] = useShowCancelled()
   // The day on screen is the day a new booking starts on, so the page that owns the New booking button needs to know it.
   useEffect(() => { onDate?.(date); return () => onDate?.(undefined) }, [date, onDate])
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(timer) }, [])
@@ -62,7 +65,9 @@ export default function Calendar({ signOut, openBooking, openDay, revision, init
   useReturnRefresh(reread)
   const data = loaded?.date === date ? loaded.data : null
   const failed = failure?.date === date
-  const timeline = data && dayTimeline(data, date, now)
+  // Cancelled bookings are left out unless asked for (the choice made in the Agenda), so a day's free time reads as one stretch.
+  const listed = data && listedBookings(data.bookings, showCancelled)
+  const timeline = data && dayTimeline({ ...data, bookings: listed }, date, now)
   function navigate(value) { if (!value) return; setDate(value); setHeaderHidden(false) }
   return <>
     <header className={`admin-header ${headerHidden && !accountOpen ? 'is-hidden' : ''}`} onFocusCapture={() => setHeaderHidden(false)}>
@@ -97,7 +102,8 @@ export default function Calendar({ signOut, openBooking, openDay, revision, init
       {failed && <div role={data ? 'status' : 'alert'} className="error"><p>{data ? 'Could not refresh the calendar just now.' : 'Could not load calendar. Please check your connection and try again.'}</p><button className="btn--small" onClick={() => { quiet.asked(); reread() }}>{data ? 'Try again' : 'Retry calendar'}</button></div>}
       {data && <>
         <p className="admin-working-hours">{timeline.hours?.available ? `Working hours ${time(timeline.hours.start_minutes)}–${time(timeline.hours.end_minutes)}` : 'Not a working day'}</p>
-        {!data.bookings.length && <p className="admin-day-note">No appointments for this day.</p>}
+        {!listed.length && <p className="admin-day-note">No appointments for this day.</p>}
+        <CancelledToggle bookings={data.bookings} on={showCancelled} change={setShowCancelled} />
         <ol role="list" className="admin-timeline" aria-label="Day timeline">
           {timeline.rows.map(row => <li key={`${row.kind}-${row.id}`} className={`admin-timeline-row admin-timeline-${row.kind}`} data-start={row.start}>
             {row.kind === 'booking' ? <BookingCard booking={row.booking} open={() => openBooking(row.booking.id)} now={new Date(now)} /> : row.kind === 'block' && row.block.kind !== 'series_hold' ? <button className="admin-timeline-entry block admin-block-button" onClick={() => setBlockDialog({ date, block: row.block })}>
