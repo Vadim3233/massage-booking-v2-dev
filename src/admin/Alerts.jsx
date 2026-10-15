@@ -35,7 +35,15 @@ export default function Alerts({ openBooking, openPage, changed, api = alertsApi
   async function open(group) {
     const alert = group.head
     const id = bookingIdFromLink(alert.link_path)
-    if (group.unreadIds.length) { try { await api.markRead(group.unreadIds); changed() } catch { /* Opening the booking still works. */ } }
+    if (group.unreadIds.length) {
+      try {
+        await api.markRead(group.unreadIds)
+        // The row stops saying "New" at once, rather than waiting for the list to be read again.
+        const readAt = new Date().toISOString()
+        setAlerts(list => list?.map(item => group.unreadIds.includes(item.id) ? { ...item, read_at: readAt } : item))
+        changed()
+      } catch { /* Opening the booking still works. */ }
+    }
     const page = adminPageFromLink(alert.link_path)
     if (id) openBooking(id)
     else if (page) openPage?.(page)
