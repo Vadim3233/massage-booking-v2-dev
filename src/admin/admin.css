@@ -44,16 +44,18 @@
 .admin-agenda-sentinel { height: 1px; }
 
 /* The strip that says what needs the Admin, first thing */
-.admin-tocheck { margin: 8px 0 14px; padding: 16px; border-radius: var(--radius); background: var(--needs-bg); box-shadow: inset 0 0 0 1.5px rgb(178 107 0 / .28); }
-.admin-tocheck .eyebrow { color: var(--needs-ink); }
-.admin-tocheck h2 { font: 600 22px/1.2 var(--font-display); font-variant-numeric: lining-nums; color: #3f2700; }
-.admin-tocheck ul { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
-.admin-tocheck li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px 12px; padding: 12px; border-radius: 12px; background: rgb(255 255 255 / .82); }
-.admin-tocheck li strong { font-size: 16px; }
-.admin-tocheck li .when { grid-column: 1; color: var(--ink-soft); font-size: 14px; }
-.admin-tocheck li .admin-payment-actions { grid-column: 2; grid-row: 1 / span 2; }
-.admin-tocheck-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.admin-tocheck-head .more { display: inline-flex; align-items: center; min-height: 44px; margin: -14px -6px -14px 0; padding: 0 6px; font-weight: 600; color: #3f2700; }
+/* Needs you: one short header, then a row for each payment with "Not yet" beside the button that settles it. A row's buttons drop under its words on a very narrow phone. */
+.admin-tocheck { margin: 6px 0 10px; padding: 8px 12px 4px; border-radius: var(--radius); background: var(--needs-bg); box-shadow: inset 0 0 0 1.5px rgb(178 107 0 / .28); }
+.admin-tocheck h2 { margin: 0; font: 600 16px/1.3 var(--font-display); font-variant-numeric: lining-nums; color: #3f2700; }
+.admin-tocheck ul { list-style: none; margin: 4px 0 0; padding: 0; }
+.admin-tocheck li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; padding: 6px 0; border-top: 1px solid rgb(178 107 0 / .25); }
+.admin-tocheck li:first-child { border-top: 0; }
+.admin-tocheck-who { display: grid; flex: 1 1 110px; gap: 1px; min-width: 0; }
+.admin-tocheck-who strong { font-size: 15.5px; overflow-wrap: anywhere; }
+.admin-tocheck .when { color: var(--ink-soft); font-size: 12.5px; line-height: 1.3; }
+.admin-tocheck .admin-payment-actions { flex: 0 0 auto; margin-left: auto; }
+.admin-tocheck-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.admin-tocheck-head .more { display: inline-flex; align-items: center; min-height: 44px; margin: -8px -6px -8px 0; padding: 0 6px; font-size: 14px; font-weight: 600; white-space: nowrap; color: #3f2700; }
 
 /* ---------- Day and agenda rows ---------- */
 .admin-timeline { list-style: none; padding: 0; margin: 0; }
@@ -327,8 +329,12 @@
 .admin-details .close-x { font-size: 22px; line-height: 1; margin-right: 2px; }
 .admin-review-item > a { gap: 2px; }
 .admin-review-item .admin-payment-actions { margin: 8px 0 2px; }
-.admin-tocheck .admin-payment-buttons { margin: 0; }
-.admin-tocheck .btn--small { min-height: 48px; padding-inline: 18px; }
+.admin-tocheck .admin-payment-buttons { flex-wrap: nowrap; gap: 8px; margin: 0; }
+.admin-tocheck .btn--small { min-height: 44px; padding-inline: 14px; }
+/* "Not yet": an amber outline, quieter than the button that settles the payment and clearly not the one that cancels it. */
+:is(.booking-shell, .admin-shell) .btn--later { border-color: #8a6a2c; background: transparent; color: var(--needs-ink); }
+:is(.booking-shell, .admin-shell) .btn--later:not(:disabled):hover { background: rgb(178 107 0 / .12); }
+.admin-review-item .btn--later { grid-column: 1 / -1; }
 @media (max-width: 767px) {
   .admin-confirm .admin-payment-buttons { flex-direction: column; }
 }
@@ -341,9 +347,6 @@
 .admin-fab .fab-label { display: inline-block; max-width: 160px; overflow: hidden; white-space: nowrap; transition: max-width var(--dur) var(--ease), opacity var(--dur) var(--ease); }
 .admin-fab.is-compact { padding: 0 18px; }
 .admin-fab.is-compact .fab-label { max-width: 0; opacity: 0; }
-.admin-tocheck li { padding: 10px 12px; }
-.admin-tocheck li .when { font-size: 13px; line-height: 1.35; }
-.admin-tocheck h2 { font-size: 21px; }
 .admin-review-item .admin-payment-buttons { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; }
 .admin-review-item .admin-payment-buttons:has(> :only-child) { grid-template-columns: 1fr; }
 .admin-review-item { padding-bottom: 8px; }

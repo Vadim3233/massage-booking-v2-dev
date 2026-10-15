@@ -7,7 +7,7 @@ Updated 2026-10-13. This is written for the owner, in plain words. Almost nothin
 Both sides were redesigned as one product; the rules (availability, travel buffers, payments, cancellation) did not change and nothing in the database changed.
 
 - **Booking page**: tap a length and you go straight to choosing a time; the time page opens on the first day with room and shows the days before it as full; looking at other days never lets go of a time that is held; the review is a ticket with preferences and extras tucked away and a price that updates by itself; "Continue as guest" is the big button, with "Sign in with email" and "Create an account" plainly under it, and a guest can change their mind on the details screen; a confirmed appointment can be added to a phone's calendar; a regular client is offered "Book your usual"; "Book another appointment" starts afresh.
-- **Admin**: a tab bar at the bottom (a rail on a wide screen) with a number on To check and Alerts; the Agenda opens with a "Needs you" strip where Verify and Approve are one tap and one confirmation away; the next appointment is tagged Now or Next; alerts about one booking are one card; New booking is one numbered page where treatment and length are tapped; clients show their initials; more buttons say what they do ("Cancel unpaid booking").
+- **Admin**: a tab bar at the bottom (a rail on a wide screen) with a number on To check and Alerts; the Agenda opens with a short "Needs you" strip where Verify and Approve are one tap and one confirmation away, and **Not yet** puts a payment you cannot settle off until a time you choose; the next appointment is tagged Now or Next; alerts about one booking are one card; New booking is one numbered page where treatment and length are tapped; clients show their initials; more buttons say what they do ("Cancel unpaid booking").
 - **Directions from the Agenda**: every appointment still to come, in the Agenda and the Day view, has a Directions button beside its status that opens the way to the address in Google Maps. Cancelled and finished appointments do not.
 - **Alerts by day**: alerts sit under the day they came in (Today, Yesterday, then the date) with the day heading in sight while you scroll, and each card shows just the time.
 - **To check by day**: payments to check sit under the day of their appointment (Today, Tomorrow, then the date), soonest first, and each day's heading says how much needs you that day.
@@ -86,6 +86,16 @@ Press **Day settings** on any day in the Agenda, or in the Day view beside Block
 - **Warns, never moves.** If different hours leave a booking outside them, you are told which and can save anyway. Nothing is moved or cancelled for you.
 - **A day that has passed** can be looked at but not changed.
 - **No database change of its own.** Saving a day writes the release time and schedule mode, so it needs the two database changes above (`20261030100000_anchor_release.sql`, then `20261031100000_schedule_mode.sql`), which are already online (2026-10-15). On a project without them, saving shows "Could not save".
+
+## New: Not yet, and a tighter Agenda (2026-10-15)
+
+**Not yet** sits beside Verify or Approve in the Needs you box and on the To check page. Press it, choose when to be reminded (in 3 hours, tomorrow morning, or the morning before the appointment) and the payment leaves the box and the number on To check until then. It waits on the To check page as "Reminder set", with **Check now** to bring it back at once, and Undo in the message that appears.
+
+- **Nothing else changes.** The booking keeps its time, the client is told nothing, and nothing is cancelled or confirmed. A payment you can already settle can still be verified or approved from To check while it is put off.
+- **It comes back by itself** when its time comes, and at once if the booking or its payment changes (the client declaring again, say).
+- **Kept on the phone you used.** No database change. Another device (a laptop) does not know about it and still shows the payment as needing you; if a phone ever forgets, the payment simply comes back.
+- **It does not buzz your phone.** The reminder shows the next time you open the Admin.
+- **Thinner Agenda.** Booking cards use the full width with their time inside, and are a little thinner; each day's heading is one line with a clock icon that opens Day settings (it stays pinned at the top while you scroll, so it was cut from 102px to 48px); the Needs you box is about a third shorter.
 
 ## What works now (tested locally)
 

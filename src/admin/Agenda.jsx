@@ -62,21 +62,27 @@ function readShowEvery() {
   try { return localStorage.getItem(SHOW_EVERY_KEY) === '1' } catch { return false }
 }
 
-// What needs the Admin, first thing: declared transfers and cash requests, each one tap and a confirmation away.
+// What needs the Admin, first thing: declared transfers and cash requests, each one tap and a confirmation away, or "Not yet" to be reminded later.
+// A payment put off leaves this box; focus then goes to the box's heading, or to the page's own when nothing is left in it.
 function ToCheck({ toCheck, checked, seeAll }) {
   if (!toCheck?.needs.length) return null
   const shown = toCheck.needs.slice(0, 2)
   const count = toCheck.needs.length
+  const moved = () => requestAnimationFrame(() => {
+    const target = document.getElementById('tocheck-title') ?? [...document.querySelectorAll('#admin-main h1')].find(item => item.getClientRects().length > 0)
+    if (target) { target.setAttribute('tabindex', '-1'); target.focus({ preventScroll: true }) }
+  })
   return <section className="admin-tocheck" aria-labelledby="tocheck-title">
     <div className="admin-tocheck-head">
-      <p className="eyebrow">Needs you</p>
+      <h2 id="tocheck-title">Needs you · {count} {count === 1 ? 'payment' : 'payments'} to check · {money(toCheck.total)}</h2>
       {count > shown.length && <button className="btn--quiet admin-link-button more" onClick={seeAll}>See all {count}</button>}
     </div>
-    <h2 id="tocheck-title">{count} {count === 1 ? 'payment' : 'payments'} to check · {money(toCheck.total)}</h2>
     <ul role="list">{shown.map(booking => <li key={booking.id}>
-      <strong>{clientName(booking)}</strong>
-      <span className="when">{dateLabel(booking.date)} · {time(booking.start_minutes)} · {booking.booking_payments.method === 'cash' ? 'Cash request' : 'Bank transfer'} · {money(booking.total_gbp)}</span>
-      <PaymentActions booking={booking} refresh={checked} only={['verify', 'approve']} compact />
+      <div className="admin-tocheck-who">
+        <strong>{clientName(booking)}</strong>
+        <span className="when">{dateLabel(booking.date)} · {time(booking.start_minutes)} · {booking.booking_payments.method === 'cash' ? 'Cash request' : 'Bank transfer'} · {money(booking.total_gbp)}</span>
+      </div>
+      <PaymentActions booking={booking} refresh={checked} only={['verify', 'approve']} compact later onReminded={moved} />
     </li>)}</ul>
   </section>
 }
