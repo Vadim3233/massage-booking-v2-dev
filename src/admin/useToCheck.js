@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { loadReviewResource, needsYou, paymentReviewApi } from './paymentReviewApi.js'
 import { activeReminder, useReminders } from './paymentReminders.js'
 
-// What needs the Admin right now: transfers the client says they made, and cash requests to decide, except the ones she has put off with "Not yet"
+// What needs the Admin right now: transfers the client says they made, and cash requests to decide, except the ones put off with "Not yet"
 // until their time. Bookings still waiting for the client to pay are counted apart, because nothing is asked of the Admin yet.
 export function summariseToCheck(bookings, reminders = {}, now = Date.now()) {
   const asking = bookings.filter(needsYou)
