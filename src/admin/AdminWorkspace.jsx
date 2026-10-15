@@ -139,12 +139,18 @@ export default function AdminWorkspace({ signOut, ownerId }) {
     headingFocusWanted.current = false
     if (before === null || before === screen) return
     if (!headingWanted && (before === 'Booking' || screen === 'Booking')) return
-    const focusHeading = (tries = 0) => {
-      const heading = document.querySelector('#admin-main h1')
+    // Most pages load a moment after they are opened, and the page being left stays in place, hidden, until then. So the heading to take focus is
+    // the first one that can be seen, and the wait for it is measured in time, because a phone on a slow connection can take seconds to fetch a page.
+    const started = performance.now()
+    let stopped = false
+    const focusHeading = () => {
+      if (stopped) return
+      const heading = [...document.querySelectorAll('#admin-main h1')].find(item => item.getClientRects().length > 0)
       if (heading) { heading.setAttribute('tabindex', '-1'); heading.focus({ preventScroll: true }) }
-      else if (tries < 30) requestAnimationFrame(() => focusHeading(tries + 1))
+      else if (performance.now() - started < 8000) requestAnimationFrame(focusHeading)
     }
     focusHeading()
+    return () => { stopped = true }
   }, [screen])
   const needsYou = toCheck.needs.length
   return <>
