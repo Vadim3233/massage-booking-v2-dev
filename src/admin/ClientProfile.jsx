@@ -5,6 +5,9 @@ import { clientContactLinks } from './contactLinks.js'
 import { dateLabel, label, money, time } from './calendarPresentation.js'
 import ClientRepeats from './ClientRepeats.jsx'
 import CombinePicker from './CombinePicker.jsx'
+import DeleteClient from './DeleteClient.jsx'
+import { deletedMessage } from './clientDelete.js'
+import { toast } from '../ui/toast.js'
 
 const PAGE = 15
 const stamp = value => new Date(value).toLocaleDateString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', year: 'numeric' })
@@ -124,7 +127,7 @@ function History({ clientId, api, openBooking, version }) {
   </section>
 }
 
-export default function ClientProfile({ id, back, openBooking, newBooking, openCombine, api = clientsApi }) {
+export default function ClientProfile({ id, back, openBooking, newBooking, openCombine, onDeleted, api = clientsApi }) {
   const [client, setClient] = useState(null)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(false)
@@ -168,5 +171,6 @@ export default function ClientProfile({ id, back, openBooking, newBooking, openC
         ? <CombinePicker clientId={id} openCombine={openCombine} close={() => setCombining(false)} api={api} />
         : <button className="btn--tonal" onClick={() => setCombining(true)}>Combine with another client…</button>}
     </section>}
+    <DeleteClient client={client} api={api} deleted={name => { toast(deletedMessage(name)); onDeleted?.(id); back() }} />
   </section>
 }
