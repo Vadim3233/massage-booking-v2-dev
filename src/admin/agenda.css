@@ -1,13 +1,10 @@
-.admin-calendar-views { display: flex; gap: 6px; padding: 8px; background: var(--paper); border-bottom: 1px solid var(--line); }
-.admin-calendar-views a { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; min-width: 88px; padding: 4px 14px; border: 1px solid #cfd8d1; border-radius: 999px; color: var(--ink); text-decoration: none; background: white; font-size: 14px; font-weight: 600; }
-.admin-calendar-views a[aria-current="page"] { background: var(--ink); border-color: var(--ink); color: white; }
 
 .admin-agenda { padding: 8px 16px 28px; }
 .admin-agenda-days { margin: 8px 0; }
 .admin-agenda-day { padding: 14px 0 18px; border-top: 1px solid var(--line); }
 .admin-agenda-day-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .admin-agenda-day-heading h2 { margin: 0; font-size: 17px; line-height: 1.3; }
-.admin-agenda-day-heading span { color: #596b63; font-size: 12px; white-space: nowrap; }
+.admin-agenda-day-heading span { color: var(--muted); font-size: 12px; white-space: nowrap; }
 /* Day settings: a quiet button on each day. It drops below the heading when there is no room beside it. */
 .admin-agenda-day-heading { flex-wrap: wrap; row-gap: 2px; }
 .admin-agenda-day-heading .admin-day-settings-button { margin-left: auto; min-height: 44px; gap: 6px; color: var(--primary); font-size: 14px; font-weight: 600; white-space: nowrap; }
@@ -30,12 +27,12 @@
 .admin-agenda-options { display: flex; flex-direction: column; align-items: flex-start; gap: 0; margin: 0 0 2px; }
 .admin-agenda-switches { display: flex; flex-wrap: nowrap; align-items: center; gap: 0 10px; max-width: 100%; }
 /* Day settings for any date, even one the list does not show: a native date field laid invisibly over a button-looking label. */
-.admin-agenda-pick { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid #cfd8d1; border-radius: 999px; background: var(--surface); color: var(--primary); font-size: 14px; font-weight: 600; cursor: pointer; }
+.admin-agenda-pick { position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid var(--tile-border); border-radius: var(--radius-pill); background: var(--surface); color: var(--primary); font-size: 14px; font-weight: 600; cursor: pointer; }
 .admin-agenda-pick input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
 .admin-agenda-pick:has(:focus-visible) { outline: 3px solid var(--primary); outline-offset: 2px; }
 .admin-agenda-switch { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0; color: var(--ink); font-size: 13px; font-weight: 500; white-space: nowrap; cursor: pointer; }
-.admin-agenda-switch input { -webkit-appearance: none; appearance: none; position: relative; flex: 0 0 36px; width: 36px; height: 22px; margin: 0; border-radius: 11px; background: #6f7f77; cursor: pointer; }
-.admin-agenda-switch input::before { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform var(--dur-fast) var(--ease); }
+.admin-agenda-switch input { -webkit-appearance: none; appearance: none; position: relative; flex: 0 0 36px; width: 36px; height: 22px; margin: 0; border-radius: 11px; background: var(--control-border); cursor: pointer; }
+.admin-agenda-switch input::before { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--surface); transition: transform var(--dur-fast) var(--ease); }
 .admin-agenda-switch input:checked { background: var(--primary); }
 .admin-agenda-switch input:checked::before { transform: translateX(14px); }
 /* On a screen 340px wide or less the two together would run past the edge, so each is a little smaller there. */
@@ -52,16 +49,16 @@
 
 /* Time away: one calm banner for the whole block, which opens it to change or remove. */
 .admin-agenda-away { margin: 10px 0 4px; }
-.admin-agenda-away > button { display: flex; align-items: center; justify-content: flex-start; gap: 12px; width: 100%; min-height: 56px; padding: 10px 14px; border: 0; border-radius: 12px; background: var(--primary-soft); color: #17443a; text-align: left; }
+.admin-agenda-away > button { display: flex; align-items: center; justify-content: flex-start; gap: 12px; width: 100%; min-height: 56px; padding: 10px 14px; border: 0; border-radius: var(--radius-sm); background: var(--primary-soft); color: var(--primary-strong); text-align: left; }
 .admin-agenda-away-text { display: grid; gap: 2px; flex: 1 1 auto; min-width: 0; }
 .admin-agenda-away-text strong { font-size: 15px; font-weight: 600; }
-.admin-agenda-away-text span { font-size: 13px; font-weight: 400; color: #2f5448; }
+.admin-agenda-away-text span { font-size: 13px; font-weight: 400; color: var(--ink-soft); }
 .admin-agenda-away-change { flex: 0 0 auto; font-size: 13px; font-weight: 600; }
 
 /* What is special about a day that has bookings, in words under its date. */
 .admin-agenda-notes { display: grid; gap: 4px; margin: 0 0 8px; padding: 0; list-style: none; }
 .admin-agenda-notes li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; background: var(--needs-bg); color: var(--needs-ink); font-size: 13px; }
-.admin-agenda-notes li.is-away { background: var(--primary-soft); color: #17443a; }
+.admin-agenda-notes li.is-away { background: var(--primary-soft); color: var(--primary-strong); }
 .admin-agenda-notes li.is-off { background: var(--done-bg); color: var(--done-ink); }
 
 /* Days with nothing booked: one quiet line each, in smaller type. */
@@ -70,7 +67,7 @@
 .admin-agenda-quiet .when { flex: 0 0 92px; font-weight: 500; }
 .admin-agenda-quiet .what { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .admin-agenda-quiet li.is-special .what { color: var(--needs-ink); }
-.admin-agenda-quiet li.is-away .what, .admin-agenda-quiet li.is-away button { color: #2f5448; }
+.admin-agenda-quiet li.is-away .what, .admin-agenda-quiet li.is-away button { color: var(--primary-strong); }
 /* The date of a free day opens that day's settings; it is underlined so it reads as pressable. */
 .admin-agenda-quiet-date { flex: 0 0 100px; justify-content: flex-start; min-height: 44px; margin: -3px 0 -3px -8px; padding: 4px 8px; border: 0; background: transparent; color: var(--primary); font-size: 13px; font-weight: 600; text-align: left; text-decoration: underline; text-underline-offset: 3px; }
 /* A plain free day is one pressable line: the date, what it is, and an arrow. */
@@ -81,19 +78,14 @@
 .admin-agenda-quiet-day svg { flex: 0 0 auto; color: var(--primary); }
 .admin-agenda-quiet-button { justify-content: flex-start; min-height: 44px; margin: -3px 0 -3px -8px; padding: 4px 8px; border: 0; background: transparent; color: var(--ink-soft); font-size: 13px; font-weight: 400; text-align: left; }
 @media (hover: hover) {
-  .admin-agenda-away > button:hover { background: #d9e8df; }
+  .admin-agenda-away > button:hover { background: var(--primary-line); }
   .admin-agenda-quiet-button:hover, .admin-agenda-quiet-date:hover, .admin-agenda-quiet-day:hover { background: var(--primary-soft); }
 }
 @media (prefers-reduced-motion: reduce) {
   .admin-agenda-switch input::before { transition: none; }
 }
 
-@media (min-width: 360px) {
-  .admin-calendar-views { padding-inline: 12px; }
-}
-
 @media (min-width: 768px) {
-  .admin-calendar-views { padding-inline: 16px; }
   .admin-agenda { padding-inline: 16px; }
   .admin-agenda-load { width: auto; min-width: 220px; }
 }

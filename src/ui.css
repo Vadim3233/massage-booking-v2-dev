@@ -14,18 +14,18 @@
 @media (hover: hover) { :where(.booking-shell, .admin-shell) :where(button:not(:disabled, [aria-pressed=true], [aria-current], [aria-selected=true]):hover, a.btn:hover) { background: var(--primary-soft); } }
 :where(.booking-shell, .admin-shell) :where(button:not(:disabled):active) { transform: translateY(1px) scale(.992); }
 
-:is(.booking-shell, .admin-shell) .btn--primary { border-color: var(--primary); background: var(--primary); color: #fff; box-shadow: 0 6px 16px -8px rgb(30 86 70 / .65); }
+:is(.booking-shell, .admin-shell) .btn--primary { border-color: var(--primary); background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow-brand); }
 :is(.booking-shell, .admin-shell) .btn--primary:not(:disabled):hover { background: var(--primary-strong); border-color: var(--primary-strong); }
 :is(.booking-shell, .admin-shell) .btn--lg { min-height: 56px; font-size: 17px; padding-inline: 22px; }
 :is(.booking-shell, .admin-shell) .btn--block { display: flex; width: 100%; }
 :is(.booking-shell, .admin-shell) .btn--quiet { border-color: transparent; background: transparent; padding-inline: 10px; }
 :is(.booking-shell, .admin-shell) .btn--quiet:not(:disabled):hover { background: var(--primary-soft); }
 :is(.booking-shell, .admin-shell) .btn--tonal { border-color: transparent; background: var(--primary-soft); }
-:is(.booking-shell, .admin-shell) .btn--tonal:not(:disabled):hover { background: #d9e8df; }
+:is(.booking-shell, .admin-shell) .btn--tonal:not(:disabled):hover { background: var(--primary-line); }
 :is(.booking-shell, .admin-shell) .btn--danger { border-color: var(--danger); color: var(--danger); }
 :is(.booking-shell, .admin-shell) .btn--danger:not(:disabled):hover { background: var(--danger-soft); }
-:is(.booking-shell, .admin-shell) .btn--danger-solid { border-color: var(--danger); background: var(--danger); color: #fff; }
-:is(.booking-shell, .admin-shell) .btn--danger-solid:not(:disabled):hover { background: #74261f; border-color: #74261f; }
+:is(.booking-shell, .admin-shell) .btn--danger-solid { border-color: var(--danger); background: var(--danger); color: var(--on-primary); }
+:is(.booking-shell, .admin-shell) .btn--danger-solid:not(:disabled):hover { background: var(--danger-strong); border-color: var(--danger-strong); }
 :is(.booking-shell, .admin-shell) .btn--small { min-height: 44px; padding-inline: 14px; font-size: 15px; }
 :is(.booking-shell, .admin-shell) .btn--icon { width: 48px; padding: 0; }
 
@@ -39,18 +39,18 @@
 .chip--done { background: var(--done-bg); color: var(--done-ink); }
 .chip--cancel { background: var(--cancel-bg); color: var(--cancel-ink); }
 .chip--noshow { background: var(--noshow-bg); color: var(--noshow-ink); }
-.chip--fee { background: var(--danger); color: #fff; }
+.chip--fee { background: var(--danger); color: var(--on-primary); }
 .chip--info { background: var(--primary-soft); color: var(--primary); }
 
 /* ---------- Fields: the label above, a generous 48px control with a border that can be seen. ---------- */
 :where(.booking-shell, .admin-shell) :where(input:not([type=checkbox], [type=radio], [type=range], [type=file]), select, textarea) {
-  width: 100%; min-width: 0; min-height: 48px; padding: 10px 12px; border: 1.5px solid var(--field-border); border-radius: 12px;
+  width: 100%; min-width: 0; min-height: 48px; padding: 10px 12px; border: 1.5px solid var(--field-border); border-radius: var(--radius-sm);
   background: var(--surface); color: var(--ink); font: 400 16px/1.4 var(--font-ui);
   transition: border-color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
 :where(.booking-shell, .admin-shell) textarea { min-height: 96px; resize: vertical; }
 :where(.booking-shell, .admin-shell) :where(input, select, textarea):focus-visible { outline: 3px solid var(--primary); outline-offset: 1px; border-color: var(--primary); }
-:where(.booking-shell, .admin-shell) :where(input, select, textarea)::placeholder { color: #66756e; opacity: 1; }
+:where(.booking-shell, .admin-shell) :where(input, select, textarea)::placeholder { color: var(--muted); opacity: 1; }
 :where(.booking-shell, .admin-shell) :where(input[type=checkbox], input[type=radio]) { width: 24px; height: 24px; accent-color: var(--primary); flex-shrink: 0; }
 .admin-field, .field { display: grid; gap: 6px; font-size: 14px; font-weight: 600; color: var(--ink); margin: 12px 0; }
 .field-hint, .admin-detail-hint { font-size: 13px; font-weight: 400; color: var(--muted); line-height: 1.45; }
@@ -60,47 +60,48 @@
 :where(.booking-shell, .admin-shell) :is(h1, h2)[tabindex="-1"]:focus { outline: none; }
 
 /* A link that jumps past the navigation, for keyboard users: it appears when it has focus. */
-.skip-link { position: absolute; left: 12px; top: -60px; z-index: 100; padding: 12px 16px; border-radius: 12px; background: var(--primary); color: #fff; font-weight: 600; text-decoration: none; }
+.skip-link { position: absolute; left: 12px; top: -60px; z-index: 100; padding: 12px 16px; border-radius: var(--radius-sm); background: var(--primary); color: var(--on-primary); font-weight: 600; text-decoration: none; }
 .skip-link:focus { top: 12px; }
 
 /* Text for screen readers only. */
 .sr-only, .admin-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 
 /* ---------- Messages that need to be seen ---------- */
-.error { margin: 14px 0; padding: 12px 14px; border-left: 4px solid var(--danger-line); border-radius: 12px; background: var(--danger-soft); color: var(--danger); font-weight: 500; overflow-wrap: anywhere; }
+.error { margin: 14px 0; padding: 12px 14px; border-left: 4px solid var(--danger-line); border-radius: var(--radius-sm); background: var(--danger-soft); color: var(--danger); font-weight: 500; overflow-wrap: anywhere; }
 :where(button, a, summary, label, select, input) { touch-action: manipulation; }
 .error p { margin: 0 0 10px; }
 .error p:last-child { margin-bottom: 0; }
-.notice { margin: 14px 0; padding: 12px 14px; border-left: 4px solid var(--ok-rail); border-radius: 12px; background: var(--ok-bg); color: var(--ok-ink); font-weight: 500; }
+.notice { margin: 14px 0; padding: 12px 14px; border-left: 4px solid var(--ok-rail); border-radius: var(--radius-sm); background: var(--ok-bg); color: var(--ok-ink); font-weight: 500; }
 
 /* Initials in a circle, to tell people apart in a list. */
 .monogram { display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); font: 700 14px/1 var(--font-ui); }
 .monogram--large { flex-basis: 48px; width: 48px; height: 48px; font-size: 16px; }
 
 /* The round VM mark beside the name. */
-.brand-mark { display: inline-grid; place-items: center; width: 38px; height: 38px; border: 1.5px solid var(--accent); border-radius: 50%; background: var(--surface); font: 600 14px/1 var(--font-display); letter-spacing: .03em; }
+.brand-mark { display: inline-grid; place-items: center; width: 38px; height: 38px; border: 1.5px solid var(--line-strong); border-radius: 50%; background: var(--surface); font: 600 14px/1 var(--font-display); letter-spacing: .03em; }
 
 /* ---------- Cards and groups ---------- */
 .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-1); }
-.eyebrow { margin: 0 0 4px; font: 700 12px/1.2 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--accent-ink); }
+.eyebrow { margin: 0 0 4px; font: 700 12px/1.2 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .display { font-family: var(--font-display); font-weight: 600; font-variant-numeric: lining-nums; letter-spacing: -.01em; }
 .figure { font-family: var(--font-display); font-weight: 600; font-variant-numeric: lining-nums; }
 .tnum { font-variant-numeric: tabular-nums lining-nums; }
 
 /* ---------- Toasts: say what just happened, above the navigation, and go away by themselves. ---------- */
 .toast-host { position: fixed; left: 0; right: 0; bottom: calc(88px + env(safe-area-inset-bottom)); z-index: 30; display: grid; justify-items: center; gap: 8px; padding: 0 16px; pointer-events: none; }
-.toast { display: flex; align-items: center; gap: 12px; max-width: min(520px, 100%); padding: 12px 16px; border-radius: var(--radius); background: var(--ink); color: #fff; box-shadow: var(--shadow-2); font: 500 15px/1.35 var(--font-ui); pointer-events: auto; animation: toast-in var(--dur) var(--ease); }
+.toast { display: flex; align-items: center; gap: 12px; max-width: min(520px, 100%); padding: 12px 16px; border-radius: var(--radius); background: var(--ink); color: var(--on-primary); box-shadow: var(--shadow-2); font: 500 15px/1.35 var(--font-ui); pointer-events: auto; animation: toast-in var(--dur) var(--ease); }
 .toast--error { background: var(--danger); }
 /* A long name wraps instead of pushing the message's own buttons off the screen. */
 .toast > span { min-width: 0; overflow-wrap: anywhere; }
 .toast button { flex: none; }
-.toast button { min-height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: rgb(255 255 255 / .16); color: #fff; font: 600 14px/1 var(--font-ui); }
-.toast button:not(:disabled):hover { background: rgb(255 255 255 / .28); }
+.toast button { min-height: 36px; padding: 0 10px; border: 0; border-radius: var(--radius-xs); background: var(--on-dark-wash); color: var(--on-primary); font: 600 14px/1 var(--font-ui); }
+.toast button:not(:disabled):hover { background: var(--on-dark-wash-strong); }
+.toast :focus-visible { outline-color: var(--on-primary); }
 .toast .toast-close { min-height: 32px; width: 32px; padding: 0; font-size: 22px; line-height: 1; background: transparent; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: none; } }
 
 /* ---------- Loading: a calm shimmer in the shape of what is coming, instead of the word "Loading". ---------- */
-.skeleton { display: block; border-radius: 10px; background: linear-gradient(90deg, #ecefe9 25%, #f6f7f3 45%, #ecefe9 65%); background-size: 220% 100%; animation: shimmer 1.4s linear infinite; }
+.skeleton { display: block; border-radius: var(--radius-sm); background: linear-gradient(90deg, var(--hairline) 25%, var(--cream) 45%, var(--hairline) 65%); background-size: 220% 100%; animation: shimmer 1.4s linear infinite; }
 .skeleton { animation-iteration-count: 3; }
 @keyframes shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
 .skeleton-rows { display: grid; gap: 10px; margin: 12px 0; }
