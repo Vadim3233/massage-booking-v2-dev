@@ -179,7 +179,7 @@
 .gate-choices > button[aria-expanded='true'] { box-shadow: inset 0 0 0 2px var(--primary); }
 .gate-form { margin-top: 12px; }
 .gate-form > h2 { margin-bottom: 4px; font-size: 20px; }
-.guest-note { display: flex; flex-direction: column; align-items: flex-start; margin: 0 0 14px; padding: 10px 14px 2px; border-radius: 12px; background: var(--primary-soft); color: var(--ink-soft); font-size: 15px; }
+.guest-note { display: flex; flex-direction: column; align-items: flex-start; margin: 0 0 14px; padding: 10px 14px 2px; border-radius: var(--radius-sm); background: var(--primary-soft); color: var(--ink-soft); font-size: 15px; }
 .guest-note > button { margin-left: -14px; }
 /* Saved details are locked until "Edit my details" is pressed, and the email always is. A locked box is readable but plainly not for typing in. */
 .booking-shell input[readonly] { background: var(--done-bg); border-color: var(--line); cursor: default; }
@@ -197,7 +197,7 @@
 .bank-list dt { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .bank-list dd { text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0; }
 .copy-value { font: 600 17px/1.3 var(--font-ui); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.copy-button { min-height: 44px; padding: 0 14px; border-radius: 10px; font-size: 14px; }
+.copy-button { min-height: 44px; padding: 0 14px; border-radius: var(--radius-sm); font-size: 14px; }
 .copy-failed { flex-basis: 100%; color: var(--danger); }
 .bank-reference { margin: 12px 0 4px; padding: 4px 14px; border-left: 4px solid var(--primary); border-radius: var(--radius-sm); background: var(--primary-soft); }
 .bank-reference > div { border-bottom: 0; }
