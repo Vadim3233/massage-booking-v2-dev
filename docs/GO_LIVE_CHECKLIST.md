@@ -154,6 +154,18 @@ If a client forgets their password, the link in the reset email now opens a page
 - **No database change.** In Supabase the Redirect URLs should include `https://booking.vadmassage.com/**`, which already covers this page.
 - **To try it:** on https://booking.vadmassage.com/account press **Sign in**, then **Forgot password?**, use your `+test` address, press the link in the email, choose a new password, then sign out and sign in with it.
 
+## New: Your bookings says where the money stands (2026-10-16)
+
+A client's **Your bookings** list now has one quiet line under each booking that says where its money stands.
+
+- **Paid:** "£90.00 · Paid".
+- **Cash:** "£125.00 · Pay in cash at your appointment" until the appointment has passed. After that it says "£125.00 · Cash", and "Paid" once you record the cash as received.
+- **Bank transfer:** "£90.00 to pay by bank transfer" while you are waiting for it, and just "£90.00" once the client says they have sent it (the status already says you will check it).
+- **After a cancellation:** "Refund of £90.00 on its way" until you record the refund, then "Refunded"; "Late fee of £20.00 due" until you mark the fee received or waived. A cancelled booking with nothing owed either way has no line.
+- **Colours:** green when it is settled, amber when money still has to move, plain otherwise.
+- **No database change.**
+- **To try it:** sign in at https://booking.vadmassage.com/account with a client that has bookings (your `+test` address) and look at each tile.
+
 ## New: a cancelled booking says when it was cancelled (2026-10-16)
 
 - **In your Agenda, the Day view and a day's own page,** a cancelled card says who cancelled it and when, after its status: "Cancelled" and then "by client · Wed 14 Oct, 18:20" ("by you" when you cancelled it, "automatically" when the system did). When the status is long because money is still to send, the note drops to a line of its own, so the cards stay as narrow as before. You can tell a late cancellation from an early one without opening the booking.

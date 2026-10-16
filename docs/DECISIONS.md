@@ -450,6 +450,16 @@ The Telegram message has no link to the booking page (a private link in an email
 
 **Limits, on purpose:** A link works once, and stops working after a while (Supabase's rule, not ours); a mail program that opens links to check them can use one up, and the page then offers a new link. After a password is saved other devices stay signed in. The Redirect URLs in Supabase must allow the page: `https://booking.vadmassage.com/**` covers it, and the booking page, Your bookings and the Admin's reset page. The Admin's own reset page is separate and unchanged.
 
+## ADR-052 — Your bookings says where each booking's money stands (2026-10-16)
+
+**Decision:** Each booking in a client's Your bookings list has one quiet line under its treatment that says where its money stands: "£90.00 · Paid"; "£125.00 · Pay in cash at your appointment" for a cash booking still to come (once it has passed it says "£125.00 · Cash", and "Paid" after the Admin records the cash as received); "£90.00 to pay by bank transfer"; just "£90.00" once the transfer has been sent; "Refund of £90.00 on its way" and then "Refunded"; and "Late fee of £20.00 due". A line with money still to move is in the amber of the "needs you" status, a settled one is green, and the rest are plain. A cancelled booking with nothing owed either way has no line.
+
+**Reason:** The owner noticed that the list showed only the booking's status. "Confirmed" did not say whether a bank transfer had arrived or a cash booking still needed money brought, and a client could not see at a glance that a refund was on its way or a late fee was due. The words match the page that opens when a client taps a booking ("Payment received", "Cash on arrival"), shortened.
+
+**How it was built:** `src/client/account/paymentLine.js` is one pure function over the row `list_my_bookings` already returns (total, payment method and status, late fee, refund), so there is no database change. `BookingList` in `AccountApp.jsx` draws the line between the treatment and the status and says whether the booking is under Coming up; `account.css` colours it with the existing status colours (contrast checked in the browser test). Tests: `paymentLine.test.js` and `tests/e2e/clientPaymentLines.spec.js`.
+
+**Limits, on purpose:** A late fee that was received or waived, and a cancelled booking that was never paid, say nothing more. A late fee is shown on any booking that has one due, including one that was moved late. A past cash booking says only "Cash" until the Admin has recorded it as received, because that is done by hand. The list still shows the latest 50 bookings, as before.
+
 ## ADR-053 — A cancelled booking says when it was cancelled (2026-10-16)
 
 **Decision:** On the Admin's cards (the Agenda, the Day view and a day's own page), a cancelled booking says who cancelled it and when, after its status: "Cancelled" and then "by client · Wed 14 Oct, 18:20", "by you", or "automatically". When the status is long (money still to send) the note drops to a line of its own, so the cards stay as narrow as they were. On the page a client sees for a cancelled booking, one line under "Your appointment is cancelled" says "Cancelled on Friday 16 October at 16:40." Times are by the clock in London, and the year appears only for a day outside this year. The client's list of bookings is unchanged.

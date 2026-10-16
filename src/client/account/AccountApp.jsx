@@ -11,6 +11,7 @@ import BookingSummary from '../booking/components/BookingSummary.jsx'
 import TelegramBox from '../booking/components/TelegramBox.jsx'
 import { accountApi, createAccountApi, LINK_INVALID } from './accountApi.js'
 import { cancelledOn } from './cancelledOn.js'
+import { paymentLine } from './paymentLine.js'
 import { useBookingRules } from '../bookingRules.js'
 import '../booking/booking.css'
 import './account.css'
@@ -194,17 +195,22 @@ function BookingList({ open }) {
   const today = londonDate()
   const upcoming = rows.filter(row => OPEN.includes(row.booking_status) && row.date >= today).reverse()
   const earlier = rows.filter(row => !upcoming.includes(row))
-  const item = row => <li key={row.id}>
-    <button className="tile account-booking" onClick={() => open(row.id)}>
-      <span className="account-when">{dateLabel(row.date)} · {timeLabel(row.start_minutes)}</span>
-      <span className="account-what">{servicesLabel(row.services)} · {row.treatment_duration_minutes} min</span>
-      <span className={`chip chip--${CHIP[row.booking_status] || 'done'} account-status`}>{STATUS_TEXT[row.booking_status]}</span>
-    </button>
-  </li>
+  // Under the treatment, one line on where the money stands (see paymentLine.js); a booking with nothing to say has none.
+  const item = (row, isUpcoming) => {
+    const pay = paymentLine(row, { upcoming: isUpcoming })
+    return <li key={row.id}>
+      <button className="tile account-booking" onClick={() => open(row.id)}>
+        <span className="account-when">{dateLabel(row.date)} · {timeLabel(row.start_minutes)}</span>
+        <span className="account-what">{servicesLabel(row.services)} · {row.treatment_duration_minutes} min</span>
+        {pay && <span className={`account-pay${pay.tone ? ` account-pay--${pay.tone}` : ''}`}>{pay.text}</span>}
+        <span className={`chip chip--${CHIP[row.booking_status] || 'done'} account-status`}>{STATUS_TEXT[row.booking_status]}</span>
+      </button>
+    </li>
+  }
   return <>
     <h2 className="section-title">Coming up</h2>
-    {upcoming.length ? <ul role="list" className="account-list">{upcoming.map(item)}</ul> : <p>You have no upcoming appointments. <a href="/">Book a treatment</a></p>}
-    {earlier.length > 0 && <><h2 className="section-title">Earlier</h2><ul role="list" className="account-list">{earlier.map(item)}</ul></>}
+    {upcoming.length ? <ul role="list" className="account-list">{upcoming.map(row => item(row, true))}</ul> : <p>You have no upcoming appointments. <a href="/">Book a treatment</a></p>}
+    {earlier.length > 0 && <><h2 className="section-title">Earlier</h2><ul role="list" className="account-list">{earlier.map(row => item(row, false))}</ul></>}
   </>
 }
 
