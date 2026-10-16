@@ -33,7 +33,7 @@ const TEXT = [
   // The tints the Day view and the cards sit on: a card that needs the Admin, a block of time, travel, free time, a pressed pale button, the alert badge.
   ['--ink', '--needs-tint'], ['--ink-soft', '--needs-tint'], ['--muted', '--needs-tint'], ['--needs-ink', '--needs-tint'],
   ['--block-ink', '--block-bg'], ['--ink-soft', '--buffer-bg'], ['--ok-ink', '--free-bg'], ['--primary', '--primary-line'], ['--ink', '--needs-badge'],
-  ['--on-primary', '--ink'],
+  ['--on-primary', '--ink'], ['--ink-soft', '--hairline'],
 ]
 const INTERFACE = [
   // The edge of a field, and of anything tapped that has no other outline, must be seen (3:1); so must the coloured edge of a card.

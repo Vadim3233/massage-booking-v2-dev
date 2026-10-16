@@ -78,10 +78,10 @@
 .monogram--large { flex-basis: 48px; width: 48px; height: 48px; font-size: 16px; }
 
 /* The round VM mark beside the name. */
-.brand-mark { display: inline-grid; place-items: center; width: 38px; height: 38px; border: 1.5px solid var(--line-strong); border-radius: 50%; background: var(--surface); font: 600 14px/1 var(--font-display); letter-spacing: .03em; }
+.brand-mark { display: inline-grid; place-items: center; width: 38px; height: 38px; border: 1.5px solid var(--primary); border-radius: 50%; background: var(--surface); font: 600 14px/1 var(--font-display); letter-spacing: .03em; }
 
 /* ---------- Cards and groups ---------- */
-.card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-1); }
+.card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow-card); }
 .eyebrow { margin: 0 0 4px; font: 700 12px/1.2 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .display { font-family: var(--font-display); font-weight: 600; font-variant-numeric: lining-nums; letter-spacing: -.01em; }
 .figure { font-family: var(--font-display); font-weight: 600; font-variant-numeric: lining-nums; }

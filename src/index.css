@@ -64,6 +64,9 @@
   --radius-xs: 8px; --radius-sm: 12px; --radius: 16px; --radius-lg: 22px; --radius-pill: 999px;
   --shadow-1: 0 1px 2px rgb(20 47 70 / .05), 0 3px 10px rgb(20 47 70 / .04);
   --shadow-2: 0 2px 6px rgb(20 47 70 / .07), 0 12px 28px rgb(20 47 70 / .1);
+  --shadow-ring: 0 0 0 1px var(--hairline);
+  --shadow-card: var(--shadow-ring), var(--shadow-1);
+  --shadow-card-raised: var(--shadow-ring), var(--shadow-2);
   --shadow-brand: 0 6px 16px -8px rgb(52 91 115 / .6);
   --shadow-up: 0 -6px 20px rgb(20 47 70 / .06);
   --scrim: rgb(20 47 70 / .46);
