@@ -57,7 +57,7 @@
 
 /* What is special about a day that has bookings, in words under its date. */
 .admin-agenda-notes { display: grid; gap: 4px; margin: 0 0 8px; padding: 0; list-style: none; }
-.admin-agenda-notes li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; background: var(--needs-bg); color: var(--needs-ink); font-size: 13px; }
+.admin-agenda-notes li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: var(--radius-xs); background: var(--needs-bg); color: var(--needs-ink); font-size: 13px; }
 .admin-agenda-notes li.is-away { background: var(--primary-soft); color: var(--primary-strong); }
 .admin-agenda-notes li.is-off { background: var(--done-bg); color: var(--done-ink); }
 

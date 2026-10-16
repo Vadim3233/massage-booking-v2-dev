@@ -1,3 +1,4 @@
+import Icon from '../ui/icons.jsx'
 import { hiddenCancelled } from './cancelledBookings.js'
 
 // The Day view and a day's own page follow the "Show cancelled" choice made in the Agenda, but have no switch of their own. So when a day has
@@ -7,6 +8,6 @@ export default function CancelledToggle({ bookings, on, change }) {
   const count = hiddenCancelled(bookings)
   if (!count) return null
   return <p className="admin-cancelled-toggle">
-    <button type="button" className="btn--quiet btn--small" onClick={() => change(!on)}>{on ? 'Hide cancelled bookings' : `Show ${count} cancelled ${count === 1 ? 'booking' : 'bookings'}`}</button>
+    <button type="button" className="btn--quiet btn--small" onClick={() => change(!on)}><Icon name="cross" size={20} /><span>{on ? 'Hide cancelled bookings' : `Show ${count} cancelled ${count === 1 ? 'booking' : 'bookings'}`}</span><Icon name="right" size={18} className="admin-toggle-chevron" /></button>
   </p>
 }

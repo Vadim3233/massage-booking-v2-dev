@@ -6,8 +6,11 @@ import BookingCard from './BookingCard.jsx'
 import CancelledToggle from './CancelledToggle.jsx'
 import { listedBookings, useShowCancelled } from './cancelledBookings.js'
 import { dateLabel, dayTimeline, shiftDate, time, today } from './calendarPresentation.js'
+import Icon from '../ui/icons.jsx'
 const BlockDialog = lazy(() => import('./BlockDialog.jsx'))
 const api = createCalendarApi(supabase)
+// The small picture at the start of a free, travel or held stretch of the day.
+const ENTRY_ICON = { free: 'clock', buffer: 'car', hold: 'clock' }
 // One owner for all Calendar reads, including StrictMode's repeated mount effect. A later change or refresh is a new read.
 let inFlight
 function load(date, version) {
@@ -72,28 +75,28 @@ export default function Calendar({ signOut, openBooking, openDay, revision, init
   return <>
     <header className={`admin-header ${headerHidden && !accountOpen ? 'is-hidden' : ''}`} onFocusCapture={() => setHeaderHidden(false)}>
       <div className="admin-toolbar">
-        <label className="admin-date-control"><span>{dateLabel(date)}</span><span aria-hidden="true">⌄</span>
+        <label className="admin-date-control"><span>{dateLabel(date)}</span><span className="admin-date-chevron" aria-hidden="true"><Icon name="down" size={18} /></span>
           <input aria-label="Calendar date" type="date" value={date} onChange={event => navigate(event.target.value)} onClick={event => { try { event.currentTarget.showPicker?.() } catch { /* Native date entry remains available. */ } }} />
         </label>
         <button className="admin-today" onClick={() => navigate(today())}>Today</button>
-        <button aria-label="Refresh calendar" title="Refresh calendar" onClick={() => { quiet.asked(); reread() }}>↻</button>
+        <button aria-label="Refresh calendar" title="Refresh calendar" onClick={() => { quiet.asked(); reread() }}><Icon name="refresh" size={20} /></button>
         <div className="admin-account" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) setAccountOpen(false) }} onKeyDown={event => { if (event.key === 'Escape') { setAccountOpen(false); event.currentTarget.querySelector('button').focus() } }}>
-          <button aria-label="Account menu" title="Account" aria-expanded={accountOpen} aria-controls="admin-account-actions" onClick={() => setAccountOpen(value => !value)}>⋯</button>
+          <button aria-label="Account menu" title="Account" aria-expanded={accountOpen} aria-controls="admin-account-actions" onClick={() => setAccountOpen(value => !value)}><Icon name="more" size={20} filled /></button>
           {accountOpen && <div id="admin-account-actions" className="admin-account-actions"><button onClick={signOut}>Sign out</button></div>}
         </div>
       </div>
       <nav className="admin-date-strip" aria-label="Calendar navigation">
-        <button aria-label="Previous day" onClick={() => navigate(shiftDate(date, -1))}>‹</button>
+        <button aria-label="Previous day" onClick={() => navigate(shiftDate(date, -1))}><Icon name="left" size={22} /></button>
         {[-2, -1, 0, 1, 2].map(offset => {
           const day = shiftDate(date, offset)
-          return <button key={day} className="admin-day-choice" aria-label={dateLabel(day, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })} aria-current={offset === 0 ? 'date' : undefined} onClick={() => navigate(day)}><span>{dateLabel(day, { weekday: 'short' })}</span>{' '}<strong>{Number(day.slice(-2))}</strong></button>
+          return <button key={day} className="admin-day-choice" aria-label={dateLabel(day, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })} aria-current={offset === 0 ? 'date' : undefined} data-today={day === today() ? 'true' : undefined} onClick={() => navigate(day)}><span>{dateLabel(day, { weekday: 'short' })}</span>{' '}<strong>{Number(day.slice(-2))}</strong></button>
         })}
-        <button aria-label="Next day" onClick={() => navigate(shiftDate(date, 1))}>›</button>
+        <button aria-label="Next day" onClick={() => navigate(shiftDate(date, 1))}><Icon name="right" size={22} /></button>
       </nav>
     </header>
     <div className="admin-create-entry">
-      {openDay && <button className="admin-secondary-entry btn--small" onClick={() => openDay(date)}>Day settings</button>}
-      <button className="admin-secondary-entry btn--small" onClick={() => setBlockDialog({ date })}>Block time</button>
+      {openDay && <button className="admin-secondary-entry admin-entry--settings btn--small" onClick={() => openDay(date)}><Icon name="gear" size={18} />Day settings</button>}
+      <button className="admin-secondary-entry admin-entry--block btn--small" onClick={() => setBlockDialog({ date })}><Icon name="block" size={18} />Block time</button>
     </div>
     <section className="admin-day" aria-label="Day appointments">
       <h1 className="admin-sr-only">Appointments for {dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h1>
@@ -101,7 +104,7 @@ export default function Calendar({ signOut, openBooking, openDay, revision, init
       {!data && !failed && <div className="skeleton-rows" role="status" aria-label="Loading calendar"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>}
       {failed && <div role={data ? 'status' : 'alert'} className="error"><p>{data ? 'Could not refresh the calendar just now.' : 'Could not load calendar. Please check your connection and try again.'}</p><button className="btn--small" onClick={() => { quiet.asked(); reread() }}>{data ? 'Try again' : 'Retry calendar'}</button></div>}
       {data && <>
-        <p className="admin-working-hours">{timeline.hours?.available ? `Working hours ${time(timeline.hours.start_minutes)}–${time(timeline.hours.end_minutes)}` : 'Not a working day'}</p>
+        <p className="admin-working-hours"><Icon name="clock" size={20} /><span>{timeline.hours?.available ? `Working hours ${time(timeline.hours.start_minutes)}–${time(timeline.hours.end_minutes)}` : 'Not a working day'}</span></p>
         {!listed.length && <p className="admin-day-note">No appointments for this day.</p>}
         <CancelledToggle bookings={data.bookings} on={showCancelled} change={setShowCancelled} />
         <ol role="list" className="admin-timeline" aria-label="Day timeline">
@@ -109,7 +112,7 @@ export default function Calendar({ signOut, openBooking, openDay, revision, init
             {row.kind === 'booking' ? <BookingCard booking={row.booking} open={() => openBooking(row.booking.id)} now={new Date(now)} /> : row.kind === 'block' && row.block.kind !== 'series_hold' ? <button className="admin-timeline-entry block admin-block-button" onClick={() => setBlockDialog({ date, block: row.block })}>
                 <span>{row.title}</span>
                 <small>{time(row.start)} – {time(row.end)} · tap to change</small>
-            </button> : <div className={`admin-timeline-entry ${row.kind}`}>
+            </button> : <div className={`admin-timeline-entry ${row.kind}`}>{ENTRY_ICON[row.kind] && <Icon name={ENTRY_ICON[row.kind]} size={18} />}
                 <span>{row.kind === 'free' ? 'Free' : row.kind === 'buffer' ? 'Travel / buffer' : row.kind === 'hold' ? 'Temporary hold' : row.title}</span>
                 <small>{time(row.start)} – {time(row.end)}{row.kind === 'free' ? ` · ${row.end - row.start} min` : ''}</small>
             </div>}

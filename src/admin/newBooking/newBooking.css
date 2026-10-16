@@ -2,7 +2,7 @@
 .admin-new-booking { max-width: 640px; margin: 0 auto; padding: 8px 16px 24px; }
 .anb-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0 2px; }
 .anb-header h1 { margin: 0; font: 600 30px/1.1 var(--font-display); font-variant-numeric: lining-nums; letter-spacing: -.01em; }
-.anb-error { margin: 12px 0; padding: 12px 14px; border-left: 4px solid var(--danger-line); border-radius: 12px; background: var(--danger-soft); color: var(--danger); font-weight: 500; }
+.anb-error { margin: 12px 0; padding: 12px 14px; border-left: 4px solid var(--danger-line); border-radius: var(--radius-sm); background: var(--danger-soft); color: var(--danger); font-weight: 500; }
 .anb-content:disabled { opacity: .78; }
 :where(.admin-new-booking) fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 :where(.admin-new-booking) legend { padding: 0; font-size: 14px; font-weight: 600; }
