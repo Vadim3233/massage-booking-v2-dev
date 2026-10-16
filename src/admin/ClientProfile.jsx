@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Icon from '../ui/icons.jsx'
 import { clientsApi, fullName } from './clientsApi.js'
 import { AddressForm, ClientForm } from './ClientForms.jsx'
 import { clientContactLinks } from './contactLinks.js'
@@ -151,7 +152,7 @@ export default function ClientProfile({ id, back, openBooking, newBooking, openC
     <button className="admin-back-link" onClick={back}>← Clients</button>
     <h1 id="client-name">{fullName(client)}</h1>
     <p>{[client.phone, client.email].filter(Boolean).join(' · ') || 'No contact details'}</p>
-    <nav className="admin-contact-actions" aria-label="Quick contact">{clientContactLinks(client).map(link => <a key={link.key} href={link.href} {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>{link.label}</a>)}</nav>
+    <nav className="admin-contact-actions" aria-label="Quick contact">{clientContactLinks(client).map(link => <a key={link.key} href={link.href} {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}><Icon name={link.icon} />{link.label}</a>)}</nav>
     <div className="admin-payment-buttons"><button className="btn--primary" onClick={() => newBooking(client.id)}>+ New booking</button><button className="btn--tonal" onClick={() => setEditing(!editing)}>{editing ? 'Close' : 'Edit details'}</button></div>
     {editing && <section aria-label="Edit details"><ClientForm initial={client} submitLabel="Save details" onCancel={() => setEditing(false)} onSubmit={async details => { await api.update(id, details); setEditing(false); changed() }} /></section>}
     {error && <p role="alert">{error}</p>}

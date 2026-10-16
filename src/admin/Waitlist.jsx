@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { waitlistActions, waitlistApi, waitlistLabels, windowText } from './waitlistApi.js'
 import { clientContactLinks } from './contactLinks.js'
 import { dateLabel, time } from './calendarPresentation.js'
+import Icon from '../ui/icons.jsx'
 
 const stamp = value => new Date(value).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
@@ -20,7 +21,7 @@ function Request({ request, busy, act, bookFor }) {
     {request.status !== 'closed' && (matches.length > 0
       ? <p className="admin-waitlist-match" role="status"><strong>Could be booked now:</strong> {matches.map(time).join(', ')}</p>
       : <p className="admin-detail-hint">Nothing free for them yet.</p>)}
-    <nav className="admin-contact-actions" aria-label={`Contact ${request.contact_name}`}>{links.map(link => <a key={link.key} href={link.href} {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>{link.label}</a>)}</nav>
+    <nav className="admin-contact-actions" aria-label={`Contact ${request.contact_name}`}>{links.map(link => <a key={link.key} href={link.href} {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}><Icon name={link.icon} />{link.label}</a>)}</nav>
     {request.status !== 'closed' && <>
       <label className="admin-field">Your note (only you see this)<input value={note} maxLength={500} disabled={busy} onChange={event => setNote(event.target.value)} /></label>
       <div className="admin-payment-buttons">
@@ -54,7 +55,7 @@ export default function Waitlist({ api = waitlistApi, bookFor }) {
   const shut = (rows || []).filter(row => row.status === 'closed')
   return <section className="admin-review" aria-labelledby="waitlist-title">
     <header className="admin-review-heading"><div><h1 id="waitlist-title">Waitlist</h1><p>People hoping for a day that was full. Nothing is booked for them until you do it.</p></div>
-      <button onClick={() => setAttempt(value => value + 1)} aria-label="Refresh waitlist">↻</button></header>
+      <button onClick={() => setAttempt(value => value + 1)} aria-label="Refresh waitlist"><Icon name="refresh" size={20} /></button></header>
     {error && <p role="alert">{error} <button onClick={() => setAttempt(value => value + 1)}>Try again</button></p>}
     {message && <p role="status">{message}</p>}
     {!rows && !error && <p role="status">Loading the waitlist…</p>}
