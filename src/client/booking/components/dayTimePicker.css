@@ -2,7 +2,9 @@
 .dtp .date-field { display: grid; gap: 6px; max-width: 240px; margin: 4px 0 16px; color: var(--muted); font-size: 13px; font-weight: 600; }
 .dtp .date-field input { cursor: pointer; }
 .dtp .daystrip { display: grid; grid-template-columns: 40px repeat(5, minmax(0, 1fr)) 40px; gap: 6px; align-items: stretch; margin: 8px 0 0; }
-.dtp .daystrip-arrow { min-height: 68px; padding: 0; border: 0; background: transparent; }
+.dtp .daystrip-arrow { position: relative; min-height: 68px; padding: 0; border: 0; background: transparent; }
+/* The arrow is drawn 40px wide; its press area reaches 2px further each side, to 44px. */
+.dtp .daystrip-arrow::after { content: ''; position: absolute; inset: 0 -2px; }
 .dtp .daystrip-arrow[aria-disabled=true] { opacity: .35; cursor: default; }
 .dtp .daychip { display: grid; justify-items: center; align-content: center; gap: 2px; min-height: 68px; padding: 6px 0 8px; border: 1.5px solid var(--control-border); border-radius: var(--radius); background: var(--surface); color: var(--ink); }
 .dtp .daychip-dow { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }

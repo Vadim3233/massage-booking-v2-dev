@@ -10,7 +10,7 @@
 .brand-actions .btn--quiet[aria-expanded='true'] { background: var(--primary-soft); }
 .header-sign-in .gate-form { margin: 0 0 8px; }
 .brand-link { display: inline-flex; align-items: center; gap: 10px; color: var(--primary); text-decoration: none; font: 600 22px/1 var(--font-display); letter-spacing: -.005em; }
-.brand-aside { padding: 10px 2px; color: var(--primary); font-size: 14px; font-weight: 600; text-decoration: none; }
+.brand-aside { padding: 12px 2px; color: var(--primary); font-size: 14px; font-weight: 600; text-decoration: none; }
 .brand-aside:hover { text-decoration: underline; }
 .booking-shell > footer { margin-top: auto; padding: 18px 0 28px; border-top: 1px solid var(--hairline); color: var(--muted); font-size: 12px; }
 
