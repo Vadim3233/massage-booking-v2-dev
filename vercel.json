@@ -4,6 +4,7 @@
     { "source": "/admin", "destination": "/index.html" },
     { "source": "/admin/(.*)", "destination": "/index.html" },
     { "source": "/account", "destination": "/index.html" },
-    { "source": "/account/(.*)", "destination": "/index.html" }
+    { "source": "/account/(.*)", "destination": "/index.html" },
+    { "source": "/reset-password", "destination": "/index.html" }
   ]
 }

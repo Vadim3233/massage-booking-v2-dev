@@ -1,30 +1,22 @@
 import { useState } from 'react'
 import { unwrap } from '../booking/bookingApi.js'
-import { GENERIC } from '../booking/friendlyError.js'
+import { authMessage } from './authMessage.js'
 import { signUpOutcome } from './signUpOutcome.js'
 
-// What the sign-in service says, in the words a client would use. Anything else stays out of sight.
-const AUTH_MESSAGES = [
-  [/invalid login credentials/i, "That email and password don't match. Please check them and try again."],
-  [/already registered|already been registered/i, "There is already an account with that email. Please try signing in instead."],
-  [/email not confirmed/i, 'Please confirm your email first. The link is in the message I sent you.'],
-  [/password should be at least|password.*(short|weak)|least 8/i, 'Please choose a password of at least 8 characters.'],
-  [/rate limit|too many/i, 'That has been tried a few times. Please wait a minute and try again.'],
-]
-const authMessage = (error) => AUTH_MESSAGES.find(([pattern]) => pattern.test(error?.message || ''))?.[1] || GENERIC
-
-export default function AuthPanel({ client, recovery = false, onRecovered, onGuest, startOpen = false, level = 1, heading: headingOverride, redirectTo: redirectOverride }) {
+export default function AuthPanel({ client, onGuest, startOpen = false, level = 1, heading: headingOverride, redirectTo: redirectOverride }) {
   const [mode, setMode] = useState('login')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [open, setOpen] = useState(startOpen)
-  // After a sign-up that needs the email confirmed, what was typed stays here (in memory only, never saved) so she can carry on from
+  // After a sign-up that needs the email confirmed, what was typed stays here (in memory only, never saved) so the client can carry on from
   // this same page once the link has been opened, even when it opened in another app or browser.
   const [waiting, setWaiting] = useState(null)
   const redirectTo = redirectOverride || `${window.location.origin}${window.location.pathname}?step=5`
+  // The link in a password reset email always opens the page that asks for the new password, whichever page the reset was asked for from.
+  const resetRedirect = `${window.location.origin}/reset-password`
   // Booking as a guest is the quick way on, so it is the big button; signing in and creating an account sit plainly beside it.
-  const guestable = Boolean(onGuest) && !recovery
+  const guestable = Boolean(onGuest)
   function go(next) { setMode(next); setOpen(true); if (next !== 'register') setWaiting(null) }
   // The two buttons under "or use an account": a second tap on the one that is showing closes it again.
   function choose(next) {
@@ -41,9 +33,6 @@ export default function AuthPanel({ client, recovery = false, onRecovered, onGue
     event.preventDefault()
     const fields = Object.fromEntries(new FormData(event.currentTarget))
     act(async () => {
-      if (recovery) {
-        await unwrap(client.auth.updateUser({ password: fields.password })); onRecovered(); return
-      }
       if (mode === 'register') {
         const data = await unwrap(client.auth.signUp({ email: fields.email, password: fields.password,
           options: { emailRedirectTo: redirectTo, data: { first_name: fields.first_name, last_name: fields.last_name } } }))
@@ -51,8 +40,8 @@ export default function AuthPanel({ client, recovery = false, onRecovered, onGue
         if (outcome === 'confirm-email') setWaiting({ email: fields.email, password: fields.password })
         else if (outcome === 'already-registered') { setMode('login'); setError(authMessage({ message: 'already registered' })) }
       } else if (mode === 'reset') {
-        await unwrap(client.auth.resetPasswordForEmail(fields.email, { redirectTo }))
-        setMessage('Check your email for the password reset link.')
+        await unwrap(client.auth.resetPasswordForEmail(fields.email, { redirectTo: resetRedirect }))
+        setMessage("Check your email for the password reset link. If it doesn't come within a minute, please look in your junk folder too.")
       } else await unwrap(client.auth.signInWithPassword({ email: fields.email, password: fields.password }))
     })
   }
@@ -68,23 +57,23 @@ export default function AuthPanel({ client, recovery = false, onRecovered, onGue
   }
   const panelTitle = mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Sign in'
   const heading = guestable ? 'Complete your booking'
-    : headingOverride && mode === 'login' && !recovery ? headingOverride : recovery ? 'Choose a new password' : mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Complete your booking'
+    : headingOverride && mode === 'login' ? headingOverride : mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Complete your booking'
   const form = <>
     <form onSubmit={submit}>
       <fieldset disabled={busy}>
-        {mode === 'register' && !recovery && <div className="two-columns">
+        {mode === 'register' && <div className="two-columns">
           <label>First name<input name="first_name" autoComplete="given-name" required /></label>
           <label>Last name<input name="last_name" autoComplete="family-name" required /></label>
         </div>}
-        {!recovery && <label>Email address<input name="email" type="email" autoComplete="email" required /></label>}
-        {(mode !== 'reset' || recovery) && <>
-          <label>Password<input name="password" type="password" minLength={8} aria-describedby={mode === 'register' || recovery ? 'password-hint' : undefined} autoComplete={mode === 'register' || recovery ? 'new-password' : 'current-password'} required /></label>
-          {(mode === 'register' || recovery) && <p className="field-hint" id="password-hint">At least 8 characters.</p>}
+        <label>Email address<input name="email" type="email" autoComplete="email" required /></label>
+        {mode !== 'reset' && <>
+          <label>Password<input name="password" type="password" minLength={8} aria-describedby={mode === 'register' ? 'password-hint' : undefined} autoComplete={mode === 'register' ? 'new-password' : 'current-password'} required /></label>
+          {mode === 'register' && <p className="field-hint" id="password-hint">At least 8 characters.</p>}
         </>}
-        <button className="btn--primary btn--block" type="submit">{busy ? 'Please wait…' : recovery ? 'Save password' : mode === 'register' ? 'Register' : mode === 'reset' ? 'Send reset link' : 'Sign in'}</button>
+        <button className="btn--primary btn--block" type="submit">{busy ? 'Please wait…' : mode === 'register' ? 'Register' : mode === 'reset' ? 'Send reset link' : 'Sign in'}</button>
       </fieldset>
     </form>
-    {!recovery && (guestable
+    {(guestable
       ? <div className="actions">
         {mode === 'register'
           ? <button className="btn--quiet" type="button" disabled={busy} onClick={() => go('login')}>Already registered? Sign in</button>
@@ -110,8 +99,7 @@ export default function AuthPanel({ client, recovery = false, onRecovered, onGue
     <Heading id="gate-title" tabIndex={-1}>{heading}</Heading>
     {guestable
       ? <p className="lede">Book as a guest in a minute, or use an account to keep your details for next time.</p>
-      : mode === 'login' && !recovery ? <p className="lede">Sign in with the email you used to book.</p>
-        : recovery ? <p className="lede">Your choices will stay here while you continue.</p> : null}
+      : mode === 'login' ? <p className="lede">Sign in with the email you used to book.</p> : null}
     {guestable ? <>
       <button className="btn--primary btn--lg btn--block" type="button" disabled={busy} onClick={() => act(onGuest)}>
         {busy ? 'Please wait…' : 'Continue as guest'}

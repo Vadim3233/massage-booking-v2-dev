@@ -9,6 +9,7 @@ import { readUsual, rememberUsual } from './usualBooking.js'
 import { friendlyError } from './friendlyError.js'
 import { useBookingHistory } from './useBookingHistory.js'
 import { useClientAuth } from '../auth/useClientAuth.js'
+import { useLinkProblem } from '../auth/linkProblem.js'
 import AuthPanel from '../auth/AuthPanel.jsx'
 import { AreaStep, DurationStep, TimeStep, TreatmentStep } from './components/SelectionSteps.jsx'
 import ReviewStep from './components/ReviewStep.jsx'
@@ -73,13 +74,15 @@ export default function BookingFlow() {
     return () => { live = false }
   }, [signedInUser, step])
   const bank = chooseBank(savedBank, fallbackBank)
+  // An email link that was used already, or has run out, brings the person back here with the reason in the address.
+  const linkProblem = useLinkProblem()
   const held = activeHold(draft, clock)
   const remaining = draft.hold ? Math.max(0, Math.ceil((Date.parse(draft.hold.expires_at) - clock) / 1000)) : 0
   useEffect(() => { store.expireHold() }, [store, clock, busy])
   // A new screen starts at its heading: named in the tab, read out first by a screen reader, and the page back at the top.
   // Signing in or carrying on as a guest swaps the content inside a step, so that counts as a new screen too.
   const needsAuth = step >= 5 && !auth.session
-  const screen = `${step}:${needsAuth ? 'sign-in' : auth.recovery ? 'recovery' : 'main'}`
+  const screen = `${step}:${needsAuth ? 'sign-in' : 'main'}`
   const lastScreen = useRef(null)
   useEffect(() => {
     document.title = `${STEPS[Math.min(step, STEPS.length - 1)]} · Book a massage · VadMassage`
@@ -162,8 +165,8 @@ export default function BookingFlow() {
   const canGoBack = step > 0 && step < 7 && !draft.pending && !draft.bookingId
   const shown = Math.min(step, STEPS.length - 1)
   // The gate on the details screen has its own sign-in, and once a booking exists there is no way back, so the top of the page offers neither then.
-  const showSignIn = signInOpen && !needsAuth && !auth.recovery && !signedInAccount && !draft.bookingId
-  const accountControl = !auth.ready || auth.recovery || draft.bookingId ? null
+  const showSignIn = signInOpen && !needsAuth && !signedInAccount && !draft.bookingId
+  const accountControl = !auth.ready || draft.bookingId ? null
     : signedInAccount ? <button type="button" className="btn--quiet btn--small" onClick={signOut}>Sign out</button>
       : needsAuth ? null
         : <button type="button" className="btn--quiet btn--small" aria-expanded={showSignIn} aria-controls={showSignIn ? 'header-sign-in' : undefined} onClick={() => setSignInOpen(open => !open)}>Sign in</button>
@@ -185,6 +188,7 @@ export default function BookingFlow() {
       {!draft.bookingId && <HoldNotice hold={draft.hold} remaining={remaining} busy={busy} pending={draft.pending} error={error} extend={store.extendHold} release={store.releaseHold} />}
       {error && step !== 6 && <p role="alert" className="error" ref={alertBox}>{error}</p>}
       {auth.error && <p role="alert" className="error">{auth.error}</p>}
+      {linkProblem && <p role="alert" className="error">{linkProblem}</p>}
       {!catalogue ? (catalogueFailed
         ? <>{step === 6 && error && <p role="alert" className="error">{error}</p>}<button className="btn--tonal" onClick={() => { setCatalogueFailed(false); store.setError(''); setCatalogueAttempt(catalogueAttempt + 1) }}>Try again</button></>
         : <div className="skeleton-rows" role="status"><span className="sr-only">Just getting things ready…</span><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>) : <>
@@ -197,10 +201,10 @@ export default function BookingFlow() {
           {step === 3 && <TimeStep rules={rules} joinWaitlist={api.joinWaitlist} draft={draft} loadAvailability={store.availability} selectSlot={store.selectSlot} next={() => goWithQuote(4)} />}
           {step === 4 && <ReviewStep draft={draft} catalogue={catalogue} quote={quote} quoteError={quoteError} edit={store.edit} navigate={navigate} refreshQuote={store.refreshQuote} retryQuote={store.retryQuote} next={() => goWithQuote(5)} />}
           {!auth.ready && step >= 5 && <p role="status">Checking your account…</p>}
-          {auth.ready && (needsAuth || auth.recovery) && <AuthPanel client={supabase} recovery={auth.recovery} onRecovered={auth.finishRecovery} onGuest={startGuest} startOpen={wantsAccount} />}
-          {step === 5 && auth.session && !auth.recovery && <DetailsStep key={auth.session.user.id} draft={draft} user={auth.session.user} api={api} edit={store.edit} report={store.setError} guest={isGuest} onSwitchToAccount={isGuest && !draft.bookingId ? leaveGuest : undefined} newTestGuest={startNewTestGuest} next={() => goWithQuote(6)} />}
-          {step === 6 && auth.session && !auth.recovery && <PaymentStep rules={rules} draft={draft} quote={quote} quoteError={quoteError} bank={bank} api={api} store={store} finalize={() => store.finalize(auth.session.user.id)} held={held} error={error} chooseTimeAgain={() => navigate(3)} />}
-          {step === 7 && auth.session && !auth.recovery && <ConfirmationStep id={draft.bookingId} result={result} api={api} bank={bank} quote={quote} again={startAgain} />}
+          {auth.ready && needsAuth && <AuthPanel client={supabase} onGuest={startGuest} startOpen={wantsAccount} />}
+          {step === 5 && auth.session && <DetailsStep key={auth.session.user.id} draft={draft} user={auth.session.user} api={api} edit={store.edit} report={store.setError} guest={isGuest} onSwitchToAccount={isGuest && !draft.bookingId ? leaveGuest : undefined} newTestGuest={startNewTestGuest} next={() => goWithQuote(6)} />}
+          {step === 6 && auth.session && <PaymentStep rules={rules} draft={draft} quote={quote} quoteError={quoteError} bank={bank} api={api} store={store} finalize={() => store.finalize(auth.session.user.id)} held={held} error={error} chooseTimeAgain={() => navigate(3)} />}
+          {step === 7 && auth.session && <ConfirmationStep id={draft.bookingId} result={result} api={api} bank={bank} quote={quote} again={startAgain} />}
         </fieldset>
       </>}
     </main>
