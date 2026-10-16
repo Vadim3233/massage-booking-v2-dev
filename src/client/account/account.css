@@ -2,6 +2,9 @@
 .account-booking { display: grid; justify-items: start; align-content: center; gap: 4px; min-height: 0; padding: 14px 16px; }
 .account-when { font: 600 19px/1.25 var(--font-display); font-variant-numeric: lining-nums; }
 .account-what { color: var(--ink-soft); font-size: 15px; font-weight: 500; }
+.account-pay { color: var(--ink-soft); font-size: 15px; font-weight: 500; line-height: 1.35; }
+.account-pay--ok { color: var(--ok-ink); }
+.account-pay--due { color: var(--needs-ink); font-weight: 600; }
 .account-status { margin-top: 4px; }
 .account-note { padding: 12px 14px; margin: 16px 0; border-left: 4px solid var(--primary); background: var(--primary-soft); border-radius: 12px; }
 .account-note--fee { border-left-color: var(--accent); background: var(--accent-soft); }
