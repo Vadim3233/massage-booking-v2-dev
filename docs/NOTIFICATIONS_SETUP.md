@@ -37,7 +37,7 @@ In the Vercel project, Settings, Environment Variables (Production), add:
 | `TELEGRAM_BOT_TOKEN` | the bot token |
 | `ADMIN_TELEGRAM_CHAT_ID` | your chat ID |
 | `RESEND_API_KEY` | the Resend key |
-| `EMAIL_FROM` | `Vad <hello@vadmassage.com>` |
+| `EMAIL_FROM` | `VadMassage <hello@book.vadmassage.com>` (an address on the domain you verified in Resend; the live site uses `book.vadmassage.com`) |
 | `ADMIN_ALERT_EMAIL` | the address you want alerts sent to |
 | `EMAIL_REPLY_TO` | where client replies should go |
 | `SUPABASE_URL` | your Supabase project URL |

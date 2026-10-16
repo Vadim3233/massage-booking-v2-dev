@@ -3,6 +3,7 @@ import { dayParts } from '../booking/dateStrip.js'
 import Icon from '../../ui/icons.jsx'
 import { supabase } from '../../lib/supabase.js'
 import { useClientAuth } from '../auth/useClientAuth.js'
+import { useLinkProblem } from '../auth/linkProblem.js'
 import AuthPanel from '../auth/AuthPanel.jsx'
 import { dateLabel, londonDate, money, timeLabel } from '../booking/bookingDraft.js'
 import DayTimePicker from '../booking/components/DayTimePicker.jsx'
@@ -206,6 +207,8 @@ function BookingList({ open }) {
 
 export default function AccountApp() {
   const auth = useClientAuth(supabase)
+  // An email link that was used already, or has run out, brings the person back here with the reason in the address.
+  const linkProblem = useLinkProblem()
   const [start, setStart] = useState(readLink)
   const [selected, setSelected] = useState(start.booking)
   // A second link opened in this same tab changes only the part after the #, which does not reload the page: take the new code up.
@@ -243,6 +246,7 @@ export default function AccountApp() {
   return <div className="booking-shell">
     <header className="brand"><a className="brand-link" href="/"><b className="brand-mark" aria-hidden="true">VM</b>VadMassage</a><a className="brand-aside" href="/">Book a treatment</a></header>
     <main className="booking-main">
+    {linkProblem && <p role="alert" className="error">{linkProblem}</p>}
     {linked
       ? <Manage key={`${start.booking}:${start.key}`} id={start.booking} api={linkApi} linked rules={rules} close={() => {}} changed={() => setRevision(value => value + 1)} />
       : <>
