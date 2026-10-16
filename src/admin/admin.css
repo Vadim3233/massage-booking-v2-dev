@@ -385,6 +385,9 @@
 .admin-card-wrap.has-directions .admin-status { max-width: calc(100% - 108px); white-space: normal; border-radius: 16px; }
 /* A cancelled booking has no Directions button, so its status may use the whole width, and wraps if it names a refund and a late fee together. */
 .admin-card.cancelled .admin-status { max-width: 100%; white-space: normal; border-radius: 16px; }
+/* Who cancelled it and when sits after the status, and drops onto a line of its own when the status is long. */
+.admin-card.cancelled .admin-card-foot { flex-wrap: wrap; gap: 4px 8px; }
+.admin-card-cancelled-when { flex: 0 0 auto; font-size: 13px; line-height: 1.3; color: var(--cancel-ink); }
 /* The status and Directions share one band at the foot of the card, so they line up and neither covers the text above. */
 .admin-shell .admin-card-wrap.has-directions .admin-card { padding-bottom: 3px; }
 .admin-card-wrap.has-directions .admin-card-foot { min-height: 36px; margin-top: 0; }

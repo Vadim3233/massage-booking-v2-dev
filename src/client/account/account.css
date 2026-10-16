@@ -6,6 +6,7 @@
 .account-pay--ok { color: var(--ok-ink); }
 .account-pay--due { color: var(--needs-ink); font-weight: 600; }
 .account-status { margin-top: 4px; }
+.account-cancelled-on { margin: -4px 0 14px; color: var(--ink-soft); font-weight: 500; line-height: 1.4; }
 .account-note { padding: 12px 14px; margin: 16px 0; border-left: 4px solid var(--primary); background: var(--primary-soft); border-radius: 12px; }
 .account-note--fee { border-left-color: var(--accent); background: var(--accent-soft); }
 .booking-shell .account-back { margin: 0 0 0 -10px; padding-inline: 8px 14px; }

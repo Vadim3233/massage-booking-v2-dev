@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { hiddenCancelled, isListed, listedBookings, moneyToSort, readShowCancelled, SHOW_CANCELLED_KEY, writeShowCancelled } from './cancelledBookings.js'
+import { cancelledNote, hiddenCancelled, isListed, listedBookings, moneyToSort, readShowCancelled, SHOW_CANCELLED_KEY, writeShowCancelled } from './cancelledBookings.js'
 
 const booking = (status, extra = {}) => ({ id: `b-${status}-${Math.random()}`, booking_status: status, refund_due_gbp: 0, late_fee_status: 'none', late_fee_due_gbp: 0, booking_payments: { status: 'paid' }, ...extra })
 
@@ -89,5 +89,27 @@ describe('the choice, kept on this device', () => {
     vi.stubGlobal('localStorage', { getItem: () => { throw new Error('blocked') }, setItem: () => { throw new Error('blocked') } })
     expect(readShowCancelled()).toBe(false)
     expect(() => writeShowCancelled(true)).not.toThrow()
+  })
+})
+
+describe('who cancelled a booking and when, for its card', () => {
+  const now = new Date('2026-10-16T20:00:00Z')
+  const cancelled = (extra = {}) => booking('cancelled', { cancelled_at: '2026-10-14T17:20:00Z', cancelled_by_actor_type: 'client', ...extra })
+  it('says who cancelled it and when, by the clock in London', () => {
+    expect(cancelledNote(cancelled(), now)).toBe('by client · Wed 14 Oct, 18:20')
+    expect(cancelledNote(cancelled({ cancelled_by_actor_type: 'admin', cancelled_at: '2026-10-15T08:05:00Z' }), now)).toBe('by you · Thu 15 Oct, 09:05')
+    expect(cancelledNote(cancelled({ cancelled_by_actor_type: 'system' }), now)).toBe('automatically · Wed 14 Oct, 18:20')
+  })
+  it('gives just the day and time when nobody is named', () => {
+    expect(cancelledNote(cancelled({ cancelled_by_actor_type: null }), now)).toBe('Wed 14 Oct, 18:20')
+    expect(cancelledNote(cancelled({ cancelled_by_actor_type: 'someone new' }), now)).toBe('Wed 14 Oct, 18:20')
+  })
+  it('adds the year for an older cancellation', () => {
+    expect(cancelledNote(cancelled({ cancelled_at: '2025-12-30T10:00:00Z' }), now)).toBe('by client · Tue 30 Dec 2025, 10:00')
+  })
+  it('is nothing for a booking that is not cancelled, or whose time was never recorded', () => {
+    expect(cancelledNote(booking('confirmed', { cancelled_at: '2026-10-14T17:20:00Z' }), now)).toBe('')
+    expect(cancelledNote(cancelled({ cancelled_at: null }), now)).toBe('')
+    expect(cancelledNote(undefined, now)).toBe('')
   })
 })
