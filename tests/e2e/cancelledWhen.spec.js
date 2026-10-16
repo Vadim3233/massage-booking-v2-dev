@@ -42,7 +42,7 @@ async function booked({ first = 'Cora', last = 'Cancelled', clientId, day = 2, s
     ...(status === 'cancelled' ? { cancelled_at: at, cancelled_by_actor_type: by } : {}), ...fields,
   }).select().single())
   await unwrap(f.admin.from('booking_sessions').insert({ booking_id: booking.id, position: 1, service_id: f.ids.service, duration_minutes: 60, service_name_snapshot: 'Massage', unit_price_gbp: 85 }))
-  await unwrap(f.admin.from('booking_payments').insert({ booking_id: booking.id, method: 'bank_transfer', status: pay, amount_gbp: 85, ...(pay === 'paid' ? { paid_at: new Date().toISOString() } : {}) }))
+  await unwrap(f.admin.from('booking_payments').insert({ booking_id: booking.id, method: ['approved', 'awaiting_approval'].includes(pay) ? 'cash' : 'bank_transfer', status: pay, amount_gbp: 85, ...(pay === 'paid' ? { paid_at: new Date().toISOString() } : {}) }))
   return booking
 }
 
