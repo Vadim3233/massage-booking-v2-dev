@@ -8,6 +8,7 @@ import { agendaDays, mergeExtras } from './agendaDays.js'
 import { AwayBanner, DayNotes, QuietDays, TimedBlock } from './AgendaParts.jsx'
 import { useQuietRetry, useReturnRefresh } from './useReturnRefresh.js'
 import BookingCard from './BookingCard.jsx'
+import { listedBookings, useShowCancelled } from './cancelledBookings.js'
 import { clientName, dateLabel, dayHeading, daySummary, money, nextUp, shiftDate, time, today } from './calendarPresentation.js'
 
 const BlockDialog = lazy(() => import('./BlockDialog.jsx'))
@@ -98,6 +99,7 @@ export default function Agenda({ openBooking, openDay, revision, toCheck, checke
   const [lastChunk, setLastChunk] = useState(1)
   const [now, setNow] = useState(Date.now)
   const [showEvery, setShowEvery] = useState(readShowEvery)
+  const [showCancelled, setShowCancelled] = useShowCancelled()
   const [blockDialog, setBlockDialog] = useState(null)
   const shown = useRef(null)
   const anchor = useRef(null)
@@ -139,7 +141,8 @@ export default function Agenda({ openBooking, openDay, revision, toCheck, checke
   }, [attempt, revision, reread, quiet])
   useReturnRefresh(reread)
 
-  const entries = data ? agendaDays({ bookings: data.bookings, blocks: data.blocks, overrides: data.overrides, weekly: data.weekly, start: data.start, end: data.end, day: today(), showEvery }) : []
+  // Cancelled bookings are left out unless asked for (one with money still to sort out stays), so a day left with nothing drops out of the list.
+  const entries = data ? agendaDays({ bookings: listedBookings(data.bookings, showCancelled), blocks: data.blocks, overrides: data.overrides, weekly: data.weekly, start: data.start, end: data.end, day: today(), showEvery }) : []
   const upNext = data ? nextUp(data.bookings, new Date(now)) : null
 
   async function extend(direction) {
@@ -203,7 +206,10 @@ export default function Agenda({ openBooking, openDay, revision, toCheck, checke
         {openDay && <label className="admin-agenda-pick"><Icon name="calendar" size={18} /><span>Day settings for a date</span>
           <input type="date" value="" onChange={event => { if (event.target.value) openDay(event.target.value) }} onClick={event => { try { event.currentTarget.showPicker?.() } catch { /* Native date entry remains available. */ } }} />
         </label>}
-        <label className="admin-agenda-switch"><input type="checkbox" role="switch" checked={showEvery} onChange={toggleShowEvery} />Show every day</label>
+        <div className="admin-agenda-switches" role="group" aria-label="What the Agenda lists">
+          <label className="admin-agenda-switch"><input type="checkbox" role="switch" checked={showEvery} onChange={toggleShowEvery} />Show every day</label>
+          <label className="admin-agenda-switch"><input type="checkbox" role="switch" checked={showCancelled} onChange={event => setShowCancelled(event.target.checked)} />Show cancelled</label>
+        </div>
       </div>
       <div className="admin-agenda-days">
         {entries.map(entry => {

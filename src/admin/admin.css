@@ -134,6 +134,8 @@
 .admin-day-caption { display: none; }
 .admin-working-hours { margin: 2px 0 10px; font-size: 13px; color: var(--muted); }
 .admin-day-note { margin: 6px 0 14px; padding: 18px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); color: var(--ink-soft); }
+/* The one line that puts cancelled bookings on show or away in the Day view and on a day's own page. */
+.admin-cancelled-toggle { margin: 0 0 8px; }
 .admin-create-entry { display: flex; justify-content: flex-end; gap: 8px; padding: 8px 16px 0; }
 .admin-shell .admin-create-entry button { min-height: 44px; font-size: 15px; }
 
@@ -381,6 +383,8 @@
 .admin-shell .admin-card-directions:hover { background: #d9e8df; }
 .admin-shell .admin-card-directions::after { content: ''; position: absolute; inset: -4px; }
 .admin-card-wrap.has-directions .admin-status { max-width: calc(100% - 108px); white-space: normal; border-radius: 16px; }
+/* A cancelled booking has no Directions button, so its status may use the whole width, and wraps if it names a refund and a late fee together. */
+.admin-card.cancelled .admin-status { max-width: 100%; white-space: normal; border-radius: 16px; }
 /* The status and Directions share one band at the foot of the card, so they line up and neither covers the text above. */
 .admin-shell .admin-card-wrap.has-directions .admin-card { padding-bottom: 3px; }
 .admin-card-wrap.has-directions .admin-card-foot { min-height: 36px; margin-top: 0; }

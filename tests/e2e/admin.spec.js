@@ -5,6 +5,8 @@ let f
 test.beforeEach(async () => { f = await adminFixture() })
 test.afterEach(async () => { await f?.cleanup() })
 async function login(page) {
+  // These tests are about the cards, so cancelled bookings are asked for here (the Day view leaves them out unless they are); the default is tested in adminCancelledSwitch.spec.js.
+  await page.addInitScript(() => localStorage.setItem('vad-admin-agenda-show-cancelled', '1'))
   await page.goto('/admin/day')
   await expect(page.getByRole('heading', { name: 'Admin sign in' })).toBeVisible()
   await expect(page.getByText('Continue as guest')).toHaveCount(0)

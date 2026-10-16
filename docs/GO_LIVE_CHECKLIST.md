@@ -113,7 +113,7 @@ Each day can now be set to **Flexible** instead of the usual **Chain**. Under **
 
 ## New: Day settings, one date on its own (2026-10-14)
 
-Press **Day settings** on any day in the Agenda, or in the Day view beside Block time, to change just that date. With **Show every day** on, each free day's whole line opens it, and **Day settings for a date**, beside that switch, opens any date, booked or not. The page shows what the day is set to and why, then lets you change its hours, schedule mode (Chain or Flexible), first appointment and release time with one **Save this day** button, add or change blocked time, and open the day's bookings. **Use my usual week** puts the date back to normal; it asks first, because it removes the date's own settings.
+Press **Day settings** on any day in the Agenda, or in the Day view beside Block time, to change just that date. With **Show every day** on, each free day's whole line opens it, and **Day settings for a date**, above that switch, opens any date, booked or not. The page shows what the day is set to and why, then lets you change its hours, schedule mode (Chain or Flexible), first appointment and release time with one **Save this day** button, add or change blocked time, and open the day's bookings. **Use my usual week** puts the date back to normal; it asks first, because it removes the date's own settings.
 
 - **What is saved.** A special day, the same one the Special days list shows. Your usual week is not touched.
 - **Warns, never moves.** If different hours leave a booking outside them, you are told which and can save anyway. Nothing is moved or cancelled for you.
@@ -129,6 +129,16 @@ Press **Day settings** on any day in the Agenda, or in the Day view beside Block
 - **Kept on the phone you used.** No database change. Another device (a laptop) does not know about it and still shows the payment as needing you; if a phone ever forgets, the payment simply comes back.
 - **It does not buzz your phone.** The reminder shows the next time you open the Admin.
 - **Thinner Agenda.** Booking cards use the full width with their time inside, and are a little thinner; each day's heading is one line with a clock icon that opens Day settings (it stays pinned at the top while you scroll, so it was cut from 102px to 48px); the Needs you box is about a third shorter.
+
+## New: cancelled bookings are out of the way (2026-10-15)
+
+The Agenda no longer lists cancelled bookings, so it shows only your current ones. A second switch, **Show cancelled**, sits next to **Show every day**, on one line; switch it on to see the cancelled ones again, with the days that only had cancelled bookings. Both switches start off, and each is remembered on the phone you used.
+
+- **Money still to sort out stays in view.** A cancelled booking where you still owe a refund, or a late fee is still due, stays in the list whatever the switch says. Its status is amber: "Cancelled · refund £85.00 to send" or "Cancelled · late fee £20.00 due". Once you record the refund, or mark the fee received or waived, it drops out like the others. It matters because nothing else lists refunds to send: the cancellation alert says so once, and the booking's own page shows "Refund due".
+- **The Day view and a day's own page follow the same choice.** They have no switch; a day with cancelled bookings has one line, "Show 2 cancelled bookings", which turns into "Hide cancelled bookings".
+- **What does not change.** Day headings still count only what is going ahead. Alerts, To check and the Clients pages still show cancelled bookings. Nothing is deleted or changed: they are only out of sight.
+- **A little different at the top.** The two switches share one line, and the **Day settings for a date** button now has the line above them. On the smallest phones the switches are a touch smaller so both still fit.
+- **No database change.**
 
 ## What works now (tested locally)
 
