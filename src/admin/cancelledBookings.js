@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { londonMoment } from '../lib/londonMoment.js'
 import { money } from './calendarPresentation.js'
 
 // Cancelled bookings are history, so the Admin's lists leave them out unless the Admin asks for them ("Show cancelled" in the Agenda, kept on this
@@ -15,6 +16,15 @@ export function moneyToSort(booking) {
   if (payment?.status === 'paid' && Number(booking.refund_due_gbp) > 0) owed.push(`refund ${money(booking.refund_due_gbp)} to send`)
   if (booking.late_fee_status === 'due') owed.push(`late fee ${money(booking.late_fee_due_gbp)} due`)
   return owed.join(' · ')
+}
+
+// Who cancelled a booking and when, in a few words for its card ("by client · Wed 14 Oct, 18:20", London time), so a late cancellation can be
+// told from an early one without opening the booking. Nothing for a booking that is not cancelled or whose time was never recorded.
+const CANCELLED_BY = { client: 'by client', admin: 'by you', system: 'automatically' }
+export function cancelledNote(booking, now = new Date()) {
+  const moment = booking?.booking_status === 'cancelled' ? londonMoment(booking.cancelled_at, { now }) : null
+  if (!moment) return ''
+  return [CANCELLED_BY[booking.cancelled_by_actor_type], `${moment.day}, ${moment.time}`].filter(Boolean).join(' · ')
 }
 
 // Whether the Admin's lists show this booking: anything that is not cancelled, a cancelled booking with money to sort out, and every cancelled

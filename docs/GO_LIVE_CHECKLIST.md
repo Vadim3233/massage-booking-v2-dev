@@ -154,6 +154,15 @@ If a client forgets their password, the link in the reset email now opens a page
 - **No database change.** In Supabase the Redirect URLs should include `https://booking.vadmassage.com/**`, which already covers this page.
 - **To try it:** on https://booking.vadmassage.com/account press **Sign in**, then **Forgot password?**, use your `+test` address, press the link in the email, choose a new password, then sign out and sign in with it.
 
+## New: a cancelled booking says when it was cancelled (2026-10-16)
+
+- **In your Agenda, the Day view and a day's own page,** a cancelled card says who cancelled it and when, after its status: "Cancelled" and then "by client · Wed 14 Oct, 18:20" ("by you" when you cancelled it, "automatically" when the system did). When the status is long because money is still to send, the note drops to a line of its own, so the cards stay as narrow as before. You can tell a late cancellation from an early one without opening the booking.
+- **On the page a client sees** for a cancelled booking, one line under the heading says "Cancelled on Friday 16 October at 16:40." For a client with a late fee it shows why. It is there when they open the booking from their list and from the link in an email.
+- **Times are London time.** A booking with no recorded cancellation time shows nothing.
+- **Not in the client's list of bookings.** A client knows when they cancelled, and the list does not carry the time.
+- **No database change.**
+- **To try it:** switch **Show cancelled** on in the Agenda and look at a cancelled card; then open a cancelled booking as the client.
+
 ## What works now (tested locally)
 
 **For clients** (the website)

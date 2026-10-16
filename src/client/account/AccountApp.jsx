@@ -10,6 +10,7 @@ import DayTimePicker from '../booking/components/DayTimePicker.jsx'
 import BookingSummary from '../booking/components/BookingSummary.jsx'
 import TelegramBox from '../booking/components/TelegramBox.jsx'
 import { accountApi, createAccountApi, LINK_INVALID } from './accountApi.js'
+import { cancelledOn } from './cancelledOn.js'
 import { useBookingRules } from '../bookingRules.js'
 import '../booking/booking.css'
 import './account.css'
@@ -154,9 +155,11 @@ function Manage({ id, rules, close, changed, api, linked = false }) {
   </>
   const open = OPEN.includes(booking.booking_status)
   const owes = Number(booking.late_fee_due_gbp) > 0 && booking.late_fee_status === 'due'
+  const cancelledAt = cancelledOn(booking.cancelled_at)
   return <section>
     {!linked && <button className="btn--quiet btn--small account-back" onClick={close}><Icon name="left" size={20} />Your bookings</button>}
     <h1 tabIndex={-1}>{HEADING[booking.booking_status]}</h1>
+    {booking.booking_status === 'cancelled' && cancelledAt && <p className="account-cancelled-on">{cancelledAt}</p>}
     {message && <p role="alert" className="account-note">{message}</p>}
     {mode === 'view' && <>
       {/* Linking Telegram is done as the signed-in client, so it is not offered on a page opened from the email link, where nobody has signed in. */}
