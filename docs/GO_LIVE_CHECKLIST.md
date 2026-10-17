@@ -186,6 +186,14 @@ The booking pages, a client's account pages and the whole Admin share one new lo
 - **Not changed, because it is set outside this site.** The sign-up and password emails that Supabase sends keep their green and gold until you edit those templates in Supabase.
 - **To try it:** open the Vercel preview of this change on your phone and look at Day, Agenda, To check, a booking, and the booking pages as a client.
 
+## New: a hint for finding the email (2026-10-17)
+
+- **Under "Confirmation email:"** on the page a client sees after booking, and on the page of an open booking (from Your bookings or from the link in an email), one grey line says: "My emails come from hello@book.vadmassage.com. Can't find one? Look in your spam folder and press “Not spam”." A new sender's first email can land in spam, and one "Not spam" teaches the inbox to trust the rest.
+- **Not on the payment step,** where no email has gone yet, and **not on a booking with no email address,** which already says "Please contact Vad to confirm your email".
+- **If you ever change the sender address** (the `EMAIL_FROM` setting in Vercel), the address in this line has to change with it. It is one line in `src/client/emailSender.js`, and a test fails if it no longer matches the setup guide.
+- **No database change, no new setting, no new package.**
+- **To try it:** make a test booking and look under the email address on the confirmation page; then open it from Your bookings.
+
 ## What works now (tested locally)
 
 **For clients** (the website)
