@@ -135,7 +135,7 @@ Press **Day settings** on any day in the Agenda, or in the Day view beside Block
 
 The Agenda no longer lists cancelled bookings, so it shows only your current ones. A second switch, **Show cancelled**, sits next to **Show every day**, on one line; switch it on to see the cancelled ones again, with the days that only had cancelled bookings. Both switches start off, and each is remembered on the phone you used.
 
-- **Money still to sort out stays in view.** A cancelled booking where you still owe a refund, or a late fee is still due, stays in the list whatever the switch says. Its status is amber: "Cancelled · refund £85.00 to send" or "Cancelled · late fee £20.00 due". Once you record the refund, or mark the fee received or waived, it drops out like the others. It matters because nothing else lists refunds to send: the cancellation alert says so once, and the booking's own page shows "Refund due".
+- **Money still to sort out stays in view.** A cancelled booking where you still owe a refund, or a late fee is still due, stays in the list whatever the switch says. Its status is amber: "Cancelled · refund £85.00 to send" or "Cancelled · late fee £85.00 due". Once you record the refund, or mark the fee received or waived, it drops out like the others. It matters because nothing else lists refunds to send: the cancellation alert says so once, and the booking's own page shows "Refund due".
 - **The Day view and a day's own page follow the same choice.** They have no switch; a day with cancelled bookings has one line, "Show 2 cancelled bookings", which turns into "Hide cancelled bookings".
 - **What does not change.** Day headings still count only what is going ahead. Alerts, To check and the Clients pages still show cancelled bookings. Nothing is deleted or changed: they are only out of sight.
 - **A little different at the top.** The two switches share one line, and the **Day settings for a date** button now has the line above them. On the smallest phones the switches are a touch smaller so both still fit.
@@ -162,7 +162,7 @@ A client's **Your bookings** list now has one quiet line under each booking that
 - **Paid:** "£90.00 · Paid".
 - **Cash:** "£125.00 · Pay in cash at your appointment" until the appointment has passed. After that it says "£125.00 · Cash", and "Paid" once you record the cash as received.
 - **Bank transfer:** "£90.00 to pay by bank transfer" while you are waiting for it, and just "£90.00" once the client says they have sent it (the status already says you will check it).
-- **After a cancellation:** "Refund of £90.00 on its way" until you record the refund, then "Refunded"; "Late fee of £20.00 due" until you mark the fee received or waived. A cancelled booking with nothing owed either way has no line.
+- **After a cancellation:** "Refund of £90.00 on its way" until you record the refund, then "Refunded"; "Late fee of £90.00 due" until you mark the fee received or waived. A cancelled booking with nothing owed either way has no line.
 - **Colours:** green when it is settled, amber when money still has to move, plain otherwise.
 - **No database change.**
 - **To try it:** sign in at https://booking.vadmassage.com/account with a client that has bookings (your `+test` address) and look at each tile.
@@ -210,7 +210,7 @@ The booking pages, a client's account pages and the whole Admin share one new lo
 **For clients** (the website)
 - Choose area, treatment, length, date and time, sign in or continue as a guest, pay by bank transfer or cash, get a confirmation.
 - A booking waiting for payment keeps its time until you confirm or remove it. Nothing is ever cancelled automatically.
-- `/account`: see their bookings, cancel or change the time themselves. Inside the free window they must acknowledge a late fee first. Free for an hour after booking.
+- `/account`: see their bookings, cancel or change the time themselves. More than 24 hours before the appointment (your setting "Free to cancel or change more than this many hours before"), and for the first hour after booking, it is free. Inside that time they can still cancel or move online, but the full price is charged as a late fee that they must tick to accept and that you can lower or waive: a paid booking that is cancelled gets no refund, and a move adds the fee on top of what they paid. You confirmed this rule on 2026-10-17.
 - If a day is full, they can leave their details for the waitlist.
 - The booking page opens with a warm welcome, three plain steps and the free change window. You can write your own welcome and a "A little about me" (training, experience, insurance: only what is true) under More, Welcome message.
 
