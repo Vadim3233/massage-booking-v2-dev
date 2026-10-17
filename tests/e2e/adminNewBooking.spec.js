@@ -149,6 +149,40 @@ test('inline client duplicate is actionable and new canonical client saves a def
   expect(client.auth_user_id).toBeNull()
 })
 
+test('a client can be added with only a name while booking, and the appointment address is typed for it', async ({ page }) => {
+  await start(page)
+  await page.getByRole('button', { name: '+ Add new client', exact: true }).click()
+  await expect(page.getByText('Only the name is needed.')).toBeVisible()
+  // Half an address is caught before anything is sent; no address at all is fine.
+  await page.getByLabel('First name', { exact: true }).fill('E2E-nameonly-booking')
+  await page.getByLabel('Postcode', { exact: true }).fill('SW1A 1AA')
+  await page.getByRole('button', { name: 'Save client', exact: true }).click()
+  await expect(page.getByRole('alert')).toHaveText('Enter the street, city and postcode, or leave the address empty.')
+  await page.getByLabel('Postcode', { exact: true }).fill('')
+  await page.getByRole('button', { name: 'Save client', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'E2E-nameonly-booking', level: 3 })).toBeVisible()
+  const client = await unwrap(f.admin.from('clients').select('id,email,phone').eq('first_name', 'E2E-nameonly-booking').single())
+  f.trackRecipient(client.id)
+  expect(client).toMatchObject({ email: null, phone: null })
+  expect(await unwrap(f.admin.from('client_addresses').select('id').eq('client_id', client.id))).toEqual([])
+  // No saved address yet, so this appointment's address is typed, as for any one-off address.
+  await expect(page.getByRole('radio', { name: 'One-off booking address', exact: true })).toBeChecked()
+  await page.getByLabel('Address line 1', { exact: true }).fill('5 Typed Road')
+  await page.getByLabel('City', { exact: true }).fill('London')
+  await page.getByLabel('Postcode', { exact: true }).fill('SW1A 1AA')
+  await page.getByRole('combobox', { name: 'Service area', exact: true }).selectOption(f.ids.area)
+  await treatment(page)
+  await pickTime(page)
+  await page.getByRole('button', { name: 'Create booking', exact: true }).click()
+  await expect(page.getByRole('dialog')).toContainText('E2E-nameonly-booking')
+  const booking = await unwrap(f.admin.from('bookings').select('id,address_line_1_snapshot,postcode_snapshot,booking_email_snapshot').eq('client_id', client.id).single())
+  expect(booking).toMatchObject({ address_line_1_snapshot: '5 Typed Road', postcode_snapshot: 'SW1A 1AA', booking_email_snapshot: null })
+  // There is no one to email, so nothing is queued for the client.
+  const events = await unwrap(f.admin.from('event_outbox').select('id').eq('aggregate_id', booking.id))
+  const messages = await unwrap(f.admin.from('notification_deliveries').select('audience').in('event_id', events.map(event => event.id)))
+  expect(messages.filter(message => message.audience === 'client')).toEqual([])
+})
+
 test('stale selected slot is rejected and no booking is created', async ({ page }) => {
   await start(page)
   await selectClient(page)

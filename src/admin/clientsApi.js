@@ -5,6 +5,7 @@ export const SAFE_MESSAGES = new Set([
   'Another client already uses this email or phone.',
   'An existing client uses this email or phone. Select that client instead.',
   'Name and a valid email or phone are required',
+  'A name is required, and an email or phone must be valid if you give one',
   'Address, city and postcode are required',
   'Two clients who each have their own login cannot be combined.',
   'The client with the login is the one that stays.',
@@ -22,11 +23,11 @@ const failure = error => new Error(SAFE_MESSAGES.has(error?.message) ? error.mes
 
 export const fullName = client => [client?.first_name, client?.last_name].filter(Boolean).join(' ') || 'Client'
 
+// Only the name is needed. A phone number or an email that is typed has to look right.
 export function validateClient(details) {
   if (!details.first_name?.trim()) return 'Enter a first name.'
   const phone = (details.phone || '').replace(/[^0-9]/g, '')
   const email = (details.email || '').trim()
-  if (!email && !phone) return 'Enter a phone number or an email address.'
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return 'That email address does not look right.'
   if (phone && (phone.length < 7 || phone.length > 20)) return 'That phone number does not look right.'
   return ''
@@ -34,6 +35,12 @@ export function validateClient(details) {
 export function validateAddress(address) {
   if (!address.address_line_1?.trim() || !address.city?.trim() || !address.postcode?.trim()) return 'Enter the street, city and postcode.'
   return ''
+}
+// An address given with a new client is optional as a whole. The city is filled in with London, so it does not count as typing an address;
+// anything else does, and then the street, city and postcode are all needed.
+export const addressTyped = address => Boolean(address.address_line_1?.trim() || address.address_line_2?.trim() || address.postcode?.trim() || address.entry_instructions?.trim())
+export function validateOptionalAddress(address) {
+  return addressTyped(address) && validateAddress(address) ? 'Enter the street, city and postcode, or leave the address empty.' : ''
 }
 
 export function createClientsApi(client) {
