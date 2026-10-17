@@ -211,6 +211,28 @@ test('when anything goes wrong the client sees nothing of it: the box is just no
   expect(await tokens()).toBe(0)
 })
 
+test('the box says Telegram is optional and needs its free app, with a link to get it, and says neither once the chat is linked', async ({ page }) => {
+  await book(page)
+  await expect(box(page).getByRole('heading', { name: 'Get updates on Telegram' })).toBeVisible()
+  await expect(box(page)).toContainText("It's optional: you'll get the email either way.")
+  await expect(box(page)).toContainText('You need the free Telegram app. Don\'t have it? Get it here, then come back to this page and press the button again.')
+  const getIt = box(page).getByRole('link', { name: 'Get it here' })
+  await expect(getIt).toHaveAttribute('href', 'https://telegram.org/dl')
+  await expect(getIt).toHaveAttribute('target', '_blank')
+  await expect(getIt).toHaveAttribute('rel', /noopener/)
+  // The line sits under the button it explains, with room between them, and does not run off a phone's edge.
+  const button = await box(page).getByRole('link', { name: 'Open Telegram' }).boundingBox()
+  const line = await box(page).getByText('You need the free Telegram app.').boundingBox()
+  expect(line.y).toBeGreaterThanOrEqual(button.y + button.height + 8)
+  expect(line.x + line.width).toBeLessThanOrEqual(390)
+  // Once the chat is linked the box has no use for either line.
+  const code = await codeOf(page)
+  expect((await fixture.admin.rpc('link_client_telegram', { p_token: code, p_chat_id: chat() })).data).toEqual({ status: 'linked', first_name: 'Test' })
+  await expect(box(page).getByRole('heading', { name: "You're connected on Telegram" })).toBeVisible({ timeout: 15000 })
+  await expect(box(page).getByRole('link', { name: 'Get it here' })).toHaveCount(0)
+  await expect(box(page)).not.toContainText("It's optional")
+})
+
 test('the box fits a phone and a very small phone', async ({ page }) => {
   await book(page)
   await expect(box(page)).toBeVisible()

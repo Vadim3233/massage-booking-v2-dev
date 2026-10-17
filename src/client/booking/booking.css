@@ -131,6 +131,8 @@
 .summary-when { margin: 12px 0 4px; font: 600 20px/1.3 var(--font-display); font-variant-numeric: lining-nums; }
 .summary-line { margin: 4px 0; color: var(--ink-soft); font-size: 15px; }
 .summary-line strong { color: var(--ink); }
+.summary-hint { margin: 0 0 4px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.summary-hint strong { color: var(--ink-soft); font-weight: 600; overflow-wrap: anywhere; }
 .summary-sessions { margin: 10px 0; padding-left: 20px; color: var(--ink); font-weight: 500; }
 .summary-total { margin: 10px 0 4px; padding-top: 10px; border-top: 1px dashed var(--tile-border); font-weight: 600; }
 .summary-total .figure { color: var(--primary); font-size: 22px; }
@@ -249,6 +251,7 @@
 .telegram-box { margin: 4px 0 18px; padding: 14px 16px 12px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); }
 .telegram-box h2 { margin: 0 0 6px; font-size: 18px; }
 .telegram-box p { margin: 0 0 12px; color: var(--ink-soft); font-size: 15px; line-height: 1.5; }
+.telegram-box .btn + p { margin-top: 12px; }
 .telegram-box p.fine { margin: 10px 0 0; }
 .telegram-box[data-state=linked] { border-color: var(--ok-rail); background: var(--ok-bg); }
 .telegram-box[data-state=linked] p { margin-bottom: 4px; color: var(--ok-ink); }

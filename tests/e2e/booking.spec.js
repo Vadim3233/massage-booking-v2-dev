@@ -70,6 +70,9 @@ test('mobile bank-transfer journey, browser Back, reload and real persisted resu
   await page.getByRole('button', { name: "I've made the bank transfer" }).click()
   await expect(page.getByRole('heading', { name: "I've received your booking" })).toBeVisible()
   await expect(page.getByText("Payment: Transfer sent — I'll check it shortly", { exact: true })).toBeVisible()
+  // Under the email address: which address my emails come from, and where to look for one that has not come.
+  await expect(page.locator('.summary-hint')).toContainText('My emails come from hello@book.vadmassage.com.')
+  await expect(page.locator('.summary-hint')).toContainText('Look in your spam folder')
   await expect(page.getByRole('listitem').filter({ hasText: 'Integration massage · 60 minutes' })).toHaveCount(2)
   await page.screenshot({ path: 'test-results/mobile-confirmation.png', fullPage: true })
   await page.reload()
@@ -418,6 +421,8 @@ test('provisional payment shows canonical email/postcode and survives reload bef
   await expect(page.getByRole('dialog', { name: 'Still booking?' })).toHaveCount(0)
   await expect(page.locator('.hold')).toHaveCount(0)
   await expect(page.getByText(fixture.email, { exact: true })).toBeVisible()
+  // No email has gone yet, so the line about finding one is not on this step.
+  await expect(page.locator('.summary-hint')).toHaveCount(0)
   await expect(page.getByText('Payment: Awaiting your bank transfer', { exact: true })).toBeVisible()
   await expect(page.locator('[aria-current=step]')).toHaveText('Payment')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
@@ -435,6 +440,7 @@ test('provisional payment shows canonical email/postcode and survives reload bef
   await expect(page.getByRole('heading', { name: "I've received your booking" })).toBeVisible()
   await expect(page.getByText(fixture.email, { exact: true })).toBeVisible()
   await expect(page.getByText('10 Browser Street, London, SW1A 1AA', { exact: true })).toBeVisible()
+  await expect(page.locator('.summary-hint')).toBeVisible()
 })
 
 test('a pending reservation has no deadline: it survives a reload and keeps its time', async ({ page }) => {

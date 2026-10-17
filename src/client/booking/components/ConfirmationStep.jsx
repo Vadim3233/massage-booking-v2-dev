@@ -30,7 +30,7 @@ export default function ConfirmationStep({ id, api, bank, quote, again }) {
     <h1 tabIndex={-1}>{status === 'cancelled' ? <>Your appointment is <em>cancelled</em></> : status === 'completed' ? <>Your appointment is <em>complete</em></> : <>Your appointment is <em>confirmed</em></>}</h1>
     <p className="lede">{status === 'cancelled' ? 'This appointment will not go ahead. Contact Vad if you have any questions.' : status === 'completed' ? 'Thank you for your visit.' : "I'm looking forward to seeing you."}</p>
     {status === 'confirmed' && <TelegramBox />}
-    <BookingSummary booking={booking} quote={quote} />
+    <BookingSummary booking={booking} quote={quote} emailHint />
     {status === 'confirmed' && booking.booking_payments.method === 'cash' && booking.booking_payments.status === 'approved' && <p>Please pay the full amount in cash at your appointment.</p>}
     {calendar && <a className="btn btn--tonal btn--block" href={calendar} download="massage-with-vad.ics"><Icon name="download" size={20} />Add to your calendar</a>}
     {another}
@@ -43,7 +43,7 @@ export default function ConfirmationStep({ id, api, bank, quote, again }) {
     <h1 tabIndex={-1}>I've <em>received</em> your booking</h1>
     <p className="lede">{bankTransfer ? "Thank you. I look forward to seeing you. I'll check your transfer and confirm your appointment as soon as possible." : "Thank you. I look forward to seeing you. I'll confirm your appointment as soon as possible."}</p>
     <TelegramBox />
-    <BookingSummary booking={booking} quote={quote} />
+    <BookingSummary booking={booking} quote={quote} emailHint />
     <section><h2>What happens next</h2>
       {bankTransfer ? <ol role="list" className="timeline">
         <li>I'll check your transfer.</li>

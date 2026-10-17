@@ -64,8 +64,10 @@ export default function TelegramBox({ username = import.meta.env.VITE_TELEGRAM_C
     {linked
       ? <p>I'll message you there when your appointment is confirmed, moved or cancelled. Send /stop in the chat to turn it off.</p>
       : <>
-        <p>I'll message you when your appointment is confirmed, moved or cancelled. Press the button, then press Start in Telegram.</p>
+        <p>I'll message you when your appointment is confirmed, moved or cancelled. Press the button, then press Start in Telegram. It's optional: you'll get the email either way.</p>
         <a className="btn btn--tonal btn--block" href={view.link} target="_blank" rel="noopener noreferrer" onClick={opened}>Open Telegram</a>
+        {/* Telegram's own page for getting the app on any phone or computer. */}
+        <p>You need the free Telegram app. Don't have it? <a href="https://telegram.org/dl" target="_blank" rel="noopener noreferrer">Get it here</a>, then come back to this page and press the button again.</p>
         <p className="fine">This page will tell you when you're connected.</p>
       </>}
     {/* Said aloud to a screen reader when the chat gets linked. */}
