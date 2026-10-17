@@ -249,6 +249,7 @@
 .telegram-box { margin: 4px 0 18px; padding: 14px 16px 12px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); }
 .telegram-box h2 { margin: 0 0 6px; font-size: 18px; }
 .telegram-box p { margin: 0 0 12px; color: var(--ink-soft); font-size: 15px; line-height: 1.5; }
+.telegram-box .btn + p { margin-top: 12px; }
 .telegram-box p.fine { margin: 10px 0 0; }
 .telegram-box[data-state=linked] { border-color: var(--ok-rail); background: var(--ok-bg); }
 .telegram-box[data-state=linked] p { margin-bottom: 4px; color: var(--ok-ink); }
