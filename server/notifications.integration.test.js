@@ -49,6 +49,11 @@ describe('the sender against local Supabase', () => {
     expect(mine).toMatchObject({ subject: 'Your appointment is confirmed' })
     expect(mine.text).toContain('https://booking.example.com/account?booking=' + ids.booking)
     expect(mine.text).toContain('I have received your payment.')
+    // The same email in the look of the booking pages, made from the database's own wording: the day and time in bold, the link on a button.
+    expect(mine.html).toContain('<strong>Mon 2 Jun at 10:00</strong>')
+    expect(mine.html).toContain('I have received your payment.')
+    expect(mine.html).toContain('href="https://booking.example.com/account?booking=' + ids.booking)
+    expect(mine.html).not.toContain('{link}')
     expect((await deliveries(event))[0]).toMatchObject({ status: 'sent' })
   })
 
@@ -61,6 +66,8 @@ describe('the sender against local Supabase', () => {
     const mine = bodies.find(body => body.to[0] === ids.email)
     const code =/\/account\?booking=[0-9a-f-]{36}#key=([0-9a-f]{64})/.exec(mine.text)?.[1]
     expect(code).toBeTruthy()
+    // The button of the HTML version holds that very link.
+    expect(mine.html).toContain(`href="https://booking.example.com/account?booking=${ids.booking}#key=${code}"`)
     const config = localConfig()
     const visitor = createClient(config.API_URL, config.ANON_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
     const opened = await visitor.rpc('booking_by_key', { p_booking_id: ids.booking, p_key: code })

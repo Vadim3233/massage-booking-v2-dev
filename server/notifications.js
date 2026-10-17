@@ -1,5 +1,6 @@
 // Delivers queued Telegram and email notifications. The database writes every message; this only sends
 // them and records the outcome. Secrets come from the environment and never appear in results or errors.
+import { composeEmailHtml } from './emailHtml.js'
 import { CALL_LIMIT_MS } from './telegramWebhook.js'
 
 const TELEGRAM_LIMIT = 4000
@@ -83,7 +84,12 @@ async function sendEmail(row, message, config, fetchImpl) {
   const to = row.audience === 'admin' ? config.email.adminTo : row.recipient
   if (!to) throw new Error('ADMIN_ALERT_EMAIL is not set')
   const payload = { from: config.email.from, to: [to], subject: row.audience === 'admin' ? `[VadMassage] ${message.title}` : message.title, text: message.body }
-  if (row.audience === 'client' && config.email.replyTo) payload.reply_to = config.email.replyTo
+  if (row.audience === 'client') {
+    // A client's email also goes out in the look of the booking pages, beside the plain text. It is made from the message as written (with its
+    // "{link}") and the private link, and it never holds the email back: if it cannot be made the plain text goes alone.
+    try { payload.html = composeEmailHtml({ title: message.title, body: row.body, url: message.url, canReply: Boolean(config.email.replyTo) }) } catch { /* plain text only */ }
+    if (config.email.replyTo) payload.reply_to = config.email.replyTo
+  }
   const response = await fetchImpl('https://api.resend.com/emails', {
     method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${config.email.apiKey}` }, body: JSON.stringify(payload),
   })

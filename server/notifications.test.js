@@ -185,6 +185,13 @@ describe('the private link in a client\'s email', () => {
     expect(calls[0].text).toContain('See or change your booking: https://booking.example.com/account?booking=b1#key=CODE1-b1')
     expect(client.completed).toEqual([{ p_id: 'c', p_ok: true, p_error: null }])
   })
+  it('puts the same private link on the button of the HTML version, which the plain text keeps beside it, and gives the Admin plain text only', async () => {
+    const { calls } = await send([clientRow(), row({ id: 'a', channel: 'email' })])
+    expect(calls[0].html).toContain('href="https://booking.example.com/account?booking=b1#key=CODE1-b1"')
+    expect(calls[0].html).not.toContain('{link}')
+    expect(calls[0].text).toBe('Thank you.\n\nSee or change your booking: https://booking.example.com/account?booking=b1#key=CODE1-b1')
+    expect(calls[1].html).toBeUndefined()
+  })
   it('gives every email its own code', async () => {
     const { client, calls } = await send([clientRow({ id: 'c1' }), clientRow({ id: 'c2' })])
     expect(client.minted).toHaveLength(2)
