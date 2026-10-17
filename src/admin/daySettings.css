@@ -1,7 +1,7 @@
 /* Day settings: one date on its own. It uses the Admin's own cards, fields and buttons; these rules only space it out. */
 .admin-day-settings { padding-bottom: 32px; }
 .admin-day-settings-date { margin: 0 0 12px; color: var(--ink-soft); font-size: 16px; }
-.admin-day-glance { display: grid; gap: 4px; padding: 14px 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); }
+.admin-day-glance { display: grid; gap: 4px; padding: 14px 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); }
 .admin-day-glance p { margin: 0; overflow-wrap: anywhere; }
 .admin-day-glance-main { font-weight: 600; }
 .admin-day-settings-form { margin-top: 20px; }

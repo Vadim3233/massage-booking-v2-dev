@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { adminPageFromLink, alertsApi, bookingIdFromLink, groupAlerts, groupByDay } from './alertsApi.js'
 import { useQuietRetry, useReturnRefresh } from './useReturnRefresh.js'
+import Icon from '../ui/icons.jsx'
 
 // The day is in the heading above the card, so a card only needs the time.
 const clock = value => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
@@ -51,7 +52,7 @@ export default function Alerts({ openBooking, openPage, changed, api = alertsApi
   const unread = (alerts || []).filter(alert => !alert.read_at).length
   return <section className="admin-review" aria-labelledby="alerts-title">
     <header className="admin-review-heading"><div><h1 id="alerts-title">Alerts</h1><p>What has happened since you last looked.</p></div>
-      <button onClick={() => { quiet.asked(); reread() }} aria-label="Refresh alerts">↻</button></header>
+      <button onClick={() => { quiet.asked(); reread() }} aria-label="Refresh alerts"><Icon name="refresh" size={20} /></button></header>
     {error && <p role="alert">{error} <button onClick={() => { quiet.asked(); reread() }}>Retry alerts</button></p>}
     {!alerts && !error && <p role="status">Loading alerts…</p>}
     {alerts && !alerts.length && <p>Nothing yet. New bookings and client changes will appear here.</p>}

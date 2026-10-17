@@ -175,6 +175,16 @@ A client's **Your bookings** list now has one quiet line under each booking that
 - **No database change.**
 - **To try it:** switch **Show cancelled** on in the Agenda and look at a cancelled card; then open a cancelled booking as the client.
 
+## New: a calmer, more premium look (2026-10-16)
+
+The booking pages, a client's account pages and the whole Admin share one new look: warm ivory pages, white cards, **slate blue** (instead of green) for buttons, links and whatever is selected, and **midnight navy** headings. The gold is gone, including the app icon on a phone's home screen: remove the app from the home screen and add it again to get the new icon.
+
+- **Same meaning, same colour, always with words.** Sage is confirmed or paid, amber means you need to act, terracotta on peach is cancelled or be careful, deep red is an error or something that cannot be undone.
+- **The Day view and the Agenda.** The selected tab and date are slate blue, with a dot for today; the working hours are a powder-blue row; "Show 3 cancelled bookings" is a peach row; travel time has a car, free time is tinted sage, and each booking card has a slate edge. A cancelled booking is a quiet soft-grey card with a terracotta edge and the note of who cancelled it and when.
+- **Nothing else changed.** The layout, wording, prices, payments, scheduling and sign-in work as before. One small fix on the way: the Admin sign-in error now sits inside the sign-in card instead of loose at the left edge of the page.
+- **Not changed, because it is set outside this site.** The sign-up and password emails that Supabase sends keep their green and gold until you edit those templates in Supabase.
+- **To try it:** open the Vercel preview of this change on your phone and look at Day, Agenda, To check, a booking, and the booking pages as a client.
+
 ## What works now (tested locally)
 
 **For clients** (the website)

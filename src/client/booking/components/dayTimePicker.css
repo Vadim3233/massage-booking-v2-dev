@@ -2,7 +2,9 @@
 .dtp .date-field { display: grid; gap: 6px; max-width: 240px; margin: 4px 0 16px; color: var(--muted); font-size: 13px; font-weight: 600; }
 .dtp .date-field input { cursor: pointer; }
 .dtp .daystrip { display: grid; grid-template-columns: 40px repeat(5, minmax(0, 1fr)) 40px; gap: 6px; align-items: stretch; margin: 8px 0 0; }
-.dtp .daystrip-arrow { min-height: 68px; padding: 0; border: 0; background: transparent; }
+.dtp .daystrip-arrow { position: relative; min-height: 68px; padding: 0; border: 0; background: transparent; }
+/* The arrow is drawn 40px wide; its press area reaches 2px further each side, to 44px. */
+.dtp .daystrip-arrow::after { content: ''; position: absolute; inset: 0 -2px; }
 .dtp .daystrip-arrow[aria-disabled=true] { opacity: .35; cursor: default; }
 .dtp .daychip { display: grid; justify-items: center; align-content: center; gap: 2px; min-height: 68px; padding: 6px 0 8px; border: 1.5px solid var(--control-border); border-radius: var(--radius); background: var(--surface); color: var(--ink); }
 .dtp .daychip-dow { color: var(--muted); font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
@@ -11,15 +13,15 @@
 .dtp .daychip[data-free=yes] .daychip-dot { background: var(--ok-rail); }
 .dtp .daychip[data-free=no] { border-style: dashed; background: transparent; color: var(--muted); }
 .dtp .daychip[data-free=unknown] { border-style: dotted; }
-.dtp .daychip[aria-pressed=true] { border-color: var(--primary); background: var(--primary); color: #fff; box-shadow: 0 8px 16px -10px rgb(30 86 70 / .85); }
-.dtp .daychip[aria-pressed=true] .daychip-dow { color: rgb(255 255 255 / .85); }
-.dtp .daychip[aria-pressed=true] .daychip-dot { background: var(--accent); }
+.dtp .daychip[aria-pressed=true] { border-color: var(--primary); background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow-brand); }
+.dtp .daychip[aria-pressed=true] .daychip-dow { color: var(--on-primary-soft); }
+.dtp .daychip[aria-pressed=true] .daychip-dot { background: var(--on-primary); }
 .dtp .strip-month { margin: 10px 0 14px; color: var(--muted); font-size: 13px; font-weight: 600; text-align: center; }
 .dtp .day-name { margin: 20px 0 4px; font: 600 20px/1.3 var(--font-display); font-variant-numeric: lining-nums; }
-.dtp .slot-group { margin: 16px 0 8px; color: var(--accent-ink); font: 700 12px/1 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; }
+.dtp .slot-group { margin: 16px 0 8px; color: var(--muted); font: 700 12px/1 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; }
 .dtp .slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 8px; }
 .dtp .slots button { min-height: 48px; padding: 0 8px; border-color: var(--control-border); font-variant-numeric: tabular-nums; }
-.dtp .slots button[aria-pressed=true] { border-color: var(--primary); background: var(--primary); color: #fff; box-shadow: 0 8px 16px -10px rgb(30 86 70 / .85); }
+.dtp .slots button[aria-pressed=true] { border-color: var(--primary); background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow-brand); }
 .dtp .slots button[aria-pressed=true]::before { content: ''; width: 6px; height: 11px; margin: -3px 2px 0 0; border: solid currentColor; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
 .dtp .empty-day { margin: 20px 0 12px; }
 @media (min-width: 560px) { .dtp .slots { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

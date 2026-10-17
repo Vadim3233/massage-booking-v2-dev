@@ -1,56 +1,81 @@
+/* The colours, type, shape and depth of the whole app, in one place. Every screen, the booking pages and the Admin alike, reads these, so a value
+   changed here changes everywhere. src/theme.test.js checks that the text and interface colours below keep their contrast.
+
+   The look: warm ivory and white do most of the work, slate blue is the one interactive colour, midnight navy carries the headings, and sage,
+   powder blue and terracotta appear only where they mean something (settled, the brand's own tint, cancelled or to be careful with). */
 :root {
-  --ink: #253b36;
-  --ink-soft: #52625c;
-  --muted: #5e6b65;
-  --paper: #f7f6f2;
+  /* Text. Navy for what matters, two quieter slates for the rest; each reads at 4.5:1 or better on ivory, white, cream and powder blue. */
+  --ink: #142f46;
+  --ink-soft: #435467;
+  --muted: #636d78;
+
+  /* Page and surfaces. Ivory is the page, white the cards, cream the quiet areas, powder blue the brand's own tint. */
+  --paper: #faf8f5;
+  --paper-clear: rgb(250 248 245 / 0);
   --surface: #ffffff;
-  --line: #d8dfda;
-  --line-strong: #becbbf;
-  --green: #255443;
-  --green-deep: #1e5646;
-  --green-soft: #eef3ec;
-  --gold: #b28342;
-  --gold-soft: #f8f1e4;
+  --cream: #f4ede3;
+
+  /* Lines. Hairlines and tile borders are decoration; a field or anything tapped without another outline uses --control-border, 3:1 on ivory. */
+  --hairline: #e6e3df;
+  --line: #ddd8d1;
+  --line-strong: #c8c2b9;
+  --tile-border: #d3cec6;
+  --field-border: #7b8794;
+  --control-border: #7b8794;
+
+  /* Brand: slate blue. White text on it is 7:1; --primary-strong is the pressed and hover colour. */
+  --primary: #345b73;
+  --primary-strong: #24465e;
+  --primary-soft: #e7f0f6;
+  --primary-line: #c3d5e1;
+  --primary-mid: #8aa5b8;
+  --on-primary: #ffffff;
+  --on-primary-soft: rgb(255 255 255 / .82);
+
+  /* Terracotta on peach: cancelled bookings and things to be careful with. --accent-ink is the shade that is safe for small text. */
+  --accent: #a66a4d;
+  --accent-ink: #915d43;
+  --accent-soft: #f8e7de;
+
+  /* Errors and the choices that cannot be undone. */
   --danger: #8e3029;
   --danger-line: #b45644;
-  --danger-soft: #fbece6;
+  --danger-soft: #fbe9e5;
+  --danger-strong: #742621;
+
+  /* Colour says whose turn it is: amber = you act, dashed = the client acts, sage = settled. Each status keeps its words, and its dot or shape, as well. */
+  --needs-ink: #6b4a12; --needs-bg: #faedcf; --needs-rail: #b8791a;
+  --wait-ink: #55606b; --wait-rail: #8591a0;
+  --ok-ink: #587336; --ok-bg: #eaf0e5; --ok-rail: #789d4a;
+  --done-ink: #3d4f5f; --done-bg: #e8edf1; --done-rail: #3d4f5f;
+  --cancel-ink: #915d43; --cancel-bg: #f8e7de; --cancel-rail: #a66a4d; --cancel-surface: #f6f4f1;
+  --noshow-ink: #7a2740; --noshow-bg: #f7e1e7; --noshow-rail: #b04566;
+  --needs-tint: #fdf6e6; --needs-badge: #f2b84b; --needs-outline: rgb(184 121 26 / .3);
+  --block-bg: #eaeef1; --block-ink: #3d4f5f; --block-rail: #7f8b96;
+  --free-bg: #f3f6ee; --buffer-bg: #f1eee9;
+  --alert-dot: #a8321f;
+
+  /* Type. */
   --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
   --font-ui: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
   color-scheme: light;
 
-  /* Surfaces, lines and fields. Field borders pass 3:1 against white; hairlines are decoration only. */
-  --surface-soft: #fbfaf7;
-  --hairline: #e4e7e1;
-  --field-border: #7d8e84;
+  /* Shape and depth: a fine border plus a very soft, navy-tinted shadow, never a grey drop shadow. */
+  --radius-xs: 8px; --radius-sm: 12px; --radius: 16px; --radius-lg: 22px; --radius-pill: 999px;
+  --shadow-1: 0 1px 2px rgb(20 47 70 / .05), 0 3px 10px rgb(20 47 70 / .04);
+  --shadow-2: 0 2px 6px rgb(20 47 70 / .07), 0 12px 28px rgb(20 47 70 / .1);
+  --shadow-ring: 0 0 0 1px var(--hairline);
+  --shadow-card: var(--shadow-ring), var(--shadow-1);
+  --shadow-card-raised: var(--shadow-ring), var(--shadow-2);
+  --shadow-brand: 0 6px 16px -8px rgb(52 91 115 / .6);
+  --shadow-up: 0 -6px 20px rgb(20 47 70 / .06);
+  --scrim: rgb(20 47 70 / .46);
+  --on-dark-wash: rgb(255 255 255 / .16);
+  --on-dark-wash-strong: rgb(255 255 255 / .28);
 
-  /* Brand roles. Gold is for decoration and large type; --accent-ink is the gold that is safe for small text. */
-  --primary: #1e5646;
-  --primary-strong: #17443a;
-  --primary-soft: #e7f0ea;
-  --primary-line: #b9d0c3;
-  --accent: #b28342;
-  --accent-ink: #7a5420;
-  --accent-soft: #f8f1e4;
-  --accent-strong: #8a5f1f; /* gold that reads on the page at any size (5.2:1) */
-  --tile-border: #c3d0c7;
-  --control-border: #7d8e84; /* the border of anything you tap that has no other outline: 3.2:1 on the page */
-
-  /* Colour says whose turn it is: amber = you act, dashed = the client acts, green = settled. */
-  --needs-ink: #6b4200; --needs-bg: #fdebc8; --needs-rail: #b26b00;
-  --wait-ink: #5a5347; --wait-rail: #857d6b;
-  --ok-ink: #1b5a41; --ok-bg: #e2f0e7; --ok-rail: #2f7a5b;
-  --done-ink: #44544e; --done-bg: #e9eeea; --done-rail: #44544e;
-  --cancel-ink: #5b5752; --cancel-bg: #eceae6; --cancel-rail: #8a857e;
-  --noshow-ink: #7a2740; --noshow-bg: #f7e1e7; --noshow-rail: #b04566;
-  --alert-dot: #a8321f;
-
-  /* Shape, depth and motion. */
-  --radius-sm: 8px; --radius: 14px; --radius-lg: 20px; --radius-pill: 999px;
-  --shadow-1: 0 1px 2px rgb(37 59 54 / .06), 0 4px 12px rgb(37 59 54 / .05);
-  --shadow-2: 0 2px 4px rgb(37 59 54 / .08), 0 12px 32px rgb(37 59 54 / .14);
+  /* Motion: small, and switched off for anyone who asks for less. */
   --ease: cubic-bezier(.2, .8, .2, 1);
   --dur-fast: 120ms; --dur: 220ms;
-  --tap: 44px;
 }
 * { box-sizing: border-box; }
 /* Something focused or jumped to is never hidden behind a sticky bar. */
@@ -59,8 +84,8 @@ body { margin: 0; color: var(--ink); background: var(--paper); font-family: var(
 button, input, textarea, select { font: inherit; }
 button, a, input, textarea, select { -webkit-tap-highlight-color: transparent; }
 :focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
-a { color: var(--green-deep); }
-::selection { background: var(--green-soft); }
+a { color: var(--primary); }
+::selection { background: var(--primary-line); }
 /* Small, quiet feedback on anything pressable, switched off for people who ask for less motion. */
 button, a { transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease; }
 button:not(:disabled):active { transform: translateY(1px); }

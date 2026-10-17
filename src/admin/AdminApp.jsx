@@ -54,9 +54,10 @@ export default function AdminApp() {
       {requestReset && <PasswordResetRequest onBack={() => setRequestReset(false)} />}
       {!requestReset && auth.state === 'checking' && <p role="status">Checking authentication…</p>}
       {!requestReset && auth.state === 'signed-out' && <form onSubmit={signIn}><h2>Admin sign in</h2><label>Email<input name="email" type="email" autoComplete="username" required /></label><label>Password<input name="password" type="password" autoComplete="current-password" required /></label><button className="admin-forgot" type="button" disabled={busy} onClick={() => setRequestReset(true)}>Forgot password?</button><button disabled={busy}>Sign in</button></form>}
+      {!requestReset && auth.state === 'signed-out' && error && <p role="alert" className="error">{error}</p>}
       {!requestReset && auth.state === 'denied' && <><p role="alert">This account does not have Admin access.</p><button onClick={signOut}>Sign out</button></>}
       {!requestReset && auth.state === 'error' && <><p role="alert">{auth.error}</p><button onClick={() => setAttempt(value => value + 1)}>Retry authentication</button></>}
     </section></main>}
-    {error && <p role="alert">{error}</p>}
+    {error && (requestReset || auth.state !== 'signed-out') && <p role="alert" className="error">{error}</p>}
   </div>
 }

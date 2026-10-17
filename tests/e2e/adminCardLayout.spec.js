@@ -85,6 +85,11 @@ test('a cancelled card is grey and quiet, with its name and price struck through
   const grey = await cancelled.evaluate(node => getComputedStyle(node).backgroundColor)
   const white = await first(page).evaluate(node => getComputedStyle(node).backgroundColor)
   expect(grey).not.toBe(white)
+  // The card is a quiet soft grey, never peach: only its status label is peach, and its edge is the terracotta that goes with it.
+  const token = name => page.evaluate(variable => { const probe = document.createElement('i'); probe.style.background = `var(${variable})`; document.body.append(probe); const colour = getComputedStyle(probe).backgroundColor; probe.remove(); return colour }, name)
+  expect(grey).not.toBe(await token('--cancel-bg'))
+  expect(await cancelled.locator('.admin-status').evaluate(node => getComputedStyle(node).backgroundColor)).toBe(await token('--cancel-bg'))
+  expect(await cancelled.evaluate(node => getComputedStyle(node, '::before').backgroundColor)).toBe(await token('--cancel-rail'))
   await expect(cancelled.locator('xpath=..').getByRole('link', { name: /^Directions to/ })).toHaveCount(0)
   await expect(cancelled.locator('.admin-card-times')).toContainText('13:00')
 })

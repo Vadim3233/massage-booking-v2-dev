@@ -6,38 +6,38 @@
 .admin-shell p { margin: 8px 0; }
 
 /* ---------- Navigation: thumb-reach bar on a phone, a rail on a bigger screen ---------- */
-.admin-primary-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; isolation: isolate; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: rgb(255 255 255 / .97); border-top: 1px solid var(--hairline); box-shadow: 0 -8px 24px rgb(37 59 54 / .07); }
-.admin-primary-nav a { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 58px; border-radius: 14px; color: var(--muted); font: 600 12px/1.1 var(--font-ui); text-decoration: none; }
+.admin-primary-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; isolation: isolate; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 6px 8px calc(6px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--hairline); box-shadow: var(--shadow-up); }
+.admin-primary-nav a { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 58px; border-radius: var(--radius); color: var(--muted); font: 600 12px/1.1 var(--font-ui); text-decoration: none; }
 .admin-primary-nav a .icon { width: 25px; height: 25px; transition: transform var(--dur) var(--ease); }
-.admin-primary-nav a::before { content: ''; position: absolute; top: 5px; width: 58px; height: 31px; border-radius: 16px; background: transparent; z-index: -1; transition: background-color var(--dur) var(--ease); }
+.admin-primary-nav a::before { content: ''; position: absolute; top: 5px; width: 58px; height: 31px; border-radius: var(--radius); background: transparent; z-index: -1; transition: background-color var(--dur) var(--ease); }
 .admin-primary-nav a[aria-current="page"] { color: var(--primary); }
 .admin-primary-nav a[aria-current="page"]::before { background: var(--primary-soft); }
 .admin-primary-nav a[aria-current="page"] .icon { transform: translateY(-1px); stroke-width: 2.1; }
 .admin-primary-nav a:hover::before { background: var(--primary-soft); }
-.admin-badge { position: absolute; top: 3px; left: calc(50% + 6px); min-width: 20px; padding: 1px 6px; border-radius: 999px; background: var(--alert-dot); color: #fff; font: 700 11px/1.5 var(--font-ui) !important; text-align: center; box-shadow: 0 0 0 2px #fff; }
-.admin-badge--needs { background: #f5b83d; color: #2b1a00; }
+.admin-badge { position: absolute; top: 3px; left: calc(50% + 6px); min-width: 20px; padding: 1px 6px; border-radius: var(--radius-pill); background: var(--alert-dot); color: var(--on-primary); font: 700 11px/1.5 var(--font-ui) !important; text-align: center; box-shadow: 0 0 0 2px var(--surface); }
+.admin-badge--needs { background: var(--needs-badge); color: var(--ink); }
 
-.admin-fab { position: fixed; right: 16px; bottom: calc(86px + env(safe-area-inset-bottom)); z-index: 15; min-height: 56px; padding: 0 22px 0 18px; border-radius: 28px; font-size: 17px; box-shadow: var(--shadow-2), 0 8px 22px -8px rgb(30 86 70 / .7); }
+.admin-fab { position: fixed; right: 16px; bottom: calc(86px + env(safe-area-inset-bottom)); z-index: 15; min-height: 56px; padding: 0 22px 0 18px; border-radius: 28px; font-size: 17px; box-shadow: var(--shadow-2), var(--shadow-brand); }
 .admin-fab .fab-plus { font-size: 28px; font-weight: 500; line-height: 1; margin-top: -2px; }
 
 /* ---------- Calendar / Agenda switch ---------- */
-.admin-shell .admin-calendar-views { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 12px 16px 4px; padding: 4px; border: 0; border-radius: 16px; background: #e9ece6; }
-.admin-shell .admin-calendar-views a { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 44px; padding: 0; border: 0; border-radius: 12px; background: transparent; color: var(--ink-soft); font: 600 16px/1 var(--font-ui); text-decoration: none; transition: background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
-.admin-shell .admin-calendar-views a[aria-current="page"] { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgb(37 59 54 / .16); }
+.admin-shell .admin-calendar-views { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 12px 16px 4px; padding: 4px; border: 0; border-radius: var(--radius); background: var(--primary-soft); }
+.admin-shell .admin-calendar-views a { display: flex; align-items: center; justify-content: center; min-width: 0; min-height: 44px; padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--ink-soft); font: 600 16px/1 var(--font-ui); text-decoration: none; transition: background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease); }
+.admin-shell .admin-calendar-views a[aria-current="page"] { background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow-1); }
 
 /* ---------- Agenda ---------- */
 .admin-agenda { padding: 8px 16px 16px; }
 .admin-agenda-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 4px 0 6px; }
-.admin-agenda-actions .btn--quiet { min-height: 40px; font-size: 14px; }
+.admin-agenda-actions .btn--quiet { min-height: 44px; font-size: 14px; }
 .admin-agenda-days { margin: 0; }
 .admin-agenda-day { padding: 0 0 8px; }
-.admin-agenda-day-heading { position: sticky; top: 0; z-index: 4; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 -16px; padding: 12px 16px 8px; background: rgb(247 246 242); }
+.admin-agenda-day-heading { position: sticky; top: 0; z-index: 4; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 -16px; padding: 12px 16px 8px; background: var(--paper); }
 .admin-agenda-day-heading h2 { font: 600 21px/1.2 var(--font-display); font-variant-numeric: lining-nums; letter-spacing: -.01em; }
 .admin-agenda-day-heading h2 .day-name { color: var(--primary); }
 .admin-agenda-day-heading span { color: var(--muted); font-size: 13px; font-weight: 500; white-space: nowrap; }
-.admin-agenda-day.is-today .admin-agenda-day-heading { background: #e7f0ea; box-shadow: 0 1px 0 var(--primary-line); }
+.admin-agenda-day.is-today .admin-agenda-day-heading { background: var(--primary-soft); box-shadow: 0 1px 0 var(--primary-line); }
 .admin-agenda-day.is-today .admin-agenda-day-heading h2 { font-size: 24px; }
-.admin-agenda-empty { margin: 6px 0 14px; padding: 18px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); color: var(--ink-soft); }
+.admin-agenda-empty { margin: 6px 0 14px; padding: 18px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); color: var(--ink-soft); }
 .admin-agenda-empty strong { display: block; font: 600 19px/1.3 var(--font-display); color: var(--ink); }
 .admin-agenda-load { width: 100%; margin: 12px 0; }
 .admin-agenda-range { margin: 14px 0 0; color: var(--muted); text-align: center; font-size: 12px; }
@@ -45,17 +45,17 @@
 
 /* The strip that says what needs the Admin, first thing */
 /* Needs you: one short header, then a row for each payment with "Not yet" beside the button that settles it. A row's buttons drop under its words on a very narrow phone. */
-.admin-tocheck { margin: 6px 0 10px; padding: 8px 12px 4px; border-radius: var(--radius); background: var(--needs-bg); box-shadow: inset 0 0 0 1.5px rgb(178 107 0 / .28); }
-.admin-tocheck h2 { margin: 0; font: 600 16px/1.3 var(--font-display); font-variant-numeric: lining-nums; color: #3f2700; }
+.admin-tocheck { margin: 6px 0 10px; padding: 8px 12px 4px; border-radius: var(--radius); background: var(--needs-bg); box-shadow: inset 0 0 0 1.5px var(--needs-outline); }
+.admin-tocheck h2 { margin: 0; font: 600 16px/1.3 var(--font-display); font-variant-numeric: lining-nums; color: var(--needs-ink); }
 .admin-tocheck ul { list-style: none; margin: 4px 0 0; padding: 0; }
-.admin-tocheck li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; padding: 6px 0; border-top: 1px solid rgb(178 107 0 / .25); }
+.admin-tocheck li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; padding: 6px 0; border-top: 1px solid var(--needs-outline); }
 .admin-tocheck li:first-child { border-top: 0; }
 .admin-tocheck-who { display: grid; flex: 1 1 110px; gap: 1px; min-width: 0; }
 .admin-tocheck-who strong { font-size: 15.5px; overflow-wrap: anywhere; }
 .admin-tocheck .when { color: var(--ink-soft); font-size: 12.5px; line-height: 1.3; }
 .admin-tocheck .admin-payment-actions { flex: 0 0 auto; margin-left: auto; }
 .admin-tocheck-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.admin-tocheck-head .more { display: inline-flex; align-items: center; min-height: 44px; margin: -8px -6px -8px 0; padding: 0 6px; font-size: 14px; font-weight: 600; white-space: nowrap; color: #3f2700; }
+.admin-tocheck-head .more { display: inline-flex; align-items: center; min-height: 44px; margin: -8px -6px -8px 0; padding: 0 6px; font-size: 14px; font-weight: 600; white-space: nowrap; color: var(--needs-ink); }
 
 /* ---------- Day and agenda rows ---------- */
 .admin-timeline { list-style: none; padding: 0; margin: 0; }
@@ -65,79 +65,93 @@
 .share-link { margin: 12px 0; }
 .share-link input { font-size: 15px; text-overflow: ellipsis; }
 .share-more { margin-top: 18px; }
-.admin-next-tag { margin-top: 4px; padding: 3px 7px; border-radius: 6px; background: var(--accent-soft); color: var(--accent-ink); font: 700 10px/1 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; font-style: normal; }
-.admin-shell .admin-card { --rail: var(--ok-rail); position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; justify-content: stretch; align-items: start; justify-items: stretch; width: 100%; gap: 2px 10px; padding: 8px 12px 6px 17px; border: 0; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); color: var(--ink); font: 400 15px/1.35 var(--font-ui); text-align: left; overflow: hidden; }
-.admin-shell .admin-card:not(:disabled):hover { background: #fcfdfb; box-shadow: var(--shadow-2); }
-.admin-card::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--rail); }
-.admin-card[data-chip="needs"] { --rail: var(--needs-rail); background: #fffaf0; }
+.admin-next-tag { margin-top: 4px; padding: 3px 7px; border-radius: var(--radius-xs); background: var(--primary-soft); color: var(--primary); font: 600 11px/1 var(--font-ui); letter-spacing: .1em; text-transform: uppercase; font-style: normal; }
+.admin-shell .admin-card { --rail: var(--primary); position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; justify-content: stretch; align-items: start; justify-items: stretch; width: 100%; gap: 2px 10px; padding: 8px 12px 6px 17px; border: 0; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); color: var(--ink); font: 400 15px/1.35 var(--font-ui); text-align: left; overflow: hidden; }
+.admin-shell .admin-card:not(:disabled):hover { background: var(--surface); box-shadow: var(--shadow-card-raised); }
+.admin-card::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--rail); }
+.admin-card[data-chip="needs"] { --rail: var(--needs-rail); background: var(--needs-tint); }
 .admin-card[data-chip="wait"] { --rail: var(--wait-rail); }
 .admin-card[data-chip="done"] { --rail: var(--done-rail); }
 .admin-card[data-chip="noshow"] { --rail: var(--noshow-rail); }
 .admin-card[data-chip="cancel"] { --rail: var(--cancel-rail); }
 .admin-card-heading { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: baseline; }
-.admin-card-heading strong { min-width: 0; overflow-wrap: anywhere; font: 650 17px/1.25 var(--font-ui); }
+.admin-card-heading strong { min-width: 0; overflow-wrap: anywhere; font: 600 17px/1.25 var(--font-ui); }
 .admin-card-price { font: 600 19px/1 var(--font-display); font-variant-numeric: lining-nums; white-space: nowrap; }
 /* A little thinner on the Calendar: smaller name and price than the same words get on the review screens, which share these classes. */
 .admin-card .admin-card-heading strong { font-size: 16px; }
 .admin-card .admin-card-price { font-size: 17px; }
 /* The top of a card: when the treatment starts and ends, an optional Now or Next tag, and how long it is, over a thin divider. */
 .admin-card-when { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; margin-bottom: 4px; padding-bottom: 5px; border-bottom: 1px solid var(--hairline); }
-.admin-card-times { font: 650 18px/1.2 var(--font-display); font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.01em; white-space: nowrap; }
-.admin-card-length { margin-left: auto; color: var(--muted); font: 500 13px/1.2 var(--font-ui); white-space: nowrap; }
+.admin-card-times { font: 600 18px/1.2 var(--font-display); font-variant-numeric: lining-nums tabular-nums; letter-spacing: -.01em; white-space: nowrap; }
+.admin-card-length { margin-left: auto; padding: 2px 10px; border-radius: var(--radius-pill); background: var(--primary-soft); color: var(--primary); font: 600 13px/1.3 var(--font-ui); white-space: nowrap; }
 .admin-card-when .admin-next-tag { margin: 0; }
 /* Treatment and postcode on one line under the name; the postcode never breaks, the treatment wraps if it must. */
 .admin-card-meta { grid-column: 1 / -1; display: flex; flex-wrap: wrap; column-gap: 6px; min-width: 0; color: var(--ink-soft); font-size: 13px; }
 .admin-card-treatment { min-width: 0; overflow-wrap: anywhere; }
 .admin-card-postcode { color: var(--muted); letter-spacing: .02em; white-space: nowrap; }
 .admin-card-foot { grid-column: 1 / -1; display: flex; align-items: center; min-width: 0; margin-top: 2px; }
-.admin-shell .admin-card.cancelled { gap: 1px 10px; padding-block: 6px; background: var(--cancel-bg); box-shadow: none; color: var(--cancel-ink); }
-.admin-card.cancelled .admin-card-when { margin-bottom: 4px; padding-bottom: 5px; border-bottom-color: #d9d6d0; }
+.admin-shell .admin-card.cancelled { gap: 1px 10px; padding-block: 6px; background: var(--cancel-surface); box-shadow: var(--shadow-ring); color: var(--muted); }
+.admin-card.cancelled .admin-card-when { margin-bottom: 4px; padding-bottom: 5px; border-bottom-color: var(--hairline); }
 .admin-card.cancelled .admin-card-times { font-size: 16px; font-weight: 500; }
-.admin-card.cancelled .admin-card-length { color: var(--cancel-ink); }
+.admin-card.cancelled .admin-card-length { background: var(--hairline); color: var(--ink-soft); }
 .admin-card.cancelled .admin-card-heading strong { font-weight: 500; text-decoration: line-through; text-decoration-thickness: 1px; }
-.admin-card.cancelled .admin-card-price { font-size: 15px; text-decoration: line-through; color: var(--cancel-ink); }
+.admin-card.cancelled .admin-card-price { font-size: 15px; text-decoration: line-through; color: var(--muted); }
 .admin-card.cancelled .admin-card-meta { font-size: 13px; }
-.admin-card.cancelled .admin-card-postcode { color: var(--cancel-ink); }
+.admin-card.cancelled .admin-card-postcode { color: var(--muted); }
 .admin-card-action { display: flex; flex-wrap: wrap; gap: 8px; }
 .admin-card-action .admin-payment-buttons { margin: 0; }
 
 .admin-timeline-row.admin-timeline-buffer { margin: 2px 0; }
 .admin-timeline-row.admin-timeline-free { margin: 6px 0; }
-.admin-timeline-entry { min-width: 0; padding: 10px 12px; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; row-gap: 2px; border-radius: 10px; font-size: 14px; }
+.admin-timeline-entry { min-width: 0; padding: 10px 12px; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; row-gap: 2px; border-radius: var(--radius-sm); font-size: 14px; }
 .admin-timeline-entry small { font-size: 13px; color: var(--muted); }
-.admin-timeline-entry.hold { border: 1.5px dashed #b59b62; background: #faf3e2; color: #795019; }
-.admin-timeline-entry.block { border-left: 4px solid #7e8a8d; background: #e9edec; color: #3f4f52; }
-.admin-timeline-entry.free { padding-block: 8px; border-radius: 0; border-top: 1.5px dashed #cfd7cf; background: transparent; color: var(--muted); }
-.admin-timeline-entry.buffer { padding-block: 3px; border-radius: 0; color: var(--muted); border-left: 2px solid #d2d9d1; font-size: 13px; }
+.admin-timeline-entry .icon { flex: none; align-self: center; width: 18px; height: 18px; }
+.admin-timeline-entry.hold { border: 1.5px dashed var(--needs-rail); background: var(--needs-tint); color: var(--needs-ink); }
+.admin-timeline-entry.block { border-left: 4px solid var(--block-rail); background: var(--block-bg); color: var(--block-ink); }
+.admin-timeline-entry.free { padding-block: 8px; border-radius: var(--radius-sm); background: var(--free-bg); color: var(--ok-ink); }
+.admin-timeline-entry.free small { color: var(--ok-ink); }
+.admin-timeline-entry.buffer { padding-block: 4px; border-radius: var(--radius-sm); background: var(--buffer-bg); color: var(--ink-soft); font-size: 13px; line-height: 1.3; }
+.admin-timeline-entry.buffer small { color: var(--ink-soft); }
 .admin-block-button { width: 100%; text-align: left; display: grid; gap: 2px; }
-.admin-shell .admin-timeline-entry.block.admin-block-button { min-height: 52px; border: 0; border-left: 4px solid #7e8a8d; border-radius: 10px; justify-content: flex-start; align-items: flex-start; flex-direction: column; font-weight: 600; background: #e9edec; color: #3f4f52; }
+.admin-shell .admin-timeline-entry.block.admin-block-button { min-height: 52px; border: 0; border-left: 4px solid var(--block-rail); border-radius: var(--radius-sm); justify-content: flex-start; align-items: flex-start; flex-direction: column; font-weight: 600; background: var(--block-bg); color: var(--block-ink); }
 
 /* ---------- Day header ---------- */
-.admin-header { position: sticky; top: 0; z-index: 5; padding: 4px 12px 2px; background: rgb(247 246 242 / .97); border-bottom: 1px solid var(--hairline); transition: transform var(--dur) var(--ease); }
+.admin-header { position: sticky; top: 0; z-index: 5; padding: 4px 12px 2px; background: var(--paper); border-bottom: 1px solid var(--hairline); transition: transform var(--dur) var(--ease); }
 .admin-header.is-hidden:not(:has(:focus-visible)) { transform: translateY(-100%); }
 .admin-toolbar { display: flex; align-items: center; gap: 4px; }
-.admin-shell .admin-toolbar > button, .admin-shell .admin-account > button { width: 44px; min-height: 44px; flex-shrink: 0; padding: 0; border-color: transparent; background: transparent; font-size: 22px; }
-.admin-shell .admin-toolbar .admin-today { width: auto; padding-inline: 12px; font-size: 14px; border-radius: 12px; background: var(--primary-soft); }
+.admin-shell .admin-toolbar > button, .admin-shell .admin-account > button { width: 44px; min-height: 44px; flex-shrink: 0; padding: 0; border-color: var(--hairline); border-radius: var(--radius-pill); background: var(--surface); color: var(--ink); font-size: 22px; }
+.admin-shell .admin-toolbar .admin-today { width: auto; padding-inline: 14px; border-color: transparent; font-size: 14px; border-radius: var(--radius-pill); background: var(--primary-soft); color: var(--primary); }
 .admin-date-control { position: relative; display: flex; flex: 1; align-items: center; gap: 4px; min-width: 0; min-height: 44px; font: 600 21px/1.1 var(--font-display); font-variant-numeric: lining-nums; white-space: nowrap; }
 .admin-date-control input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
-.admin-date-control:has(:focus-visible) { outline: 3px solid var(--primary); outline-offset: 0; border-radius: 6px; }
+.admin-date-control:has(:focus-visible) { outline: 3px solid var(--primary); outline-offset: 0; border-radius: var(--radius-xs); }
 .admin-account { position: relative; }
-.admin-account-actions { position: absolute; top: 100%; right: 0; z-index: 6; width: 160px; padding: 6px; border-radius: 12px; background: #fff; box-shadow: var(--shadow-2); }
+.admin-account-actions { position: absolute; top: 100%; right: 0; z-index: 6; width: 160px; padding: 6px; border-radius: var(--radius-sm); background: var(--surface); box-shadow: var(--shadow-2); }
 .admin-shell .admin-account-actions button { width: 100%; justify-content: flex-start; border: 0; }
 .admin-date-strip { display: grid; grid-template-columns: 44px repeat(5, minmax(0, 1fr)) 44px; align-items: center; gap: 2px; padding-bottom: 4px; }
-.admin-shell .admin-date-strip button { min-height: 52px; border: 0; background: transparent; padding: 4px; border-radius: 12px; color: var(--ink); line-height: 1.2; }
+.admin-shell .admin-date-strip button { min-height: 52px; border: 0; background: transparent; padding: 4px; border-radius: var(--radius-sm); color: var(--ink); line-height: 1.2; }
 .admin-shell .admin-date-strip > button:first-child, .admin-shell .admin-date-strip > button:last-child { font-size: 26px; color: var(--primary); }
 .admin-shell .admin-date-strip .admin-day-choice { display: grid; justify-items: center; align-content: center; gap: 2px; font-size: 12px; font-weight: 500; overflow-wrap: normal; white-space: nowrap; }
 .admin-day-choice strong { font: 600 19px/1 var(--font-display); font-variant-numeric: lining-nums; }
-.admin-shell .admin-date-strip .admin-day-choice[aria-current="date"] { background: var(--primary); color: #fff; box-shadow: 0 6px 14px -8px rgb(30 86 70 / .8); }
+.admin-shell .admin-date-strip .admin-day-choice[aria-current="date"] { background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow-brand); }
+.admin-day-choice[data-today]::after { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--primary); }
+.admin-shell .admin-date-strip .admin-day-choice[aria-current="date"][data-today]::after { background: var(--on-primary); }
 .admin-day { padding: 8px 16px 16px; }
 .admin-day-caption { display: none; }
-.admin-working-hours { margin: 2px 0 10px; font-size: 13px; color: var(--muted); }
-.admin-day-note { margin: 6px 0 14px; padding: 18px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); color: var(--ink-soft); }
+.admin-working-hours { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; padding: 11px 14px; border-radius: var(--radius); background: var(--primary-soft); color: var(--primary-strong); font-size: 15px; font-weight: 500; }
+.admin-working-hours .icon { flex: none; color: var(--primary); }
+.admin-day-note { margin: 6px 0 14px; padding: 18px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); color: var(--ink-soft); }
 /* The one line that puts cancelled bookings on show or away in the Day view and on a day's own page. */
 .admin-cancelled-toggle { margin: 0 0 8px; }
+.admin-shell .admin-cancelled-toggle button { width: 100%; justify-content: flex-start; gap: 10px; min-height: 48px; padding-inline: 14px; border-color: transparent; border-radius: var(--radius); background: var(--accent-soft); color: var(--accent-ink); font-weight: 600; }
+.admin-shell .admin-cancelled-toggle button:not(:disabled):hover { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.admin-cancelled-toggle .admin-toggle-chevron { margin-left: auto; }
 .admin-create-entry { display: flex; justify-content: flex-end; gap: 8px; padding: 8px 16px 0; }
-.admin-shell .admin-create-entry button { min-height: 44px; font-size: 15px; }
+.admin-shell .admin-create-entry button { min-height: 44px; gap: 8px; padding-inline: 12px; border-color: transparent; border-radius: var(--radius-pill); font-size: 15px; white-space: nowrap; }
+@media (min-width: 360px) { .admin-shell .admin-create-entry button { padding-inline: 16px; } }
+.admin-shell .admin-create-entry .admin-entry--settings { background: var(--primary-soft); color: var(--primary); }
+.admin-shell .admin-create-entry .admin-entry--settings:not(:disabled):hover { background: var(--primary-line); }
+.admin-shell .admin-create-entry .admin-entry--block { background: var(--cream); color: var(--ink-soft); }
+.admin-shell .admin-create-entry .admin-entry--block:not(:disabled):hover { background: var(--hairline); }
 
 /* ---------- Login ---------- */
 .admin-login { max-width: 420px; margin: 0 auto; padding: 56px 20px 40px; }
@@ -146,14 +160,14 @@
 .admin-login-brand .brand-mark { flex-shrink: 0; width: 44px; height: 44px; font-size: 16px; }
 .admin-login h1 { font: 600 30px/1.15 var(--font-display); margin-bottom: 18px; }
 .admin-login h2 { font: 600 20px/1.2 var(--font-display); margin: 0 0 6px; }
-.admin-login form { padding: 20px; border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-1); }
+.admin-login form { padding: 20px; border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-card); }
 .admin-login label { display: grid; gap: 6px; margin: 14px 0; font-size: 14px; font-weight: 600; }
 .admin-shell .admin-forgot { display: inline-flex; min-height: 44px; border: 0; background: transparent; padding: 0; text-decoration: underline; font-size: 15px; font-weight: 500; }
-.admin-login button:last-of-type { width: 100%; min-height: 54px; background: var(--primary); color: #fff; }
+.admin-login button:last-of-type { width: 100%; min-height: 54px; background: var(--primary); color: var(--on-primary); }
 
 /* ---------- Booking details: a hero, the one next step, then the rest ---------- */
 .admin-details { position: fixed; inset: 0; width: 100%; max-width: none; height: 100dvh; max-height: 100dvh; margin: 0; padding: 0; border: 0; border-radius: 0; color: var(--ink); background: var(--paper); overflow-y: auto; overflow-wrap: anywhere; overscroll-behavior: contain; font-size: 15px; }
-.admin-details::backdrop { background: rgb(25 40 35 / .4); }
+.admin-details::backdrop { background: var(--scrim); }
 .admin-details-bar { position: sticky; top: 0; z-index: 3; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: max(8px, env(safe-area-inset-top)) 12px 8px; background: var(--paper); border-bottom: 1px solid var(--hairline); }
 .admin-details .admin-details-bar button { min-height: 44px; padding-inline: 8px 14px; border-color: transparent; background: transparent; font-size: 16px; }
 .admin-details-bar > div { display: grid; text-align: right; line-height: 1.25; }
@@ -164,12 +178,14 @@
 .admin-details-content > section:last-child { border-bottom: 0; }
 .admin-details-client { padding-top: 22px !important; }
 .admin-details h2 { font: 600 32px/1.1 var(--font-display); letter-spacing: -.01em; margin: 0 0 10px; }
-.admin-details h3 { margin: 0 0 10px; font: 700 12px/1.2 var(--font-ui); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.admin-details h3 { margin: 0 0 10px; font: 600 12px/1.2 var(--font-ui); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
 .admin-details h4 { font-size: 16px; margin: 0 0 4px; }
 .admin-details h5 { font-size: 13px; margin: 10px 0 4px; color: var(--muted); }
 .admin-details p { margin: 6px 0; white-space: pre-wrap; }
 .admin-details address { font-style: normal; }
 .admin-details a { display: inline-block; max-width: 100%; padding-block: 4px; }
+/* A link that is a line of its own (the email and phone number) is 44px to press. */
+.admin-details p > a:only-child { display: inline-flex; align-items: center; min-height: 44px; }
 .admin-details ul { margin: 6px 0; padding-left: 20px; }
 .admin-details .admin-status { margin: 0 0 8px; }
 .admin-session-list { list-style: none; margin: 0; padding: 0; }
@@ -182,17 +198,17 @@
 .admin-detail-hint, .admin-metadata { color: var(--muted); font-size: 13px; }
 .admin-when { font: 600 22px/1.25 var(--font-display); font-variant-numeric: lining-nums; margin: 4px 0 4px; }
 .admin-where { color: var(--ink-soft); }
-.admin-next { margin: 14px -4px 0; padding: 18px 16px !important; border: 0 !important; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); }
+.admin-next { margin: 14px -4px 0; padding: 18px 16px !important; border: 0 !important; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); }
 .admin-next + .admin-next { margin-top: 12px; }
 .admin-next .admin-payment-buttons { gap: 10px; }
 .admin-contact-actions { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
 .admin-shell .admin-contact-actions a, .admin-details .admin-contact-actions a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 64px; padding: 8px 4px; border: 0; border-radius: var(--radius); background: var(--primary-soft); color: var(--primary); font: 600 13px/1.1 var(--font-ui); text-decoration: none; }
 .admin-contact-actions a .icon { width: 22px; height: 22px; }
-.admin-contact-actions a:hover { background: #d9e8df; }
+.admin-contact-actions a:hover { background: var(--primary-line); }
 
 /* ---------- Sheets and confirmations: bottom sheets on a phone, centred cards on a big screen ---------- */
 .admin-confirm { width: min(460px, calc(100vw - 32px)); box-sizing: border-box; max-height: calc(100dvh - 32px); overflow: auto; padding: 22px; border: 0; border-radius: var(--radius-lg); background: var(--paper); color: var(--ink); box-shadow: var(--shadow-2); overflow-wrap: anywhere; }
-.admin-confirm::backdrop { background: rgb(25 40 35 / .5); }
+.admin-confirm::backdrop { background: var(--scrim); }
 .admin-confirm h2 { font: 600 25px/1.2 var(--font-display); margin: 0 0 10px; }
 .admin-confirm p { margin: 8px 0; }
 .admin-confirm .admin-payment-buttons { margin-top: 18px; }
@@ -200,7 +216,7 @@
 .admin-action form { display: grid; gap: 6px; }
 .admin-who { border: 0; padding: 0; margin: 8px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .admin-who legend { grid-column: 1 / -1; padding: 0 0 4px; font: 600 14px/1.3 var(--font-ui); }
-.admin-who label { display: flex; align-items: center; justify-content: center; min-height: 52px; padding: 8px 10px; border: 1.5px solid var(--field-border); border-radius: 12px; background: var(--surface); text-align: center; font-size: 15px; font-weight: 600; cursor: pointer; }
+.admin-who label { display: flex; align-items: center; justify-content: center; min-height: 52px; padding: 8px 10px; border: 1.5px solid var(--field-border); border-radius: var(--radius-sm); background: var(--surface); text-align: center; font-size: 15px; font-weight: 600; cursor: pointer; }
 .admin-who label:has(:checked) { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
 .admin-who label { position: relative; }
 .admin-who input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
@@ -221,11 +237,12 @@
 .admin-review-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .admin-review-heading p { font-size: 14px; color: var(--ink-soft); max-width: 36em; }
 .admin-review-heading button { width: 48px; padding: 0; }
+.admin-shell .admin-review-heading > button { flex: none; width: 44px; min-height: 44px; border-color: var(--hairline); border-radius: var(--radius-pill); background: var(--surface); color: var(--ink); }
 .admin-review-list { list-style: none; margin: 14px 0; padding: 0; display: grid; gap: 12px; }
-.admin-review-item { position: relative; padding: 16px 16px 16px 20px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); font-size: 15px; overflow: hidden; }
+.admin-review-item { position: relative; padding: 16px 16px 16px 20px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); font-size: 15px; overflow: hidden; }
 .admin-review-item::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--needs-rail); }
 .admin-review-item.wait::before { background: var(--wait-rail); }
-.admin-review-item .admin-card-heading h3 { margin: 0; font: 650 19px/1.25 var(--font-ui); }
+.admin-review-item .admin-card-heading h3 { margin: 0; font: 600 19px/1.25 var(--font-ui); }
 .admin-review-item .admin-card-price { font-size: 22px; }
 .admin-review-item p { margin: 4px 0; color: var(--ink-soft); }
 .admin-review-item .admin-status { margin: 0 0 8px; }
@@ -234,9 +251,9 @@
 .admin-review-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
 
 .admin-alerts { list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 10px; }
-.admin-shell .admin-alerts button { display: grid; gap: 3px; width: 100%; min-height: 0; padding: 14px 16px 14px 20px; border: 0; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); color: var(--ink); text-align: left; justify-content: stretch; font: 400 15px/1.4 var(--font-ui); position: relative; overflow: hidden; }
+.admin-shell .admin-alerts button { display: grid; gap: 3px; width: 100%; min-height: 0; padding: 14px 16px 14px 20px; border: 0; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); color: var(--ink); text-align: left; justify-content: stretch; font: 400 15px/1.4 var(--font-ui); position: relative; overflow: hidden; }
 .admin-alerts button::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--hairline); }
-.admin-alerts .is-unread button { background: #fffaf0; }
+.admin-alerts .is-unread button { background: var(--needs-tint); }
 .admin-alerts .is-unread button::before { background: var(--needs-rail); }
 .admin-alerts strong { font-size: 16px; }
 .admin-alerts .is-read strong { font-weight: 600; color: var(--ink-soft); }
@@ -245,30 +262,30 @@
 .admin-alerts .is-unread small { color: var(--needs-ink); font-weight: 600; }
 
 .admin-menu { list-style: none; padding: 0; margin: 14px 0 20px; display: grid; gap: 10px; }
-.admin-menu a, .admin-back-link { display: flex; align-items: center; justify-content: space-between; min-height: 58px; padding: 8px 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); color: var(--ink); font-weight: 600; text-decoration: none; }
+.admin-menu a, .admin-back-link { display: flex; align-items: center; justify-content: space-between; min-height: 58px; padding: 8px 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); color: var(--ink); font-weight: 600; text-decoration: none; }
 .admin-menu a::after { content: ''; flex-shrink: 0; width: 9px; height: 9px; margin-right: 4px; border: solid var(--muted); border-width: 2.5px 2.5px 0 0; transform: rotate(45deg); }
 .admin-menu a:hover { background: var(--primary-soft); }
 .admin-shell .admin-back-link { display: inline-flex; justify-content: flex-start; gap: 4px; min-height: 48px; margin: 4px 0 0 8px; padding: 0 12px; background: none; box-shadow: none; border: 0; color: var(--primary); }
 
-.admin-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 14px 0; padding: 4px; border-radius: 16px; background: #e9ece6; }
-.admin-shell .admin-tabs button { border: 0; background: transparent; color: var(--ink-soft); min-height: 44px; border-radius: 12px; }
-.admin-shell .admin-tabs button[aria-selected="true"] { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgb(37 59 54 / .16); }
+.admin-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 14px 0; padding: 4px; border-radius: var(--radius); background: var(--primary-soft); }
+.admin-shell .admin-tabs button { border: 0; background: transparent; color: var(--ink-soft); min-height: 44px; border-radius: var(--radius-sm); }
+.admin-shell .admin-tabs button[aria-selected="true"] { background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow-1); }
 .admin-week, .admin-special-form { display: grid; gap: 12px; }
-.admin-weekday { border: 0; border-radius: var(--radius); padding: 12px 16px 16px; margin: 0; display: grid; gap: 8px; background: var(--surface); box-shadow: var(--shadow-1); }
+.admin-weekday { border: 0; border-radius: var(--radius); padding: 12px 16px 16px; margin: 0; display: grid; gap: 8px; background: var(--surface); box-shadow: var(--shadow-card); }
 .admin-weekday legend { font: 600 18px/1.2 var(--font-display); padding: 0; float: left; width: 100%; margin-bottom: 4px; }
 .admin-hours-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .admin-hours-fields label:nth-child(n+3), .admin-hours-fields > .admin-detail-hint { grid-column: 1 / -1; }
 .admin-hours-fields > .admin-detail-hint { margin: 0; }
 .admin-who-row { display: flex; align-items: center; gap: 10px; min-height: 48px; font-weight: 500; }
-.admin-conflicts { padding: 12px 14px; border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 12px 12px 0; overflow-wrap: anywhere; }
+.admin-conflicts { padding: 12px 14px; border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; overflow-wrap: anywhere; }
 .admin-conflicts ul { margin: 6px 0; padding-left: 18px; }
 /* The buttons that ask before deleting a client carry their name, so a long one wraps instead of pushing the page sideways. */
 .admin-delete-choices button { min-width: 0; max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
 
 .admin-special-list, .admin-setting-list, .admin-waitlist, .admin-client-list, .admin-client-bookings, .admin-address-list, .admin-note-list { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 10px; }
-.admin-special-list li, .admin-setting, .admin-waitlist-item, .admin-address-list li, .admin-note-list li, .admin-repeat { display: grid; gap: 8px; padding: 14px 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); }
+.admin-special-list li, .admin-setting, .admin-waitlist-item, .admin-address-list li, .admin-note-list li, .admin-repeat { display: grid; gap: 8px; padding: 14px 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); }
 .admin-special-list li span { display: block; font-size: 14px; color: var(--ink-soft); }
-.admin-shell .admin-client-list button, .admin-shell .admin-client-bookings button { display: grid; gap: 2px; width: 100%; min-height: 64px; padding: 12px 16px; border: 0; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); color: var(--ink); text-align: left; justify-content: stretch; font: 400 15px/1.35 var(--font-ui); }
+.admin-shell .admin-client-list button, .admin-shell .admin-client-bookings button { display: grid; gap: 2px; width: 100%; min-height: 64px; padding: 12px 16px; border: 0; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); color: var(--ink); text-align: left; justify-content: stretch; font: 400 15px/1.35 var(--font-ui); }
 .admin-shell .admin-client-list button { display: flex; align-items: center; justify-content: flex-start; gap: 12px; }
 .admin-shell .admin-client-list .monogram { flex: 0 0 44px; width: 44px; height: 44px; }
 .admin-client-text { display: grid; gap: 1px; min-width: 0; overflow-wrap: anywhere; text-align: left; }
@@ -279,24 +296,24 @@
 .admin-client-profile section { margin-top: 24px; }
 .admin-client-profile h2 { margin: 0 0 8px; }
 .admin-client-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }
-.admin-client-summary div { padding: 12px 14px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); }
+.admin-client-summary div { padding: 12px 14px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); }
 .admin-client-summary .wide { grid-column: 1 / -1; }
 .admin-client-summary .owed { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px var(--accent); }
-.admin-client-summary dt { font: 700 11px/1.2 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.admin-client-summary dt { font: 600 11px/1.2 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .admin-client-summary dd { margin: 2px 0 0; font: 600 22px/1.2 var(--font-display); font-variant-numeric: lining-nums; }
 .admin-client-summary .wide dd { font-size: 18px; }
 .admin-address-list address { font-style: normal; }
 .admin-address-list small, .admin-note-list small { display: block; color: var(--muted); }
 .admin-note-list p { margin: 0; white-space: pre-wrap; }
 .admin-client-form { display: grid; gap: 4px; }
-.admin-address-fieldset { border: 0; border-radius: var(--radius); padding: 12px 16px 16px; display: grid; gap: 4px; background: var(--surface); box-shadow: var(--shadow-1); }
+.admin-address-fieldset { border: 0; border-radius: var(--radius); padding: 12px 16px 16px; display: grid; gap: 4px; background: var(--surface); box-shadow: var(--shadow-card); }
 .admin-note-form { display: grid; gap: 8px; margin-bottom: 12px; }
-.admin-setting.is-hidden, .admin-waitlist-item.is-closed { background: #f1efe9; box-shadow: none; }
+.admin-setting.is-hidden, .admin-waitlist-item.is-closed { background: var(--cream); box-shadow: none; }
 .admin-setting.is-hidden .admin-setting-head strong { color: var(--muted); }
 .admin-setting-head { display: grid; gap: 2px; }
 .admin-setting p, .admin-waitlist-item p { margin: 0; font-size: 15px; }
 .admin-price-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: end; }
-.admin-waitlist-match { padding: 10px 12px; border-left: 4px solid var(--ok-rail); background: var(--ok-bg); border-radius: 0 10px 10px 0; }
+.admin-waitlist-match { padding: 10px 12px; border-left: 4px solid var(--ok-rail); background: var(--ok-bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
 .admin-repeat h3 { margin: 0 0 4px; font: 600 18px/1.25 var(--font-display); text-transform: none; letter-spacing: 0; color: var(--ink); }
 .admin-repeat .admin-repeat-skip { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; margin: 8px 0; }
 .admin-contact-actions + .admin-payment-buttons { margin-top: 14px; }
@@ -304,7 +321,7 @@
 @media (min-width: 768px) {
   .admin-shell { max-width: none; padding: 0 28px 48px 112px; }
   .admin-content { max-width: 800px; margin: 0 auto; }
-  .admin-primary-nav { top: 0; right: auto; width: 92px; grid-template-columns: 1fr; align-content: start; gap: 6px; padding: 20px 8px; border-top: 0; border-right: 1px solid var(--hairline); box-shadow: none; background: rgb(255 255 255 / .75); }
+  .admin-primary-nav { top: 0; right: auto; width: 92px; grid-template-columns: 1fr; align-content: start; gap: 6px; padding: 20px 8px; border-top: 0; border-right: 1px solid var(--hairline); box-shadow: none; background: var(--surface); }
   .admin-primary-nav a { min-height: 66px; }
   .admin-badge { left: calc(50% + 8px); }
   .admin-fab { right: 32px; bottom: 32px; }
@@ -316,16 +333,16 @@
 
 @media (max-width: 767px) {
   /* Confirmations rise from the bottom edge, where a thumb is. */
-  .admin-confirm { width: 100%; max-width: none; margin: auto 0 0; border-radius: 22px 22px 0 0; padding: 22px 18px calc(22px + env(safe-area-inset-bottom)); }
+  .admin-confirm { width: 100%; max-width: none; margin: auto 0 0; border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: 22px 18px calc(22px + env(safe-area-inset-bottom)); }
   .admin-confirm .admin-payment-buttons button { flex: 0 0 auto; width: 100%; }
 }
 
 /* ---------- Additions: confirmation summary, group titles, calmer review items ---------- */
-.admin-confirm-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: baseline; margin: 10px 0 8px; padding: 14px 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); }
+.admin-confirm-summary { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: baseline; margin: 10px 0 8px; padding: 14px 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); }
 .admin-confirm-summary strong { font-size: 17px; }
 .admin-confirm-summary span { grid-column: 1; color: var(--ink-soft); font-size: 14px; }
 .admin-confirm-summary b { grid-column: 2; grid-row: 1 / span 2; font: 600 28px/1 var(--font-display); font-variant-numeric: lining-nums; }
-.admin-group-title { margin: 22px 0 8px !important; font: 700 12px/1.2 var(--font-ui) !important; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
+.admin-group-title { margin: 22px 0 8px !important; font: 600 12px/1.2 var(--font-ui) !important; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
 .admin-review-summary { margin: 10px 0 4px; font-size: 15px; color: var(--ink-soft); }
 .admin-review-summary strong { color: var(--needs-ink); }
 .admin-review-when { font-size: 15px; color: var(--ink) !important; }
@@ -336,11 +353,15 @@
 .admin-tocheck .admin-payment-buttons { flex-wrap: nowrap; gap: 8px; margin: 0; }
 .admin-tocheck .btn--small { min-height: 44px; padding-inline: 14px; }
 /* "Not yet": an amber outline, quieter than the button that settles the payment and clearly not the one that cancels it. */
-:is(.booking-shell, .admin-shell) .btn--later { border-color: #8a6a2c; background: transparent; color: var(--needs-ink); }
-:is(.booking-shell, .admin-shell) .btn--later:not(:disabled):hover { background: rgb(178 107 0 / .12); }
+:is(.booking-shell, .admin-shell) .btn--later { border-color: var(--needs-rail); background: transparent; color: var(--needs-ink); }
+:is(.booking-shell, .admin-shell) .btn--later:not(:disabled):hover { background: var(--needs-bg); }
 .admin-review-item .btn--later { grid-column: 1 / -1; }
 @media (max-width: 767px) {
   .admin-confirm .admin-payment-buttons { flex-direction: column; }
+}
+/* On a wide screen the buttons of a payment to check keep a sensible width instead of stretching across the page. */
+@media (min-width: 768px) {
+  .admin-review-item .admin-payment-buttons { max-width: 520px; }
 }
 
 /* ---------- Refinements after the first look ---------- */
@@ -369,7 +390,7 @@
   .admin-confirm .admin-payment-buttons.admin-sticky-actions .btn--quiet { flex: 0 0 auto; }
 }
 .admin-who.admin-fee-choices { grid-template-columns: repeat(var(--choices, 2), minmax(0, 1fr)); }
-.admin-confirm .admin-new-time { margin: 10px 0 0; padding: 10px 14px; border-radius: 12px; background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+.admin-confirm .admin-new-time { margin: 10px 0 0; padding: 10px 14px; border-radius: var(--radius-sm); background: var(--primary-soft); color: var(--primary); font-weight: 600; }
 .admin-confirm .admin-confirm-ref { font-size: 14px; color: var(--ink-soft); }
 .admin-confirm .admin-confirm-ref strong { color: var(--ink); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
 .admin-confirm .admin-remove { justify-self: start; margin-top: 8px; }
@@ -379,32 +400,32 @@
 
 /* A Directions button sits beside the status of an appointment still to come: a control of its own, next to the card and not inside it. */
 .admin-card-wrap { position: relative; min-width: 0; }
-.admin-shell .admin-card-directions { position: absolute; right: 8px; bottom: 3px; z-index: 1; display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 0 10px 0 9px; border-radius: 20px; background: var(--primary-soft); color: var(--primary); font: 600 13px/1 var(--font-ui); text-decoration: none; }
-.admin-shell .admin-card-directions:hover { background: #d9e8df; }
+.admin-shell .admin-card-directions { position: absolute; right: 8px; bottom: 3px; z-index: 1; display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 0 10px 0 9px; border-radius: var(--radius-pill); background: var(--primary-soft); color: var(--primary); font: 600 13px/1 var(--font-ui); text-decoration: none; }
+.admin-shell .admin-card-directions:hover { background: var(--primary-line); }
 .admin-shell .admin-card-directions::after { content: ''; position: absolute; inset: -4px; }
-.admin-card-wrap.has-directions .admin-status { max-width: calc(100% - 108px); white-space: normal; border-radius: 16px; }
+.admin-card-wrap.has-directions .admin-status { max-width: calc(100% - 108px); white-space: normal; border-radius: var(--radius); }
 /* A cancelled booking has no Directions button, so its status may use the whole width, and wraps if it names a refund and a late fee together. */
-.admin-card.cancelled .admin-status { max-width: 100%; white-space: normal; border-radius: 16px; }
+.admin-card.cancelled .admin-status { max-width: 100%; white-space: normal; border-radius: var(--radius); }
 /* Who cancelled it and when sits after the status, and drops onto a line of its own when the status is long. */
 .admin-card.cancelled .admin-card-foot { flex-wrap: wrap; gap: 4px 8px; }
-.admin-card-cancelled-when { flex: 0 0 auto; font-size: 13px; line-height: 1.3; color: var(--cancel-ink); }
+.admin-card-cancelled-when { flex: 0 0 auto; font-size: 13px; line-height: 1.3; color: var(--ink-soft); }
 /* The status and Directions share one band at the foot of the card, so they line up and neither covers the text above. */
 .admin-shell .admin-card-wrap.has-directions .admin-card { padding-bottom: 3px; }
 .admin-card-wrap.has-directions .admin-card-foot { min-height: 36px; margin-top: 0; }
 
 /* Alerts sit under the day they were raised on, with the same day headings as the Agenda. */
 .admin-alerts-day .admin-alerts { margin: 6px 0 14px; }
-.admin-alerts-day.is-today .admin-agenda-day-heading { background: #e7f0ea; box-shadow: 0 1px 0 var(--primary-line); }
+.admin-alerts-day.is-today .admin-agenda-day-heading { background: var(--primary-soft); box-shadow: 0 1px 0 var(--primary-line); }
 
 /* The payments to check sit under the day of their appointment, like the Agenda. */
 .admin-review-day .admin-review-list { margin: 6px 0 14px; }
-.admin-review-day.is-today .admin-agenda-day-heading { background: #e7f0ea; box-shadow: 0 1px 0 var(--primary-line); }
+.admin-review-day.is-today .admin-agenda-day-heading { background: var(--primary-soft); box-shadow: 0 1px 0 var(--primary-line); }
 
 /* "Is this the same person?": a quiet note on the Clients page, and the two profiles side by side. */
-.admin-same-person { margin: 14px 0 6px; padding: 12px 14px 10px; border-radius: var(--radius); background: #fffaf0; box-shadow: inset 4px 0 0 var(--needs-rail), var(--shadow-1); }
+.admin-same-person { margin: 14px 0 6px; padding: 12px 14px 10px; border-radius: var(--radius); background: var(--needs-tint); box-shadow: inset 4px 0 0 var(--needs-rail), var(--shadow-1); }
 .admin-same-person h2 { font: 600 19px/1.25 var(--font-display); }
 .admin-same-person ul { list-style: none; margin: 10px 0 4px; padding: 0; display: grid; gap: 8px; }
-.admin-shell .admin-same-person li button { display: grid; gap: 2px; width: 100%; min-height: 58px; padding: 10px 14px; justify-content: stretch; text-align: left; border: 0; border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-1); color: var(--ink); font: 400 15px/1.35 var(--font-ui); }
+.admin-shell .admin-same-person li button { display: grid; gap: 2px; width: 100%; min-height: 58px; padding: 10px 14px; justify-content: stretch; text-align: left; border: 0; border-radius: var(--radius-sm); background: var(--surface); box-shadow: var(--shadow-card); color: var(--ink); font: 400 15px/1.35 var(--font-ui); }
 .admin-same-person li strong { font-size: 16px; font-weight: 650; overflow-wrap: anywhere; }
 .admin-same-person li span { font-size: 14px; color: var(--ink-soft); }
 .admin-combine-lede { color: var(--ink-soft); }
@@ -412,7 +433,7 @@
 .admin-combine-card { display: grid; align-content: start; gap: 2px; min-width: 0; padding: 12px 12px 12px; border-radius: var(--radius); background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-strong); overflow-wrap: anywhere; }
 .admin-combine-card.is-keep { box-shadow: inset 0 0 0 2px var(--primary); }
 .admin-review .admin-combine-card p { margin: 0; }
-.admin-combine-tag { margin: 0 0 4px !important; font: 700 11px/1.2 var(--font-ui); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.admin-combine-tag { margin: 0 0 4px !important; font: 600 11px/1.2 var(--font-ui); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
 .admin-combine-card.is-keep .admin-combine-tag { color: var(--primary); }
 .admin-review .admin-combine-card h2 { margin: 0 0 4px; font: 600 19px/1.25 var(--font-display); }
 .admin-combine-contact { font-size: 14px; color: var(--ink-soft); }
@@ -424,7 +445,7 @@
 .admin-combine-actions { display: grid; gap: 10px; margin: 16px 0; }
 .admin-combine-confirm { margin: 16px 0; }
 @media (max-width: 359px) { .admin-combine-cards { grid-template-columns: 1fr; } }
-.admin-combine-caution { margin: 10px 0; padding: 10px 14px; border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 12px 12px 0; font-size: 15px; }
+.admin-combine-caution { margin: 10px 0; padding: 10px 14px; border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 15px; }
 
 /* Receipts: the receipt as the client will read it, and the buttons to send it. */
 .admin-receipt-panel { display: grid; gap: 10px; margin-top: 12px; }
@@ -437,7 +458,7 @@
 .admin-receipt-business { display: grid; gap: 1px; margin: 8px 0 10px !important; }
 .admin-receipt-business span { font-size: 13px; color: var(--ink-soft); }
 .admin-receipt-address { white-space: pre-line; }
-.admin-receipt-label { margin-top: 8px !important; font: 700 11px/1.2 var(--font-ui); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
+.admin-receipt-label { margin-top: 8px !important; font: 600 11px/1.2 var(--font-ui); letter-spacing: .07em; text-transform: uppercase; color: var(--muted); }
 .admin-receipt-lines { display: grid; gap: 4px; margin: 12px 0 8px; padding-top: 8px; border-top: 1px solid var(--hairline); }
 .admin-receipt-lines div { display: flex; justify-content: space-between; gap: 12px; }
 .admin-receipt-lines dt, .admin-receipt-lines dd { margin: 0; font-size: 15px; }
@@ -445,7 +466,7 @@
 .admin-receipt-lines .is-total { margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--hairline); font-weight: 600; }
 .admin-receipt-note { margin-top: 8px !important; font-size: 14px; white-space: pre-line; }
 .admin-receipt-edit { position: absolute; top: 8px; right: 8px; min-height: 40px; }
-.admin-receipt-warning { margin: 0; padding: 10px 14px; border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 12px 12px 0; font-size: 14px; }
+.admin-receipt-warning { margin: 0; padding: 10px 14px; border-left: 4px solid var(--accent); background: var(--accent-soft); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; font-size: 14px; }
 .admin-receipt-form { margin-top: 8px; }
 .admin-receipt-warning p { margin: 0; }
 .admin-receipt-warning button { margin-top: 8px; }

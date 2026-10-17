@@ -2,7 +2,7 @@
 .admin-new-booking { max-width: 640px; margin: 0 auto; padding: 8px 16px 24px; }
 .anb-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0 2px; }
 .anb-header h1 { margin: 0; font: 600 30px/1.1 var(--font-display); font-variant-numeric: lining-nums; letter-spacing: -.01em; }
-.anb-error { margin: 12px 0; padding: 12px 14px; border-left: 4px solid var(--danger-line); border-radius: 12px; background: var(--danger-soft); color: var(--danger); font-weight: 500; }
+.anb-error { margin: 12px 0; padding: 12px 14px; border-left: 4px solid var(--danger-line); border-radius: var(--radius-sm); background: var(--danger-soft); color: var(--danger); font-weight: 500; }
 .anb-content:disabled { opacity: .78; }
 :where(.admin-new-booking) fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
 :where(.admin-new-booking) legend { padding: 0; font-size: 14px; font-weight: 600; }
@@ -18,7 +18,7 @@
 .anb-block { margin-top: 30px; }
 .anb-content .anb-block:first-child { margin-top: 10px; }
 .anb-block > h2 { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; font: 600 22px/1.2 var(--font-display); font-variant-numeric: lining-nums; counter-increment: anb; }
-.anb-block > h2::before { content: counter(anb); display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; border: 1.5px solid var(--accent); border-radius: 50%; color: var(--primary); font: 600 14px/1 var(--font-display); }
+.anb-block > h2::before { content: counter(anb); display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; border: 1.5px solid var(--primary-line); border-radius: 50%; color: var(--primary); font: 600 14px/1 var(--font-display); }
 
 /* Choosing the client: people with their initials, the one chosen as a card. */
 .anb-client-list { display: grid; gap: 8px; margin: 12px 0 8px; padding: 0; list-style: none; }
@@ -49,7 +49,7 @@
 .admin-new-booking .anb-chip input { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
 .anb-chip > span { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; padding: 0 18px; border: 1.5px solid var(--tile-border); border-radius: var(--radius-pill); background: var(--surface); font-size: 15px; font-weight: 600; transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
 @media (hover: hover) { .anb-chip:hover > span { border-color: var(--primary); } }
-.anb-chip input:checked + span { border-color: var(--primary); background: var(--primary); color: #fff; }
+.anb-chip input:checked + span { border-color: var(--primary); background: var(--primary); color: var(--on-primary); }
 .anb-chip input:focus-visible + span { outline: 3px solid var(--primary); outline-offset: 2px; }
 .anb-chip input:disabled + span { opacity: .45; }
 .anb-chip--length > span { flex-direction: column; gap: 0; min-width: 96px; min-height: 58px; padding: 6px 14px; border-radius: var(--radius); line-height: 1.25; }
@@ -68,13 +68,13 @@
 .anb-preferences summary span { display: block; margin-top: 1px; color: var(--muted); font-size: 13px; font-weight: 400; }
 .anb-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 0 12px; }
 .anb-chips button { min-height: 44px; border-radius: var(--radius-pill); font-size: 14px; }
-.anb-chips button[aria-pressed=true] { border-color: var(--primary); background: var(--primary); color: #fff; }
+.anb-chips button[aria-pressed=true] { border-color: var(--primary); background: var(--primary); color: var(--on-primary); }
 .anb-repeat { margin-top: 18px; padding: 4px 14px 8px; border: 1.5px dashed var(--tile-border); border-radius: var(--radius); }
 .anb-repeat > legend { padding: 0 6px; }
 .anb-repeat .anb-radio { margin: 4px 0; border: 0; background: none; padding-inline: 0; }
 
 /* The booking at a glance, then the price, then the one button that matters. */
-.anb-summary { margin-top: 30px; padding: 16px 18px; border: 1px solid var(--hairline); border-left: 4px solid var(--accent); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); }
+.anb-summary { margin-top: 30px; padding: 16px 18px; border: 1px solid var(--hairline); border-left: 4px solid var(--primary); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); }
 .anb-summary > h2 { margin: 0 0 8px; font: 600 20px/1.2 var(--font-display); counter-increment: none; }
 .anb-summary > h2::before { display: none; }
 .anb-summary p { margin: 4px 0; }
@@ -83,7 +83,7 @@
 .anb-price dd { margin: 0; font-variant-numeric: tabular-nums; }
 .anb-price > div:last-child { align-items: baseline; margin-top: 8px; font-size: 16px; font-weight: 700; }
 .anb-price > div:last-child dd { color: var(--primary); font: 600 26px/1 var(--font-display); font-variant-numeric: lining-nums; }
-.anb-footer { position: sticky; bottom: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 24px -16px 0; padding: 14px 16px max(14px, env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--paper) 74%, rgb(247 246 242 / 0)); }
+.anb-footer { position: sticky; bottom: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 24px -16px 0; padding: 14px 16px max(14px, env(safe-area-inset-bottom)); background: linear-gradient(to top, var(--paper) 74%, var(--paper-clear)); }
 .anb-footer-total { display: grid; gap: 1px; color: var(--muted); font-size: 13px; }
 .anb-footer-total b { color: var(--primary); font-size: 26px; line-height: 1.05; }
 .anb-footer .btn--lg { white-space: nowrap; }
@@ -102,7 +102,7 @@
 .anb-alltimes .slots button[data-usual=no] { border-style: dashed; }
 .anb-alltimes .slots button[aria-disabled=true] { border-color: var(--hairline); background: transparent; opacity: .55; cursor: not-allowed; }
 .anb-alltimes .slots button[aria-pressed=true] { border-style: solid; }
-.anb-time-note { margin: 12px 0 0; padding: 10px 14px; border-left: 4px solid var(--accent); border-radius: 0 12px 12px 0; background: var(--accent-soft); font-size: 14px; line-height: 1.45; }
+.anb-time-note { margin: 12px 0 0; padding: 10px 14px; border-left: 4px solid var(--accent); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; background: var(--accent-soft); font-size: 14px; line-height: 1.45; }
 .anb-time-note p { margin: 0; }
 .anb-time-note ul { margin: 4px 0 0; padding-left: 18px; }
 .anb-time-note--refused { border-left-color: var(--danger-line); background: var(--danger-soft); }

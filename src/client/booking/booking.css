@@ -10,7 +10,7 @@
 .brand-actions .btn--quiet[aria-expanded='true'] { background: var(--primary-soft); }
 .header-sign-in .gate-form { margin: 0 0 8px; }
 .brand-link { display: inline-flex; align-items: center; gap: 10px; color: var(--primary); text-decoration: none; font: 600 22px/1 var(--font-display); letter-spacing: -.005em; }
-.brand-aside { padding: 10px 2px; color: var(--primary); font-size: 14px; font-weight: 600; text-decoration: none; }
+.brand-aside { padding: 12px 2px; color: var(--primary); font-size: 14px; font-weight: 600; text-decoration: none; }
 .brand-aside:hover { text-decoration: underline; }
 .booking-shell > footer { margin-top: auto; padding: 18px 0 28px; border-top: 1px solid var(--hairline); color: var(--muted); font-size: 12px; }
 
@@ -22,7 +22,7 @@
 .progress-bar { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; }
 .progress-bar span { height: 4px; border-radius: 4px; background: var(--hairline); transition: background-color var(--dur) var(--ease); }
 .progress-bar .done { background: var(--primary); }
-.progress-bar .current { background: var(--accent); }
+.progress-bar .current { background: var(--primary-mid); }
 .progress { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; list-style: none; }
 .busy-bar { position: relative; height: 3px; margin: 10px 0 0; overflow: hidden; border-radius: 3px; background: transparent; }
 .busy-bar.is-on { background: var(--hairline); }
@@ -31,7 +31,7 @@
 
 /* ---------- Type: one expressive question per screen, plain words beneath it ---------- */
 :where(.booking-shell) h1 { margin: 10px 0 8px; font: 600 clamp(30px, 8.6vw, 38px)/1.12 var(--font-display); font-variant-numeric: lining-nums; letter-spacing: -.012em; text-wrap: balance; }
-:where(.booking-shell) h1 em { font-style: italic; font-weight: 500; color: var(--accent-strong); }
+:where(.booking-shell) h1 em { font-style: italic; font-weight: 500; color: var(--primary); }
 :where(.booking-shell) h1:focus { outline: none; }
 :where(.booking-shell) h2 { margin: 28px 0 12px; font: 600 22px/1.25 var(--font-display); font-variant-numeric: lining-nums; }
 :where(.booking-shell) h3 { margin: 20px 0 8px; font: 700 15px/1.3 var(--font-ui); }
@@ -92,9 +92,9 @@
 .welcome .eyebrow { margin-top: 14px; }
 .welcome-steps { counter-reset: welcome; display: grid; gap: 10px; margin: 18px 0; padding: 0; list-style: none; }
 .welcome-steps li { position: relative; padding: 2px 0 2px 40px; counter-increment: welcome; color: var(--ink-soft); font-size: 15px; line-height: 1.45; }
-.welcome-steps li::before { content: counter(welcome); position: absolute; left: 0; top: -1px; display: grid; place-items: center; width: 28px; height: 28px; border: 1.5px solid var(--accent); border-radius: 50%; color: var(--primary); font: 600 14px/1 var(--font-display); font-variant-numeric: lining-nums; }
-.welcome-note { display: flex; align-items: flex-start; gap: 10px; margin: 16px 0; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); color: var(--ink); font-size: 14px; line-height: 1.45; }
-.welcome-note .icon { flex-shrink: 0; margin-top: 1px; color: var(--accent-strong); }
+.welcome-steps li::before { content: counter(welcome); position: absolute; left: 0; top: -1px; display: grid; place-items: center; width: 28px; height: 28px; border: 1.5px solid var(--primary-line); border-radius: 50%; color: var(--primary); font: 600 14px/1 var(--font-display); font-variant-numeric: lining-nums; }
+.welcome-note { display: flex; align-items: flex-start; gap: 10px; margin: 16px 0; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--cream); color: var(--ink); font-size: 14px; line-height: 1.45; }
+.welcome-note .icon { flex-shrink: 0; margin-top: 1px; color: var(--primary); }
 .welcome--after { margin-top: 26px; }
 .welcome--after .welcome-steps { margin-top: 0; }
 .welcome-about { margin: 8px 0 0; }
@@ -105,7 +105,7 @@
 .usual-go { display: inline-flex; align-items: center; gap: 2px; flex-shrink: 0; color: var(--primary); font-size: 14px; font-weight: 700; }
 
 /* The bar that stays in reach while you scroll: what is chosen on the left, the next step on the right. */
-.action-bar { position: sticky; bottom: 0; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 14px; margin: 20px -16px 0; padding: 24px 16px calc(14px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, rgb(247 246 242 / 0), var(--paper) 18px); }
+.action-bar { position: sticky; bottom: 0; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 14px; margin: 20px -16px 0; padding: 24px 16px calc(14px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, var(--paper-clear), var(--paper) 18px); }
 .action-bar > .btn--block { flex: 1; }
 .action-bar .btn--lg { flex: 1 1 150px; padding-inline: 12px; }
 .action-summary { flex: 0 1 auto; max-width: 46%; }
@@ -116,7 +116,7 @@
 .action-summary b.figure { color: var(--primary); font-size: 24px; line-height: 1.1; }
 
 /* ---------- Review ---------- */
-.ticket { margin: 16px 0; padding: 0; overflow: hidden; border: 1px solid var(--hairline); border-left: 4px solid var(--accent); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); }
+.ticket { margin: 16px 0; padding: 0; overflow: hidden; border: 1px solid var(--hairline); border-left: 4px solid var(--primary); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); }
 .ticket-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 16px 12px 14px 16px; }
 .ticket-when { margin: 0; font-size: 24px; line-height: 1.2; }
 .ticket-time { margin: 4px 0 0; font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -148,10 +148,10 @@
 .more--flat .more-body { padding-inline: 0; }
 .person + .person { margin-top: 16px; padding-top: 4px; border-top: 1px dashed var(--tile-border); }
 .booking-shell .person-title { margin: 14px 0 0; font: 600 17px/1.3 var(--font-display); }
-.preference-title { margin: 14px 0 8px; color: var(--accent-ink); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.preference-title { margin: 14px 0 8px; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .preference-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .preference-chip { min-height: 44px; padding: 0 16px; border-radius: var(--radius-pill); border-color: var(--control-border); font-weight: 500; }
-.preference-chip[aria-pressed=true] { border-color: var(--primary); background: var(--primary); color: #fff; }
+.preference-chip[aria-pressed=true] { border-color: var(--primary); background: var(--primary); color: var(--on-primary); }
 .preference-chip[aria-pressed=true]::before { content: ''; width: 5px; height: 9px; margin: -2px 2px 0 -2px; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg); }
 .addons { margin: 20px 0 8px; }
 .addons .section-title { margin: 0 0 8px; }
@@ -168,7 +168,7 @@
 .prices > .prices-total { padding-top: 12px; border-bottom: 0; }
 .prices-total dt { color: var(--ink); font-weight: 700; }
 .prices-total dd { color: var(--primary); font-size: 28px; }
-.price-state { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 16px 0; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); }
+.price-state { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 16px 0; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--accent-soft); }
 .price-state p { margin: 0; }
 .price-skeleton .skeleton { height: 112px; }
 
@@ -179,7 +179,7 @@
 .gate-choices > button[aria-expanded='true'] { box-shadow: inset 0 0 0 2px var(--primary); }
 .gate-form { margin-top: 12px; }
 .gate-form > h2 { margin-bottom: 4px; font-size: 20px; }
-.guest-note { display: flex; flex-direction: column; align-items: flex-start; margin: 0 0 14px; padding: 10px 14px 2px; border-radius: 12px; background: var(--primary-soft); color: var(--ink-soft); font-size: 15px; }
+.guest-note { display: flex; flex-direction: column; align-items: flex-start; margin: 0 0 14px; padding: 10px 14px 2px; border-radius: var(--radius-sm); background: var(--primary-soft); color: var(--ink-soft); font-size: 15px; }
 .guest-note > button { margin-left: -14px; }
 /* Saved details are locked until "Edit my details" is pressed, and the email always is. A locked box is readable but plainly not for typing in. */
 .booking-shell input[readonly] { background: var(--done-bg); border-color: var(--line); cursor: default; }
@@ -189,17 +189,17 @@
 .details-unlocked { margin: 0 0 12px; }
 .reserved { display: flex; align-items: center; gap: 8px; margin: 4px 0 6px; color: var(--ok-ink); font-weight: 600; }
 .reserved-dot { flex-shrink: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--ok-rail); box-shadow: 0 0 0 4px var(--ok-bg); }
-.amount-card { margin: 16px 0; padding: 18px 20px; border-radius: var(--radius); background: var(--primary); color: #fff; box-shadow: var(--shadow-2); }
-.amount-card .eyebrow { color: rgb(255 255 255 / .82); }
+.amount-card { margin: 16px 0; padding: 18px 20px; border-radius: var(--radius); background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow-2); }
+.amount-card .eyebrow { color: var(--on-primary-soft); }
 .amount { margin: 0; font-size: 46px; line-height: 1.1; letter-spacing: -.01em; }
 .bank-list { display: grid; margin: 8px 0; }
 .bank-list > div { display: grid; gap: 2px; padding: 10px 0; border-bottom: 1px solid var(--hairline); }
 .bank-list dt { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .bank-list dd { text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0; }
 .copy-value { font: 600 17px/1.3 var(--font-ui); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.copy-button { min-height: 44px; padding: 0 14px; border-radius: 10px; font-size: 14px; }
+.copy-button { min-height: 44px; padding: 0 14px; border-radius: var(--radius-sm); font-size: 14px; }
 .copy-failed { flex-basis: 100%; color: var(--danger); }
-.bank-reference { margin: 12px 0 4px; padding: 4px 14px; border-left: 4px solid var(--accent); border-radius: 12px; background: var(--accent-soft); }
+.bank-reference { margin: 12px 0 4px; padding: 4px 14px; border-left: 4px solid var(--primary); border-radius: var(--radius-sm); background: var(--primary-soft); }
 .bank-reference > div { border-bottom: 0; }
 .bank-card h3 { margin-top: 18px; }
 .steps-list { margin: 8px 0 0; padding-left: 22px; }
@@ -220,7 +220,7 @@
 
 /* ---------- The "still booking?" prompt ---------- */
 .hold-dialog { width: min(420px, calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow: auto; padding: 24px; border: 0; border-radius: var(--radius-lg); background: var(--surface); color: var(--ink); box-shadow: var(--shadow-2); }
-.hold-dialog::backdrop { background: rgb(25 40 35 / .5); }
+.hold-dialog::backdrop { background: var(--scrim); }
 .hold-dialog h2 { margin-top: 0; }
 .hold-dialog .actions { display: grid; gap: 10px; }
 .hold-dialog small { display: block; margin-top: 12px; color: var(--muted); line-height: 1.5; }
