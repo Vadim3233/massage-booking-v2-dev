@@ -205,6 +205,16 @@ The booking pages, a client's account pages and the whole Admin share one new lo
 - **Not changed, because it is set outside this site:** the sign-up and password emails that Supabase sends keep their own templates.
 - **To try it:** after this goes live, make a test booking with your own email address and look at the email that arrives (and open it on your phone). A client's Gmail, Outlook and Apple Mail may differ a little in small details such as rounded corners.
 
+## New: add a client with just a name (2026-10-17)
+
+- **Only the name is needed.** In Clients, **+ Add client**, and in New booking, **+ Add new client**, type just a first name and save. The last name, phone, email and address are all optional: add them now or later (the client's page has **Edit details** and **+ Add address**).
+- **If you give an address,** it needs the street, city and postcode. A half-typed address is caught on the screen and not saved. The city is filled in with London to save typing; on its own it does not count as an address.
+- **A phone or email that you do type** still has to look right, and still cannot belong to someone else. You can also clear a client's phone and email.
+- **A client with no email** gets no emails, and nothing is queued for them. A client with no phone has no Call or WhatsApp buttons. In a booking for a client with no saved address you type the address for that appointment, as for a one-off address.
+- **Two clients with only the same name** are two clients, and no warning is shown, so choose carefully.
+- **One step for you first:** the database needs a small update before this works, `supabase/migrations/20261101100000_client_name_only.sql`, applied in the Supabase SQL Editor like the earlier ones. It is safe to apply before this goes live (the old screens keep working). Without it, adding a client with only a name says "Name and a valid email or phone are required".
+- **To try it:** after the update, add a client with only a name, one with a name and an address, and one with a wrong email (it should say so beside the field), then open the first one and book them an appointment.
+
 ## What works now (tested locally)
 
 **For clients** (the website)
@@ -219,7 +229,7 @@ The booking pages, a client's account pages and the whole Admin share one new lo
 - Calendar (day and agenda), booking details with call, WhatsApp, directions and email.
 - Create a booking for someone, complete, no-show, cancel, move; late fees and refunds are recorded for you to settle.
 - Payment Review: confirm a transfer, approve cash, or remove a booking, with a note of when it was booked.
-- Clients: search, profile, addresses, private notes, booking history, online booking on or off.
+- Clients: search, add (a name alone is enough), profile, addresses, private notes, booking history, online booking on or off.
 - Working hours, special days, and blocked time or personal events over a range of dates and hours (a holiday, a few days, or a couple of hours), with a warning if a change clashes with a booking.
 - Repeating bookings: tick "Repeat every Thursday" when creating a booking. The weekly slot is held for that client, the next session becomes a booking about a week before the day and they are asked to pay for it, and you can skip a date, pause or stop it from the client's page.
 - Settings: treatments and prices, extras, areas and travel fees, bank details, and the booking rules (days ahead, notice, free window, grace period, booking limits).

@@ -148,11 +148,12 @@ export default function ClientProfile({ id, back, openBooking, newBooking, openC
   if (error && !client) return <section className="admin-review"><p role="alert">{error}</p><button onClick={changed}>Try again</button><button onClick={back}>Back to Clients</button></section>
   if (client === false) return <section className="admin-review"><p>That client could not be found.</p><button onClick={back}>Back to Clients</button></section>
   if (!client) return <section className="admin-review"><p role="status">Loading client…</p></section>
+  const contactLinks = clientContactLinks(client)
   return <section className="admin-review admin-client-profile" aria-labelledby="client-name">
     <button className="admin-back-link" onClick={back}>← Clients</button>
     <h1 id="client-name">{fullName(client)}</h1>
     <p>{[client.phone, client.email].filter(Boolean).join(' · ') || 'No contact details'}</p>
-    <nav className="admin-contact-actions" aria-label="Quick contact">{clientContactLinks(client).map(link => <a key={link.key} href={link.href} {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}><Icon name={link.icon} />{link.label}</a>)}</nav>
+    {contactLinks.length > 0 && <nav className="admin-contact-actions" aria-label="Quick contact">{contactLinks.map(link => <a key={link.key} href={link.href} {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}><Icon name={link.icon} />{link.label}</a>)}</nav>}
     <div className="admin-payment-buttons"><button className="btn--primary" onClick={() => newBooking(client.id)}>+ New booking</button><button className="btn--tonal" onClick={() => setEditing(!editing)}>{editing ? 'Close' : 'Edit details'}</button></div>
     {editing && <section aria-label="Edit details"><ClientForm initial={client} submitLabel="Save details" onCancel={() => setEditing(false)} onSubmit={async details => { await api.update(id, details); setEditing(false); changed() }} /></section>}
     {error && <p role="alert">{error}</p>}

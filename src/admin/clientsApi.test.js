@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { clientContactLinks } from './contactLinks.js'
-import { createClientsApi, fullName, validateAddress, validateClient } from './clientsApi.js'
+import { addressTyped, createClientsApi, fullName, validateAddress, validateClient, validateOptionalAddress } from './clientsApi.js'
 
 describe('checking a client before saving', () => {
-  it('needs a name and some way to reach them', () => {
+  it('needs only a name: a phone and an email are optional', () => {
+    expect(validateClient({ first_name: 'Ana' })).toBe('')
+    expect(validateClient({ first_name: 'Ana', last_name: '', phone: '', email: ' ' })).toBe('')
     expect(validateClient({ first_name: 'Ana', email: 'ana@example.test' })).toBe('')
     expect(validateClient({ first_name: 'Ana', phone: '07700 900123' })).toBe('')
     expect(validateClient({ first_name: ' ', email: 'ana@example.test' })).toBe('Enter a first name.')
-    expect(validateClient({ first_name: 'Ana' })).toBe('Enter a phone number or an email address.')
+    expect(validateClient({})).toBe('Enter a first name.')
   })
   it('catches an email or phone that cannot be right', () => {
     expect(validateClient({ first_name: 'Ana', email: 'ana-at-example' })).toBe('That email address does not look right.')
@@ -17,6 +19,17 @@ describe('checking a client before saving', () => {
   it('needs a street, city and postcode for an address', () => {
     expect(validateAddress({ address_line_1: '1 Road', city: 'London', postcode: 'SW1A 1AA' })).toBe('')
     expect(validateAddress({ address_line_1: '1 Road', city: '', postcode: 'SW1A 1AA' })).toBe('Enter the street, city and postcode.')
+  })
+  it('treats an address given with a new client as optional as a whole', () => {
+    // The city is filled in with London on the form, so a city alone is not an address.
+    expect(addressTyped({ address_line_1: '', address_line_2: '', city: 'London', postcode: '', entry_instructions: '' })).toBe(false)
+    expect(validateOptionalAddress({ address_line_1: ' ', city: 'London', postcode: '' })).toBe('')
+    expect(validateOptionalAddress({ address_line_1: '1 Road', city: 'London', postcode: 'SW1A 1AA' })).toBe('')
+    for (const started of [{ address_line_1: '1 Road' }, { postcode: 'SW1A 1AA' }, { address_line_2: 'Flat 2' }, { entry_instructions: 'Ring twice' }]) {
+      expect(addressTyped({ city: 'London', ...started })).toBe(true)
+      expect(validateOptionalAddress({ city: 'London', ...started })).toBe('Enter the street, city and postcode, or leave the address empty.')
+    }
+    expect(validateOptionalAddress({ address_line_1: '1 Road', city: '', postcode: 'SW1A 1AA' })).toBe('Enter the street, city and postcode, or leave the address empty.')
   })
   it('names a client sensibly', () => {
     expect(fullName({ first_name: 'Ana', last_name: 'Silva' })).toBe('Ana Silva')
