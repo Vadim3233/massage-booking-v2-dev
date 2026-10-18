@@ -215,6 +215,17 @@ The booking pages, a client's account pages and the whole Admin share one new lo
 - **One step for you first:** the database needs a small update before this works, `supabase/migrations/20261101100000_client_name_only.sql`, applied in the Supabase SQL Editor like the earlier ones. It is safe to apply before this goes live (the old screens keep working). Without it, adding a client with only a name says "Name and a valid email or phone are required".
 - **To try it:** after the update, add a client with only a name, one with a name and an address, and one with a wrong email (it should say so beside the field), then open the first one and book them an appointment.
 
+## New: record an appointment that already happened (2026-10-13)
+
+Booking, payment, cancellation and rescheduling rules did not change for clients. It needs one database change, `20261027100000_admin_past_bookings.sql`, which has **not** been applied to the online Supabase project yet (I only do that with your say-so, after a dry run, and I will note it here once it is done). Until it is, the box below can be ticked but recording says it is "not ready yet" and nothing is saved.
+
+- **Where.** New booking, Date and time: tick **It has already happened**. Choose the **day it happened** (any day in the last year, up to today) and the time. If you press **+ New booking** while looking at a day that has gone, it starts like this for that day.
+- **Payment.** **Paid by bank transfer** or **Paid in cash**: it is recorded as **completed** straight away, so it counts as a visit and in what the client has paid, and you can make them a receipt, which shows the day of the appointment as the day it was paid. A completed appointment cannot be cancelled or changed from the app, so you are asked once more first; the question shows the client, the day (with the year), the time and the amount, so please read it. **Not paid yet — bank transfer** or **Not paid yet — cash**: it stays **confirmed**, with no question, and you receive the payment and complete it later like any appointment that has started.
+- **Nobody is told.** The client gets no email and you get no alert, whichever way it is paid, and not later either while it is still a day that has gone (cancelling it again, or a payment recorded afterwards). If you move it to a time still to come, the client is told, as for any appointment.
+- **What is checked.** Only that it does not overlap another appointment (a time that does is greyed and says what it clashes with). Your working hours, the usual gap and blocked time do not apply to something that has already happened. If a client is part-way through booking that same day, it asks you to try again in a few minutes.
+- **Not for these:** a repeating booking. Without the box ticked, a day or time that has gone is refused exactly as before.
+- **Things to know.** The price is today's price list, even for an appointment in the past, and a completed one cannot be corrected from the app. A client you record a paid visit for counts as a returning client from then on (they can hold more than one upcoming booking), and a client with an account sees the appointment under Earlier in their bookings. Recording an appointment from earlier today can close most of the rest of today to online booking: clients are then usually offered only the time an hour after the day's last appointment.
+
 ## What works now (tested locally)
 
 **For clients** (the website)
