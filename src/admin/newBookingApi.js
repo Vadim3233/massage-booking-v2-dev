@@ -45,7 +45,8 @@ export function createAdminNewBookingApi(client) {
     // The same for a day that has gone: every half hour that has begun, and what was in the diary.
     pastTimes: (date, duration) => unwrap(client.rpc('admin_past_booking_times', { p_date: date, p_treatment_duration_minutes: duration })),
     create: (request, requestId) => one(client.rpc('admin_create_booking', { p_request: request, p_request_id: requestId })),
-    createSeries: (request, endDate, requestId) => one(client.rpc('admin_create_series', { p_request: request, p_end_date: endDate || null, p_request_id: requestId })),
+    // How often it repeats is sent only when it is not simply every week, which is what it always was.
+    createSeries: (request, endDate, requestId, pattern) => one(client.rpc('admin_create_series', { p_request: request, p_end_date: endDate || null, p_request_id: requestId, ...(pattern ? { p_pattern: pattern } : {}) })),
   }
 }
 
