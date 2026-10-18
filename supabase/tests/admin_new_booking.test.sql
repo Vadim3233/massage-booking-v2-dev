@@ -56,8 +56,34 @@ select throws_ok($$select public.admin_create_client('{"first_name":"Other","ema
  'PT409','An existing client uses this email or phone. Select that client instead.','Normalized email duplicate rejected');
 select throws_ok($$select public.admin_create_client('{"first_name":"Other","phone":"44 (7700) 900811","address_line_1":"2 Road","city":"London","postcode":"SW1 1AA"}',gen_random_uuid())$$,
  'PT409','An existing client uses this email or phone. Select that client instead.','Normalized phone duplicate rejected');
-select throws_ok($$select public.admin_create_client('{"first_name":"Other","address_line_1":"2 Road","city":"London","postcode":"SW1 1AA"}',gen_random_uuid())$$,
- '22023','Name and a valid email or phone are required','Useful contact required');
+-- A client needs only a name: no contact and no address are required.
+create temporary table t_name_only as select * from public.admin_create_client('{"first_name":"Nameonly"}','00000000-0000-0000-0000-000000008211');
+select ok((select last_name='' and email is null and phone is null and normalized_email is null and normalized_phone is null and auth_user_id is null from t_name_only),'A client needs only a name');
+select is((select count(*)::integer from public.client_addresses a join t_name_only c on c.id=a.client_id),0,'A client made with only a name has no address');
+select is((select id from public.admin_create_client('{"first_name":"Nameonly"}','00000000-0000-0000-0000-000000008211')),(select id from t_name_only),'Retrying a name-only client returns the same client');
+select is((select count(*)::integer from public.clients where first_name='Nameonly'),1,'And makes no second client');
+create temporary table t_name_address as select * from public.admin_create_client('{"first_name":"Nameaddress","address_line_1":"3 Test Street","city":"London","postcode":"sw3 1aa"}',gen_random_uuid());
+select ok((select a.is_default and a.postcode='SW3 1AA' and a.address_line_1='3 Test Street' from t_name_address c join public.client_addresses a on a.client_id=c.id),'A name and an address is enough, and the address is the default');
+create temporary table t_name_city as select * from public.admin_create_client('{"first_name":"Namecity","address_line_1":"","address_line_2":" ","city":"London","postcode":"","entry_instructions":""}',gen_random_uuid());
+select is((select count(*)::integer from t_name_city),1,'A client with only a name and the screens'' default city is made');
+select is((select count(*)::integer from public.client_addresses a join t_name_city c on c.id=a.client_id),0,'A bare city, with the rest of the address empty, is not an address');
+select is((select count(*)::integer from public.admin_create_client('{"first_name":"Phoneonly","phone":"+44 7700 900822"}',gen_random_uuid())),1,'A name and a phone is enough');
+select is((select count(*)::integer from public.admin_create_client('{"first_name":"Emailonly","email":"Emailonly.AdminTest@example.test"}',gen_random_uuid())),1,'A name and an email is enough');
+select is((select count(*)::integer from (select id from public.admin_create_client('{"first_name":"Twin"}',gen_random_uuid()) union all select id from public.admin_create_client('{"first_name":"Twin"}',gen_random_uuid())) t),2,'Two clients with only the same name are two clients: a name is not an identity');
+select is((select count(*)::integer from public.event_outbox e join public.clients c on c.id=e.aggregate_id where e.event_type='client.created' and c.first_name='Nameonly'),1,'A client made with only a name is recorded like any other');
+select is((select count(*)::integer from public.notification_deliveries d join public.event_outbox e on e.id=d.event_id join public.clients c on c.id=e.aggregate_id where c.first_name='Nameonly'),0,'And nobody is messaged about it');
+-- What is given still has to be right.
+select throws_ok($$select public.admin_create_client('{"first_name":"Other","email":"ALICE.ADMINTEST@example.test"}',gen_random_uuid())$$,
+ 'PT409','An existing client uses this email or phone. Select that client instead.','A duplicate email is refused even with no address');
+select throws_ok($$select public.admin_create_client('{"last_name":"NoFirstName"}',gen_random_uuid())$$,'22023','A name is required, and an email or phone must be valid if you give one','A name is required');
+select throws_ok($$select public.admin_create_client('{"first_name":"   "}',gen_random_uuid())$$,'22023','A name is required, and an email or phone must be valid if you give one','A blank name is not a name');
+select throws_ok($$select public.admin_create_client('{"first_name":"Bad","email":"not-an-email"}',gen_random_uuid())$$,'22023','A name is required, and an email or phone must be valid if you give one','An email that is given must look like one');
+select throws_ok($$select public.admin_create_client('{"first_name":"Bad","phone":"123"}',gen_random_uuid())$$,'22023','A name is required, and an email or phone must be valid if you give one','A phone number that is given must look like one');
+select throws_ok($$select public.admin_create_client('{"first_name":"Partial","postcode":"SW1 1AA"}',gen_random_uuid())$$,'22023','Address, city and postcode are required','A postcode alone is not an address');
+select throws_ok($$select public.admin_create_client('{"first_name":"Partial","address_line_1":"2 Road","city":"London"}',gen_random_uuid())$$,'22023','Address, city and postcode are required','A street without a postcode is not an address');
+select throws_ok($$select public.admin_create_client('{"first_name":"Partial","address_line_1":"2 Road","postcode":"SW1 1AA","city":""}',gen_random_uuid())$$,'22023','Address, city and postcode are required','A street and postcode without a city is not an address');
+select throws_ok($$select public.admin_create_client('{"first_name":"Partial","entry_instructions":"Ring twice"}',gen_random_uuid())$$,'22023','Address, city and postcode are required','Entry instructions with no address are not lost silently');
+select is((select count(*)::integer from public.clients where first_name in ('Partial','Bad','Other')),0,'None of the refused clients was made');
 select is((select count(*)::integer from public.admin_search_clients('Alice AdminTest')),1,'Search full name');
 select is((select count(*)::integer from public.admin_search_clients('900811')),1,'Search normalized phone');
 select is((select count(*)::integer from public.admin_search_clients('ALICE.ADMINTEST@')),1,'Search email');
