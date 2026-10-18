@@ -103,4 +103,18 @@ describe('a New booking draft and a day that has gone', () => {
     saveAdminDraft('owner', { ...emptyAdminDraft(DAY), areaId: 'a1', serviceId: 's1', past: false, start: 990 })
     expect(loadAdminDraft('owner', yesterday)).toMatchObject({ past: false, date: DAY })
   })
+  it('does not bring back a half-made draft with nothing in it worth keeping: New booking starts from the day it was opened from', () => {
+    // She opened New booking from yesterday (so "already happened" was ticked), touched a time, and left without choosing anyone or anything.
+    saveAdminDraft('owner', { ...emptyAdminDraft(yesterday), start: 600, payment: 'bank_received' })
+    expect(loadAdminDraft('owner', today())).toMatchObject({ past: false, date: today(), start: null, payment: 'bank_pending' })
+    expect(loadAdminDraft('owner', DAY)).toMatchObject({ past: false, date: DAY, start: null })
+    // The same goes for a day picked and nothing else, for the usual kind of booking.
+    saveAdminDraft('owner', { ...emptyAdminDraft(DAY), start: 990 })
+    expect(loadAdminDraft('owner', today())).toMatchObject({ date: today(), start: null })
+    // As soon as there is a client, a treatment, an area, an address or a note, it is kept.
+    for (const kept of [{ client: { id: 'c1' } }, { serviceId: 's1' }, { areaId: 'a1' }, { note: 'Bring the table' }]) {
+      saveAdminDraft('owner', { ...emptyAdminDraft(yesterday), start: 600, ...kept })
+      expect(loadAdminDraft('owner', today())).toMatchObject({ past: true, date: yesterday, start: 600 })
+    }
+  })
 })

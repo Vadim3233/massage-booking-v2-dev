@@ -22,7 +22,8 @@ export function bookingRequest(draft) {
     payment_arrangement: draft.payment,
     note: draft.note.trim() || null,
     // A time chosen from "Show all times" that is not one of the usual ones: the database then sets the usual rules aside, but never allows a double booking.
-    ...(draft.anyTime ? { any_time: true } : {}),
+    // (Not for something that has already happened: that sets them aside in its own way, and the database refuses the two together.)
+    ...(draft.anyTime && !draft.past ? { any_time: true } : {}),
     // An appointment that has already happened, recorded on purpose: the database then records it as completed if it is paid, and tells no one.
     ...(draft.past ? { past: true } : {}),
   }

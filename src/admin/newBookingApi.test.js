@@ -23,6 +23,10 @@ describe('the request for a new booking', () => {
   it('says "past" only for an appointment that has already happened, and never together with "any time"', () => {
     expect(bookingRequest(draft({ past: true }))).toMatchObject({ past: true, start_minutes: 960, date: DAY })
     expect(bookingRequest(draft({ past: true }))).not.toHaveProperty('any_time')
+    // Even a draft that somehow has both (the database refuses the pair) says only that it has already happened.
+    expect(bookingRequest(draft({ past: true, anyTime: true }))).toMatchObject({ past: true })
+    expect(bookingRequest(draft({ past: true, anyTime: true }))).not.toHaveProperty('any_time')
+    expect(bookingRequest(draft({ past: false, anyTime: true }))).toMatchObject({ any_time: true })
     expect(bookingRequest(draft({ past: false }))).not.toHaveProperty('past')
     expect(bookingRequest(draft({ past: undefined }))).not.toHaveProperty('past')
   })

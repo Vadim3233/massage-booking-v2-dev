@@ -54,6 +54,8 @@ select pg_temp.working(-5, false, null, null);
 create function pg_temp.cur() returns integer language sql as $$
   select least((floor((extract(hour from (clock_timestamp() at time zone 'Europe/London')) * 60 + extract(minute from (clock_timestamp() at time zone 'Europe/London'))) / 30) * 30)::integer, 1380);
 $$;
+-- A start on today that an hour's appointment from the half hour that has just begun can never overlap, whatever the hour (for the time a client holds).
+create function pg_temp.hold_start() returns integer language sql as $$ select case when pg_temp.cur() >= 720 then 360 else 1320 end; $$;
 
 -- ---------------------------------------------------------------------------------------------
 -- Who may ask
@@ -110,6 +112,9 @@ select results_eq($$select b.booking_status, b.date = pg_temp.day(-2), b.start_m
   $$values ('completed'::text, true, 600, 'admin'::text)$$, 'On the day and time given, made by the Admin');
 select results_eq($$select p.method, p.status, p.paid_at is not null, p.verified_at is not null, p.verified_by from public.booking_payments p join t_bank t on t.booking_id = p.booking_id$$,
   $$values ('bank_transfer'::text, 'paid'::text, true, true, '00000000-0000-0000-0000-00000000d901'::uuid)$$, 'The payment is paid and verified, and by whom');
+select results_eq($$select (p.paid_at at time zone 'Europe/London') = (pg_temp.day(-2)::timestamp + interval '10 hours'), p.verified_at > p.paid_at, p.verified_at <= clock_timestamp()
+  from public.booking_payments p join t_bank t on t.booking_id = p.booking_id$$, $$values (true, true, true)$$,
+  'It is dated the day and time of the appointment, so a receipt for it reads right, while the Admin''s check of it is dated when she recorded it');
 select results_eq($$select from_status, to_status from public.booking_status_events e join t_bank t on t.booking_id = e.booking_id where e.entity = 'booking' order by e.occurred_at, e.id$$,
   $$values (null::text, 'confirmed'::text), ('confirmed'::text, 'completed'::text)$$, 'The history shows it made confirmed and then completed, through the one step the guard allows');
 select results_eq($$select e.event_type, (e.payload->>'past')::boolean from public.event_outbox e join t_bank t on t.booking_id = e.aggregate_id order by e.event_type$$,
@@ -122,6 +127,8 @@ select is((select count(*)::integer from public.event_outbox e join t_bank t on 
 create temporary table t_cash as select * from public.admin_create_booking(pg_temp.request(-4, 600, true, 'cash_received'), '00000000-0000-4000-8000-00000000d922');
 select results_eq($$select b.booking_status, p.method, p.status from t_cash t join public.bookings b on b.id = t.booking_id join public.booking_payments p on p.booking_id = b.id$$,
   $$values ('completed'::text, 'cash'::text, 'paid'::text)$$, 'Paid in cash is completed too');
+select results_eq($$select (p.paid_at at time zone 'Europe/London') = (pg_temp.day(-4)::timestamp + interval '10 hours'), p.verified_at is null from public.booking_payments p join t_cash t on t.booking_id = p.booking_id$$,
+  $$values (true, true)$$, 'and dated the day of the appointment as well (cash is not "verified" by anyone, as before)');
 
 -- ---------------------------------------------------------------------------------------------
 -- Not paid yet: it stays confirmed
@@ -173,12 +180,12 @@ select lives_ok($$select public.admin_create_booking(pg_temp.request(-7, 600, tr
 select throws_ok($$select public.admin_create_series(pg_temp.request(-9, 600, true), null, gen_random_uuid())$$, '22023', 'A repeat cannot start with an appointment that has already happened', 'A repeating booking is never started in the past');
 -- Today. A client who is part-way through booking holds a time: recording a past appointment today waits, as unusual times do.
 insert into public.booking_holds(id, date, start_minutes, treatment_duration_minutes, status, expires_at, client_key)
-values ('00000000-0000-4000-8000-00000000d931', pg_temp.day(0), 1380, 60, 'active', clock_timestamp() + interval '10 minutes', 'past-bookings-test-hold-0001');
+values ('00000000-0000-4000-8000-00000000d931', pg_temp.day(0), pg_temp.hold_start(), 60, 'active', clock_timestamp() + interval '10 minutes', 'past-bookings-test-hold-0001');
 select throws_ok($$select public.admin_create_booking(pg_temp.request(0, pg_temp.cur(), true), gen_random_uuid())$$, 'PT409', 'A client is in the middle of booking that day. Try again in a few minutes.',
   'While a client is booking that day it waits a few minutes');
 select is((public.admin_past_booking_times(pg_temp.day(0), 60)->>'client_booking')::boolean, true, 'and the list of that day says a client is booking');
-select results_eq($$select (b->>'start')::integer, (b->>'end')::integer, b->>'label', b->>'kind' from jsonb_array_elements(public.admin_past_booking_times(pg_temp.day(0), 60)->'booked') b where (b->>'start')::integer = 1380$$,
-  $$values (1380, 1440, null::text, 'hold'::text)$$, 'and lists the time held for them, as a hold with no name');
+select results_eq($$select (b->>'start')::integer, (b->>'end')::integer, b->>'label', b->>'kind' from jsonb_array_elements(public.admin_past_booking_times(pg_temp.day(0), 60)->'booked') b where (b->>'start')::integer = pg_temp.hold_start()$$,
+  $$values (pg_temp.hold_start(), pg_temp.hold_start() + 60, null::text, 'hold'::text)$$, 'and lists the time held for them, as a hold with no name');
 update public.booking_holds set expires_at = clock_timestamp() - interval '1 minute' where id = '00000000-0000-4000-8000-00000000d931';
 select is((public.admin_past_booking_times(pg_temp.day(0), 60)->>'client_booking')::boolean, false, 'Once the hold has expired the list no longer says so');
 -- What has begun can be recorded and what has not cannot, whatever the hour: the half hour that has just begun goes through, the next one is refused.
@@ -188,6 +195,8 @@ select case when pg_temp.cur() + 30 <= 1380
     'That time has not happened yet. Turn off "It has already happened" to book it.', 'The next half hour has not begun, so it cannot be recorded as past')
   else skip(1, 'after 23:00 there is no later half hour that fits in the day') end;
 select lives_ok($$select public.admin_create_booking(pg_temp.request(0, pg_temp.cur(), true), gen_random_uuid())$$, 'The half hour that has just begun can be recorded (once the hold has expired)');
+select ok((select p.paid_at <= clock_timestamp() and p.paid_at >= clock_timestamp() - interval '2 days' from public.booking_payments p join public.bookings b on b.id = p.booking_id
+  where b.date = pg_temp.day(0) and p.status = 'paid'), 'One paid and recorded for earlier today is dated at its own time, never in the future');
 
 -- ---------------------------------------------------------------------------------------------
 -- Everything made as before is as before
@@ -202,6 +211,9 @@ select results_eq($$select booking_status, payment_status from t_future$$, $$val
 select results_eq($$select d.title, d.audience, d.channel from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id join t_future t on t.booking_id = e.aggregate_id$$,
   $$values ('Your appointment is booked'::text, 'client'::text, 'email'::text)$$, 'and the client is emailed, as before');
 select is((select e.payload ? 'past' from public.event_outbox e join t_future t on t.booking_id = e.aggregate_id where e.event_type = 'booking.created'), false, 'The event of a booking for the future has no "past" in it');
+create temporary table t_future_cash as select * from public.admin_create_booking(pg_temp.request(31, (select min(a.start_minutes) from public.admin_booking_availability(pg_temp.day(31), 60) a), null, 'cash_received'), gen_random_uuid());
+select ok((select abs(extract(epoch from (p.paid_at - clock_timestamp()))) < 120 from public.booking_payments p join t_future_cash t on t.booking_id = p.booking_id),
+  'A booking for the future that is paid is dated now, as before (only something that has already happened is dated the day of the appointment)');
 -- Only one recorded after the fact is kept quiet. One made in the usual way that has since begun (and was never completed) is announced as before.
 update public.bookings set date = pg_temp.day(-20) where id = (select booking_id from t_future);
 select public.admin_cancel_booking((select booking_id from t_future), gen_random_uuid(), pg_temp.bv((select booking_id from t_future)), pg_temp.pv((select booking_id from t_future)), 'Did not go ahead', 'admin');

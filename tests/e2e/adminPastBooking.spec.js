@@ -86,6 +86,9 @@ test('an appointment that has already happened is recorded as completed when it 
   expect(asked).toContain('A completed appointment cannot be cancelled or changed from here')
   expect(await rowsOf()).toEqual([{ date: pastDay, start_minutes: 600, booking_status: 'completed', source_channel: 'admin', booking_payments: { method: 'bank_transfer', status: 'paid' } }])
   expect(await deliveries()).toBe(0)
+  // It was paid on the day of the appointment, not the day it was recorded, so a receipt for it reads right.
+  const payment = (await unwrap(f.admin.from('booking_payments').select('paid_at, bookings!inner(client_id)').eq('bookings.client_id', f.recipient.id)))[0]
+  expect(new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(new Date(payment.paid_at))).toBe(pastDay)
 })
 
 test('saying no to the question records nothing, and she can change her mind about the client or the day', async ({ page }) => {

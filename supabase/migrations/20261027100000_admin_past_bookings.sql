@@ -83,7 +83,7 @@ declare
   v_payment text; v_payment_method text; v_payment_status text; v_note text;
   v_session jsonb; v_session_id uuid; v_position integer:=0; v_service_id uuid; v_duration integer;
   v_service_name text; v_price numeric(10,2); v_recipient text; v_preferences uuid[]; v_enhancement public.enhancements%rowtype;
-  v_any boolean := false; v_today date; v_past boolean := false; v_started boolean;
+  v_any boolean := false; v_today date; v_past boolean := false; v_started boolean; v_paid_at timestamptz;
 begin
   if auth.uid() is null or coalesce((auth.jwt()->>'is_anonymous')::boolean,false) or not public.is_booking_admin() then
     raise exception 'Admin authorization required' using errcode='42501';
@@ -236,9 +236,12 @@ begin
       values(v_booking_id,v_enhancement.id,v_enhancement.name,1,v_enhancement.price_gbp,0);
   end loop;
   v_now:=clock_timestamp();
+  -- Something that has already happened was paid for at the time, as far as anyone knows, so a paid one is dated the day of the appointment (never
+  -- later than now) and a receipt for it reads right. The Admin's check of it is dated now, which is when she recorded it.
+  v_paid_at:=case when v_past then least(v_now,(v_date+make_interval(mins=>v_start)) at time zone 'Europe/London') else v_now end;
   insert into public.booking_payments(booking_id,method,status,amount_gbp,payment_reference,paid_at,verified_at,verified_by)
     values(v_booking_id,v_payment_method,v_payment_status,v_quote.total_gbp,v_reference,
-      case when v_payment_status='paid' then v_now end,case when v_payment='bank_received' then v_now end,case when v_payment='bank_received' then auth.uid() end);
+      case when v_payment_status='paid' then v_paid_at end,case when v_payment='bank_received' then v_now end,case when v_payment='bank_received' then auth.uid() end);
   insert into public.command_requests(scope,idempotency_key,source_channel,actor_type,actor_id,command_type,request_fingerprint,status,result_reference,completed_at)
     values(v_scope,p_request_id::text,'admin','admin',auth.uid()::text,'admin_create_booking',v_fingerprint,'succeeded',v_booking_id::text,v_now) returning * into v_command;
   insert into public.event_outbox(event_type,aggregate_type,aggregate_id,source_command_id,deduplication_key,payload)

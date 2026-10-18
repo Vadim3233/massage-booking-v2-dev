@@ -19,6 +19,9 @@ export function loadAdminDraft(ownerId, initialDate) {
     const saved = JSON.parse(sessionStorage.getItem(draftKey(ownerId)))
     if (saved?.version === 1 && Array.isArray(saved.draft?.sessions) && saved.draft?.details) {
       const merged = { ...emptyAdminDraft(initialDate), ...saved.draft }
+      // A draft with nothing in it that is worth keeping (no client, treatment, area or note: only a day or a time was touched) is not brought back,
+      // so New booking starts from the day it was opened from, and a day or "already happened" left over from an earlier visit cannot follow her.
+      if (!meaningfulDraft(merged)) return emptyAdminDraft(initialDate)
       // A draft kept from before "It has already happened" existed has no such choice: it follows the day that draft is for, not the day New booking
       // was opened from this time (which would give a ticked box with a day still to come).
       const dated = saved.draft.past === undefined ? { ...merged, past: merged.date < today() } : merged
