@@ -165,12 +165,14 @@ select is((select count(*)::integer from public.calendar_blocks where series_id 
 -- ------------------------------------------------------------------------------------------------
 -- The daily job makes the booking for any pattern when it is due
 -- ------------------------------------------------------------------------------------------------
--- A repeat every 2 weeks that started ten days ago: its next session is four days from now.
-create temp table direct as select pg_temp.series(pg_temp.today_plus(-10), 'weeks', 2, null, null) as id;
+-- A repeat every 2 weeks that started ten days ago: its next session is four days from now. Another that started two days ago has
+-- its next session twelve days from now, so the week in between (five days from now) must not be booked as a weekly repeat would.
+create temp table direct as select pg_temp.series(pg_temp.today_plus(-10), 'weeks', 2, null, null) as id, pg_temp.series(pg_temp.today_plus(-2), 'weeks', 2, null, null) as off_id;
 update public.booking_series set client_id = '00000000-0000-4000-8000-00000000f712', created_by = '00000000-0000-0000-0000-00000000f701',
-  request = pg_temp.request(2, 0) - 'date' - 'start_minutes' where id = (select id from direct);
-select is((select public.run_series_maintenance()), '{"made": 1, "clashes": 0, "ended": 0}'::jsonb, 'A repeat every 2 weeks is booked when its next date is within the week');
+  request = pg_temp.request(2, 0) - 'date' - 'start_minutes' where id in ((select id from direct), (select off_id from direct));
+select is((select public.run_series_maintenance()), '{"made": 1, "clashes": 0, "ended": 0}'::jsonb, 'A repeat every 2 weeks is booked when its next date is within the week, and only that one');
 select is((select date from public.bookings where series_id = (select id from direct)), pg_temp.today_plus(4), 'It is the date two weeks after the one ten days ago, not a weekly one');
+select is((select count(*)::integer from public.bookings where series_id = (select off_id from direct)), 0, 'The week between the sessions of a repeat every 2 weeks is not booked');
 select is((select public.run_series_maintenance()), '{"made": 0, "clashes": 0, "ended": 0}'::jsonb, 'And only once');
 
 -- ------------------------------------------------------------------------------------------------
@@ -226,6 +228,10 @@ create temp table cal_bookings as select
   pg_temp.booking((select id from cal), 1, 0, 'confirmed', 'bank_transfer', 'paid') as paid_id,
   pg_temp.booking((select id from cal), 8, 600, 'awaiting_transfer', 'bank_transfer', 'awaiting_transfer') as unpaid_id,
   pg_temp.booking((select id from cal), 15, 600, 'confirmed', 'cash', 'approved') as cash_id;
+-- Two that are never cancelled from the repeat, whatever is asked: a session marked completed (ahead of today only to prove the point) and one today that has already begun.
+create temp table cal_untouchable as select
+  pg_temp.booking((select id from cal), 36, 600, 'completed', 'bank_transfer', 'paid') as completed_id,
+  pg_temp.booking((select id from cal), 0, 0, 'confirmed', 'bank_transfer', 'paid') as started_id;
 select public.refresh_series_holds((select id from cal));
 select is((select count(*)::integer from public.calendar_blocks where series_id = (select id from cal) and date = pg_temp.today_plus(22)), 1, 'The weeks after the booked ones are held');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000f701","role":"authenticated"}', true);
@@ -269,7 +275,10 @@ select is((select count(*)::integer from public.bookings where series_id = (sele
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000f701","role":"authenticated"}', true);
 set local role authenticated;
 select is(public.admin_series_cancel_dates((select id from cal), array[pg_temp.today_plus(8), pg_temp.today_plus(29)], gen_random_uuid()), '{"cancelled": 1, "skipped": 1}'::jsonb, 'Several dates at once');
+select is(public.admin_series_cancel_dates((select id from cal), array[pg_temp.today_plus(0), pg_temp.today_plus(36)], gen_random_uuid()), '{"cancelled": 0, "skipped": 0}'::jsonb, 'A session that has begun, or is marked completed, is left alone when its date is named');
 reset role;
+select is((select booking_status from public.bookings where id = (select started_id from cal_untouchable)), 'confirmed', 'The one that has begun is still confirmed');
+select is((select booking_status from public.bookings where id = (select completed_id from cal_untouchable)), 'completed', 'And the completed one is still completed');
 select results_eq($$select booking_status, late_fee_status, refund_due_gbp::numeric from public.bookings where id = (select unpaid_id from cal_bookings)$$, $$values ('cancelled'::text, 'none'::text, 0::numeric)$$, 'An unpaid booking is cancelled with nothing to refund');
 select is((select status from public.booking_payments where booking_id = (select unpaid_id from cal_bookings)), 'rejected', 'Its payment is closed');
 select is((select booking_status from public.bookings where id = (select cash_id from cal_bookings)), 'confirmed', 'The date not named is untouched');
@@ -285,6 +294,7 @@ select is((select result from all_cancel), '{"cancelled": 1, "skipped": 0}'::jso
 select is((select booking_status from public.bookings where id = (select cash_id from cal_bookings)), 'cancelled', 'The cash booking is cancelled');
 select is((select status from public.booking_payments where booking_id = (select cash_id from cal_bookings)), 'rejected', 'And its payment closed');
 select is((select booking_status from public.bookings where id = (select done_id from cal_bookings)), 'completed', 'A session that has happened is left as it is');
+select is((select count(*)::integer from public.bookings where id in ((select started_id from cal_untouchable), (select completed_id from cal_untouchable)) and booking_status <> 'cancelled'), 2, 'And so are the two that cancelling everything must not touch');
 select results_eq($$select status, ended_at is not null from public.booking_series where id = (select id from cal)$$, $$values ('ended'::text, true)$$, 'The repeat has ended');
 select is((select count(*)::integer from public.calendar_blocks where series_id = (select id from cal)), 0, 'Nothing is held any more');
 select is((select public.run_series_maintenance()), '{"made": 0, "clashes": 0, "ended": 0}'::jsonb, 'The daily job makes nothing for an ended repeat');
@@ -296,7 +306,8 @@ select throws_ok($$select public.admin_series_cancel_dates((select id from cal),
 reset role;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000f701","role":"authenticated"}', true);
 set local role authenticated;
-select is(jsonb_array_length(public.admin_client_series('00000000-0000-4000-8000-00000000f714')->0->'upcoming'), 0, 'An ended repeat has no dates still to come');
+select is(jsonb_array_length(public.admin_client_series('00000000-0000-4000-8000-00000000f714')->0->'upcoming'), 1, 'An ended repeat lists no dates still to come, only a booking it already made');
+select is(public.admin_client_series('00000000-0000-4000-8000-00000000f714')->0->'upcoming'->0->>'booking_status', 'completed', 'Which is the completed one');
 select is(public.admin_client_series('00000000-0000-4000-8000-00000000f714')->0->>'upcoming_booked', '0', 'And no bookings');
 reset role;
 select is((select count(*)::integer from public.event_outbox e where e.event_type = 'booking.cancelled'
