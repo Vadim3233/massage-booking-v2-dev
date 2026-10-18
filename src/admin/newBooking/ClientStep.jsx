@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { money } from '../calendarPresentation.js'
 import { emptyAddress, clientLabel, initials } from './presentation.js'
+import { addressTyped, validateClient, validateOptionalAddress } from '../clientsApi.js'
 
-export function AddressFields({ details, change, prefix = 'address' }) {
+// `optional` is for an address that may be left out altogether (a new client's), where the three parts are not each required.
+export function AddressFields({ details, change, prefix = 'address', optional = false }) {
   return <div className="anb-fields">
-    {[['address_line_1', 'Address line 1', true], ['address_line_2', 'Address line 2', false], ['city', 'City', true], ['postcode', 'Postcode', true]].map(([key, label, required]) => <label key={key} htmlFor={`${prefix}-${key}`}>{label}{!required && ' (optional)'}<input id={`${prefix}-${key}`} required={required} value={details[key] || ''} maxLength={key === 'postcode' ? 16 : 200} autoComplete={key === 'postcode' ? 'postal-code' : 'off'} onChange={event => change({ ...details, [key]: event.target.value })} /></label>)}
+    {[['address_line_1', 'Address line 1', true], ['address_line_2', 'Address line 2', false], ['city', 'City', true], ['postcode', 'Postcode', true]].map(([key, label, required]) => <label key={key} htmlFor={`${prefix}-${key}`}>{label}{!required && ' (optional)'}<input id={`${prefix}-${key}`} required={required && !optional} value={details[key] || ''} maxLength={key === 'postcode' ? 16 : 200} autoComplete={key === 'postcode' ? 'postal-code' : 'off'} onChange={event => change({ ...details, [key]: event.target.value })} /></label>)}
     <label className="anb-wide">Entry instructions (optional)<textarea value={details.entry_instructions || ''} maxLength={1000} onChange={event => change({ ...details, entry_instructions: event.target.value })} /></label>
   </div>
 }
@@ -15,13 +17,17 @@ export default function ClientStep({ draft, patch, catalogue, query, setQuery, c
   const searching = !draft.client || changing
   const newClient = draft.newClient || { first_name: '', last_name: '', phone: '', email: '', ...emptyAddress }
   const setNewClient = value => patch({ newClient: value })
-  const [contactError, setContactError] = useState('')
+  const [formError, setFormError] = useState('')
   const area = catalogue.areas.find(item => item.id === draft.areaId)
   async function add(event) {
     event.preventDefault()
-    if (!newClient.phone.trim() && !newClient.email.trim()) { setContactError('Enter a phone number or email address.'); return }
-    setContactError('')
-    if (await createClient(newClient)) { patch({ newClient: null }); setAdding(false) }
+    // Only the name is needed. An address is optional as a whole; if one is started it needs the street, city and postcode.
+    const problem = validateClient(newClient) || validateOptionalAddress(newClient)
+    if (problem) { setFormError(problem); return }
+    setFormError('')
+    // Nothing typed for the address (the city is filled in with London) means a client with no address yet.
+    const details = addressTyped(newClient) ? newClient : { first_name: newClient.first_name, last_name: newClient.last_name, phone: newClient.phone, email: newClient.email }
+    if (await createClient(details)) { patch({ newClient: null }); setAdding(false) }
   }
   return <>
     {!adding && searching && <>
@@ -36,9 +42,9 @@ export default function ClientStep({ draft, patch, catalogue, query, setQuery, c
     {adding && <form className="anb-inline-client" onSubmit={add}>
       <h3>Add new client</h3><div className="anb-fields">
         {[['first_name', 'First name', 'text'], ['last_name', 'Last name (optional)', 'text'], ['phone', 'Phone', 'tel'], ['email', 'Email', 'email']].map(([key, label, type]) => <label key={key}>{label}<input required={key === 'first_name'} type={type} value={newClient[key]} maxLength={key === 'email' ? 254 : 120} onChange={event => setNewClient({ ...newClient, [key]: event.target.value })} /></label>)}
-      </div><p className="anb-hint">A phone number or email is required. This address becomes the client’s default.</p>
-      {contactError && <p role="alert">{contactError}</p>}
-      <AddressFields details={newClient} change={setNewClient} prefix="new-client" />
+      </div><p className="anb-hint">Only the name is needed. Phone, email and address are optional; an address you enter becomes the client’s default.</p>
+      {formError && <p role="alert">{formError}</p>}
+      <AddressFields details={newClient} change={setNewClient} prefix="new-client" optional />
       {clientError && <p role="alert">{clientError}</p>}
       <div className="anb-inline-actions"><button type="button" disabled={clientBusy} onClick={() => setAdding(false)}>Back to client search</button><button className="btn--primary" disabled={clientBusy}>{clientBusy ? 'Saving client…' : 'Save client'}</button></div>
     </form>}

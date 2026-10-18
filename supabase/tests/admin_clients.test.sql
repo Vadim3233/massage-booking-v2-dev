@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions, pg_temp;
-select plan(30);
+select plan(32);
 
 insert into auth.users(id, aud, role, email, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values
@@ -10,7 +10,8 @@ values
 insert into public.admin_users(user_id) values ('00000000-0000-0000-0000-00000000f101');
 insert into public.clients(id, first_name, last_name, email, phone) values
   ('00000000-0000-4000-8000-00000000f201', 'Maya', 'Margin', 'maya@example.test', '+44 7700 900201'),
-  ('00000000-0000-4000-8000-00000000f202', 'Noor', 'Neighbour', 'noor@example.test', '+44 7700 900202');
+  ('00000000-0000-4000-8000-00000000f202', 'Noor', 'Neighbour', 'noor@example.test', '+44 7700 900202'),
+  ('00000000-0000-4000-8000-00000000f2a1', 'Clearme', '', 'clearme@example.test', '+44 7700 900777');
 insert into public.client_addresses(id, client_id, address_line_1, city, postcode, is_default) values
   ('00000000-0000-4000-8000-00000000f301', '00000000-0000-4000-8000-00000000f201', '1 First Street', 'London', 'SW1A 1AA', true),
   ('00000000-0000-4000-8000-00000000f302', '00000000-0000-4000-8000-00000000f201', '2 Second Street', 'London', 'SW1A 2AA', false),
@@ -57,9 +58,12 @@ select is((select normalized_phone from public.clients where id = '00000000-0000
 select lives_ok($$select * from public.admin_update_client('00000000-0000-4000-8000-00000000f201', '{"first_name":"Maya","last_name":"Marginson","email":"maya.m@example.test","phone":"07700 900 301"}')$$, 'Saving a client with their own email and phone is not a duplicate');
 select throws_ok($$select * from public.admin_update_client('00000000-0000-4000-8000-00000000f201', '{"first_name":"Maya","email":"noor@example.test"}')$$, 'PT409', 'Another client already uses this email or phone.', 'Another client''s email is refused');
 select throws_ok($$select * from public.admin_update_client('00000000-0000-4000-8000-00000000f201', '{"first_name":"Maya","phone":"+44 7700 900202"}')$$, 'PT409', 'Another client already uses this email or phone.', 'Another client''s phone is refused, however it is typed');
-select throws_ok($$select * from public.admin_update_client('00000000-0000-4000-8000-00000000f201', '{"first_name":"","email":"maya@example.test"}')$$, '22023', 'Name and a valid email or phone are required', 'A name is required');
-select throws_ok($$select * from public.admin_update_client('00000000-0000-4000-8000-00000000f201', '{"first_name":"Maya"}')$$, '22023', 'Name and a valid email or phone are required', 'Some way to reach the client is required');
-select throws_ok($$select * from public.admin_update_client('00000000-0000-4000-8000-00000000f201', '{"first_name":"Maya","email":"not-an-email"}')$$, '22023', 'Name and a valid email or phone are required', 'The email must look like an email');
+select throws_ok($$select * from public.admin_update_client('00000000-0000-4000-8000-00000000f201', '{"first_name":"","email":"maya@example.test"}')$$, '22023', 'A name is required, and an email or phone must be valid if you give one', 'A name is required');
+-- Only the name is needed: the contact details can be cleared, and a client who never had any can still be edited.
+select ok((select email is null and phone is null and normalized_email is null and normalized_phone is null from public.admin_update_client('00000000-0000-4000-8000-00000000f2a1', '{"first_name":"Clearme"}')), 'Contact details can be cleared: only the name is needed');
+select is((select first_name from public.admin_update_client('00000000-0000-4000-8000-00000000f2a1', '{"first_name":"Clearme Too","last_name":"Renamed"}')), 'Clearme Too', 'A client with no contact details can still be edited');
+select throws_ok($$select * from public.admin_update_client('00000000-0000-4000-8000-00000000f201', '{"first_name":"Maya","phone":"123"}')$$, '22023', 'A name is required, and an email or phone must be valid if you give one', 'A phone number that is given must look like one');
+select throws_ok($$select * from public.admin_update_client('00000000-0000-4000-8000-00000000f201', '{"first_name":"Maya","email":"not-an-email"}')$$, '22023', 'A name is required, and an email or phone must be valid if you give one', 'The email must look like an email');
 select throws_ok($$select * from public.admin_update_client('00000000-0000-4000-8000-00000000f201', '{"first_name":"Maya","email":"m@example.test","online_booking_enabled":false}')$$, '22023', 'Invalid client details', 'Only the four contact fields can be changed here');
 select throws_ok($$select * from public.admin_update_client(gen_random_uuid(), '{"first_name":"Maya","email":"m@example.test"}')$$, 'P0002', 'Client unavailable', 'An unknown client is refused');
 select results_eq($$select first_name from public.clients where id = '00000000-0000-4000-8000-00000000f202'$$, $$values ('Noor'::text)$$, 'The other client is untouched');
