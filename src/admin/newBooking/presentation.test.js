@@ -22,6 +22,9 @@ describe('what a regular client usually books', () => {
   it('suggests Massage for a client with no history', () => {
     expect(defaultsFromLast(empty(), catalogue, null)).toEqual({ serviceId: 's-massage' })
   })
+  it('takes only the area from a client whose bookings were all cancelled', () => {
+    expect(defaultsFromLast(empty(), catalogue, { service_area_id: 'a-fulham' })).toEqual({ serviceId: 's-massage', areaId: 'a-fulham' })
+  })
   it('never overwrites something already chosen', () => {
     const chosen = empty({ serviceId: 's-stretch', areaId: 'a-chelsea', payment: 'bank_received', start: 840 })
     expect(defaultsFromLast(chosen, catalogue, last())).toEqual({})

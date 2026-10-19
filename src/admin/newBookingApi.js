@@ -36,8 +36,15 @@ export function createAdminNewBookingApi(client) {
     search: query => unwrap(client.rpc('admin_search_clients', { p_query: query })),
     client: id => unwrap(client.from('clients').select('id,first_name,last_name,email,phone').eq('id', id).maybeSingle()),
     addresses: clientId => unwrap(client.rpc('admin_client_addresses', { p_client_id: clientId })),
-    // The client's most recent booking that was not cancelled, used only to suggest defaults.
-    lastBooking: async clientId => (await unwrap(client.from('bookings').select('service_area_id,booking_sessions(service_id,duration_minutes,position),booking_payments(method)').eq('client_id', clientId).neq('booking_status', 'cancelled').order('date', { ascending: false }).order('start_minutes', { ascending: false }).limit(1)))?.[0] || null,
+    // The client's most recent booking that was not cancelled, used only to suggest defaults. A client whose bookings were all cancelled is still
+    // suggested the area of the last of them (only the area: what was cancelled says nothing sure about the treatment or the payment).
+    lastBooking: async clientId => {
+      const newest = async (columns, cancelled) => {
+        const rows = client.from('bookings').select(columns).eq('client_id', clientId)
+        return (await unwrap((cancelled ? rows.eq('booking_status', 'cancelled') : rows.neq('booking_status', 'cancelled')).order('date', { ascending: false }).order('start_minutes', { ascending: false }).limit(1)))?.[0] || null
+      }
+      return await newest('service_area_id,booking_sessions(service_id,duration_minutes,position),booking_payments(method)', false) || newest('service_area_id', true)
+    },
     createClient: (details, requestId) => one(client.rpc('admin_create_client', { p_details: details, p_request_id: requestId })),
     quote: draft => one(client.rpc('admin_quote_booking', quoteParams(draft))),
     availability: (date, duration) => unwrap(client.rpc('admin_booking_availability', { p_date: date, p_treatment_duration_minutes: duration })),
