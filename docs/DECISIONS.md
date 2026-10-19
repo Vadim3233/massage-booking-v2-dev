@@ -576,6 +576,14 @@ The Telegram message has no link to the booking page (a private link in an email
 
 **How it was built:** No database change. The message is made in one place, `src/admin/shareBooking.js` (`shareText`), used by both actions; the bank details come from the same function and setting the client's page uses (`get_bank_details`, `bankFromSettings`, `chooseBank`). The button is `ShareBooking.jsx`. When the app becomes a phone app (Capacitor) the Share… action can use its Share plugin; the button stays the same.
 
+## ADR-064 — The client's name in New booking opens their page, and the booking waits (2026-10-19)
+
+**Decision:** Once a client is chosen in New booking, their name is a link to their page. It opens without the "Discard this unsaved booking?" question, because the half-made booking is already kept as it is filled in. At the top of the client's page the back link then says "← Back to the booking" (the phone's back button does the same) and returns to the booking exactly as it was, with where it was started from. Coming back, the booking reads the client again, so a name, phone or email changed on their page shows at once, and a saved address chosen for the booking is used as it now reads (one removed there falls back to the client's default). A booking brought back keeps the treatment, area and payment she chose: the suggestions from the client's last booking fill in only when a client is chosen. Only New booking has the link (Vadim chose New booking only, not the booking sheet or To check). While a booking is being made the name is plain text.
+
+**Reason:** Vadim asked to be able to look at, or fix, a client's details in the middle of making a booking for them without losing the booking.
+
+**How it was built:** No database change. `AdminWorkspace.jsx` opens the client's page with a marker in the browser history, and the page's back link goes one step back; `AdminNewBooking.jsx` reads the client and their addresses again when a kept booking opens. Browser test `newBookingClientLink.spec.js`.
+
 ## ADR-065 — New booking suggests the area of a client whose bookings were all cancelled (2026-10-19)
 
 **Decision:** When a client is chosen in New booking, the treatment, length, area and payment are still suggested from their last booking that was not cancelled. A client whose bookings were all cancelled now gets the area of the last of them suggested too (only the area: a cancelled booking says nothing sure about the treatment or the payment). Nothing already chosen is changed.
