@@ -163,7 +163,7 @@ export default function DaySettings({ date, revision, openBooking, changed, api 
         <h2 id="day-bookings-title">Bookings</h2>
         {listedBookings(data.bookings, showCancelled).length > 0
           ? <ol role="list" className="admin-timeline" aria-label={`Bookings for ${full}`}>{listedBookings(data.bookings, showCancelled).map(booking => <li key={booking.id} className="admin-timeline-row admin-timeline-booking">
-            <BookingCard booking={booking} open={() => openBooking(booking.id)} now={new Date()} />
+            <BookingCard booking={booking} open={() => openBooking(booking.id)} changed={() => setAttempt(value => value + 1)} now={new Date()} />
           </li>)}</ol>
           : <p>No bookings on this day.</p>}
         <CancelledToggle bookings={data.bookings} on={showCancelled} change={setShowCancelled} />

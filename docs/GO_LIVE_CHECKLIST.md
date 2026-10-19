@@ -263,6 +263,21 @@ Booking, payment, cancellation and rescheduling rules did not change for clients
 - **Always what clients can book.** The hours come from the same place the booking page uses, so the Calendar can never show different hours from the times clients are offered.
 - **To try it:** open the Agenda and look at today and the next few days; turn on Show every day; set a special day off with a note in Day settings and see its name in the Agenda and the Day view.
 
+## New: cancelling says what happens to the money (2026-10-19)
+
+- **No database step.**
+- **Before you confirm a cancellation,** a box under the late fee says what happens to the money for the fee you chose, for example "No cancellation fee – Andreas gets a full £90.00 refund" or "Late cancellation – you keep £45.00, refund £45.00". It changes as you change the fee. The red button says the same.
+- **Record refund on the card.** A cancelled booking with a refund to send now has **Record refund** on its card in the Calendar. Press it once you have sent the money; it asks first, and the reminder goes.
+- **To try it:** on a test booking that has been paid, open Cancel booking and try No fee, Full price and another amount, and read the box; cancel it, find the card in the Agenda and press Record refund.
+
+## New: share a booking's details from the booking sheet (2026-10-19)
+
+- **No database step.**
+- **Where:** the round share button at the top right of a booking, beside its date and time. **WhatsApp client** opens WhatsApp at the client's chat with the details already written; check them and press send yourself. **Share…** opens your phone's share sheet (WhatsApp, email, Messages…); on a computer it copies the text.
+- **What it says:** the date and time, the address, the treatments with the length and price, and how the payment stands; if a bank transfer is still due, the bank details and reference your clients already see. Never your notes, the client's phone or email, or anything internal.
+- **Not on a cancelled booking.** WhatsApp client is not offered when the client has no usable phone number.
+- **To try it:** open a test booking, press the share button, choose WhatsApp client and look at the message (do not send it to a real client), then try Share….
+
 ## What works now (tested locally)
 
 **For clients** (the website)

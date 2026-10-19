@@ -4,6 +4,7 @@ import { acquireBodyScrollLock } from './dialogScrollLock.js'
 import { contactLinks } from './contactLinks.js'
 import Icon from '../ui/icons.jsx'
 import ClientNotesSection from './ClientNotesSection.jsx'
+import ShareBooking from './ShareBooking.jsx'
 export default function BookingDetails({ booking: b, close, payment, lifecycle, returnFocus }) {
   const ref = useRef(null)
   useEffect(() => {
@@ -21,7 +22,7 @@ export default function BookingDetails({ booking: b, close, payment, lifecycle, 
   const state = bookingState(b)
   const email = b.booking_email_snapshot || b.clients?.email
   return <dialog className="admin-details" ref={ref} onCancel={close} aria-labelledby="booking-title">
-    <header className="admin-details-bar"><button onClick={close} aria-label="Close details"><span aria-hidden="true" className="close-x">×</span> Close</button><div><strong>{dateLabel(b.date)}</strong><span>{time(b.start_minutes)}–{time(b.start_minutes + b.treatment_duration_minutes)}</span></div></header>
+    <header className="admin-details-bar"><button onClick={close} aria-label="Close details"><span aria-hidden="true" className="close-x">×</span> Close</button><div className="admin-details-when"><div><strong>{dateLabel(b.date)}</strong><span>{time(b.start_minutes)}–{time(b.start_minutes + b.treatment_duration_minutes)}</span></div><ShareBooking booking={b} /></div></header>
     <div className="admin-details-content">
       <section className="admin-details-client"><h2 id="booking-title">{clientName(b)}</h2>
         <p className="admin-when">{dateLabel(b.date, { weekday: 'short', day: 'numeric', month: 'short' })} · {time(b.start_minutes)}–{time(b.start_minutes + b.treatment_duration_minutes)}</p>

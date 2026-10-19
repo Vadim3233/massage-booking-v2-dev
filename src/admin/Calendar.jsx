@@ -110,7 +110,7 @@ export default function Calendar({ signOut, openBooking, openDay, revision, init
         <CancelledToggle bookings={data.bookings} on={showCancelled} change={setShowCancelled} />
         <ol role="list" className="admin-timeline" aria-label="Day timeline">
           {timeline.rows.map(row => <li key={`${row.kind}-${row.id}`} className={`admin-timeline-row admin-timeline-${row.kind}`} data-start={row.start}>
-            {row.kind === 'booking' ? <BookingCard booking={row.booking} open={() => openBooking(row.booking.id)} now={new Date(now)} /> : row.kind === 'block' && row.block.kind !== 'series_hold' ? <button className="admin-timeline-entry block admin-block-button" onClick={() => setBlockDialog({ date, block: row.block })}>
+            {row.kind === 'booking' ? <BookingCard booking={row.booking} open={() => openBooking(row.booking.id)} changed={reread} now={new Date(now)} /> : row.kind === 'block' && row.block.kind !== 'series_hold' ? <button className="admin-timeline-entry block admin-block-button" onClick={() => setBlockDialog({ date, block: row.block })}>
                 <span>{row.title}</span>
                 <small>{time(row.start)} – {time(row.end)} · tap to change</small>
             </button> : <div className={`admin-timeline-entry ${row.kind}`}>{ENTRY_ICON[row.kind] && <Icon name={ENTRY_ICON[row.kind]} size={18} />}
