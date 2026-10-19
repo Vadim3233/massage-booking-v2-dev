@@ -549,3 +549,11 @@ The Telegram message has no link to the booking page (a private link in an email
 **Limits, on purpose:** Only the Admin's boxes change. The client's own pages (Your bookings, the confirmation) keep the colours they have. A booking the Admin made herself with "payment pending" still reads "Confirmed · Awaiting transfer": it is confirmed (the time is held for the client) with the money still to come, and it is drawn sand because of the money. A pale card hovered or pressed gets a slightly deeper tint, never white.
 
 **If it ever has to be taken back:** revert the change; nothing in the database depends on it.
+
+## ADR-063 — The booking sheet can share a booking's details, mainly to the client on WhatsApp (2026-10-19)
+
+**Decision:** A share button at the top right of the booking sheet, beside the date and time, offers **WhatsApp client** (WhatsApp opens at the client's own chat with the details written in; hidden when the booking has no usable phone number) and **Share…** (the phone's share sheet; on a computer the text is copied and the screen says "Copied"). The message is WhatsApp plain text: a *bold* first line with the date and time, the address, the treatments with the total length and price, and the payment in plain words; while a bank transfer is still due it adds the bank details and reference the client's own booking page shows. It never includes the Admin's notes, the client's own phone or email, internal ids or the booking's history. A cancelled booking has no share button. Nothing is sent by itself; the text can be changed in WhatsApp before sending.
+
+**Reason:** Vadim's admin UI notes (Part A §3). Drawn and approved on 2026-10-19 (cancelled bookings: the share icon is hidden, the brief's first option).
+
+**How it was built:** No database change. The message is made in one place, `src/admin/shareBooking.js` (`shareText`), used by both actions; the bank details come from the same function and setting the client's page uses (`get_bank_details`, `bankFromSettings`, `chooseBank`). The button is `ShareBooking.jsx`. When the app becomes a phone app (Capacitor) the Share… action can use its Share plugin; the button stays the same.
