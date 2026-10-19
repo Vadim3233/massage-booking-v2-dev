@@ -99,6 +99,14 @@ describe('a New booking draft and a day that has gone', () => {
     saveAdminDraft('owner', { ...emptyAdminDraft(DAY), areaId: 'a1', serviceId: 's1', start: 600, repeat: { on: true, endDate: '' } })
     expect(loadAdminDraft('owner', today())).toMatchObject({ past: false, repeat: { on: true } })
   })
+  it('starts a repeat as every week, and brings a draft kept from before the other ways to repeat back as that', () => {
+    expect(emptyAdminDraft(DAY).repeat).toEqual({ on: false, kind: 'weeks', every: 1, dates: [], endDate: '' })
+    saveAdminDraft('owner', { ...emptyAdminDraft(DAY), areaId: 'a1', serviceId: 's1', start: 600, repeat: { on: true, endDate: '2027-01-01' } })
+    expect(loadAdminDraft('owner', DAY).repeat).toEqual({ on: true, kind: 'weeks', every: 1, dates: [], endDate: '2027-01-01' })
+    const chosen = { on: true, kind: 'dates', every: 1, dates: [shiftDate(DAY, 7), shiftDate(DAY, 21)], endDate: '' }
+    saveAdminDraft('owner', { ...emptyAdminDraft(DAY), areaId: 'a1', serviceId: 's1', start: 600, repeat: chosen })
+    expect(loadAdminDraft('owner', DAY).repeat).toEqual(chosen)
+  })
   it('keeps a saved choice as it is, whatever day New booking is opened from', () => {
     saveAdminDraft('owner', { ...emptyAdminDraft(DAY), areaId: 'a1', serviceId: 's1', past: false, start: 990 })
     expect(loadAdminDraft('owner', yesterday)).toMatchObject({ past: false, date: DAY })

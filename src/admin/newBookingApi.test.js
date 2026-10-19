@@ -30,6 +30,21 @@ describe('the request for a new booking', () => {
     expect(bookingRequest(draft({ past: false }))).not.toHaveProperty('past')
     expect(bookingRequest(draft({ past: undefined }))).not.toHaveProperty('past')
   })
+  it('makes a repeat with its pattern only when it is not simply every week', async () => {
+    const calls = []
+    const api = createAdminNewBookingApi({ rpc: (name, args) => { calls.push([name, args]); return Promise.resolve({ data: [{ series_id: 's1' }], error: null }) } })
+    const request = { client_id: 'c1' }
+    await api.createSeries(request, null, 'k1')
+    await api.createSeries(request, '2027-06-01', 'k2', null)
+    await api.createSeries(request, null, 'k3', { kind: 'weeks', every_weeks: 2 })
+    await api.createSeries(request, null, 'k4', { kind: 'dates', dates: ['2027-03-11'] })
+    expect(calls).toEqual([
+      ['admin_create_series', { p_request: request, p_end_date: null, p_request_id: 'k1' }],
+      ['admin_create_series', { p_request: request, p_end_date: '2027-06-01', p_request_id: 'k2' }],
+      ['admin_create_series', { p_request: request, p_end_date: null, p_request_id: 'k3', p_pattern: { kind: 'weeks', every_weeks: 2 } }],
+      ['admin_create_series', { p_request: request, p_end_date: null, p_request_id: 'k4', p_pattern: { kind: 'dates', dates: ['2027-03-11'] } }],
+    ])
+  })
   it('asks the database for the times of a day that has gone', async () => {
     const calls = []
     const api = createAdminNewBookingApi({ rpc: (name, args) => { calls.push([name, args]); return Promise.resolve({ data: { slots: [] }, error: null }) } })

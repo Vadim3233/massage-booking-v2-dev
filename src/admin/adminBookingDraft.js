@@ -1,4 +1,5 @@
 import { today } from './calendarPresentation.js'
+import { emptyRepeat } from './repeatPattern.js'
 
 export const draftKey = ownerId => `admin-new-booking:v1:${ownerId}`
 export function emptyAdminDraft(initialDate) {
@@ -8,7 +9,7 @@ export function emptyAdminDraft(initialDate) {
     details: { savedAddressId: '', address_line_1: '', address_line_2: '', city: '', postcode: '', entry_instructions: '' },
     areaId: '', serviceId: '', sessions: [{ duration_minutes: 60, recipient_name: '', preference_ids: [] }],
     // Starting from a day that has gone (she was looking at it in the calendar) means recording something that already happened.
-    enhancementIds: [], date, start: null, anyTime: false, anyTimeNotes: [], past: date < today(), payment: 'bank_pending', note: '', repeat: { on: false, endDate: '' }, submission: null,
+    enhancementIds: [], date, start: null, anyTime: false, anyTimeNotes: [], past: date < today(), payment: 'bank_pending', note: '', repeat: { ...emptyRepeat }, submission: null,
   }
 }
 export function meaningfulDraft(draft) {
@@ -18,7 +19,8 @@ export function loadAdminDraft(ownerId, initialDate) {
   try {
     const saved = JSON.parse(sessionStorage.getItem(draftKey(ownerId)))
     if (saved?.version === 1 && Array.isArray(saved.draft?.sessions) && saved.draft?.details) {
-      const merged = { ...emptyAdminDraft(initialDate), ...saved.draft }
+      // A draft kept from before there were other ways to repeat has only the box and the end date: it is every week, as it was.
+      const merged = { ...emptyAdminDraft(initialDate), ...saved.draft, repeat: { ...emptyRepeat, ...saved.draft.repeat } }
       // A draft with nothing in it that is worth keeping (no client, treatment, area or note: only a day or a time was touched) is not brought back,
       // so New booking starts from the day it was opened from, and a day or "already happened" left over from an earlier visit cannot follow her.
       if (!meaningfulDraft(merged)) return emptyAdminDraft(initialDate)

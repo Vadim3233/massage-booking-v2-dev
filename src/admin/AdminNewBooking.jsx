@@ -6,6 +6,7 @@ import { clientLabel, defaultsFromLast, emptyAddress, isPaidArrangement, pastQue
 import TreatmentStep from './newBooking/TreatmentStep.jsx'
 import { DateTimeStep, PaymentStep, Summary } from './newBooking/BookingSteps.jsx'
 import { money } from './calendarPresentation.js'
+import { repeatProblem, repeatRequest } from './repeatPattern.js'
 import './newBooking/newBooking.css'
 
 const message = error => error?.message || 'Something went wrong. Please retry.'
@@ -41,6 +42,8 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
   const quoteError = quoteState?.key === quoteKey ? quoteState.error : ''
   const availability = availabilityState?.key === availabilityKey ? availabilityState : null
   const locked = busy || Boolean(draft.submission)
+  // Only an appointment at a usual time, for a day still to come, can repeat.
+  const repeating = Boolean(draft.repeat?.on) && !draft.anyTime && !draft.past
 
   useEffect(() => {
     let live = true
@@ -149,6 +152,7 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
     if (!draft.serviceId || !draft.sessions.length || draft.sessions.length > 4 || duration > 240 || draft.sessions.some(session => !catalogue.prices.some(price => price.service_id === draft.serviceId && price.duration_minutes === session.duration_minutes))) return 'Choose a treatment and an available duration.'
     // A time chosen from "Show all times", or for an appointment that has already happened, is checked by the database when the booking is made: it refuses a double booking.
     if (!draft.date || draft.start === null || (!draft.anyTime && !draft.past && (!availability || availability.error || !availability.slots.some(slot => slot.start_minutes === draft.start)))) return draft.past ? 'Choose the day and time it happened.' : 'Choose an available appointment time.'
+    if (repeating) return repeatProblem(draft.repeat, draft.date)
     return ''
   }
   async function create() {
@@ -163,10 +167,10 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
         && !window.confirm(pastQuestion({ who: clientLabel(draft.client), date: draft.date, start: draft.start, minutes: duration, total: money(quote.total_gbp), payment: draft.payment }))) return
     }
     busyRef.current = true; setBusy(true); setError('')
-    const submission = draft.submission || { id: crypto.randomUUID(), payload: bookingRequest(draft), repeat: draft.repeat?.on && !draft.anyTime && !draft.past ? { endDate: draft.repeat.endDate || null } : null }
+    const submission = draft.submission || { id: crypto.randomUUID(), payload: bookingRequest(draft), repeat: repeating ? repeatRequest(draft.repeat, draft.date) : null }
     patch({ submission })
     try {
-      const result = submission.repeat ? await api.createSeries(submission.payload, submission.repeat.endDate, submission.id) : await api.create(submission.payload, submission.id)
+      const result = submission.repeat ? await api.createSeries(submission.payload, submission.repeat.endDate, submission.id, submission.repeat.pattern) : await api.create(submission.payload, submission.id)
       completed.current = true; clear()
       onCreated({ ...result, date: submission.payload.date })
     } catch (failure) {

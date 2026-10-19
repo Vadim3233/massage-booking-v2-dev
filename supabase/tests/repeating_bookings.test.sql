@@ -3,7 +3,7 @@ create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions, pg_temp;
 select no_plan();
 
-select ok(not has_function_privilege('anon', 'public.admin_create_series(jsonb,date,uuid)', 'EXECUTE'), 'Anonymous callers cannot make a repeat');
+select ok(not has_function_privilege('anon', 'public.admin_create_series(jsonb,date,uuid,jsonb)', 'EXECUTE'), 'Anonymous callers cannot make a repeat');
 select ok(not has_function_privilege('authenticated', 'public.run_series_maintenance()', 'EXECUTE'), 'Signed-in users cannot run the repeat job');
 select ok(has_function_privilege('service_role', 'public.run_series_maintenance()', 'EXECUTE'), 'The server can run the repeat job');
 select ok(not has_function_privilege('authenticated', 'public.series_create_occurrence(uuid,date,boolean)', 'EXECUTE'), 'Making a session is internal');
