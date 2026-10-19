@@ -256,6 +256,13 @@ Booking, payment, cancellation and rescheduling rules did not change for clients
 - **Not changed.** What your clients see (Your bookings, the confirmation page) keeps its colours for now. A booking you make yourself with "payment pending" still says "Confirmed · Awaiting transfer", because it is confirmed (the time is held) and only the money is to come; it is drawn sand because of the money.
 - **To try it:** open the Agenda and look for a settled booking (sage), one waiting on a transfer (sand with a hollow dot) and one with a payment to check (sand); then open one, look at the line on its sheet, and look at the same bookings in To check and on the client's page.
 
+## New: every day says its working hours (2026-10-19)
+
+- **One step for you first:** the database needs a small update, `supabase/migrations/20261105100000_day_hours.sql`, applied in the Supabase SQL Editor like the earlier ones. It only adds a way to read the hours; it changes nothing about bookings. **Apply it before this goes live**, or the Calendar cannot load its hours.
+- **What you see.** Under every day in the Agenda: its usual hours as a plain line, special hours highlighted as before, or "Day off" (with its name, such as "Day off · Christmas Holidays"). With **Show every day** on, the empty days say their hours too. The Day view's line says the same.
+- **Always what clients can book.** The hours come from the same place the booking page uses, so the Calendar can never show different hours from the times clients are offered.
+- **To try it:** open the Agenda and look at today and the next few days; turn on Show every day; set a special day off with a note in Day settings and see its name in the Agenda and the Day view.
+
 ## What works now (tested locally)
 
 **For clients** (the website)

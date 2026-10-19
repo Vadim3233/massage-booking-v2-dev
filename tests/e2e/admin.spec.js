@@ -90,7 +90,7 @@ test('presentation preserves scheduling context and truthful payment labels', ()
   const now = Date.now()
   const booking = { id: 'booking', booking_status: 'confirmed', start_minutes: 660, treatment_duration_minutes: 60, travel_buffer_minutes: 15, booking_payments: { method: 'cash', status: 'approved' }, booking_sessions: [{ service_name_snapshot: 'Deep Tissue', duration_minutes: 60 }] }
   const cancelled = { ...booking, id: 'cancelled', start_minutes: 840, booking_status: 'cancelled' }
-  const data = { bookings: [booking, cancelled], blocks: [{ id: 'block', start_minutes: 750, end_minutes: 780, title: 'Lunch' }], holds: [{ id: 'hold', start_minutes: 780, treatment_duration_minutes: 30, travel_buffer_minutes: 5, expires_at: new Date(now + 60000).toISOString() }, { id: 'expired', expires_at: new Date(now - 1).toISOString() }], overrides: [{ date: f.date, available: true, start_minutes: 600, end_minutes: 1080 }], hours: [] }
+  const data = { bookings: [booking, cancelled], blocks: [{ id: 'block', start_minutes: 750, end_minutes: 780, title: 'Lunch' }], holds: [{ id: 'hold', start_minutes: 780, treatment_duration_minutes: 30, travel_buffer_minutes: 5, expires_at: new Date(now + 60000).toISOString() }, { id: 'expired', expires_at: new Date(now - 1).toISOString() }], dayHours: [{ date: f.date, source: 'special', available: true, start_minutes: 600, end_minutes: 1080 }] }
   const timeline = dayTimeline(data, f.date, now)
   expect(timeline.rows.map(row => row.start)).toEqual(timeline.rows.map(row => row.start).sort((a, b) => a - b))
   expect(timeline.rows.filter(row => row.kind === 'hold').map(row => row.id)).toEqual(['hold'])
@@ -102,7 +102,7 @@ test('presentation preserves scheduling context and truthful payment labels', ()
   expect(bookingState({ ...booking, booking_status: 'awaiting_cash_approval' }, now).text).toBe('Awaiting cash approval')
   expect(sessionSummary(booking)).toBe('Deep Tissue · 60 min')
   expect(sessionSummary({ ...booking, treatment_duration_minutes: 180, booking_sessions: [{}, {}, {}] })).toBe('3 sessions · 180 min')
-  expect(dayTimeline({ ...data, overrides: [{ date: f.date, available: false }] }, f.date, now).rows.some(row => ['free', 'boundary'].includes(row.kind))).toBe(false)
+  expect(dayTimeline({ ...data, dayHours: [{ date: f.date, source: 'special', available: false }] }, f.date, now).rows.some(row => ['free', 'boundary'].includes(row.kind))).toBe(false)
 })
 
 test('agenda integrates holds and blocks; compact controls scroll and account signs out', async ({ page }) => {
@@ -124,7 +124,8 @@ test('agenda integrates holds and blocks; compact controls scroll and account si
   await expect(page.getByText('Travel / buffer', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Working day starts', { exact: true })).toHaveCount(0)
   await expect(page.getByText('Working day ends', { exact: true })).toHaveCount(0)
-  await expect(page.getByText('Working hours 10:00–22:00', { exact: true })).toBeVisible()
+  // The day's hours come from the database, as the booking engine reads them; the fixture's day has special hours.
+  await expect(page.locator('.admin-working-hours')).toHaveText(/^Special hours 10:00–22:00/)
   await expect(page.getByText(/Free intervals are not bookable-slot suggestions/)).toHaveCount(0)
   // A long unbroken name wraps inside the card instead of stretching it; one line more or less (a font loading) is not what is being checked.
   expect((await page.locator('.admin-card').first().boundingBox()).height).toBeLessThan(200)
@@ -165,7 +166,7 @@ for (const [name, secondStart, expected] of [
   ['adjacent', 1080, [[840, 900], [960, 1080], [1140, 1200]]],
 ]) test(`${name} booking buffers render once without changing free time`, () => {
   const booking = { id: 'a', booking_status: 'confirmed', start_minutes: 900, treatment_duration_minutes: 60, travel_buffer_minutes: 60 }
-  const data = { bookings: [booking, { ...booking, id: 'b', start_minutes: secondStart }, { ...booking, id: 'cancelled', start_minutes: 720, booking_status: 'cancelled' }], holds: [], blocks: [], hours: [], overrides: [{ date: f.date, available: true, start_minutes: 600, end_minutes: 1320 }] }
+  const data = { bookings: [booking, { ...booking, id: 'b', start_minutes: secondStart }, { ...booking, id: 'cancelled', start_minutes: 720, booking_status: 'cancelled' }], holds: [], blocks: [], dayHours: [{ date: f.date, source: 'special', available: true, start_minutes: 600, end_minutes: 1320 }] }
   const snapshot = JSON.stringify(data)
   const timeline = dayTimeline(data, f.date, Date.now())
   expect(timeline.rows.filter(row => row.kind === 'buffer').map(row => [row.start, row.end])).toEqual(expected)

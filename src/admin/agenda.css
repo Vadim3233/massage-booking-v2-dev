@@ -60,6 +60,8 @@
 .admin-agenda-notes li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: var(--radius-xs); background: var(--needs-bg); color: var(--needs-ink); font-size: 13px; }
 .admin-agenda-notes li.is-away { background: var(--primary-soft); color: var(--primary-strong); }
 .admin-agenda-notes li.is-off { background: var(--done-bg); color: var(--done-ink); }
+/* Usual hours are said plainly, so a special day still stands out. */
+.admin-agenda-notes li.is-usual { padding-inline: 2px; background: transparent; color: var(--ink-soft); }
 
 /* Days with nothing booked: one quiet line each, in smaller type. */
 .admin-agenda-quiet { margin: 0; padding: 4px 0; border-top: 1px solid var(--line); list-style: none; }

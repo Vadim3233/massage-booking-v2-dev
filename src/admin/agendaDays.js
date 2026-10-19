@@ -1,9 +1,10 @@
 import { dateLabel, shiftDate, time } from './calendarPresentation.js'
-import { clock, hoursLine, weekdayOf } from './scheduleApi.js'
+import { clock, hoursLine } from './scheduleApi.js'
 
 // What the Agenda lists, in order. Days with bookings are shown in full, as they always were. Around them come the things that change the diary
 // without being a booking: time away (a block over several days or a whole day), a special day (a day off, or different hours), a few hours
-// blocked on one day, and, when "Show every day" is on, every day with nothing on it, one quiet line each.
+// blocked on one day, and, when "Show every day" is on, every day with nothing on it, one quiet line each. Every day says its working hours, as the
+// database works them out (admin_day_hours: its special day, or else the usual week), so the Agenda never shows hours clients cannot book.
 
 const isAllDay = row => row.start_minutes === 0 && row.end_minutes === 1440
 const push = (map, key, value) => map.set(key, [...(map.get(key) || []), value])
@@ -33,6 +34,8 @@ export function blockSpan(group) {
   return `${begins} to ${ends} · ${dates.length} days`
 }
 export const specialLine = entry => `${entry.available ? `Special hours ${hoursLine(entry)}` : 'Day off'}${entry.note ? ` · ${entry.note}` : ''}`
+// A day's hours in words, whatever kind of day it is: special hours or a special day off as above, usual hours, or a usual day off.
+export const dayHoursLine = hours => !hours ? '' : hours.source === 'special' ? specialLine(hours) : hours.available ? `Hours ${hoursLine(hours)}` : 'Day off'
 const timedLine = row => `${time(row.start_minutes)}–${time(row.end_minutes)} · ${blockTitle(row)}`
 
 // A day's own list: its bookings and its timed blocks, in time order (a booking comes first when they start together).
@@ -41,27 +44,27 @@ const dayRows = (bookings, timed) => [
   ...timed.map(row => ({ kind: 'block', start: row.start_minutes, row })),
 ].sort((a, b) => a.start - b.start)
 
-// The usual week has the day off, or says nothing about it (so it is not worked).
-const usuallyClosed = (date, weekly) => weekly.length > 0 && !weekly.find(row => row.weekday === weekdayOf(date))?.available
-
-// The Agenda reads blocks and special days a month at a time, like the bookings; a block over two months comes back in both.
+// The Agenda reads blocks and each day's hours a month at a time, like the bookings; a block over two months comes back in both.
 export function mergeExtras(lists) {
   const blocks = new Map()
-  const overrides = new Map()
+  const hours = new Map()
   for (const list of lists) {
     for (const row of list.blocks || []) blocks.set(row.id, row)
-    for (const entry of list.overrides || []) overrides.set(entry.date, entry)
+    for (const entry of list.hours || []) hours.set(entry.date, entry)
   }
-  return { blocks: [...blocks.values()], overrides: [...overrides.values()] }
+  return { blocks: [...blocks.values()], hours: [...hours.values()].sort((a, b) => a.date.localeCompare(b.date)) }
 }
+// How many special days a month read found, so the Agenda can tell a month with something in it from an empty one.
+export const specialCount = extras => (extras.hours || []).filter(entry => entry.source === 'special').length
 
 // start is the first day on show and end the day after the last. day is today, which is always on show, even when nothing is booked,
 // so there is always a fixed point to scroll from.
-export function agendaDays({ bookings, blocks = [], overrides = [], weekly = [], start, end, day, showEvery = false }) {
+export function agendaDays({ bookings, blocks = [], hours = [], start, end, day, showEvery = false }) {
   const inRange = date => date >= start && date < end
   const byDate = new Map()
   for (const booking of bookings) push(byDate, booking.date, booking)
-  const specials = new Map(overrides.filter(entry => inRange(entry.date)).map(entry => [entry.date, entry]))
+  const hoursOn = new Map(hours.map(entry => [entry.date, entry]))
+  const specials = new Map(hours.filter(entry => entry.source === 'special' && inRange(entry.date)).map(entry => [entry.date, entry]))
   const groups = groupsOf(blocks)
   const timed = new Map()
   for (const group of groups.filter(group => !isAway(group))) for (const row of group.rows) if (inRange(row.date)) push(timed, row.date, row)
@@ -83,7 +86,7 @@ export function agendaDays({ bookings, blocks = [], overrides = [], weekly = [],
     const cover = covered.get(date)
     const booked = byDate.get(date) || []
     if (booked.length || date === day) {
-      raw.push({ type: 'day', date, bookings: booked, rows: dayRows(booked, timed.get(date) || []), special: specials.get(date) || null, away: cover?.group || null })
+      raw.push({ type: 'day', date, bookings: booked, rows: dayRows(booked, timed.get(date) || []), hours: hoursOn.get(date) || null, special: specials.get(date) || null, away: cover?.group || null })
       continue
     }
     // The banner already stands for the first day of the block, and, with Show every day off, for all of its days.
@@ -96,7 +99,8 @@ export function agendaDays({ bookings, blocks = [], overrides = [], weekly = [],
     const blocked = timed.get(date) || []
     if (special) raw.push(quiet(date, special.available ? 'special' : 'off', specialLine(special)))
     for (const row of blocked) raw.push(quiet(date, 'block', timedLine(row), row))
-    if (showEvery && !special && !blocked.length) raw.push(usuallyClosed(date, weekly) ? quiet(date, 'closed', 'usual day off') : quiet(date, 'free', 'free'))
+    const own = hoursOn.get(date)
+    if (showEvery && !special && !blocked.length) raw.push(own && !own.available ? quiet(date, 'closed', 'usual day off') : quiet(date, 'free', own ? `free · ${hoursLine(own)}` : 'free'))
   }
 
   // Quiet lines that follow each other are one list, so a screen reader meets one list, not a heading for every empty day.
