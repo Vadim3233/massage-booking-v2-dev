@@ -57,4 +57,33 @@ describe('the request for a new booking', () => {
     await api.pastTimes('2026-10-06', 90)
     expect(calls).toEqual([['admin_past_booking_times', { p_date: '2026-10-06', p_treatment_duration_minutes: 90 }]])
   })
+  // A stand-in for the bookings table: the newest booking that is not cancelled, and the newest that is, for one client.
+  function bookingsTable({ kept, cancelled }) {
+    const reads = []
+    return { reads, from: () => {
+      const read = { filters: [] }
+      reads.push(read)
+      const query = {
+        select: columns => { read.columns = columns; return query },
+        eq: (column, value) => { read.filters.push(['eq', column, value]); return query },
+        neq: (column, value) => { read.filters.push(['neq', column, value]); return query },
+        order: () => query, limit: () => query,
+        then: (resolve, reject) => Promise.resolve({ data: read.filters.some(([how]) => how === 'neq') ? kept : cancelled, error: null }).then(resolve, reject),
+      }
+      return query
+    } }
+  }
+  it('suggests from the client\'s last booking that was not cancelled, and reads nothing more when there is one', async () => {
+    const last = { service_area_id: 'a1', booking_sessions: [], booking_payments: { method: 'cash' } }
+    const table = bookingsTable({ kept: [last], cancelled: [{ service_area_id: 'a2' }] })
+    expect(await createAdminNewBookingApi(table).lastBooking('c1')).toEqual(last)
+    expect(table.reads).toHaveLength(1)
+    expect(table.reads[0].filters).toEqual([['eq', 'client_id', 'c1'], ['neq', 'booking_status', 'cancelled']])
+  })
+  it('suggests only the area of the last cancelled booking when every booking was cancelled, and nothing when there are none', async () => {
+    const table = bookingsTable({ kept: [], cancelled: [{ service_area_id: 'a2' }] })
+    expect(await createAdminNewBookingApi(table).lastBooking('c1')).toEqual({ service_area_id: 'a2' })
+    expect(table.reads[1]).toEqual({ columns: 'service_area_id', filters: [['eq', 'client_id', 'c1'], ['eq', 'booking_status', 'cancelled']] })
+    expect(await createAdminNewBookingApi(bookingsTable({ kept: [], cancelled: [] })).lastBooking('c1')).toBeNull()
+  })
 })

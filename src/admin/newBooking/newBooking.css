@@ -29,6 +29,8 @@
 .anb-client-text > span { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
 .anb-chosen { display: flex; align-items: center; gap: 12px; padding: 12px 8px 12px 12px; border-radius: var(--radius); background: var(--primary-soft); }
 .anb-chosen h3 { font: 600 20px/1.2 var(--font-display); }
+.anb-client-link { display: inline-flex; align-items: center; min-height: 44px; color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.anb-client-link > span { color: var(--primary); }
 .anb-chosen .anb-hint { margin: 2px 0 0; overflow-wrap: anywhere; }
 .anb-chosen > button { flex-shrink: 0; margin-left: auto; }
 .anb-section, .anb-inline-client { margin-top: 18px; }

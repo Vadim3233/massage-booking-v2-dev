@@ -42,7 +42,7 @@ const plainClick = event => !event.ctrlKey && !event.metaKey && !event.shiftKey 
 function AdminLink({ href, navigate, children, ...rest }) {
   return <a href={href} onClick={event => { if (plainClick(event)) { event.preventDefault(); navigate(href) } }} {...rest}>{children}</a>
 }
-const readRoute = () => ({ path: window.location.pathname.replace(/\/$/, '') || '/admin', search: window.location.search, background: window.history.state?.adminBackground, returnTo: window.history.state?.adminReturnTo })
+const readRoute = () => ({ path: window.location.pathname.replace(/\/$/, '') || '/admin', search: window.location.search, background: window.history.state?.adminBackground, returnTo: window.history.state?.adminReturnTo, fromBooking: Boolean(window.history.state?.adminFromBooking) })
 export default function AdminWorkspace({ signOut, ownerId }) {
   const [route, setRoute] = useState(readRoute)
   const [revision, setRevision] = useState(0)
@@ -106,6 +106,13 @@ export default function AdminWorkspace({ signOut, ownerId }) {
   const newBooking = (date, clientId) => {
     const returnTo = clientId ? `/admin/clients/${clientId}` : surface === '/admin/agenda' ? surface : `/admin?date=${date}`
     window.history.pushState({ adminReturnTo: returnTo }, '', `/admin/bookings/new?date=${date}${clientId ? `&client=${clientId}` : ''}`)
+    setRoute(readRoute())
+    window.scrollTo(0, 0)
+  }
+  // The client's name in New booking opens their page without the discard question: the half-made booking is saved as she goes, and the page's back
+  // link goes back one step, to the booking as it was (with where it was started from).
+  const openClientFromBooking = id => {
+    window.history.pushState({ adminFromBooking: true }, '', `/admin/clients/${id}`)
     setRoute(readRoute())
     window.scrollTo(0, 0)
   }
@@ -174,10 +181,10 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {daySettingsSurface && <AdminLink className="admin-back-link" href={daySettingsBack} navigate={navigate}>← {daySettingsBack === '/admin/agenda' ? 'Agenda' : 'Day'}</AdminLink>}
       {daySettingsSurface && <DaySettings key={date} date={date} revision={revision} openBooking={openBooking} changed={() => setRevision(value => value + 1)} />}
       {surface === '/admin/agenda' && <Agenda openBooking={openBooking} openDay={day => openDaySettings(day, '/admin/agenda')} revision={revision} toCheck={toCheck} checked={() => { setRevision(value => value + 1); refreshToCheck() }} seeAll={() => navigate('/admin/review')} />}
-      {creating && <AdminNewBooking initialDate={date} initialClientId={clientParam} ownerId={ownerId} registerGuard={registerGuard} onCancel={() => navigate(route.returnTo || '/admin')} onCreated={created} />}
+      {creating && <AdminNewBooking initialDate={date} initialClientId={clientParam} ownerId={ownerId} registerGuard={registerGuard} onCancel={() => navigate(route.returnTo || '/admin')} onCreated={created} openClient={openClientFromBooking} />}
       {surface === '/admin/review' && <PaymentReview openBooking={openBooking} revision={revision} changed={refreshToCheck} />}
       {surface === '/admin/clients' && <Clients openClient={id => navigate(`/admin/clients/${id}`)} openCombine={openCombine} />}
-      {profile && <ClientProfile key={profile[1]} id={profile[1]} back={() => navigate('/admin/clients')} openBooking={openBooking} newBooking={clientId => newBooking(today(), clientId)} openCombine={openCombine} onDeleted={deletedId => { forgetDraftFor(ownerId, deletedId); refreshAlerts() }} />}
+      {profile && <ClientProfile key={profile[1]} id={profile[1]} back={route.fromBooking ? () => window.history.back() : () => navigate('/admin/clients')} backLabel={route.fromBooking ? 'Back to the booking' : 'Clients'} openBooking={openBooking} newBooking={clientId => newBooking(today(), clientId)} openCombine={openCombine} onDeleted={deletedId => { forgetDraftFor(ownerId, deletedId); refreshAlerts() }} />}
       {combining && <CombineClients key={`${pairA}:${pairB}`} a={pairA} b={pairB} back={() => navigate('/admin/clients')} openClient={id => navigate(`/admin/clients/${id}`)} resolved={refreshAlerts} />}
       {surface === '/admin/alerts' && <Alerts openBooking={openBooking} openPage={path => navigate(path)} changed={refreshAlerts} />}
       {surface === '/admin/more' && <section className="admin-review"><h1>More</h1>

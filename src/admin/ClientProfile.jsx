@@ -130,7 +130,7 @@ function History({ clientId, api, openBooking, version }) {
   </section>
 }
 
-export default function ClientProfile({ id, back, openBooking, newBooking, openCombine, onDeleted, api = clientsApi }) {
+export default function ClientProfile({ id, back, backLabel = 'Clients', openBooking, newBooking, openCombine, onDeleted, api = clientsApi }) {
   const [client, setClient] = useState(null)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(false)
@@ -152,7 +152,7 @@ export default function ClientProfile({ id, back, openBooking, newBooking, openC
   if (!client) return <section className="admin-review"><p role="status">Loading client…</p></section>
   const contactLinks = clientContactLinks(client)
   return <section className="admin-review admin-client-profile" aria-labelledby="client-name">
-    <button className="admin-back-link" onClick={back}>← Clients</button>
+    <button className="admin-back-link" onClick={back}>← {backLabel}</button>
     <h1 id="client-name">{fullName(client)}</h1>
     <p>{[client.phone, client.email].filter(Boolean).join(' · ') || 'No contact details'}</p>
     {contactLinks.length > 0 && <nav className="admin-contact-actions" aria-label="Quick contact">{contactLinks.map(link => <a key={link.key} href={link.href} {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}><Icon name={link.icon} />{link.label}</a>)}</nav>}
