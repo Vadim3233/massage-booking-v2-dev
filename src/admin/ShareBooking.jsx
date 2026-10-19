@@ -3,14 +3,23 @@ import { supabase } from '../lib/supabase.js'
 import Icon from '../ui/icons.jsx'
 import { bankFromSettings, chooseBank, paymentConfig } from '../client/booking/paymentConfig.js'
 import { canShare, shareText, transferDue, whatsappShareLink } from './shareBooking.js'
+import { shareMessageApi } from './shareMessageApi.js'
 
 const fallbackBank = paymentConfig(import.meta.env)
 
 // The share button at the top of the booking sheet: WhatsApp the client the booking's details, or share them anywhere (on a computer, copy them). The
 // message is made in one place (Copy puts the same text on the clipboard) (shareBooking.js); nothing is ever sent by itself, and it can still be changed in WhatsApp before sending.
-export default function ShareBooking({ booking }) {
+export default function ShareBooking({ booking, wordingApi = shareMessageApi }) {
   const [open, setOpen] = useState(false)
   const [bank, setBank] = useState(null)
+  const [wording, setWording] = useState(null)
+  // The Admin's own wording (Settings › Share message), or the standard one when there is none or it cannot be read.
+  useEffect(() => {
+    if (!open || wording !== null) return undefined
+    let live = true
+    wordingApi.get().then(text => { if (live) setWording(text) }, () => { if (live) setWording('') })
+    return () => { live = false }
+  }, [open, wording, wordingApi])
   const [said, setSaid] = useState('')
   const wrap = useRef(null)
   // The bank details are only needed when a transfer is still due; they are the ones the client's own booking page shows.
@@ -31,8 +40,8 @@ export default function ShareBooking({ booking }) {
     return () => { document.removeEventListener('pointerdown', away); node?.removeEventListener('keydown', escape) }
   }, [open])
   if (!canShare(booking)) return null
-  const waiting = open && transferDue(booking) && !bank
-  const text = shareText(booking, bank)
+  const waiting = open && ((transferDue(booking) && !bank) || wording === null)
+  const text = shareText(booking, bank, wording || undefined)
   const whatsapp = whatsappShareLink(booking, text)
   async function share() {
     setSaid('')
@@ -52,7 +61,7 @@ export default function ShareBooking({ booking }) {
   return <div className="admin-share" ref={wrap}>
     <button type="button" className="admin-share-button" aria-label="Share booking details" aria-expanded={open} onClick={() => { setSaid(''); setOpen(value => !value) }}><Icon name="share" size={20} /></button>
     {open && <div className="admin-share-menu">
-      {waiting ? <p role="status">Getting your bank details…</p> : <>
+      {waiting ? <p role="status">Getting the details…</p> : <>
         {whatsapp && <a href={whatsapp} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}><Icon name="chat" size={18} />WhatsApp client</a>}
         <button type="button" onClick={share}><Icon name="share" size={18} />Share…</button>
         <button type="button" onClick={copy}><Icon name="copy" size={18} />Copy</button>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { canShare, paymentWords, shareText, whatsappShareLink } from './shareBooking.js'
+import { canShare, fillShareMessage, paymentWords, SHARE_BLANKS, shareMessageProblem, shareText, shareValues, STANDARD_SHARE_MESSAGE, whatsappShareLink } from './shareBooking.js'
+import { createShareMessageApi } from './shareMessageApi.js'
 
 const bank = { configured: true, accountName: 'V Massage', bankName: 'WISE', sortCode: '00-00-00', accountNumber: '00000000', note: '' }
 const booking = (changes = {}) => ({
@@ -40,8 +41,47 @@ describe('the booking details the Admin sends a client', () => {
     expect(whatsappShareLink(booking(), 'Hi there')).toBe('https://wa.me/447700900123?text=Hi%20there')
     expect(whatsappShareLink(booking({ clients: { phone: '' } }), 'Hi')).toBeNull()
   })
+  it('fills the Admin\'s own wording, leaving out a line whose blank has nothing to say', () => {
+    const wording = 'Hi! See you {date} at {time}.\n\n{address}\n{treatment}\n{payment}\n\n{bank details}\n\nThanks, V'
+    expect(shareText(booking({ booking_payments: { method: 'cash', status: 'approved' }, address_snapshot: '' }), bank, wording))
+      .toBe('Hi! See you Thu 29 Oct at 17:30–19:30.\n\nDeep tissue · 120 min · £120.00\nPayment: cash, due at the appointment\n\nThanks, V')
+    expect(shareText(booking(), bank, wording)).toContain('Payment: bank transfer – awaiting payment\n\nPlease pay by bank transfer to:\nName: V Massage')
+    // Empty wording is the standard one, which reads exactly as before there was a choice.
+    expect(shareText(booking(), bank, '  ')).toBe(shareText(booking(), bank))
+    expect(fillShareMessage(STANDARD_SHARE_MESSAGE, shareValues(booking(), bank))).toBe(shareText(booking(), bank))
+  })
+  it('allows only the blanks listed, written exactly, as the database does', () => {
+    for (const ok of ['', 'Plain words', SHARE_BLANKS.map(name => `{${name}}`).join(' ')]) expect(shareMessageProblem(ok)).toBe('')
+    for (const bad of ['{phone}', '{note}', '{Date}', '{date', 'date}', '{ date }']) expect(shareMessageProblem(bad)).toBe('Only the blanks listed can be used, each in curly brackets.')
+    expect(shareMessageProblem('x'.repeat(1001))).toBe('The share message can be up to 1000 characters.')
+  })
   it('does not share a cancelled booking', () => {
     expect(canShare(booking())).toBe(true)
     expect(canShare(booking({ booking_status: 'cancelled' }))).toBe(false)
+  })
+})
+
+describe('reading and saving the share message', () => {
+  const settings = (row, rpcError = null) => {
+    const calls = []
+    return { calls, from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: row, error: null }) }) }) }),
+      rpc: async (name, args) => { calls.push([name, args]); return { error: rpcError } } }
+  }
+  it('reads the saved wording, or nothing for the standard one', async () => {
+    expect(await createShareMessageApi(settings({ value: 'Hi {date}' })).get()).toBe('Hi {date}')
+    expect(await createShareMessageApi(settings(null)).get()).toBe('')
+  })
+  it('saves the standard wording, or an empty one, as nothing', async () => {
+    const client = settings(null)
+    const api = createShareMessageApi(client)
+    await api.save('  Hi {date}  ')
+    await api.save(STANDARD_SHARE_MESSAGE)
+    await api.save('   ')
+    expect(client.calls).toEqual([['admin_save_share_message', { p_text: 'Hi {date}' }], ['admin_save_share_message', { p_text: null }], ['admin_save_share_message', { p_text: null }]])
+  })
+  it('says plainly why a save did not work, and nothing more', async () => {
+    await expect(createShareMessageApi(settings(null, { message: 'Only the blanks listed can be used, each in curly brackets' })).save('{x}')).rejects.toThrow('Only the blanks listed can be used, each in curly brackets.')
+    await expect(createShareMessageApi(settings(null, { code: 'PGRST202', message: 'Could not find the function public.admin_save_share_message(p_text)' })).save('Hi')).rejects.toThrow('Saving your own wording is not switched on yet.')
+    await expect(createShareMessageApi(settings(null, { message: 'permission denied for table secrets' })).save('Hi')).rejects.toThrow('Could not save. Please check your connection and try again.')
   })
 })
