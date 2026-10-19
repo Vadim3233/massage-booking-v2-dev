@@ -559,3 +559,11 @@ The Telegram message has no link to the booking page (a private link in an email
 **How it was built:** Migration `20261105100000_day_hours.sql` adds the two functions; the booking engine (`compute_booking_availability`) is not touched, so how times are offered does not change. The database test `day_hours.test.sql` checks each kind of day and that the engine agrees: nothing is offered on any day the Calendar calls a day off, and every time offered lies inside the day's hours. The Agenda and the Day view read the function instead of the special-day and usual-week tables (the day's settings page still reads those rows, because it edits them).
 
 **If it ever has to be taken back:** put the screens back, then drop `admin_day_hours(date, date)` and `day_hours(date)`.
+
+## ADR-065 — New booking suggests the area of a client whose bookings were all cancelled (2026-10-19)
+
+**Decision:** When a client is chosen in New booking, the treatment, length, area and payment are still suggested from their last booking that was not cancelled. A client whose bookings were all cancelled now gets the area of the last of them suggested too (only the area: a cancelled booking says nothing sure about the treatment or the payment). Nothing already chosen is changed.
+
+**Reason:** Vadim found a returning client with no area suggested; their only bookings had been cancelled, and chose this fallback.
+
+**How it was built:** No database change. `lastBooking` in `src/admin/newBookingApi.js` reads the last cancelled booking's area when there is no other booking; `defaultsFromLast` is unchanged.
