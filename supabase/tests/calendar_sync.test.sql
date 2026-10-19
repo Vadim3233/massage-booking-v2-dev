@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions, pg_temp;
-select plan(47);
+select plan(54);
 
 -- Privileges: nothing new can be read or changed from a browser, the token least of all.
 select ok(not exists (
@@ -11,7 +11,7 @@ select ok(not exists (
 select ok((select bool_and(relrowsecurity) from pg_class where oid in ('public.calendar_connection'::regclass, 'public.calendar_sync_events'::regclass, 'public.calendar_sync_queue'::regclass)), 'Row security is on for all three');
 select ok(not exists (
   select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace
-    and p.proname in ('calendar_desired_events', 'claim_calendar_sync', 'complete_calendar_sync', 'calendar_save_connection', 'calendar_refresh_token', 'calendar_forget_connection', 'queue_calendar_sync', 'calendar_queue_booking', 'calendar_queue_session', 'calendar_queue_client')
+    and p.proname in ('calendar_desired_events', 'claim_calendar_sync', 'complete_calendar_sync', 'calendar_save_connection', 'calendar_refresh_token', 'calendar_forget_connection', 'queue_calendar_sync', 'calendar_queue_all', 'calendar_queue_out_of_step', 'calendar_queue_booking', 'calendar_queue_session', 'calendar_queue_client')
     and (has_function_privilege('anon', p.oid, 'EXECUTE') or has_function_privilege('authenticated', p.oid, 'EXECUTE'))
 ), 'Only the server can run the sync functions or read the token');
 select ok(has_function_privilege('service_role', 'public.calendar_refresh_token()', 'EXECUTE') and has_function_privilege('service_role', 'public.claim_calendar_sync(integer)', 'EXECUTE'), 'The server job can');
@@ -127,8 +127,28 @@ update public.bookings set start_minutes = 780 where id = '00000000-0000-4000-80
 select public.complete_calendar_sync(booking_id, queued_at) from fx_claim2;
 select ok(exists (select 1 from public.calendar_sync_queue where booking_id = '00000000-0000-4000-8000-0000000c0006' and attempt_count = 0), 'A booking changed meanwhile is checked again');
 
+-- The 15-minute check finds what is out of step with what was put in Google; nothing more.
+delete from public.calendar_sync_queue;
+delete from public.calendar_sync_events;
+insert into public.calendar_sync_events(booking_id, kind, google_event_id, content_hash) select booking_id, kind, google_event_id, content_hash from public.calendar_desired_events();
+select is(public.calendar_queue_out_of_step(), 0, 'Nothing is queued when Google has what is wanted');
+update public.calendar_sync_events set content_hash = 'old' where booking_id = '00000000-0000-4000-8000-0000000c0003' and kind = 'booking';
+insert into public.calendar_sync_events(booking_id, kind, google_event_id, content_hash) values ('00000000-0000-4000-8000-0000000c0999', 'travel', 'vm000000000000400080000000000c0999t', 'gone');
+select is(public.calendar_queue_out_of_step(), 2, 'A changed event and an event whose booking is gone are queued');
+select ok((select bool_and(not force) from public.calendar_sync_queue), 'The regular check does not force a rewrite');
+-- The nightly check queues everything, forced, including what is only left in Google.
+create temporary table fx_all as select public.calendar_queue_all(true) as n;
+select ok((select n from fx_all) >= 12 and (select bool_and(force) from public.calendar_sync_queue)
+  and exists (select 1 from public.calendar_sync_queue where booking_id = '00000000-0000-4000-8000-0000000c0999'), 'The full check queues every booking and every leftover, forced');
+select public.queue_calendar_sync(array['00000000-0000-4000-8000-0000000c0003'::uuid]);
+select ok((select force from public.calendar_sync_queue where booking_id = '00000000-0000-4000-8000-0000000c0003'), 'A later ordinary change keeps a forced rewrite forced');
+select is((select force from public.claim_calendar_sync(100) where booking_id = '00000000-0000-4000-8000-0000000c0003'), true, 'The job is told to force it');
+delete from public.calendar_sync_queue;
+delete from public.calendar_sync_events;
+
 -- The connection: the token goes into Vault, and only the server reads it back.
 select public.calendar_save_connection('refresh-token-for-test', 'vadim@example.test', 'cal-id@group.calendar.google.com');
+select ok((select count(*) from public.calendar_sync_queue where force) = (select count(*) from public.bookings), 'Connecting copies every booking in');
 select is(public.calendar_refresh_token(), 'refresh-token-for-test', 'The server reads the token back');
 select ok(not exists (select 1 from public.calendar_connection where refresh_token_secret_id is null) and not exists (select 1 from vault.secrets s join public.calendar_connection c on c.refresh_token_secret_id = s.id where s.secret = 'refresh-token-for-test'), 'It is kept encrypted in Vault, not in a plain column');
 insert into public.calendar_sync_events(booking_id, kind, google_event_id, content_hash) values ('00000000-0000-4000-8000-0000000c0004', 'booking', 'vm000000000000400080000000000c0004b', 'x');

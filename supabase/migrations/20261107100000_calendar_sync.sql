@@ -15,6 +15,9 @@ create table public.calendar_connection (
   last_success_at timestamptz,
   last_error text,
   last_error_at timestamptz,
+  -- When the job last looked for bookings out of step with the calendar (every 15 minutes), and last rewrote everything (nightly).
+  last_check_at timestamptz,
+  last_full_check_at timestamptz,
   updated_at timestamptz not null default now()
 );
 
@@ -38,7 +41,9 @@ create table public.calendar_sync_queue (
   attempt_count integer not null default 0 constraint calendar_sync_queue_attempts_valid check (attempt_count >= 0),
   next_attempt_at timestamptz not null default clock_timestamp(),
   last_error text,
-  failed_at timestamptz
+  failed_at timestamptz,
+  -- Put in Google again even if nothing seems to have changed (the nightly check and Resync now), to undo a change made in Google.
+  force boolean not null default false
 );
 create index calendar_sync_queue_due_idx on public.calendar_sync_queue (next_attempt_at) where failed_at is null;
 
@@ -50,22 +55,23 @@ grant select, insert, update, delete on table public.calendar_connection, public
 
 -- Notes a booking for checking. It can never stop the change that called it: if noting fails, a warning is logged and the regular
 -- check (every 15 minutes, and nightly) puts the calendar right anyway.
-create function public.queue_calendar_sync(p_booking_ids uuid[])
+create function public.queue_calendar_sync(p_booking_ids uuid[], p_force boolean default false)
 returns void
 language plpgsql
 security definer
 set search_path = ''
 as $$
 begin
-  insert into public.calendar_sync_queue (booking_id)
-  select distinct unnest(p_booking_ids)
-  on conflict (booking_id) do update set queued_at = clock_timestamp(), attempt_count = 0, next_attempt_at = clock_timestamp(), last_error = null, failed_at = null;
+  insert into public.calendar_sync_queue (booking_id, force)
+  select distinct unnest(p_booking_ids), coalesce(p_force, false)
+  on conflict (booking_id) do update set queued_at = clock_timestamp(), attempt_count = 0, next_attempt_at = clock_timestamp(), last_error = null, failed_at = null,
+    force = public.calendar_sync_queue.force or excluded.force;
 exception when others then
   raise warning 'calendar sync queue: %', sqlerrm;
 end;
 $$;
-revoke all on function public.queue_calendar_sync(uuid[]) from public, anon, authenticated;
-grant execute on function public.queue_calendar_sync(uuid[]) to service_role;
+revoke all on function public.queue_calendar_sync(uuid[], boolean) from public, anon, authenticated;
+grant execute on function public.queue_calendar_sync(uuid[], boolean) to service_role;
 
 create function public.calendar_queue_booking()
 returns trigger
@@ -165,10 +171,51 @@ $$;
 revoke all on function public.calendar_desired_events(date, date, uuid[]) from public, anon, authenticated;
 grant execute on function public.calendar_desired_events(date, date, uuid[]) to service_role;
 
+-- Every booking, and every booking something was put in Google for (a booking deleted outright included), is queued: on connecting,
+-- nightly and from Resync now (forced, so a change made in Google is undone).
+create function public.calendar_queue_all(p_force boolean default false)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_ids uuid[] := array(select id from public.bookings union select booking_id from public.calendar_sync_events);
+begin
+  perform public.queue_calendar_sync(v_ids, p_force);
+  return coalesce(array_length(v_ids, 1), 0);
+end;
+$$;
+-- The 15-minute check: bookings whose events are not what was last put in Google (missing, different, or no longer wanted) are queued.
+create function public.calendar_queue_out_of_step()
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_ids uuid[];
+begin
+  with wanted as (select d.booking_id, d.kind, d.content_hash from public.calendar_desired_events() d),
+  differ as (
+    select coalesce(w.booking_id, s.booking_id) as booking_id from wanted w
+    full join public.calendar_sync_events s on s.booking_id = w.booking_id and s.kind = w.kind
+    where w.content_hash is distinct from s.content_hash
+  )
+  select array(select distinct booking_id from differ) into v_ids;
+  perform public.queue_calendar_sync(v_ids);
+  return coalesce(array_length(v_ids, 1), 0);
+end;
+$$;
+revoke all on function public.calendar_queue_all(boolean) from public, anon, authenticated;
+revoke all on function public.calendar_queue_out_of_step() from public, anon, authenticated;
+grant execute on function public.calendar_queue_all(boolean) to service_role;
+grant execute on function public.calendar_queue_out_of_step() to service_role;
+
 -- The job takes bookings to check, a few at a time, without two runs taking the same one. A booking taken is not offered again for
 -- 10 minutes unless it is finished first; after 5 tries it is marked failed (and checked again by the regular full check).
 create function public.claim_calendar_sync(p_limit integer default 20)
-returns table (booking_id uuid, queued_at timestamptz, attempt_count integer)
+returns table (booking_id uuid, queued_at timestamptz, attempt_count integer, force boolean)
 language sql
 security definer
 set search_path = ''
@@ -182,7 +229,7 @@ as $$
   )
   update public.calendar_sync_queue q set attempt_count = q.attempt_count + 1, next_attempt_at = clock_timestamp() + interval '10 minutes'
   from picked where q.booking_id = picked.booking_id
-  returning q.booking_id, q.queued_at, q.attempt_count;
+  returning q.booking_id, q.queued_at, q.attempt_count, q.force;
 $$;
 
 -- The job says how a booking went. Done: it leaves the queue, unless it changed again meanwhile (then it stays, to be checked again).
@@ -231,6 +278,8 @@ begin
   values (true, 'connected', p_account_email, p_calendar_id, v_secret, now(), null, null, now())
   on conflict (id) do update set status = 'connected', account_email = excluded.account_email, calendar_id = excluded.calendar_id,
     refresh_token_secret_id = excluded.refresh_token_secret_id, connected_at = excluded.connected_at, last_error = null, last_error_at = null, updated_at = now();
+  -- Connecting copies every booking in (and puts back anything changed in Google while disconnected).
+  perform public.calendar_queue_all(true);
 end;
 $$;
 create function public.calendar_refresh_token()
@@ -305,7 +354,7 @@ begin
   if auth.uid() is null or coalesce((auth.jwt()->>'is_anonymous')::boolean, false) or not public.is_booking_admin() then
     raise exception 'Admin authorization required' using errcode = '42501';
   end if;
-  perform public.queue_calendar_sync(array(select id from public.bookings union select booking_id from public.calendar_sync_events));
+  perform public.calendar_queue_all(true);
   select count(*) into v_count from public.calendar_sync_queue;
   return v_count;
 end;
