@@ -12,7 +12,7 @@ import './newBooking/newBooking.css'
 const message = error => error?.message || 'Something went wrong. Please retry.'
 const EMPTY_CATALOGUE = { areas: [], services: [], prices: [], preferences: [], conflicts: [], enhancements: [] }
 
-export default function AdminNewBooking({ initialDate, initialClientId, ownerId, onCancel, onCreated, registerGuard }) {
+export default function AdminNewBooking({ initialDate, initialClientId, ownerId, onCancel, onCreated, registerGuard, openClient }) {
   const { draft, patch, clear, meaningful } = useAdminBookingDraft(initialDate, ownerId)
   const [catalogue, setCatalogue] = useState(null)
   const [catalogueError, setCatalogueError] = useState('')
@@ -30,7 +30,8 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
   const busyRef = useRef(false)
   const completed = useRef(false)
   const errorRef = useRef(null)
-  const defaultsFor = useRef('')
+  // A booking brought back (from the client's page, or after a reload) keeps what she chose: defaults fill in only for a client chosen now.
+  const defaultsFor = useRef(draft.client?.id || '')
   const patchRef = useRef(patch)
   useEffect(() => { patchRef.current = patch })
   const current = useRef({ draft, meaningful })
@@ -116,6 +117,22 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
     startingClient.current = true
     api.client(initialClientId).then(found => { if (found && !current.current.draft.client) choose.current(found) }, () => { /* The Admin can still search for the client. */ })
   }, [initialClientId])
+  // A booking brought back reads its client again, since their page may have been opened to change something: the name and contact details, and
+  // the saved address chosen (an address edited there is used as it is now; one removed there falls back to the default).
+  const refreshed = useRef(false)
+  useEffect(() => {
+    const start = current.current.draft
+    if (refreshed.current || !start.client || start.submission) return
+    refreshed.current = true
+    const id = start.client.id
+    Promise.all([api.client(id), api.addresses(id)]).then(([found, addresses]) => {
+      const now = current.current.draft
+      if (!found || now.client?.id !== id || now.submission) return
+      const savedId = now.details.savedAddressId
+      const saved = savedId && (addresses.find(address => address.id === savedId) || addresses.find(address => address.is_default) || addresses[0])
+      patchRef.current({ client: { ...now.client, ...found }, ...(savedId ? { details: saved ? { ...emptyAddress, ...saved, savedAddressId: saved.id } : { ...emptyAddress } } : {}) })
+    }, () => { /* The booking still shows the client as chosen. */ })
+  }, [])
   useEffect(() => { if (error) errorRef.current?.focus() }, [error])
 
   function edit(change) { if (!locked) { patch(change); setError('') } }
@@ -193,7 +210,7 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
     {catalogueError && <><p role="alert">{catalogueError}</p><button onClick={() => setAttempt(value => value + 1)}>Retry booking options</button></>}
     {catalogue && <><fieldset className="anb-content" disabled={locked}>
       <section className="anb-block" aria-labelledby="anb-client-title"><h2 id="anb-client-title">Client</h2>
-        <ClientStep draft={draft} patch={edit} catalogue={data} query={query} setQuery={setQuery} clients={search.clients} searchLoading={search.loading} searchError={search.error} selectClient={selectClient} addresses={addressCurrent ? addressState.addresses : []} addressLoading={Boolean(draft.client) && (!addressCurrent || addressState.loading)} addressError={addressCurrent ? addressState.error : ''} createClient={createClient} clientBusy={clientBusy} clientError={clientError} /></section>
+        <ClientStep draft={draft} patch={edit} catalogue={data} query={query} setQuery={setQuery} clients={search.clients} searchLoading={search.loading} searchError={search.error} selectClient={selectClient} addresses={addressCurrent ? addressState.addresses : []} addressLoading={Boolean(draft.client) && (!addressCurrent || addressState.loading)} addressError={addressCurrent ? addressState.error : ''} createClient={createClient} clientBusy={clientBusy} clientError={clientError} openClient={openClient && !locked ? openClient : undefined} /></section>
       <section className="anb-block" aria-labelledby="anb-treatment-title"><h2 id="anb-treatment-title">Treatment</h2>
         <TreatmentStep draft={draft} patch={edit} catalogue={data} /></section>
       <section className="anb-block" aria-labelledby="anb-time-title"><h2 id="anb-time-title">Date and time</h2>

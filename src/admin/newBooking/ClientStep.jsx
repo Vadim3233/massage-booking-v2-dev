@@ -14,7 +14,7 @@ export function AddressFields({ details, change, prefix = 'address', optional = 
   </div>
 }
 
-export default function ClientStep({ draft, patch, catalogue, query, setQuery, clients, searchLoading, searchError, selectClient, addresses, addressLoading, addressError, createClient, clientBusy, clientError }) {
+export default function ClientStep({ draft, patch, catalogue, query, setQuery, clients, searchLoading, searchError, selectClient, addresses, addressLoading, addressError, createClient, clientBusy, clientError, openClient }) {
   const [adding, setAdding] = useState(false)
   const [changing, setChanging] = useState(false)
   const searching = !draft.client || changing
@@ -51,7 +51,10 @@ export default function ClientStep({ draft, patch, catalogue, query, setQuery, c
       {clientError && <p role="alert">{clientError}</p>}
       <div className="anb-inline-actions"><button type="button" disabled={clientBusy} onClick={() => setAdding(false)}>Back to client search</button><button className="btn--primary" disabled={clientBusy}>{clientBusy ? 'Saving client…' : 'Save client'}</button></div>
     </form>}
-    {draft.client && !adding && <section className="anb-section"><div className="anb-chosen"><span className="monogram monogram--large" aria-hidden="true">{initials(draft.client)}</span><div className="anb-client-text"><h3>{clientLabel(draft.client)}</h3><p className="anb-hint">{[draft.client.phone, draft.client.email].filter(Boolean).join(' · ')}</p></div>{!changing && <button type="button" className="btn--quiet btn--small" onClick={() => setChanging(true)}>Change client</button>}</div>
+    {draft.client && !adding && <section className="anb-section"><div className="anb-chosen"><span className="monogram monogram--large" aria-hidden="true">{initials(draft.client)}</span><div className="anb-client-text"><h3>{openClient
+        // The name opens the client's page; the half-made booking is kept and that page's back link returns here.
+        ? <a className="anb-client-link" href={`/admin/clients/${draft.client.id}`} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); openClient(draft.client.id) } }}>{clientLabel(draft.client)}<span aria-hidden="true"> ›</span></a>
+        : clientLabel(draft.client)}</h3><p className="anb-hint">{[draft.client.phone, draft.client.email].filter(Boolean).join(' · ')}</p></div>{!changing && <button type="button" className="btn--quiet btn--small" onClick={() => setChanging(true)}>Change client</button>}</div>
       {addressLoading && <p role="status">Loading saved addresses…</p>}{addressError && <p role="alert">{addressError}</p>}
       <fieldset><legend>Appointment address</legend>{addresses.map(address => <label className="anb-radio" key={address.id}><input type="radio" name="booking-address" checked={draft.details.savedAddressId === address.id} onChange={() => patch({ details: { ...emptyAddress, ...address, savedAddressId: address.id } })} /><span>{address.address}{address.is_default ? ' · Default' : ''}</span></label>)}
       <label className="anb-radio"><input type="radio" name="booking-address" checked={!draft.details.savedAddressId} onChange={() => patch({ details: { ...emptyAddress } })} /><span>One-off booking address</span></label></fieldset>
