@@ -7,6 +7,8 @@ export const SAFE_MESSAGES = new Set([
   'Name and a valid email or phone are required',
   'A name is required, and an email or phone must be valid if you give one',
   'Address, city and postcode are required',
+  'Address is required',
+  'That address is too long',
   'Two clients who each have their own login cannot be combined.',
   'The client with the login is the one that stays.',
   'One of these clients is no longer there. They may already have been combined.',
@@ -32,15 +34,15 @@ export function validateClient(details) {
   if (phone && (phone.length < 7 || phone.length > 20)) return 'That phone number does not look right.'
   return ''
 }
+// An address is one text (ADR-059), whatever the Admin writes or pastes. The database tidies it and checks it again.
 export function validateAddress(address) {
-  if (!address.address_line_1?.trim() || !address.city?.trim() || !address.postcode?.trim()) return 'Enter the street, city and postcode.'
+  if (!address.address?.trim()) return 'Enter the address.'
   return ''
 }
-// An address given with a new client is optional as a whole. The city is filled in with London, so it does not count as typing an address;
-// anything else does, and then the street, city and postcode are all needed.
-export const addressTyped = address => Boolean(address.address_line_1?.trim() || address.address_line_2?.trim() || address.postcode?.trim() || address.entry_instructions?.trim())
+// An address given with a new client is optional as a whole. Entry instructions belong to an address, so they need one.
+export const addressTyped = address => Boolean(address.address?.trim() || address.entry_instructions?.trim())
 export function validateOptionalAddress(address) {
-  return addressTyped(address) && validateAddress(address) ? 'Enter the street, city and postcode, or leave the address empty.' : ''
+  return addressTyped(address) && validateAddress(address) ? 'Enter the address these instructions are for, or clear them.' : ''
 }
 
 export function createClientsApi(client) {
@@ -50,10 +52,7 @@ export function createClientsApi(client) {
     return data
   }
   const one = async request => { const rows = await run(request); return Array.isArray(rows) ? rows[0] : rows }
-  const addressRow = address => ({
-    label: address.label?.trim() || null, address_line_1: address.address_line_1.trim(), address_line_2: address.address_line_2?.trim() || null,
-    city: address.city.trim(), postcode: address.postcode.trim(), entry_instructions: address.entry_instructions?.trim() || null,
-  })
+  const addressRow = address => ({ label: address.label?.trim() || null, address: address.address.trim(), entry_instructions: address.entry_instructions?.trim() || null })
   return {
     search: query => run(client.rpc('admin_search_clients', { p_query: query || '' })),
     get: id => run(client.from('clients').select('id,first_name,last_name,email,phone,auth_user_id,online_booking_enabled,created_at').eq('id', id).maybeSingle()),
@@ -61,7 +60,7 @@ export function createClientsApi(client) {
     create: (details, requestId) => one(client.rpc('admin_create_client', { p_details: details, p_request_id: requestId })),
     update: (id, details) => one(client.rpc('admin_update_client', { p_client_id: id, p_details: details })),
     setOnlineBooking: (id, enabled) => run(client.from('clients').update({ online_booking_enabled: enabled }).eq('id', id)),
-    addresses: id => run(client.from('client_addresses').select('id,label,address_line_1,address_line_2,city,postcode,entry_instructions,is_default').eq('client_id', id).order('is_default', { ascending: false }).order('created_at')),
+    addresses: id => run(client.from('client_addresses').select('id,label,address,entry_instructions,is_default').eq('client_id', id).order('is_default', { ascending: false }).order('created_at')),
     addAddress: (id, address) => run(client.from('client_addresses').insert({ client_id: id, ...addressRow(address) })),
     updateAddress: (id, address) => run(client.from('client_addresses').update(addressRow(address)).eq('id', id)),
     deleteAddress: id => run(client.from('client_addresses').delete().eq('id', id)),

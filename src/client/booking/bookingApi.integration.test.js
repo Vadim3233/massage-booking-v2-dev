@@ -10,7 +10,7 @@ describe('real local Supabase client adapter', () => {
     key = fixture.key()
     draft = { ...newDraft(), areaId: fixture.ids.area, serviceId: fixture.ids.service, date: fixture.date,
       sessions: [newSession(60), newSession(60)], enhancementIds: [fixture.ids.enhancement],
-      details: { ...newDraft().details, first_name: 'Test', last_name: 'Client', phone: '+447700900001', address_line_1: '10 Test Street', city: 'London', postcode: 'SW1A 1AA' } }
+      details: { ...newDraft().details, first_name: 'Test', last_name: 'Client', phone: '+447700900001', address: '10 Test Street\nLondon  SW1A 1AA' } }
     draft.sessions[0].preference_ids = [fixture.ids.preference]
   }, 30000)
   afterAll(async () => { await fixture?.cleanup() }, 30000)
@@ -82,7 +82,9 @@ describe('real local Supabase client adapter', () => {
     expect(booking.booking_email_snapshot).toBe(fixture.email)
     expect(booking).not.toHaveProperty('payment_reservation_expires_at')
     expect(booking).not.toHaveProperty('reservation_expired')
-    expect((await fixture.api.addresses())[0].postcode).toBe('SW1A 1AA')
+    // The address is saved as one text: the line break became a comma and the doubled space one.
+    expect((await fixture.api.addresses())[0].address).toBe('10 Test Street, London SW1A 1AA')
+    expect(booking.address_snapshot).toBe('10 Test Street, London SW1A 1AA')
   })
   it('retries idempotently without duplicate bookings, enhancements or events', async () => {
     await unwrap(fixture.admin.from('services').update({ active: false }).eq('id', fixture.ids.service))

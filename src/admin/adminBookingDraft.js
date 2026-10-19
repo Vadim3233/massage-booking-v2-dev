@@ -1,26 +1,38 @@
 import { today } from './calendarPresentation.js'
 import { emptyRepeat } from './repeatPattern.js'
 
+// A draft kept from before the address was one box has it in four: they are put together, so nothing that was typed is lost.
+// (The city alone, which started as London, is not an address.)
+export function migrateAddressParts(parts) {
+  if (!parts || typeof parts !== 'object') return parts
+  const { address_line_1: line1, address_line_2: line2, city, postcode, ...rest } = parts
+  if (line1 === undefined && line2 === undefined && city === undefined && postcode === undefined) return parts
+  const typed = String(line1 ?? '').trim() || String(postcode ?? '').trim()
+  const joined = typed ? [line1, line2, city, postcode].map(part => String(part ?? '').trim()).filter(Boolean).join(', ') : ''
+  return { ...rest, address: rest.address || joined }
+}
+
 export const draftKey = ownerId => `admin-new-booking:v1:${ownerId}`
 export function emptyAdminDraft(initialDate) {
   const date = initialDate || today()
   return {
     client: null,
-    details: { savedAddressId: '', address_line_1: '', address_line_2: '', city: '', postcode: '', entry_instructions: '' },
+    details: { savedAddressId: '', address: '', entry_instructions: '' },
     areaId: '', serviceId: '', sessions: [{ duration_minutes: 60, recipient_name: '', preference_ids: [] }],
     // Starting from a day that has gone (she was looking at it in the calendar) means recording something that already happened.
     enhancementIds: [], date, start: null, anyTime: false, anyTimeNotes: [], past: date < today(), payment: 'bank_pending', note: '', repeat: { ...emptyRepeat }, submission: null,
   }
 }
 export function meaningfulDraft(draft) {
-  return Boolean(draft.client || draft.serviceId || draft.areaId || draft.note || draft.details.address_line_1 || draft.submission || Object.values(draft.newClient || {}).some(Boolean))
+  return Boolean(draft.client || draft.serviceId || draft.areaId || draft.note || draft.details.address || draft.submission || Object.values(draft.newClient || {}).some(Boolean))
 }
 export function loadAdminDraft(ownerId, initialDate) {
   try {
     const saved = JSON.parse(sessionStorage.getItem(draftKey(ownerId)))
     if (saved?.version === 1 && Array.isArray(saved.draft?.sessions) && saved.draft?.details) {
       // A draft kept from before there were other ways to repeat has only the box and the end date: it is every week, as it was.
-      const merged = { ...emptyAdminDraft(initialDate), ...saved.draft, repeat: { ...emptyRepeat, ...saved.draft.repeat } }
+      const merged = { ...emptyAdminDraft(initialDate), ...saved.draft, details: { ...emptyAdminDraft(initialDate).details, ...migrateAddressParts(saved.draft.details) },
+        repeat: { ...emptyRepeat, ...saved.draft.repeat }, ...(saved.draft.newClient ? { newClient: migrateAddressParts(saved.draft.newClient) } : {}) }
       // A draft with nothing in it that is worth keeping (no client, treatment, area or note: only a day or a time was touched) is not brought back,
       // so New booking starts from the day it was opened from, and a day or "already happened" left over from an earlier visit cannot follow her.
       if (!meaningfulDraft(merged)) return emptyAdminDraft(initialDate)

@@ -2,11 +2,14 @@ import { useState } from 'react'
 import { money } from '../calendarPresentation.js'
 import { emptyAddress, clientLabel, initials } from './presentation.js'
 import { addressTyped, validateClient, validateOptionalAddress } from '../clientsApi.js'
+import { MAX_ADDRESS, needsPostcodeNote, NO_POSTCODE_NOTE_ADMIN } from '../../lib/address.js'
 
-// `optional` is for an address that may be left out altogether (a new client's), where the three parts are not each required.
+// The address is one text. `optional` is for an address that may be left out altogether (a new client's).
 export function AddressFields({ details, change, prefix = 'address', optional = false }) {
   return <div className="anb-fields">
-    {[['address_line_1', 'Address line 1', true], ['address_line_2', 'Address line 2', false], ['city', 'City', true], ['postcode', 'Postcode', true]].map(([key, label, required]) => <label key={key} htmlFor={`${prefix}-${key}`}>{label}{!required && ' (optional)'}<input id={`${prefix}-${key}`} required={required && !optional} value={details[key] || ''} maxLength={key === 'postcode' ? 16 : 200} autoComplete={key === 'postcode' ? 'postal-code' : 'off'} onChange={event => change({ ...details, [key]: event.target.value })} /></label>)}
+    <label htmlFor={`${prefix}-address`}>Address{optional && ' (optional)'}<textarea id={`${prefix}-address`} rows={3} required={!optional} value={details.address || ''} maxLength={MAX_ADDRESS} autoComplete="street-address" onChange={event => change({ ...details, address: event.target.value })} /></label>
+    <p className="anb-hint">Paste or type the whole address: house or flat number, street, town and postcode.</p>
+    {needsPostcodeNote(details.address) && <p className="anb-hint" role="status">{NO_POSTCODE_NOTE_ADMIN}</p>}
     <label className="anb-wide">Entry instructions (optional)<textarea value={details.entry_instructions || ''} maxLength={1000} onChange={event => change({ ...details, entry_instructions: event.target.value })} /></label>
   </div>
 }
@@ -21,11 +24,11 @@ export default function ClientStep({ draft, patch, catalogue, query, setQuery, c
   const area = catalogue.areas.find(item => item.id === draft.areaId)
   async function add(event) {
     event.preventDefault()
-    // Only the name is needed. An address is optional as a whole; if one is started it needs the street, city and postcode.
+    // Only the name is needed. An address is optional.
     const problem = validateClient(newClient) || validateOptionalAddress(newClient)
     if (problem) { setFormError(problem); return }
     setFormError('')
-    // Nothing typed for the address (the city is filled in with London) means a client with no address yet.
+    // Nothing typed for the address means a client with no address yet.
     const details = addressTyped(newClient) ? newClient : { first_name: newClient.first_name, last_name: newClient.last_name, phone: newClient.phone, email: newClient.email }
     if (await createClient(details)) { patch({ newClient: null }); setAdding(false) }
   }
@@ -50,9 +53,9 @@ export default function ClientStep({ draft, patch, catalogue, query, setQuery, c
     </form>}
     {draft.client && !adding && <section className="anb-section"><div className="anb-chosen"><span className="monogram monogram--large" aria-hidden="true">{initials(draft.client)}</span><div className="anb-client-text"><h3>{clientLabel(draft.client)}</h3><p className="anb-hint">{[draft.client.phone, draft.client.email].filter(Boolean).join(' · ')}</p></div>{!changing && <button type="button" className="btn--quiet btn--small" onClick={() => setChanging(true)}>Change client</button>}</div>
       {addressLoading && <p role="status">Loading saved addresses…</p>}{addressError && <p role="alert">{addressError}</p>}
-      <fieldset><legend>Appointment address</legend>{addresses.map(address => <label className="anb-radio" key={address.id}><input type="radio" name="booking-address" checked={draft.details.savedAddressId === address.id} onChange={() => patch({ details: { ...emptyAddress, ...address, savedAddressId: address.id } })} /><span>{address.address_line_1}, {address.postcode}{address.is_default ? ' · Default' : ''}</span></label>)}
+      <fieldset><legend>Appointment address</legend>{addresses.map(address => <label className="anb-radio" key={address.id}><input type="radio" name="booking-address" checked={draft.details.savedAddressId === address.id} onChange={() => patch({ details: { ...emptyAddress, ...address, savedAddressId: address.id } })} /><span>{address.address}{address.is_default ? ' · Default' : ''}</span></label>)}
       <label className="anb-radio"><input type="radio" name="booking-address" checked={!draft.details.savedAddressId} onChange={() => patch({ details: { ...emptyAddress } })} /><span>One-off booking address</span></label></fieldset>
-      {!draft.details.savedAddressId ? <AddressFields details={draft.details} change={details => patch({ details })} /> : <address>{[draft.details.address_line_1, draft.details.address_line_2, draft.details.city, draft.details.postcode].filter(Boolean).join(', ')}{draft.details.entry_instructions && <p>{draft.details.entry_instructions}</p>}</address>}
+      {!draft.details.savedAddressId ? <AddressFields details={draft.details} change={details => patch({ details })} /> : <address>{draft.details.address}{draft.details.entry_instructions && <p>{draft.details.entry_instructions}</p>}</address>}
       <label>Service area<select required value={draft.areaId} onChange={event => patch({ areaId: event.target.value })}><option value="">Select service area</option>{catalogue.areas.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       {area && <p className="anb-hint">Travel {money(area.travel_surcharge_gbp)} · Congestion {money(area.congestion_fee_gbp)}</p>}
     </section>}

@@ -16,20 +16,23 @@ describe('checking a client before saving', () => {
     expect(validateClient({ first_name: 'Ana', phone: '123' })).toBe('That phone number does not look right.')
     expect(validateClient({ first_name: 'Ana', phone: '+44 (0)7700 900123 ext 4' })).toBe('')
   })
-  it('needs a street, city and postcode for an address', () => {
-    expect(validateAddress({ address_line_1: '1 Road', city: 'London', postcode: 'SW1A 1AA' })).toBe('')
-    expect(validateAddress({ address_line_1: '1 Road', city: '', postcode: 'SW1A 1AA' })).toBe('Enter the street, city and postcode.')
+  it('needs only an address, as one text', () => {
+    expect(validateAddress({ address: '1 Road, London SW1A 1AA' })).toBe('')
+    expect(validateAddress({ address: 'Flat 2\n1 Road\nLondon' })).toBe('')
+    expect(validateAddress({ address: '' })).toBe('Enter the address.')
+    expect(validateAddress({ address: '   ' })).toBe('Enter the address.')
+    expect(validateAddress({})).toBe('Enter the address.')
   })
-  it('treats an address given with a new client as optional as a whole', () => {
-    // The city is filled in with London on the form, so a city alone is not an address.
-    expect(addressTyped({ address_line_1: '', address_line_2: '', city: 'London', postcode: '', entry_instructions: '' })).toBe(false)
-    expect(validateOptionalAddress({ address_line_1: ' ', city: 'London', postcode: '' })).toBe('')
-    expect(validateOptionalAddress({ address_line_1: '1 Road', city: 'London', postcode: 'SW1A 1AA' })).toBe('')
-    for (const started of [{ address_line_1: '1 Road' }, { postcode: 'SW1A 1AA' }, { address_line_2: 'Flat 2' }, { entry_instructions: 'Ring twice' }]) {
-      expect(addressTyped({ city: 'London', ...started })).toBe(true)
-      expect(validateOptionalAddress({ city: 'London', ...started })).toBe('Enter the street, city and postcode, or leave the address empty.')
-    }
-    expect(validateOptionalAddress({ address_line_1: '1 Road', city: '', postcode: 'SW1A 1AA' })).toBe('Enter the street, city and postcode, or leave the address empty.')
+  it('treats an address given with a new client as optional', () => {
+    expect(addressTyped({ address: '', entry_instructions: '' })).toBe(false)
+    expect(addressTyped({ address: '  ' })).toBe(false)
+    expect(validateOptionalAddress({ address: ' ', entry_instructions: '' })).toBe('')
+    expect(validateOptionalAddress({ address: '1 Road, London SW1A 1AA' })).toBe('')
+    expect(validateOptionalAddress({ address: '1 Road', entry_instructions: 'Ring twice' })).toBe('')
+  })
+  it('does not accept entry instructions with no address to belong to', () => {
+    expect(addressTyped({ address: '', entry_instructions: 'Ring twice' })).toBe(true)
+    expect(validateOptionalAddress({ address: '', entry_instructions: 'Ring twice' })).toBe('Enter the address these instructions are for, or clear them.')
   })
   it('names a client sensibly', () => {
     expect(fullName({ first_name: 'Ana', last_name: 'Silva' })).toBe('Ana Silva')
@@ -44,6 +47,22 @@ describe('contact links for a client', () => {
       ['call', 'tel:07700900123'], ['whatsapp', 'https://wa.me/447700900123'], ['email', 'mailto:ana@example.test']])
     expect(clientContactLinks({ email: 'ana@example.test' }).map(link => link.key)).toEqual(['email'])
     expect(clientContactLinks({}).length).toBe(0)
+  })
+})
+
+describe('saving an address', () => {
+  it('sends it as one text without the padding, with a blank label or way in as nothing', async () => {
+    const calls = []
+    const api = createClientsApi({ from: table => ({
+      insert: async row => { calls.push([table, 'insert', row]); return { data: null, error: null } },
+      update: row => ({ eq: async (column, id) => { calls.push([table, 'update', row, column, id]); return { data: null, error: null } } }),
+    }) })
+    await api.addAddress('c1', { label: ' Home ', address: '  7 Office Lane\nLondon  ', entry_instructions: '  ' })
+    await api.updateAddress('a1', { label: '', address: ' 8 Road ', entry_instructions: ' Ring ' })
+    expect(calls).toEqual([
+      ['client_addresses', 'insert', { client_id: 'c1', label: 'Home', address: '7 Office Lane\nLondon', entry_instructions: null }],
+      ['client_addresses', 'update', { label: null, address: '8 Road', entry_instructions: 'Ring' }, 'id', 'a1'],
+    ])
   })
 })
 

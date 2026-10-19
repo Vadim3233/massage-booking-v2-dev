@@ -18,7 +18,7 @@ describe('WhatsApp numbers', () => {
 
 describe('contact links', () => {
   const booking = { clients: { phone: '07700 900123', email: 'a@example.test' }, booking_email_snapshot: 'booked@example.test',
-    address_line_1_snapshot: '10 Saved Street', city_snapshot: 'London', postcode_snapshot: 'SW1A 1AA' }
+    address_snapshot: '10 Saved Street, London, SW1A 1AA' }
   it('offers call, WhatsApp, directions and email', () => {
     const links = Object.fromEntries(contactLinks(booking).map(link => [link.key, link.href]))
     expect(links.call).toBe('tel:07700900123')
@@ -27,18 +27,18 @@ describe('contact links', () => {
     expect(links.email).toBe('mailto:booked@example.test')
   })
   it('leaves out what is not recorded', () => {
-    expect(contactLinks({ clients: {}, address_line_1_snapshot: '1 Road' }).map(link => link.key)).toEqual(['directions'])
+    expect(contactLinks({ clients: {}, address_snapshot: '1 Road' }).map(link => link.key)).toEqual(['directions'])
   })
 })
 
 describe('directions', () => {
-  const booking = { address_line_1_snapshot: '10 Saved Street', address_line_2_snapshot: 'Flat 2', city_snapshot: 'London', postcode_snapshot: 'SW1A 1AA' }
+  const booking = { address_snapshot: '10 Saved Street, Flat 2, London, SW1A 1AA' }
   it('is the way to the whole address on Google Maps, the same link the booking details offer', () => {
     expect(directionsLink(booking)).toMatchObject({ label: 'Directions', external: true, href: 'https://www.google.com/maps/dir/?api=1&destination=10%20Saved%20Street%2C%20Flat%202%2C%20London%2C%20SW1A%201AA' })
     expect(contactLinks(booking).find(link => link.key === 'directions')).toEqual(directionsLink(booking))
   })
   it('is nothing when no address is recorded', () => {
     expect(directionsLink({})).toBeNull()
-    expect(directionsLink({ address_line_1_snapshot: '', city_snapshot: null })).toBeNull()
+    expect(directionsLink({ address_snapshot: '', address_line_1_snapshot: 'ignored: the parts are no longer read' })).toBeNull()
   })
 })

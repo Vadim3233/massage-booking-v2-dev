@@ -30,10 +30,12 @@ export function finalizeParams(draft, clientKey, idempotencyKey) {
     p_hold_token: draft.hold.hold_token,
     p_hold_client_key: clientKey,
     p_saved_address_id: draft.details.savedAddressId || null,
-    p_address_line_1: draft.details.address_line_1.trim(),
-    p_address_line_2: draft.details.address_line_2.trim() || null,
-    p_city: draft.details.city.trim(),
-    p_postcode: draft.details.postcode.trim(),
+    // The address goes as one text. (The four old boxes are still accepted by the database for a short while, and are sent empty.)
+    p_address: draft.details.address.trim() || null,
+    p_address_line_1: null,
+    p_address_line_2: null,
+    p_city: null,
+    p_postcode: null,
     p_entry_instructions: draft.details.entry_instructions.trim() || null,
     p_client_note: draft.note.trim() || null,
     // Payment always starts as a provisional bank-transfer reservation.
@@ -84,7 +86,7 @@ export function createBookingApi(client) {
       p_phone: details.phone?.trim() || null,
     })),
     addresses: () => unwrap(client.from('client_addresses')
-      .select('id,label,address_line_1,address_line_2,city,postcode,entry_instructions,is_default')
+      .select('id,label,address,entry_instructions,is_default')
       .order('is_default', { ascending: false })),
     finalize: (params) => one(client.rpc('finalize_client_booking', params)),
     booking: (id) => unwrap(client.rpc('get_my_booking', { p_booking_id: id })),

@@ -47,7 +47,9 @@ for (const width of [320, 360, 390, 412]) test(`real calendar and exact persiste
   await expect.poll(async () => (await page.getByRole('dialog').boundingBox())?.y).toBeCloseTo(0, 0)
   const dialogBox = await page.getByRole('dialog').boundingBox()
   expect(dialogBox).toMatchObject({ x: 0, y: expect.closeTo(0, 0), width, height: expect.closeTo(844, 0) })
-  await expect(page.getByRole('dialog')).toContainText(f.bookings[0].address_line_1_snapshot)
+  // The address is shown whole, as one text, under the name and again in its own section.
+  await expect(page.getByRole('dialog').locator('.admin-where')).toHaveText(f.bookings[0].address_snapshot)
+  await expect(page.getByRole('dialog').locator('section').filter({ has: page.getByRole('heading', { name: 'Address', exact: true, level: 3 }) })).toContainText(f.bookings[0].address_snapshot)
   await expect(page.getByRole('dialog')).toContainText(`Session ${f.bookings[0].booking_reference}`)
   await page.getByRole('dialog').evaluate(dialog => { dialog.scrollTop = 400 })
   await expect(page.getByRole('button', { name: 'Close details' })).toBeInViewport()

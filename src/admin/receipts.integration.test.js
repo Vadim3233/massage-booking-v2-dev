@@ -11,7 +11,7 @@ describe('receipts through the Admin API, against local Supabase', () => {
   const year = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric' }).format(new Date())
   const markPaid = bookingId => unwrap(f.admin.from('booking_payments').update({ status: 'paid', paid_at: new Date(Date.now() - 86400000).toISOString() }).eq('booking_id', bookingId))
   // A further paid booking like the first one, at another time of the same day.
-  const KEEP = ['client_id', 'service_area_id', 'date', 'treatment_duration_minutes', 'booking_status', 'source_channel', 'address_line_1_snapshot', 'city_snapshot', 'postcode_snapshot', 'service_area_name_snapshot', 'service_subtotal_gbp', 'total_gbp', 'booking_email_snapshot']
+  const KEEP = ['client_id', 'service_area_id', 'date', 'treatment_duration_minutes', 'booking_status', 'source_channel', 'address_snapshot', 'service_area_name_snapshot', 'service_subtotal_gbp', 'total_gbp', 'booking_email_snapshot']
   const extraBooking = async startMinutes => {
     const row = await unwrap(f.admin.from('bookings').insert({ ...Object.fromEntries(KEEP.map(key => [key, f.bookings[0][key]])), start_minutes: startMinutes, booking_reference: `EXTRA-${crypto.randomUUID()}` }).select().single())
     await unwrap(f.admin.from('booking_sessions').insert({ booking_id: row.id, position: 1, service_id: f.ids.service, duration_minutes: 60, service_name_snapshot: `Session ${row.booking_reference}`, unit_price_gbp: 85 }))

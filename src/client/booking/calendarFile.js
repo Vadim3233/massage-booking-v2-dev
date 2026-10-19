@@ -39,7 +39,7 @@ const LONDON = [
 
 // `origin` is the address of this site (https://booking.example.com), so the event can point back to the booking.
 export function buildCalendarFile(booking, now = new Date(), origin = '') {
-  const where = [booking.address_line_1_snapshot, booking.address_line_2_snapshot, booking.city_snapshot, booking.postcode_snapshot].filter(Boolean).join(', ')
+  const where = booking.address_snapshot || ''
   const manage = origin ? `${origin}/account?booking=${booking.id}` : ''
   const lines = [
     'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//VadMassage//Booking//EN', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',

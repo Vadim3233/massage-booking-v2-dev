@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { emptyAdminDraft, forgetDraftFor, loadAdminDraft, saveAdminDraft } from './adminBookingDraft.js'
+import { emptyAdminDraft, forgetDraftFor, loadAdminDraft, migrateAddressParts, saveAdminDraft } from './adminBookingDraft.js'
 import { shiftDate, today } from './calendarPresentation.js'
 
 // A day still to come, whatever day the tests run on (a fixed date would turn into a day that has gone).
@@ -124,5 +124,33 @@ describe('a New booking draft and a day that has gone', () => {
       saveAdminDraft('owner', { ...emptyAdminDraft(yesterday), start: 600, ...kept })
       expect(loadAdminDraft('owner', today())).toMatchObject({ past: true, date: yesterday, start: 600 })
     }
+  })
+})
+
+describe('a New booking draft kept from before the address was one box', () => {
+  const old = { savedAddressId: '', address_line_1: '1 Old Road', address_line_2: 'Flat 2', city: 'London', postcode: 'sw3 1aa', entry_instructions: 'Ring twice' }
+  it('has its four parts put together, so nothing that was typed is lost', () => {
+    expect(migrateAddressParts(old)).toEqual({ savedAddressId: '', address: '1 Old Road, Flat 2, London, sw3 1aa', entry_instructions: 'Ring twice' })
+  })
+  it('does not count the city alone (it used to start as London) as an address', () => {
+    expect(migrateAddressParts({ ...old, address_line_1: '', address_line_2: '', postcode: '' }).address).toBe('')
+  })
+  it('leaves one that already has the one text, and anything that is not an object, as it is', () => {
+    const kept = { savedAddressId: '', address: 'Kept as typed', entry_instructions: '' }
+    expect(migrateAddressParts(kept)).toBe(kept)
+    expect(migrateAddressParts(null)).toBeNull()
+    expect(migrateAddressParts(undefined)).toBeUndefined()
+  })
+  it('comes back with the booking address and a new client\'s address in one box each', () => {
+    const older = { ...draft(), details: old, newClient: { first_name: 'Bea', last_name: '', phone: '', email: '', address_line_1: '2 New Road', city: 'London', postcode: 'N1 1AA', entry_instructions: '' } }
+    store.set('admin-new-booking:v1:owner', JSON.stringify({ version: 1, draft: older }))
+    const loaded = loadAdminDraft('owner', DAY)
+    expect(loaded.details).toEqual({ savedAddressId: '', address: '1 Old Road, Flat 2, London, sw3 1aa', entry_instructions: 'Ring twice' })
+    expect(loaded.newClient).toMatchObject({ first_name: 'Bea', address: '2 New Road, London, N1 1AA' })
+    expect(loaded.newClient).not.toHaveProperty('address_line_1')
+  })
+  it('keeps a draft in which only the address was typed', () => {
+    saveAdminDraft('owner', { ...emptyAdminDraft(DAY), start: 990, details: { savedAddressId: '', address: '5 Typed Road, London', entry_instructions: '' } })
+    expect(loadAdminDraft('owner', DAY)).toMatchObject({ start: 990, details: { address: '5 Typed Road, London' } })
   })
 })

@@ -20,7 +20,7 @@ const newChat = () => 700000000 + Math.floor(Math.random() * 90000000)
 async function booking() {
   const row = await unwrap(f.admin.from('bookings').insert({
     client_id: f.profile.client_id, service_area_id: f.ids.area, date: f.date, start_minutes: 600, treatment_duration_minutes: 60, booking_status: 'confirmed',
-    source_channel: 'web', address_line_1_snapshot: '1 Test Road', city_snapshot: 'London', postcode_snapshot: 'SW1A1AA', service_area_name_snapshot: 'Integration area',
+    source_channel: 'web', address_snapshot: '1 Test Road, London, SW1A 1AA', service_area_name_snapshot: 'Integration area',
     service_subtotal_gbp: 85, total_gbp: 85, booking_email_snapshot: f.email, booking_reference: `TGI-${crypto.randomUUID()}` }).select().single())
   await unwrap(f.admin.from('booking_sessions').insert({ booking_id: row.id, position: 1, service_id: f.ids.service, duration_minutes: 60, service_name_snapshot: 'Integration massage', unit_price_gbp: 85 }))
   await unwrap(f.admin.from('booking_payments').insert({ booking_id: row.id, method: 'cash', status: 'approved', amount_gbp: 85 }))

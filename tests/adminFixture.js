@@ -10,7 +10,7 @@ export async function adminFixture(offset = 35) {
   await unwrap(f.admin.from('working_hours_overrides').upsert({ date: nextDay, available: true, start_minutes: 600, end_minutes: 1320, start_mode: 'flexible', fixed_start_minutes: null }))
   const user = (await f.client.auth.getUser()).data.user
   const other = await unwrap(f.admin.from('clients').insert({ first_name: 'Alexandra'.repeat(12), last_name: 'Calendar', email: 'canonical@example.test', phone: '+447700900002' }).select().single())
-  const base = { client_id: other.id, service_area_id: f.ids.area, date: f.date, start_minutes: 600, treatment_duration_minutes: 60, booking_status: 'confirmed', source_channel: 'web', address_line_1_snapshot: 'VeryLongStreet'.repeat(16), city_snapshot: 'London', postcode_snapshot: 'SW1A1AA', service_area_name_snapshot: 'Test area', service_subtotal_gbp: 85, total_gbp: 85, booking_email_snapshot: 'booking@example.test', client_note: 'Exact persisted note' }
+  const base = { client_id: other.id, service_area_id: f.ids.area, date: f.date, start_minutes: 600, treatment_duration_minutes: 60, booking_status: 'confirmed', source_channel: 'web', address_snapshot: `${'VeryLongStreet'.repeat(16)}, London, SW1A1AA`, service_area_name_snapshot: 'Test area', service_subtotal_gbp: 85, total_gbp: 85, booking_email_snapshot: 'booking@example.test', client_note: 'Exact persisted note' }
   const bookings = await unwrap(f.admin.from('bookings').insert([
     { ...base, booking_reference: `ADMIN-${crypto.randomUUID()}` },
     { ...base, start_minutes: 780, booking_status: 'cancelled', cancelled_at: new Date().toISOString(), cancelled_by_actor_type: 'admin', booking_reference: `CANCELLED-${crypto.randomUUID()}` },

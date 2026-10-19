@@ -62,8 +62,7 @@ test('a guest can change their mind and sign in, keeping the choices, the held t
 
   // The guest never became a client, and the booking goes on as the signed-in client's own.
   expect(await unwrap(fixture.admin.from('clients').select('id').eq('auth_user_id', guest.ownerUserId))).toHaveLength(0)
-  await page.getByLabel('Street address', { exact: true }).fill('10 Switch Street')
-  await page.getByLabel('Postcode', { exact: true }).fill('SW1A 1AA')
+  await page.getByRole('textbox', { name: 'Address', exact: true }).fill('10 Switch Street, London, SW1A 1AA')
   await page.getByRole('button', { name: 'Continue to payment' }).click()
   await expect(page.getByRole('heading', { name: 'One last step' })).toBeVisible()
   // The page shows before the booking is saved, so wait for it (and so that clearing up never races it).
@@ -99,8 +98,7 @@ test('a booking that is already made has no way back to the choices', async ({ p
   await page.getByLabel('Last name', { exact: true }).fill('Booker')
   await page.getByLabel('Email address', { exact: true }).fill(`guest-${crypto.randomUUID()}@example.test`)
   await page.getByLabel('Contact number', { exact: true }).fill('+44 7700 900321')
-  await page.getByLabel('Street address', { exact: true }).fill('20 Guest Street')
-  await page.getByLabel('Postcode', { exact: true }).fill('SW1A 2AA')
+  await page.getByRole('textbox', { name: 'Address', exact: true }).fill('20 Guest Street, London, SW1A 2AA')
   await page.getByRole('button', { name: 'Continue to payment' }).click()
   await expect(page.getByRole('heading', { name: 'One last step' })).toBeVisible()
   // The page shows before the booking is saved: wait for the guest's profile and booking, so clearing up finds them and never races them.
