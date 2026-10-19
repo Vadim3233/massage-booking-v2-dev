@@ -308,7 +308,8 @@ begin
   update public.calendar_connection set status = p_status, refresh_token_secret_id = null, updated_at = now(),
     last_error = coalesce(left(p_error, 500), last_error), last_error_at = case when p_error is not null then now() else last_error_at end
   where id;
-  if p_status = 'disconnected' then delete from public.calendar_sync_events; end if;
+  -- ("where true": Supabase refuses a delete with no condition when it is called through its API.)
+  if p_status = 'disconnected' then delete from public.calendar_sync_events where true; end if;
 end;
 $$;
 revoke all on function public.calendar_save_connection(text, text, text) from public, anon, authenticated;
