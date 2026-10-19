@@ -1,8 +1,3 @@
-export function formatPostcode(value = '') {
-  const compact = value.toUpperCase().replace(/\s+/g, '')
-  return /^[A-Z]{1,2}[0-9][A-Z0-9]?[0-9][A-Z]{2}$/.test(compact) || compact === 'GIR0AA'
-    ? `${compact.slice(0, -3)} ${compact.slice(-3)}` : value.toUpperCase().trim()
-}
 export function paymentStatus(booking) {
   return ({ awaiting_transfer: 'Awaiting your bank transfer', awaiting_verification: "Transfer sent — I'll check it shortly",
     awaiting_approval: 'Cash on arrival', approved: 'Cash on arrival', paid: 'Payment received',

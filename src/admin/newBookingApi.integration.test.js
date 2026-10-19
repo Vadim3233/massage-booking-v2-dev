@@ -35,14 +35,14 @@ describe('Admin New Booking adapter against local Supabase', () => {
 
   it('creates canonical clients without auth accounts and exposes duplicate conflicts', async () => {
     const details = { first_name: 'Inline', last_name: 'Created', email: `inline-${crypto.randomUUID()}@example.test`,
-      address_line_1: '22 Created Road', city: 'London', postcode: 'SW1A 1AA', entry_instructions: 'Ring twice' }
+      address: '22 Created Road\nLondon  SW1A 1AA', entry_instructions: 'Ring twice' }
     const id = crypto.randomUUID()
     const created = await api.createClient(details, id)
     f.trackRecipient(created.id)
     expect(await api.createClient(details, id)).toEqual(created)
     const client = await unwrap(f.admin.from('clients').select().eq('id', created.id).single())
     expect(client.auth_user_id).toBeNull()
-    expect(await api.addresses(created.id)).toEqual(expect.arrayContaining([expect.objectContaining({ address_line_1: details.address_line_1, is_default: true })]))
+    expect(await api.addresses(created.id)).toEqual(expect.arrayContaining([expect.objectContaining({ address: '22 Created Road, London SW1A 1AA', is_default: true })]))
     await expect(api.createClient({ ...details, email: details.email.toUpperCase() }, crypto.randomUUID())).rejects.toBeDefined()
   })
 
@@ -70,7 +70,7 @@ describe('Admin New Booking adapter against local Supabase', () => {
     const results = await Promise.all([api.create(request, key), api.create(request, key)])
     expect(results[0]).toEqual(results[1])
     const booking = await unwrap(f.admin.from('bookings').select('*,booking_payments(*),booking_sessions(*)').eq('id', results[0].booking_id).single())
-    expect(booking).toMatchObject({ booking_status: 'confirmed', source_channel: 'admin', created_by_actor_type: 'admin', created_by_actor_id: f.user.id, total_gbp: 115, address_line_1_snapshot: '10 Saved Street' })
+    expect(booking).toMatchObject({ booking_status: 'confirmed', source_channel: 'admin', created_by_actor_type: 'admin', created_by_actor_id: f.user.id, total_gbp: 115, address_snapshot: '10 Saved Street, London, SW1A 1AA' })
     expect(booking.booking_payments).toMatchObject({ method, status })
     expect(Boolean(booking.booking_payments.paid_at)).toBe(paid)
     expect(booking.booking_sessions).toHaveLength(1)

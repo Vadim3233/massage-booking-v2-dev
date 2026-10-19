@@ -32,7 +32,7 @@ async function toDetails(page) {
   await expect(page.getByText('Loading your saved details…')).toHaveCount(0)
 }
 const addAddress = () => unwrap(fixture.admin.from('client_addresses').insert({
-  client_id: fixture.profile.client_id, label: 'Home', address_line_1: '12 Edith Road', address_line_2: 'West Drayton', city: 'London', postcode: 'UB7 7LG', is_default: true,
+  client_id: fixture.profile.client_id, label: 'Home', address: '12 Edith Road, West Drayton, London, UB7 7LG', is_default: true,
 }).select().single())
 const setPhone = (phone) => unwrap(fixture.admin.from('clients').update({ phone }).eq('id', fixture.profile.client_id))
 const savedPhone = async () => (await unwrap(fixture.admin.from('clients').select('phone').eq('id', fixture.profile.client_id).single())).phone

@@ -13,7 +13,8 @@ export function bookingRequest(draft) {
   return {
     client_id: draft.client.id,
     saved_address_id: draft.details.savedAddressId || null,
-    address: draft.details.savedAddressId ? null : Object.fromEntries(['address_line_1', 'address_line_2', 'city', 'postcode', 'entry_instructions'].map(key => [key, draft.details[key]?.trim() || null])),
+    // A one-off address goes as one text, with the way in if there is one.
+    address: draft.details.savedAddressId ? null : { address: draft.details.address?.trim() || null, entry_instructions: draft.details.entry_instructions?.trim() || null },
     service_area_id: draft.areaId,
     sessions: withGuestNames(quoteParams(draft).p_sessions, clientLabel(draft.client)),
     enhancement_ids: [...draft.enhancementIds],

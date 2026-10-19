@@ -35,8 +35,7 @@ async function toDetails(page) {
   await page.getByLabel('Password', { exact: true }).fill(fixture.password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Your details', exact: true })).toBeVisible()
-  await page.getByLabel('Street address', { exact: true }).fill('10 Browser Street')
-  await page.getByLabel('Postcode', { exact: true }).fill('sw1a1aa')
+  await page.getByRole('textbox', { name: 'Address', exact: true }).fill('10 Browser Street, London, SW1A 1AA')
 }
 
 async function toPayment(page) {
@@ -63,8 +62,7 @@ test('mobile bank-transfer journey, browser Back, reload and real persisted resu
   await page.getByLabel('Email address', { exact: true }).fill(fixture.email)
   await page.getByLabel('Password', { exact: true }).fill(fixture.password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await page.getByLabel('Street address', { exact: true }).fill('10 Browser Street')
-  await page.getByLabel('Postcode', { exact: true }).fill('sw1a1aa')
+  await page.getByRole('textbox', { name: 'Address', exact: true }).fill('10 Browser Street, London, SW1A 1AA')
   await page.getByRole('button', { name: 'Continue to payment' }).click()
   await page.getByLabel('I understand the payment and cancellation terms.').check()
   await page.getByRole('button', { name: "I've made the bank transfer" }).click()
@@ -178,8 +176,7 @@ for (const method of ['cash', 'bank_transfer']) test(`guest ${method} checkout c
   await page.getByLabel('Last name', { exact: true }).fill('Client')
   await page.getByLabel('Email address', { exact: true }).fill(guestEmail)
   await page.getByLabel('Contact number', { exact: true }).fill('+44 7700 900321')
-  await page.getByLabel('Street address', { exact: true }).fill('20 Guest Street')
-  await page.getByLabel('Postcode', { exact: true }).fill('SW1A 2AA')
+  await page.getByRole('textbox', { name: 'Address', exact: true }).fill('20 Guest Street, London, SW1A 2AA')
   await page.getByRole('button', { name: 'Continue to payment' }).click()
 
   await expect(page.getByRole('heading', { name: 'One last step' })).toBeVisible()
@@ -231,7 +228,7 @@ test('normal twenty-minute hold stays invisible through typing, login and Back n
   const row = (await unwrap(fixture.admin.from('booking_holds').select('created_at,expires_at,extended_at').eq('id', before.hold.hold_id)))[0]
   expect(Date.parse(row.expires_at) - Date.parse(row.created_at)).toBe(20 * 60000)
   expect(row.extended_at).toBeNull()
-  await page.getByLabel('Street address', { exact: true }).fill('11 Still typing Street')
+  await page.getByRole('textbox', { name: 'Address', exact: true }).fill('11 Still typing Street')
   await page.goBack()
   await expect(page.getByRole('heading', { name: 'Review your booking' })).toBeVisible()
   await page.getByLabel('Anything I should know? (optional)').fill('Still typing')
@@ -361,12 +358,12 @@ test('release at the prompt frees the slot and preserves address and sessions', 
   const draft = await page.evaluate(() => JSON.parse(sessionStorage.getItem('vad-v2-booking-draft-v1')).draft)
   expect(draft).toEqual({ ...before, hold: null, start: null })
   expect((await fixture.publicApi.availability(fixture.date, 120)).some((s) => s.start_minutes === 600)).toBe(true)
-  expect(draft.details.address_line_1).toBe('10 Browser Street')
+  expect(draft.details.address).toBe('10 Browser Street, London, SW1A 1AA')
   expect(draft.sessions.map((s) => s.duration_minutes)).toEqual([60, 60])
   await page.getByRole('button', { name: '10:00', exact: true }).click()
   await page.getByRole('button', { name: 'Review booking', exact: true }).click()
   await page.getByRole('button', { name: 'Continue to your details' }).click()
-  await expect(page.getByLabel('Street address', { exact: true })).toHaveValue('10 Browser Street')
+  await expect(page.getByRole('textbox', { name: 'Address', exact: true })).toHaveValue('10 Browser Street, London, SW1A 1AA')
 })
 
 test('ignoring the modal releases availability at real expiry and preserves details', async ({ page }) => {
@@ -381,7 +378,7 @@ test('ignoring the modal releases availability at real expiry and preserves deta
   expect((await fixture.publicApi.availability(fixture.date, 120)).some((s) => s.start_minutes === 600)).toBe(true)
   expect((await unwrap(fixture.admin.from('booking_holds').select('extended_at').eq('id', held.hold_id)))[0].extended_at).toBeNull()
   expect(draft.hold).toBeNull()
-  expect(draft.details.address_line_1).toBe('10 Browser Street')
+  expect(draft.details.address).toBe('10 Browser Street, London, SW1A 1AA')
   expect(draft.enhancementIds).toEqual([fixture.ids.enhancement])
   expect(draft.sessions.map((s) => s.duration_minutes)).toEqual([60, 60])
 })

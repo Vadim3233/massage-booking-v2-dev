@@ -3,7 +3,7 @@ import { buildCalendarFile, calendarHref } from './calendarFile.js'
 
 const booking = {
   id: '0b6c7f5e-1111-4222-8333-444455556666', date: '2026-10-21', start_minutes: 960, treatment_duration_minutes: 90, booking_reference: 'VDM-20261012-ABC123',
-  address_line_1_snapshot: '24 Test Street', address_line_2_snapshot: 'Flat 2; top floor', city_snapshot: 'London', postcode_snapshot: 'SW1 1AA',
+  address_snapshot: '24 Test Street, Flat 2; top floor, London, SW1 1AA',
 }
 const now = new Date('2026-10-12T13:45:09.123Z')
 
@@ -42,13 +42,13 @@ describe('calendar file', () => {
     expect(late).not.toContain('T240000')
   })
   it('never lets a line run past 75 bytes', () => {
-    const long = buildCalendarFile({ ...booking, address_line_1_snapshot: 'Flat 12, Extremely Long Mansion Block Name Here, Kensington Gore Gardens Road' }, now)
+    const long = buildCalendarFile({ ...booking, address_snapshot: 'Flat 12, Extremely Long Mansion Block Name Here, Kensington Gore Gardens Road' }, now)
     for (const line of long.split('\r\n')) expect(new TextEncoder().encode(line).length).toBeLessThanOrEqual(75)
   })
   it('can be offered as a download link', () => {
     expect(calendarHref(text)).toMatch(/^data:text\/calendar;charset=utf-8,BEGIN%3AVCALENDAR/)
   })
   it('leaves out the location when there is no address', () => {
-    expect(buildCalendarFile({ ...booking, address_line_1_snapshot: null, address_line_2_snapshot: null, city_snapshot: null, postcode_snapshot: null }, now)).not.toContain('LOCATION')
+    expect(buildCalendarFile({ ...booking, address_snapshot: null }, now)).not.toContain('LOCATION')
   })
 })

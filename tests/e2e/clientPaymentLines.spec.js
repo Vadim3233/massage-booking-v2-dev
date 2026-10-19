@@ -40,7 +40,7 @@ const SCENES = [
 
 async function seed() {
   const base = {
-    client_id: fixture.profile.client_id, service_area_id: fixture.ids.area, source_channel: 'web', address_line_1_snapshot: '12 Edith Road', city_snapshot: 'London', postcode_snapshot: 'SW1A1AA',
+    client_id: fixture.profile.client_id, service_area_id: fixture.ids.area, source_channel: 'web', address_snapshot: '12 Edith Road, London, SW1A 1AA',
     service_area_name_snapshot: 'Test area', booking_email_snapshot: fixture.email,
   }
   for (const scene of SCENES) {

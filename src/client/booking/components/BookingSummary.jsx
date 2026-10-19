@@ -1,6 +1,6 @@
 import { dateLabel, money, timeLabel } from '../bookingDraft.js'
 import { EMAIL_SENDER } from '../../emailSender.js'
-import { formatPostcode, paymentStatus } from '../paymentPresentation.js'
+import { paymentStatus } from '../paymentPresentation.js'
 import { CopyValue } from './BankDetails.jsx'
 import { PriceSummary } from './ReviewStep.jsx'
 
@@ -14,7 +14,7 @@ export default function BookingSummary({ booking, paymentLabel, quote, emailHint
     <dl className="prices bank-list"><CopyValue label="Booking reference" value={booking.booking_reference} /></dl>
     <p className="summary-when">{dateLabel(booking.date)} · {timeLabel(booking.start_minutes)}–{timeLabel(endMinutes)} (London time)</p>
     <p className="summary-line">{booking.treatment_duration_minutes} minutes in total</p>
-    <p className="summary-line">{[booking.address_line_1_snapshot, booking.address_line_2_snapshot, booking.city_snapshot, formatPostcode(booking.postcode_snapshot)].filter(Boolean).join(', ')}</p>
+    <p className="summary-line">{booking.address_snapshot}</p>
     <p className="summary-line">Confirmation email: <strong>{booking.booking_email_snapshot || 'Please contact Vad to confirm your email'}</strong></p>
     {/* A new sender's first email can land in spam, and one "Not spam" teaches the inbox. */}
     {emailHint && booking.booking_email_snapshot && <p className="summary-hint">My emails come from <strong>{EMAIL_SENDER}</strong>. Can't find one? Look in your spam folder and press “Not spam”.</p>}

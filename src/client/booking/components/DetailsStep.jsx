@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { addressFields, addressTyped, blankAddressFields, contactComplete, detailProblems, usualAddress, validDetails } from '../bookingDraft.js'
 import { friendlyError } from '../friendlyError.js'
+import { MAX_ADDRESS, needsPostcodeNote, NO_POSTCODE_NOTE } from '../../../lib/address.js'
 
 function buildTestClient() {
   const id = crypto.randomUUID().replaceAll('-', '').slice(0, 12)
@@ -10,10 +11,7 @@ function buildTestClient() {
     last_name: `Client ${id.slice(0, 6)}`,
     email: `vadtest.${id}@example.test`,
     phone: `07700${phoneSuffix}`,
-    address_line_1: '24 Test Street',
-    address_line_2: '',
-    city: 'London',
-    postcode: 'SW3 1AA',
+    address: '24 Test Street, London, SW3 1AA',
     entry_instructions: '',
     savedAddressId: '',
   }
@@ -100,8 +98,7 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
       // A saved number that cannot be right has to be changeable, so the lock opens.
       if (found.phone) setUnlocked(true)
       report('')
-      const first = ['phone', 'postcode'].find((key) => found[key])
-      requestAnimationFrame(() => document.getElementById(`details-${first}`)?.focus())
+      requestAnimationFrame(() => document.getElementById('details-phone')?.focus())
       return
     }
     setSaving(true)
@@ -134,17 +131,14 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
       {problems.phone && <p className="field-problem" id="details-phone-problem" role="alert">{problems.phone}</p>}
       {!guest && addresses.length > 0 && <label>Saved address<select value={details.savedAddressId} onChange={(event) => {
         const address = addresses.find((item) => item.id === event.target.value)
-        setProblems((known) => ({ ...known, postcode: undefined }))
         // A saved address fills the boxes. Putting it down for "Enter an address" empties them, so nothing of it is left behind in the new address.
         const boxes = address ? addressFields(address) : details.savedAddressId ? blankAddressFields() : {}
         edit({ details: { ...details, ...boxes, savedAddressId: event.target.value } })
-      }}><option value="">Enter an address</option>{addresses.map((address) => <option key={address.id} value={address.id}>{address.label} · {address.address_line_1}, {address.postcode}</option>)}</select></label>}
+      }}><option value="">Enter an address</option>{addresses.map((address) => <option key={address.id} value={address.id}>{address.label ? `${address.label} · ` : ''}{address.address}</option>)}</select></label>}
       <fieldset disabled={!guest && Boolean(details.savedAddressId)}>
-        <label>Street address<input autoComplete="address-line1" maxLength={120} value={details.address_line_1} required onChange={(event) => field('address_line_1', event.target.value)} /></label>
-        <label>Flat or building (optional)<input autoComplete="address-line2" maxLength={120} value={details.address_line_2} onChange={(event) => field('address_line_2', event.target.value)} /></label>
-        <div className="two-columns"><label>City<input autoComplete="address-level2" maxLength={60} value={details.city} required onChange={(event) => field('city', event.target.value)} /></label>
-          <label>Postcode<input id="details-postcode" autoComplete="postal-code" autoCapitalize="characters" maxLength={12} aria-invalid={Boolean(problems.postcode) && !details.savedAddressId} aria-describedby={problems.postcode && !details.savedAddressId ? 'details-postcode-problem' : undefined} value={details.postcode} required onChange={(event) => field('postcode', event.target.value)} /></label></div>
-        {problems.postcode && !details.savedAddressId && <p className="field-problem" id="details-postcode-problem" role="alert">{problems.postcode}</p>}
+        <label>Address<textarea id="details-address" autoComplete="street-address" rows={3} maxLength={MAX_ADDRESS} required aria-describedby="details-address-hint" value={details.address} onChange={(event) => field('address', event.target.value)} /></label>
+        <p className="fine" id="details-address-hint">Paste or type the whole address: house or flat number, street, town and postcode.</p>
+        {!details.savedAddressId && needsPostcodeNote(details.address) && <p className="fine address-note" role="status">{NO_POSTCODE_NOTE}</p>}
       </fieldset>
       <details className="more more--flat">
         <summary><span className="more-title">How to get in</span><span className="more-hint">Optional</span></summary>

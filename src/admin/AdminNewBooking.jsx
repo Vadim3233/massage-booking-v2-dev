@@ -148,7 +148,7 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
   }
   // The first thing still missing, in the order the page reads, with a plain sentence.
   function validation() {
-    if (!draft.client || !draft.areaId || !draft.details.address_line_1?.trim() || !draft.details.city?.trim() || !draft.details.postcode?.trim()) return 'Choose a client, appointment address and service area.'
+    if (!draft.client || !draft.areaId || !draft.details.address?.trim()) return 'Choose a client, appointment address and service area.'
     if (!draft.serviceId || !draft.sessions.length || draft.sessions.length > 4 || duration > 240 || draft.sessions.some(session => !catalogue.prices.some(price => price.service_id === draft.serviceId && price.duration_minutes === session.duration_minutes))) return 'Choose a treatment and an available duration.'
     // A time chosen from "Show all times", or for an appointment that has already happened, is checked by the database when the booking is made: it refuses a double booking.
     if (!draft.date || draft.start === null || (!draft.anyTime && !draft.past && (!availability || availability.error || !availability.slots.some(slot => slot.start_minutes === draft.start)))) return draft.past ? 'Choose the day and time it happened.' : 'Choose an available appointment time.'

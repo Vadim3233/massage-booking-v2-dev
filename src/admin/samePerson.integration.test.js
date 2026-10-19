@@ -42,7 +42,7 @@ describe('combining two profiles through the Admin API, against local Supabase',
   }
   async function booking(clientId, days) {
     const row = await unwrap(f.admin.from('bookings').insert({ client_id: clientId, service_area_id: f.ids.area, date: shiftDate(f.date, days), start_minutes: 840, treatment_duration_minutes: 60,
-      booking_status: 'confirmed', source_channel: 'web', address_line_1_snapshot: '12 Garden Road', city_snapshot: 'London', postcode_snapshot: 'SW1A1AA',
+      booking_status: 'confirmed', source_channel: 'web', address_snapshot: '12 Garden Road, London, SW1A 1AA',
       service_area_name_snapshot: 'Test area', service_subtotal_gbp: 85, total_gbp: 85, booking_reference: `SAME-${crypto.randomUUID()}` }).select().single())
     await unwrap(f.admin.from('booking_payments').insert({ booking_id: row.id, method: 'cash', status: 'approved', amount_gbp: 85 }))
     return row.id
@@ -133,8 +133,8 @@ describe('combining two profiles through the Admin API, against local Supabase',
     await authorize()
     const login = await registered(`same-${unique()}@example.test`, 'Weekly')
     const none = await added(`same-${unique()}@example.test`, 'Weekly')
-    const mine = await unwrap(f.admin.from('client_addresses').insert({ client_id: none, address_line_1: '5 Weekly Walk', city: 'London', postcode: 'SW1A 1AA', is_default: true }).select().single())
-    const copy = await unwrap(f.admin.from('client_addresses').insert({ client_id: login, address_line_1: '5 weekly walk', city: 'London', postcode: 'sw1a 1aa', is_default: true }).select().single())
+    const mine = await unwrap(f.admin.from('client_addresses').insert({ client_id: none, address: '5 Weekly Walk, London, SW1A 1AA', is_default: true }).select().single())
+    const copy = await unwrap(f.admin.from('client_addresses').insert({ client_id: login, address: '5 weekly walk,  London,sw1a 1aa', is_default: true }).select().single())
     // A free day (the fixture has its own bookings on its date) and the same weekday a week later, both open all day.
     const first = shiftDate(f.date, 2)
     const next = shiftDate(first, 7)

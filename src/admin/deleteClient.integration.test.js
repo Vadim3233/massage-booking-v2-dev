@@ -50,7 +50,7 @@ describe('deleting a client through the Admin API, against local Supabase', () =
   }
   async function booking(clientId) {
     const { data, error } = await f.admin.from('bookings').insert({ client_id: clientId, service_area_id: f.ids.area, date: shiftDate(f.date, 4), start_minutes: 840, treatment_duration_minutes: 60,
-      booking_status: 'confirmed', source_channel: 'web', address_line_1_snapshot: '12 Garden Road', city_snapshot: 'London', postcode_snapshot: 'SW1A1AA',
+      booking_status: 'confirmed', source_channel: 'web', address_snapshot: '12 Garden Road, London, SW1A 1AA',
       service_area_name_snapshot: 'Test area', service_subtotal_gbp: 85, total_gbp: 85, booking_reference: `DEL-${crypto.randomUUID()}` }).select().single()
     return { row: data, error }
   }
@@ -103,7 +103,7 @@ describe('deleting a client through the Admin API, against local Supabase', () =
   it('says what would go, then deletes a client with no bookings and keeps a record without personal details', async () => {
     await authorize()
     const row = await added()
-    await unwrap(f.admin.from('client_addresses').insert([{ client_id: row.id, label: 'Home', address_line_1: '12 Garden Road', city: 'London', postcode: 'SW1A 2AA' }, { client_id: row.id, address_line_1: '7 Office Lane', city: 'London', postcode: 'EC1A 1BB' }]))
+    await unwrap(f.admin.from('client_addresses').insert([{ client_id: row.id, label: 'Home', address: '12 Garden Road, London, SW1A 2AA' }, { client_id: row.id, address: '7 Office Lane, London, EC1A 1BB' }]))
     await unwrap(f.admin.from('client_notes').insert({ client_id: row.id, note: 'Ring the top bell' }))
     const check = await api.deleteCheck(row.id)
     expect(check).toMatchObject({ found: true, can_delete: true, reason: null, bookings: 0, repeats: 0, addresses: 2, notes: 1, waitlist: 0, login: 'added' })

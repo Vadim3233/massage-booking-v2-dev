@@ -13,8 +13,8 @@ export async function newBookingFixture(offset = 55) {
   }).select().single())
   recipientIds.push(recipient.id)
   const addresses = await unwrap(f.admin.from('client_addresses').insert([
-    { client_id: recipient.id, label: 'Home', address_line_1: '10 Saved Street', city: 'London', postcode: 'SW1A 1AA', entry_instructions: 'Use side entrance', is_default: true },
-    { client_id: recipient.id, label: 'Office', address_line_1: '20 Office Street', city: 'London', postcode: 'SW1A 2AA', is_default: false },
+    { client_id: recipient.id, label: 'Home', address: '10 Saved Street, London, SW1A 1AA', entry_instructions: 'Use side entrance', is_default: true },
+    { client_id: recipient.id, label: 'Office', address: '20 Office Street, London, SW1A 2AA', is_default: false },
   ]).select())
   return { ...f, recipient, addresses, user,
     trackRecipient(id) { recipientIds.push(id) },

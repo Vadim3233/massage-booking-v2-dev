@@ -15,7 +15,7 @@ test.afterEach(async () => { await fixture?.cleanup() })
 async function booked(email) {
   const booking = await unwrap(fixture.admin.from('bookings').insert({
     client_id: fixture.profile.client_id, service_area_id: fixture.ids.area, date: fixture.date, start_minutes: 600, treatment_duration_minutes: 60, booking_status: 'confirmed',
-    source_channel: 'web', address_line_1_snapshot: '10 Browser Street', city_snapshot: 'London', postcode_snapshot: 'SW1A1AA', service_area_name_snapshot: 'Integration area',
+    source_channel: 'web', address_snapshot: '10 Browser Street, London, SW1A 1AA', service_area_name_snapshot: 'Integration area',
     service_subtotal_gbp: 85, total_gbp: 85, booking_email_snapshot: email, booking_reference: `EMAILHINT-${crypto.randomUUID()}`,
   }).select().single())
   await unwrap(fixture.admin.from('booking_sessions').insert({ booking_id: booking.id, position: 1, service_id: fixture.ids.service, duration_minutes: 60, service_name_snapshot: 'Massage', unit_price_gbp: 85 }))

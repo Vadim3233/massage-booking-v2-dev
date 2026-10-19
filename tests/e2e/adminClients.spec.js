@@ -82,19 +82,18 @@ test('addresses can be added, changed, made default and removed with a confirmat
   await signIn(page, `/admin/clients/${row.id}`)
   await expect(page.getByText('No saved addresses yet.')).toBeVisible()
   await page.getByRole('button', { name: '+ Add address' }).click()
-  await page.getByLabel('Street and number').fill('12 Garden Road')
-  await page.getByLabel('Postcode').fill('sw1a 2aa')
+  // A whole address can be pasted in one go: its line breaks become commas.
+  await page.getByRole('textbox', { name: 'Address', exact: true }).fill('12 Garden Road\nLondon\nSW1A 2AA')
   await page.getByRole('button', { name: 'Add address' }).click()
-  await expect(page.getByText('12 Garden Road, London, sw1a 2aa')).toBeVisible()
+  await expect(page.getByText('12 Garden Road, London, SW1A 2AA')).toBeVisible()
   await page.getByRole('button', { name: '+ Add address' }).click()
-  await page.getByLabel('Street and number').fill('7 Office Lane')
-  await page.getByLabel('Postcode').fill('EC1A 1BB')
+  await page.getByRole('textbox', { name: 'Address', exact: true }).fill('7 Office Lane, London, EC1A 1BB')
   await page.getByRole('button', { name: 'Add address' }).click()
   const second = page.locator('.admin-address-list li').filter({ hasText: '7 Office Lane' })
   await second.getByRole('button', { name: 'Make default' }).click()
   await expect(second).toContainText('Default')
-  const defaults = (await f.admin.from('client_addresses').select('address_line_1,is_default').eq('client_id', row.id)).data
-  expect(defaults.filter(item => item.is_default).map(item => item.address_line_1)).toEqual(['7 Office Lane'])
+  const defaults = (await f.admin.from('client_addresses').select('address,is_default').eq('client_id', row.id)).data
+  expect(defaults.filter(item => item.is_default).map(item => item.address)).toEqual(['7 Office Lane, London, EC1A 1BB'])
   await second.getByRole('button', { name: 'Change' }).click()
   await page.getByLabel('Entry instructions (optional)').fill('Ring the top bell')
   await page.getByRole('button', { name: 'Save address' }).click()
@@ -132,12 +131,13 @@ test('a new client can be added with an address, and opens straight away', async
   await form.getByLabel('First name').fill('Wanda')
   await form.getByLabel('Last name').fill('Newcomer')
   await form.getByLabel('Email').fill(email)
-  // The address is optional as a whole, but a started one needs the street, city and postcode.
+  // The address is optional as a whole, but entry instructions need an address to belong to.
   await expect(form.getByRole('button', { name: 'Add client' })).toBeEnabled()
-  await form.getByLabel('Street and number').fill('3 Fresh Close')
-  await expect(form.getByRole('alert')).toHaveText('Enter the street, city and postcode, or leave the address empty.')
+  await form.getByLabel('Entry instructions (optional)').fill('Ring twice')
+  await expect(form.getByRole('alert')).toHaveText('Enter the address these instructions are for, or clear them.')
   await expect(form.getByRole('button', { name: 'Add client' })).toBeDisabled()
-  await form.getByLabel('Postcode').fill('W1A 1AA')
+  // A whole address can be pasted in one go: its line breaks become commas.
+  await form.getByRole('textbox', { name: 'Address', exact: true }).fill('3 Fresh Close\nLondon\nW1A 1AA')
   await expect(form.getByRole('alert')).toHaveCount(0)
   await form.getByRole('button', { name: 'Add client' }).click()
   await expect(profile(page, 'Wanda Newcomer')).toBeVisible()
@@ -147,8 +147,7 @@ test('a new client can be added with an address, and opens straight away', async
   const again = page.getByRole('region', { name: 'Add a client' })
   await again.getByLabel('First name').fill('Wanda')
   await again.getByLabel('Email').fill(email)
-  await again.getByLabel('Street and number').fill('3 Fresh Close')
-  await again.getByLabel('Postcode').fill('W1A 1AA')
+  await again.getByRole('textbox', { name: 'Address', exact: true }).fill('3 Fresh Close, London, W1A 1AA')
   await again.getByRole('button', { name: 'Add client' }).click()
   await expect(again.getByRole('alert')).toContainText('An existing client uses this email or phone.')
 })
@@ -178,7 +177,7 @@ test('a client can be added with only a name, and opens straight away with no co
   await expect(page.getByRole('button', { name: /E2E-nameonly-one/ })).toContainText('No contact details')
 })
 
-test('a name and an address is enough, and a half-typed address or a wrong email is caught before saving', async ({ page }) => {
+test('a name and an address is enough, and entry instructions with no address, or a wrong email, are caught before saving', async ({ page }) => {
   await f.authorize()
   await signIn(page)
   await page.getByRole('button', { name: '+ Add client' }).click()
@@ -188,16 +187,21 @@ test('a name and an address is enough, and a half-typed address or a wrong email
   await expect(form.getByRole('alert')).toHaveText('That email address does not look right.')
   await expect(form.getByRole('button', { name: 'Add client' })).toBeDisabled()
   await form.getByLabel('Email').fill('')
-  await form.getByLabel('Postcode').fill('W1A 1AA')
-  await expect(form.getByRole('alert')).toHaveText('Enter the street, city and postcode, or leave the address empty.')
+  await form.getByLabel('Entry instructions (optional)').fill('Side gate')
+  await expect(form.getByRole('alert')).toHaveText('Enter the address these instructions are for, or clear them.')
   await expect(form.getByRole('button', { name: 'Add client' })).toBeDisabled()
-  await form.getByLabel('Street and number').fill('9 Nameonly Close')
+  // An address with no postcode is allowed, with a note that the postcode helps; adding it takes the note away.
+  await form.getByRole('textbox', { name: 'Address', exact: true }).fill('9 Nameonly Close, London')
+  await expect(form.getByText('There is no postcode in that address.')).toBeVisible()
+  await expect(form.getByRole('button', { name: 'Add client' })).toBeEnabled()
+  await form.getByRole('textbox', { name: 'Address', exact: true }).fill('9 Nameonly Close, London, W1A 1AA')
+  await expect(form.getByText('There is no postcode in that address.')).toHaveCount(0)
   await form.getByRole('button', { name: 'Add client' }).click()
   await expect(profile(page, 'E2E-nameonly-two')).toBeVisible()
   await expect(page.getByText('9 Nameonly Close, London, W1A 1AA')).toBeVisible()
   const row = await unwrap(f.admin.from('clients').select('id,email,phone').eq('first_name', 'E2E-nameonly-two').single())
   expect(row).toMatchObject({ email: null, phone: null })
-  expect((await unwrap(f.admin.from('client_addresses').select('address_line_1,is_default').eq('client_id', row.id)))).toEqual([{ address_line_1: '9 Nameonly Close', is_default: true }])
+  expect((await unwrap(f.admin.from('client_addresses').select('address,is_default').eq('client_id', row.id)))).toEqual([{ address: '9 Nameonly Close, London, W1A 1AA', is_default: true }])
 })
 
 test('booking history opens the booking and returns to the client, and a new booking starts with the client chosen', async ({ page }) => {

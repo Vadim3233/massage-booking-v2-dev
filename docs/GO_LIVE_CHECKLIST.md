@@ -14,7 +14,7 @@ Both sides were redesigned as one product; the rules (availability, travel buffe
 - **Stays up to date**: coming back to the Admin from the bank or WhatsApp refreshes the Agenda, the Day view, To check and Alerts by itself, and nothing blanks while it does.
 - **Cancelling and moving**: cancelling shows No fee, Standard fee and Full price as one tap each (anything else is typed); moving a booking uses the same day-and-time picker as booking; both keep their buttons at the bottom while the form scrolls.
 - **Payment screen**: the amount, then the bank details, then the terms to tick, then what happens next, with the booking itself last. Pressing the button before the terms are ticked takes the client to the box and says why.
-- **Details are checked kindly**: a phone number or postcode that cannot be right is named beside its field before a time is reserved. A quick second tap on a choice no longer picks the next treatment or length by accident. On a reserved booking there is no way back, so the payment screen offers "Change the time or cancel this booking" instead.
+- **Details are checked kindly**: a phone number that cannot be right is named beside its field before a time is reserved (an address is not judged any more: see "One box for an address"). A quick second tap on a choice no longer picks the next treatment or length by accident. On a reserved booking there is no way back, so the payment screen offers "Change the time or cancel this booking" instead.
 - **Your booking link** (More): the address of the booking page to copy or send on WhatsApp, and a link that starts part-way through for one area, treatment and length (for example `/?area=chelsea&treatment=massage&minutes=60`).
 - **Home screen**: on an iPhone, open the booking page or the Admin in Safari, press Share, then Add to Home Screen. The Admin gets its own name ("Vad Admin") and icon and opens full screen.
 
@@ -208,7 +208,7 @@ The booking pages, a client's account pages and the whole Admin share one new lo
 ## New: add a client with just a name (2026-10-17)
 
 - **Only the name is needed.** In Clients, **+ Add client**, and in New booking, **+ Add new client**, type just a first name and save. The last name, phone, email and address are all optional: add them now or later (the client's page has **Edit details** and **+ Add address**).
-- **If you give an address,** it needs the street, city and postcode. A half-typed address is caught on the screen and not saved. The city is filled in with London to save typing; on its own it does not count as an address.
+- **If you give an address,** it is one box (see "One box for an address" below). Entry instructions need an address to belong to; that is caught on the screen and not saved.
 - **A phone or email that you do type** still has to look right, and still cannot belong to someone else. You can also clear a client's phone and email.
 - **A client with no email** gets no emails, and nothing is queued for them. A client with no phone has no Call or WhatsApp buttons. In a booking for a client with no saved address you type the address for that appointment, as for a one-off address.
 - **Two clients with only the same name** are two clients, and no warning is shown, so choose carefully.
@@ -235,6 +235,17 @@ Booking, payment, cancellation and rescheduling rules did not change for clients
 - **Skip a date** now says so if the date is not one of the repeat's dates (every 2 weeks, say, and you typed the off week).
 - **To try it:** after the update, make a repeat every 2 weeks and one on chosen dates for a test client, then on the client's page cancel one date and then all upcoming, and check the cancellation email arrives for each booking that was cancelled.
 - **Not built yet:** clients making or changing a repeat themselves (a "Make this a regular booking" button for clients you choose). That is the next piece.
+
+## New: one box for an address (2026-10-19)
+
+- **One step for you first:** the database needs an update, `supabase/migrations/20261104100000_single_address.sql`, applied in the Supabase SQL Editor like the earlier ones. **Apply it before this goes live.** It is safe to apply early: the screens that are live today keep working exactly as they do now. Without it, the new screens cannot save an address.
+- **What changed.** Everywhere an address is typed there is now one box called **Address**: when a client gives their details (guest, new account or signed in), in Clients, **+ Add client** and **+ Add address**, and in New booking (the one-off address and a new client's address). Paste a whole address into it, with line breaks or without; line breaks become commas. The entry instructions box and a saved address's label are separate, as before.
+- **Nothing is lost.** Every address already saved, and the address on every booking so far, was moved into the new box by the update: the old parts put together with commas, for example `12 Garden Road, Flat 2, London, SW1A 2AA`. Cards, the booking page, emails, reminders and the calendar file all read the same text.
+- **The postcode.** It is no longer asked for separately or checked. If an address has none, the box says "I can't see a postcode in that address. It helps me find you, so add it if you have it." (and, for you, that it is what the day's cards show). It never stops anything. On a card the postcode is picked out of the address; with none, the last part of the address (usually the town) is shown instead.
+- **A booking half-made on a phone** before this goes live keeps what was typed: the four boxes are put together into the one when it is opened.
+- **Directions** open the whole address as written in Google Maps.
+- **Later, a small clean-up** removes the four old (now empty) columns from the database. It is a separate change and nothing needs doing for it until then.
+- **To try it:** after the update, make a test booking as a guest and paste a three-line address into the box; add a client with only a name, then **+ Add address** with an address pasted from a message; then look at the booking card, the booking page and the email: they should show the address on one line, with commas. Then type an address with no postcode and check the note appears and does not stop you.
 
 ## What works now (tested locally)
 

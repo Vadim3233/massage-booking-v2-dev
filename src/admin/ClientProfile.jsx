@@ -55,7 +55,7 @@ function Addresses({ clientId, api, changed }) {
       {editing === item.id
         ? <AddressForm initial={item} submitLabel="Save address" onSubmit={address => api.updateAddress(item.id, address).then(refresh)} onCancel={() => setEditing(null)} />
         : <>
-          <address>{[item.address_line_1, item.address_line_2, item.city, item.postcode].filter(Boolean).join(', ')}{item.entry_instructions && <small>{item.entry_instructions}</small>}</address>
+          <address>{item.address}{item.entry_instructions && <small>{item.entry_instructions}</small>}</address>
           <p className="admin-detail-hint">{[item.label, item.is_default ? 'Default' : null].filter(Boolean).join(' · ')}</p>
           {removing === item.id
             ? <div role="alert" className="admin-conflicts"><p>Remove this address? Past bookings keep their own copy of it.</p>

@@ -41,11 +41,11 @@ async function client(overrides = {}) {
   created.push(row.id)
   return row
 }
-const address = id => unwrap(f.admin.from('client_addresses').insert({ client_id: id, label: 'Home', address_line_1: '12 Garden Road', city: 'London', postcode: 'SW1A 2AA' }))
+const address = id => unwrap(f.admin.from('client_addresses').insert({ client_id: id, label: 'Home', address: '12 Garden Road, London, SW1A 2AA' }))
 const note = (id, text = 'Ring the top bell') => unwrap(f.admin.from('client_notes').insert({ client_id: id, note: text }))
 async function booking(clientId) {
   const row = await unwrap(f.admin.from('bookings').insert({ client_id: clientId, service_area_id: f.ids.area, date: shiftDate(f.date, 3), start_minutes: 600, treatment_duration_minutes: 60,
-    booking_status: 'confirmed', source_channel: 'web', address_line_1_snapshot: '1 Test Road', city_snapshot: 'London', postcode_snapshot: 'SW1A1AA',
+    booking_status: 'confirmed', source_channel: 'web', address_snapshot: '1 Test Road, London, SW1A 1AA',
     service_area_name_snapshot: 'Test area', service_subtotal_gbp: 85, total_gbp: 85, booking_reference: `E2EDEL-${crypto.randomUUID()}` }).select().single())
   await unwrap(f.admin.from('booking_payments').insert({ booking_id: row.id, method: 'cash', status: 'approved', amount_gbp: 85 }))
   return row
