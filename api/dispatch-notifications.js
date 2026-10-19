@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import { createDispatcher, readConfig } from '../server/notifications.js'
+import { calendarConfigured, createCalendarSync, readCalendarConfig } from '../server/calendarSync.js'
 
 function authorised(header, secret) {
   if (!secret || !header) return false
@@ -35,7 +36,12 @@ export async function handle(request, response, { env = process.env, createServi
     const repeats = await client.rpc('run_series_maintenance').then(({ data, error }) => (error ? { failed: true } : data), () => ({ failed: true }))
     // Then the morning reminders that are due, for the same reason. It does nothing until it is time, and never reminds twice.
     const reminders = await client.rpc('plan_day_of_reminders').then(({ data, error }) => (error ? { failed: true } : { made: data }), () => ({ failed: true }))
-    const summary = { ...(await sendAll(createDispatcher({ client, config: readConfig(env), fetchImpl }))), repeats, reminders }
+    // The Google Calendar copy runs beside the messages, once its Google codes are set, with its own time limit. A problem with Google never stops them.
+    const calendarConfig = readCalendarConfig(env)
+    const calendar = calendarConfigured(calendarConfig)
+      ? createCalendarSync({ client, config: calendarConfig, fetchImpl }).run().catch(() => ({ failed: true }))
+      : null
+    const summary = { ...(await sendAll(createDispatcher({ client, config: readConfig(env), fetchImpl }))), repeats, reminders, ...(calendar ? { calendar: await calendar } : {}) }
     response.statusCode = 200
     response.setHeader('content-type', 'application/json')
     response.end(JSON.stringify(summary))

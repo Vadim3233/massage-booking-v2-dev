@@ -615,3 +615,21 @@ A server job (part B, on Vercel like the email and Telegram sender) will make Go
   - two Admin functions for the settings screen: status, and Resync now.
 - Database test `calendar_sync.test.sql`: 47 checks, including every status, the 24, 25 and 26 Oct 2026 clock change, and that the address, phone, email, prices and notes never appear.
 - Rollback: `docs/rollbacks/20261107100000_calendar_sync_rollback.sql`.
+
+## ADR-068 — Google Calendar copy, part B: the job that makes Google match, run by the every-minute sender (2026-10-19, draft)
+
+**Decision:** `server/calendarSync.js` makes the "VadMassage bookings" calendar match `calendar_desired_events`. It runs inside the existing every-minute call (`api/dispatch-notifications.js`), beside the email and Telegram messages, with its own 4-second budget. So no new scheduled job, and no new secret, has to be set up online. It does nothing until `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set in Vercel and the calendar is connected.
+
+On each run it:
+- takes a few queued bookings at a time;
+- puts in, changes or removes their events, using event ids fixed by the booking, so nothing can be put in twice;
+- brings back an event deleted in Google (Google refuses the same id with 409, so it is updated instead);
+- skips events that have not changed;
+- every 15 minutes, queues anything out of step;
+- at about 3 a.m., puts everything in again, which undoes changes made in Google.
+
+When Google is down or busy, the booking is tried again after 2, 8, 18 and 32 minutes, then marked failed with the reason. When Google refuses the saved sign-in, the job stops, forgets the token and marks the connection "needs reconnect". It never changes a booking, and never logs or returns a token or Google's own error text.
+
+**Reason:** Vadim's brief asked for it to run on Vercel like the sender (the project has no Edge Functions), be state-based and idempotent, and keep Google problems away from bookings.
+
+**How it was built:** No new database change beyond part A (one fix there: Disconnect's delete needed a condition when called through Supabase's API). The test `server/calendarSync.integration.test.js` runs against local Supabase with a stand-in for Google. Eleven deliberate breakages of the job were all caught.
