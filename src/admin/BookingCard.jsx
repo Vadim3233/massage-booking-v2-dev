@@ -1,4 +1,8 @@
+import { useState } from 'react'
 import Icon from '../ui/icons.jsx'
+import { ActionDialog } from './BookingActions.jsx'
+import { DONE, lifecycleActions, lifecycleApi } from './bookingLifecycleApi.js'
+import { toast } from '../ui/toast.js'
 import { bookingEnd, bookingState, canNavigateTo, clientName, money, time, treatmentName } from './calendarPresentation.js'
 import { shortWhere } from '../lib/address.js'
 import { cancelledNote, moneyToSort } from './cancelledBookings.js'
@@ -11,13 +15,22 @@ import { directionsLink } from './contactLinks.js'
 // still has a refund to send or a late fee to collect says so in its status, in the colour of things that need the Admin, though the card
 // itself stays grey: it is cancelled, and the money is what is left to do. A cancelled card also says who cancelled it and when, after its
 // status (on the next line when the status is long), so a late cancellation shows without opening the booking.
-export default function BookingCard({ booking, open, now, tag }) {
+// `changed` is how the list is read again after a refund is recorded from the card; without it, the card offers no Record refund.
+export default function BookingCard({ booking, open, now, tag, changed }) {
+  const [refunding, setRefunding] = useState(false)
+  const refundable = Boolean(changed) && lifecycleActions(booking).includes('refund')
+  async function refunded(text, isError = false) {
+    setRefunding(false)
+    if (!isError) toast(`${DONE.refund} · ${clientName(booking)}`)
+    else toast(text)
+    await changed()
+  }
   const state = bookingState(booking)
   const owed = moneyToSort(booking)
   const cancelled = cancelledNote(booking)
   const directions = canNavigateTo(booking, now) ? directionsLink(booking) : null
   const where = shortWhere(booking.address_snapshot)
-  return <div className={`admin-card-wrap ${directions ? 'has-directions' : ''}`}>
+  return <div className={`admin-card-wrap ${directions ? 'has-directions' : ''} ${refundable ? 'has-card-action' : ''}`}>
     <button className={`admin-card ${booking.booking_status === 'cancelled' ? 'cancelled' : ''}`} data-chip={state.chip} data-variant={state.variant} onClick={open}>
       <span className="admin-card-when">
         <span className="admin-card-times">{time(booking.start_minutes)}<span aria-hidden="true"> – </span><span className="admin-sr-only"> to </span>{time(bookingEnd(booking))}</span>
@@ -34,6 +47,8 @@ export default function BookingCard({ booking, open, now, tag }) {
         {cancelled && <span className="admin-card-cancelled-when">{cancelled}</span>}
       </span>
     </button>
+    {refundable && <button type="button" className="admin-card-refund" aria-label={`Record refund sent to ${clientName(booking)}`} onClick={() => setRefunding(true)}><Icon name="check" size={15} />Record refund</button>}
+    {refunding && <ActionDialog kind="refund" booking={booking} api={lifecycleApi} close={() => setRefunding(false)} done={refunded} />}
     {directions && <a className="admin-card-directions" href={directions.href} target="_blank" rel="noopener noreferrer" aria-label={`Directions to ${clientName(booking)}`}><Icon name="pin" size={15} />Directions</a>}
   </div>
 }

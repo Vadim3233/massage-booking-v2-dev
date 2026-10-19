@@ -433,6 +433,15 @@
 .admin-shell .admin-card-directions:hover { background: var(--primary-line); }
 .admin-shell .admin-card-directions::after { content: ''; position: absolute; inset: -4px; }
 .admin-card-wrap.has-directions .admin-status { max-width: calc(100% - 108px); white-space: normal; border-radius: var(--radius); }
+/* Record refund on a cancelled card with a refund to send: at the foot of the card, where Directions sits on a card still to come. */
+.admin-shell .admin-card-refund { position: absolute; right: 8px; bottom: 6px; z-index: 1; display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 0 12px; border: 1.5px solid var(--primary); border-radius: var(--radius-pill); background: var(--surface); color: var(--primary); font: 600 13px/1 var(--font-ui); white-space: nowrap; }
+.admin-shell .admin-card-refund:hover { background: var(--primary-soft); }
+.admin-shell .admin-card-refund::after { content: ''; position: absolute; inset: -4px; }
+.admin-card-wrap.has-card-action .admin-card-foot { padding-right: 140px; min-height: 40px; }
+/* What cancelling does to the money, before it is confirmed. */
+.admin-money-outcome { display: grid; gap: 2px; margin: 10px 0; padding: 10px 12px; border: 1.5px solid var(--primary); border-radius: var(--radius-sm); background: var(--primary-soft); color: var(--ink); }
+.admin-money-outcome span, .admin-money-outcome small { color: var(--primary-strong); font-size: 13px; }
+.admin-money-outcome strong { font-size: 15px; }
 /* A cancelled booking has no Directions button, so its status may use the whole width, and wraps if it names a refund and a late fee together. */
 .admin-card.cancelled .admin-status { max-width: 100%; white-space: normal; border-radius: var(--radius); }
 /* Who cancelled it and when sits after the status, and drops onto a line of its own when the status is long. */
