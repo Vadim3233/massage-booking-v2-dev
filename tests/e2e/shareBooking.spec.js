@@ -56,6 +56,17 @@ test('Share… uses the phone\'s share sheet, and copies the same text where the
   expect(await page.evaluate(() => window.copiedText)).toBe(whatsappText)
 })
 
+test('Copy puts the same text on the clipboard and says Copied', async ({ page }) => {
+  await f.authorize()
+  await page.addInitScript(() => { Object.defineProperty(navigator, 'clipboard', { value: { writeText: async text => { window.copiedText = text } } }) })
+  await openBooking(page, f.bookings[0].id)
+  await shareButton(page).click()
+  const whatsappText = decodeURIComponent((await sheet(page).getByRole('link', { name: 'WhatsApp client' }).getAttribute('href')).split('?text=')[1])
+  await sheet(page).getByRole('button', { name: 'Copy', exact: true }).click()
+  await expect(sheet(page).getByText('Copied', { exact: true })).toBeVisible()
+  expect(await page.evaluate(() => window.copiedText)).toBe(whatsappText)
+})
+
 test('a cancelled booking has no share button', async ({ page }) => {
   await f.authorize()
   await openBooking(page, f.bookings[1].id)

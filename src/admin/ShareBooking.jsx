@@ -7,7 +7,7 @@ import { canShare, shareText, transferDue, whatsappShareLink } from './shareBook
 const fallbackBank = paymentConfig(import.meta.env)
 
 // The share button at the top of the booking sheet: WhatsApp the client the booking's details, or share them anywhere (on a computer, copy them). The
-// message is made in one place (shareBooking.js); nothing is ever sent by itself, and it can still be changed in WhatsApp before sending.
+// message is made in one place (Copy puts the same text on the clipboard) (shareBooking.js); nothing is ever sent by itself, and it can still be changed in WhatsApp before sending.
 export default function ShareBooking({ booking }) {
   const [open, setOpen] = useState(false)
   const [bank, setBank] = useState(null)
@@ -44,12 +44,18 @@ export default function ShareBooking({ booking }) {
       if (failure?.name !== 'AbortError') setSaid('Could not share. Try again.')
     }
   }
+  // Copy is always there too, for pasting the details anywhere.
+  async function copy() {
+    setSaid('')
+    try { await navigator.clipboard.writeText(text); setSaid('Copied') } catch { setSaid('Could not copy. Try again.') }
+  }
   return <div className="admin-share" ref={wrap}>
     <button type="button" className="admin-share-button" aria-label="Share booking details" aria-expanded={open} onClick={() => { setSaid(''); setOpen(value => !value) }}><Icon name="share" size={20} /></button>
     {open && <div className="admin-share-menu">
       {waiting ? <p role="status">Getting your bank details…</p> : <>
         {whatsapp && <a href={whatsapp} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}><Icon name="chat" size={18} />WhatsApp client</a>}
         <button type="button" onClick={share}><Icon name="share" size={18} />Share…</button>
+        <button type="button" onClick={copy}><Icon name="copy" size={18} />Copy</button>
       </>}
       {said && <p role="status">{said}</p>}
     </div>}
