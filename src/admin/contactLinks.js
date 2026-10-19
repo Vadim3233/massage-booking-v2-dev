@@ -12,7 +12,7 @@ export function whatsappNumber(phone) {
 
 // The way to the address the appointment is at, on Google Maps; nothing if no address is recorded.
 export function directionsLink(booking) {
-  const address = [booking.address_line_1_snapshot, booking.address_line_2_snapshot, booking.city_snapshot, booking.postcode_snapshot].filter(Boolean).join(', ')
+  const address = booking.address_snapshot
   return address ? { key: 'directions', icon: 'pin', label: 'Directions', href: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`, external: true } : null
 }
 

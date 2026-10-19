@@ -57,7 +57,7 @@ async function added({ first, last, email = null, number = phone() }) {
 }
 async function booking(clientId, days) {
   const row = await unwrap(f.admin.from('bookings').insert({ client_id: clientId, service_area_id: f.ids.area, date: shiftDate(f.date, days), start_minutes: 840, treatment_duration_minutes: 60,
-    booking_status: 'confirmed', source_channel: 'web', address_line_1_snapshot: '12 Garden Road', city_snapshot: 'London', postcode_snapshot: 'SW1A1AA',
+    booking_status: 'confirmed', source_channel: 'web', address_snapshot: '12 Garden Road, London, SW1A 1AA',
     service_area_name_snapshot: 'Test area', service_subtotal_gbp: 85, total_gbp: 85, booking_reference: `SAME-${crypto.randomUUID()}` }).select().single())
   await unwrap(f.admin.from('booking_payments').insert({ booking_id: row.id, method: 'cash', status: 'approved', amount_gbp: 85 }))
   return row.id

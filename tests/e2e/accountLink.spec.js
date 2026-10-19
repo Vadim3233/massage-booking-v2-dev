@@ -32,7 +32,7 @@ async function made({ date, start = 600, createdAgo = 3 * 86400000, status = 'co
   const client = await unwrap(f.admin.from('clients').insert(owner).select().single())
   clients.push(client.id)
   const booking = await unwrap(f.admin.from('bookings').insert({ client_id: client.id, service_area_id: f.ids.area, date, start_minutes: start, treatment_duration_minutes: 60, booking_status: status,
-    source_channel: 'web', address_line_1_snapshot: '12 Garden Road', city_snapshot: 'London', postcode_snapshot: 'SW1A2AA', service_area_name_snapshot: 'Test area',
+    source_channel: 'web', address_snapshot: '12 Garden Road, London, SW1A 2AA', service_area_name_snapshot: 'Test area',
     service_subtotal_gbp: 85, total_gbp: 85, booking_email_snapshot: email, booking_reference: `E2ELINK-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
     created_at: new Date(Date.now() - createdAgo).toISOString() }).select().single())
   await unwrap(f.admin.from('booking_payments').insert({ booking_id: booking.id, method: 'cash', status: 'approved', amount_gbp: 85 }))

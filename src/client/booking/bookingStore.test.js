@@ -222,13 +222,13 @@ describe('hold continuation and draft recovery', () => {
   })
   it.each(['release', 'expiry'])('preserves all draft fields after %s and returns to time selection', async (action) => {
     const f = fixture()
-    f.store.edit({ details: { ...f.draft.details, first_name: 'Saved', address_line_1: '1 Saved Road' }, note: 'Keep notes', paymentMethod: 'cash' })
+    f.store.edit({ details: { ...f.draft.details, first_name: 'Saved', address: '1 Saved Road' }, note: 'Keep notes', paymentMethod: 'cash' })
     f.store.navigate(5)
     if (action === 'release') await f.store.releaseHold()
     else { f.store.edit({ hold: { ...f.draft.hold, expires_at: '2000-01-01' } }); f.store.expireHold() }
     expect(f.store.getSnapshot().step).toBe(3)
     expect(restoreDraft(f.storage)).toMatchObject({ ...f.draft, hold: null, start: null,
-      details: { ...f.draft.details, first_name: 'Saved', address_line_1: '1 Saved Road' }, note: 'Keep notes', paymentMethod: 'cash' })
+      details: { ...f.draft.details, first_name: 'Saved', address: '1 Saved Road' }, note: 'Keep notes', paymentMethod: 'cash' })
   })
   it('preserves ambiguous finalization for safe retry even if its hold expires', async () => {
     const f = fixture(); await f.store.loadQuote()

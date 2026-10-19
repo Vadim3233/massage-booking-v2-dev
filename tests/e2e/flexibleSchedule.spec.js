@@ -18,7 +18,7 @@ async function bookThreeOClock() {
   await unwrap(fixture.admin.from('bookings').insert({
     id: bookingId, booking_reference: `FLEX-${bookingId.slice(0, 8)}`, client_id: fixture.profile.client_id, service_area_id: area.id,
     date: fixture.date, start_minutes: 900, treatment_duration_minutes: 60, booking_status: 'confirmed', source_channel: 'test',
-    address_line_1_snapshot: '10 Quiet Street', city_snapshot: 'London', postcode_snapshot: 'SW1A 1AA', service_area_name_snapshot: area.name,
+    address_snapshot: '10 Quiet Street, London, SW1A 1AA', service_area_name_snapshot: area.name,
     total_gbp: 85, service_subtotal_gbp: 85, booking_email_snapshot: fixture.email,
   }))
   await unwrap(fixture.admin.from('booking_payments').insert({ booking_id: bookingId, method: 'cash', status: 'approved', amount_gbp: 85 }))

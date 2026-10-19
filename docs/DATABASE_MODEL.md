@@ -76,12 +76,10 @@ Suggested columns:
 - `id uuid primary key`
 - `client_id uuid not null` → `clients.id`
 - `label text`
-- `address_line_1 text`
-- `address_line_2 text`
-- `city text`
-- `postcode text`
-- `normalized_postcode text`
+- `address text not null` — the whole address as one text; line breaks become commas (ADR-059)
+- `normalized_address text not null` — the address in lower-case letters and digits only, so the same address is not saved twice
 - `entry_instructions text`
+- `address_line_1 text`, `address_line_2 text`, `city text`, `postcode text`, `normalized_postcode text` — the old four parts: optional now, no longer filled for new addresses, removed in a later clean-up (ADR-059)
 - `is_default boolean default false`
 - timestamps
 
@@ -279,11 +277,9 @@ Suggested columns:
 - `created_by_actor_type text`
 - `created_by_actor_id text null`
 - immutable address snapshot fields:
-  - `address_line_1_snapshot`
-  - `address_line_2_snapshot`
-  - `city_snapshot`
-  - `postcode_snapshot`
+  - `address_snapshot` — the whole address as one text, as it was on the day (ADR-059)
   - `entry_instructions_snapshot`
+  - `address_line_1_snapshot`, `address_line_2_snapshot`, `city_snapshot`, `postcode_snapshot` — the old four parts: optional now, no longer filled, removed in a later clean-up
   - `service_area_name_snapshot`
 - authoritative money snapshots:
   - `service_subtotal_gbp`

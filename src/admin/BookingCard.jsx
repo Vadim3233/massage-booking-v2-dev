@@ -1,5 +1,6 @@
 import Icon from '../ui/icons.jsx'
-import { bookingEnd, bookingState, canNavigateTo, clientName, money, postcode, time, treatmentName } from './calendarPresentation.js'
+import { bookingEnd, bookingState, canNavigateTo, clientName, money, time, treatmentName } from './calendarPresentation.js'
+import { shortWhere } from '../lib/address.js'
 import { cancelledNote, moneyToSort } from './cancelledBookings.js'
 import { directionsLink } from './contactLinks.js'
 
@@ -15,7 +16,7 @@ export default function BookingCard({ booking, open, now, tag }) {
   const owed = moneyToSort(booking)
   const cancelled = cancelledNote(booking)
   const directions = canNavigateTo(booking, now) ? directionsLink(booking) : null
-  const where = postcode(booking.postcode_snapshot)
+  const where = shortWhere(booking.address_snapshot)
   return <div className={`admin-card-wrap ${directions ? 'has-directions' : ''}`}>
     <button className={`admin-card ${booking.booking_status === 'cancelled' ? 'cancelled' : ''}`} data-chip={state.chip} data-variant={state.variant} onClick={open}>
       <span className="admin-card-when">

@@ -17,6 +17,12 @@ describe('the request for a new booking', () => {
     expect(bookingRequest(draft({ anyTime: false }))).not.toHaveProperty('any_time')
     expect(bookingRequest(draft())).not.toHaveProperty('any_time')
   })
+  it('sends a one-off address as one text with its way in, and no address when a saved one is chosen', () => {
+    const typed = draft({ details: { savedAddressId: '', address: '  5 Typed Road\nLondon ', entry_instructions: ' Ring twice ' } })
+    expect(bookingRequest(typed)).toMatchObject({ saved_address_id: null, address: { address: '5 Typed Road\nLondon', entry_instructions: 'Ring twice' } })
+    expect(bookingRequest(draft({ details: { savedAddressId: '', address: '5 Typed Road', entry_instructions: '' } }))).toMatchObject({ address: { address: '5 Typed Road', entry_instructions: null } })
+    expect(bookingRequest(draft({ details: { savedAddressId: 'addr1' } }))).toMatchObject({ saved_address_id: 'addr1', address: null })
+  })
   it('starts a draft with no unusual time chosen', () => {
     expect(emptyAdminDraft(DAY)).toMatchObject({ start: null, anyTime: false, anyTimeNotes: [] })
   })

@@ -11,7 +11,7 @@ beforeEach(async () => {
   const area = (await admin.from('service_areas').select('id,name').eq('slug', 'chelsea').single()).data
   const client = (await admin.from('clients').insert({ first_name: 'Sender', last_name: 'Test', email: `sender-${crypto.randomUUID()}@example.test` }).select().single()).data
   const booking = (await admin.from('bookings').insert({ client_id: client.id, service_area_id: area.id, date: '2031-06-02', start_minutes: 600, treatment_duration_minutes: 60, booking_status: 'confirmed',
-    source_channel: 'web', address_line_1_snapshot: '1 Test Road', city_snapshot: 'London', postcode_snapshot: 'SW1A1AA', service_area_name_snapshot: area.name, service_subtotal_gbp: 85, total_gbp: 85,
+    source_channel: 'web', address_snapshot: '1 Test Road, London, SW1A 1AA', service_area_name_snapshot: area.name, service_subtotal_gbp: 85, total_gbp: 85,
     booking_email_snapshot: client.email, booking_reference: `SEND-${crypto.randomUUID()}` }).select().single()).data
   ids = { client: client.id, booking: booking.id, email: client.email }
 })

@@ -152,8 +152,7 @@ test('every booking screen fits a 320px phone, and the usual booking is offered 
   const email = `usual-${crypto.randomUUID()}@example.test`
   await page.getByLabel('Email address', { exact: true }).fill(email)
   await page.getByLabel('Contact number', { exact: true }).fill('+44 7700 900654')
-  await page.getByLabel('Street address', { exact: true }).fill('3 Usual Road')
-  await page.getByLabel('Postcode', { exact: true }).fill('SW1A 2AA')
+  await page.getByRole('textbox', { name: 'Address', exact: true }).fill('3 Usual Road, London, SW1A 2AA')
   expect(await noSideways(page)).toBe(true)
   await page.getByRole('button', { name: 'Continue to payment' }).click()
   await expect(page.getByRole('heading', { name: 'One last step' })).toBeVisible()
@@ -240,7 +239,7 @@ test('the details button is never greyed out: what is missing is said in words',
   await expect(page.getByLabel('First name', { exact: true })).toBeFocused()
   await expect(page.getByRole('heading', { name: 'Your details', exact: true })).toBeVisible()
   // Only spaces satisfy the phone's check but not ours, so the page says what is needed in words.
-  for (const label of ['First name', 'Last name', 'Contact number', 'Street address', 'Postcode']) await page.getByLabel(label, { exact: true }).fill(' ')
+  for (const label of ['First name', 'Last name', 'Contact number', 'Address']) await page.getByLabel(label, { exact: true }).fill(' ')
   await page.getByLabel('Email address', { exact: true }).fill('spaces@example.test')
   await next.click()
   await expect(page.getByRole('alert').filter({ hasText: 'Please fill in everything that is not marked optional.' })).toBeVisible()
@@ -249,7 +248,7 @@ test('the details button is never greyed out: what is missing is said in words',
   await fixture.trackUser(draft.ownerUserId)
 })
 
-test('a phone number or postcode that cannot be right is named beside the field, before anything is reserved', async ({ page }) => {
+test('a phone number that cannot be right is named beside the field, before anything is reserved', async ({ page }) => {
   await toDuration(page)
   await page.getByRole('button', { name: /^60 minutes/ }).click()
   await page.getByLabel('Appointment date').fill(fixture.date)
@@ -260,29 +259,59 @@ test('a phone number or postcode that cannot be right is named beside the field,
   await page.getByLabel('First name', { exact: true }).fill('Check')
   await page.getByLabel('Last name', { exact: true }).fill('Details')
   await page.getByLabel('Email address', { exact: true }).fill(`check-${crypto.randomUUID()}@example.test`)
-  await page.getByLabel('Street address', { exact: true }).fill('3 Check Road')
+  await page.getByRole('textbox', { name: 'Address', exact: true }).fill('3 Check Road, London, SW1A 2AA')
   const phone = page.getByLabel('Contact number', { exact: true })
-  const postcode = page.getByLabel('Postcode', { exact: true })
   await phone.fill('12345')
-  await postcode.fill('SW1A 2AA')
   await page.getByRole('button', { name: 'Continue to payment' }).click()
   await expect(page.getByText("That number doesn't look right")).toBeVisible()
   await expect(phone).toHaveAttribute('aria-invalid', 'true')
   await expect(phone).toBeFocused()
   await expect(page.getByRole('heading', { name: 'Your details', exact: true })).toBeVisible()
-  // Typing in the field takes the message away; the next problem is named in its turn.
+  // Typing in the field takes the message away, and the booking goes on.
   await phone.fill('07700 900654')
   await expect(page.getByText("That number doesn't look right")).toHaveCount(0)
-  await postcode.fill('hello world')
-  await page.getByRole('button', { name: 'Continue to payment' }).click()
-  await expect(page.getByText("That postcode doesn't look right")).toBeVisible()
-  await expect(postcode).toBeFocused()
-  await expect(page.getByRole('heading', { name: 'Your details', exact: true })).toBeVisible()
-  await postcode.fill('SW1A 2AA')
   await page.getByRole('button', { name: 'Continue to payment' }).click()
   await expect(page.getByRole('heading', { name: 'One last step' })).toBeVisible()
   // Now a client and a reservation exist, so the clean-up has something to remove.
   await fixture.trackUser((await readDraft(page)).ownerUserId)
+})
+
+test('a whole address can be pasted in one go, and one with no postcode gets a gentle note but never a stop', async ({ page }) => {
+  await toDuration(page)
+  await page.getByRole('button', { name: /^60 minutes/ }).click()
+  await page.getByLabel('Appointment date').fill(fixture.date)
+  await page.getByRole('button', { name: '10:00', exact: true }).click()
+  await page.getByRole('button', { name: 'Review booking', exact: true }).click()
+  await page.getByRole('button', { name: 'Continue to your details' }).click()
+  await page.getByRole('button', { name: 'Continue as guest' }).click()
+  await page.getByLabel('First name', { exact: true }).fill('Pasted')
+  await page.getByLabel('Last name', { exact: true }).fill('Address')
+  const email = `pasted-${crypto.randomUUID()}@example.test`
+  await page.getByLabel('Email address', { exact: true }).fill(email)
+  await page.getByLabel('Contact number', { exact: true }).fill('+44 7700 900655')
+  const address = page.getByRole('textbox', { name: 'Address', exact: true })
+  const note = page.getByText("I can't see a postcode in that address.")
+  // One box, with a line under it saying what goes in it.
+  await expect(address).toHaveAttribute('autocomplete', 'street-address')
+  await expect(address).toHaveAttribute('maxlength', '400')
+  await expect(page.getByText('Paste or type the whole address')).toBeVisible()
+  await expect(note).toHaveCount(0)
+  // No postcode: a note, and only a note. Adding one takes it away.
+  await address.fill('Flat 2\n14 Pasted Road\nLondon')
+  await expect(note).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Continue to payment' })).toBeEnabled()
+  await address.fill('Flat 2\n14 Pasted Road\nLondon\nsw3 1aa')
+  await expect(note).toHaveCount(0)
+  expect(await noSideways(page)).toBe(true)
+  // It goes on with no postcode, as typed.
+  await address.fill('Flat 2\n14 Pasted Road\nLondon')
+  await page.getByRole('button', { name: 'Continue to payment' }).click()
+  await expect(page.getByRole('heading', { name: 'One last step' })).toBeVisible()
+  const client = (await unwrap(fixture.admin.from('clients').select('id,auth_user_id').eq('normalized_email', email)))[0]
+  await fixture.trackUser(client.auth_user_id)
+  // The line breaks became commas, in the booking and in the address kept for next time.
+  await expect.poll(async () => (await unwrap(fixture.admin.from('bookings').select('address_snapshot').eq('client_id', client.id)))[0]?.address_snapshot).toBe('Flat 2, 14 Pasted Road, London')
+  expect(await unwrap(fixture.admin.from('client_addresses').select('address').eq('client_id', client.id))).toEqual([{ address: 'Flat 2, 14 Pasted Road, London' }])
 })
 
 test('the bar at the bottom of the review is one row on phones from 360 to 430 px wide', async ({ page }) => {

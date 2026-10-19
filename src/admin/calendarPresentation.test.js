@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bookingEnd, bookingState, canNavigateTo, dayContext, daySummary, getBookingCardVariant, getBookingStatusLabel, nextUp, postcode, shiftDate, treatmentName } from './calendarPresentation.js'
+import { bookingEnd, bookingState, canNavigateTo, dayContext, daySummary, getBookingCardVariant, getBookingStatusLabel, nextUp, shiftDate, treatmentName } from './calendarPresentation.js'
 
 it('a booking ends when its treatment ends, never counting the travel time either side', () => {
   expect(bookingEnd({ start_minutes: 870, treatment_duration_minutes: 60, travel_buffer_minutes: 60 })).toBe(930)
@@ -16,7 +16,6 @@ it('handles London calendar dates across DST and month boundaries', () => {
   expect(shiftDate('2026-03-29', 1)).toBe('2026-03-30')
   expect(shiftDate('2026-10-31', 1)).toBe('2026-11-01')
 })
-it('formats a snapshot postcode without changing stored data', () => { expect(postcode('sw1a1aa')).toBe('SW1A 1AA') })
 it('a booking waiting for a transfer keeps occupying displayed gaps, however old', () => {
   const now = Date.now()
   const b = { booking_status: 'awaiting_transfer', start_minutes: 780, treatment_duration_minutes: 60, travel_buffer_minutes: 60 }

@@ -13,6 +13,10 @@
 --
 -- The reminder is an ordinary client email in the notification queue, written here rather than by the event trigger, so
 -- the trigger is left as it is. Anything that follows client emails follows this one too.
+--
+-- Where the appointment is comes from the one text the booking keeps, bookings.address_snapshot (ADR-059, added by
+-- 20261104100000_single_address.sql, which has to be applied before this reminder is switched on). The function body is
+-- only checked when it runs, so this file still applies on its own.
 
 create function public.plan_day_of_reminders(p_now timestamptz default clock_timestamp())
 returns integer
@@ -34,7 +38,7 @@ declare
 begin
   if v_minutes < v_from then return 0; end if;
   for b in
-    select bk.id, bk.start_minutes, bk.booking_email_snapshot, bk.address_line_1_snapshot, bk.city_snapshot, bk.postcode_snapshot,
+    select bk.id, bk.start_minutes, bk.booking_email_snapshot, bk.address_snapshot,
            nullif(btrim(c.first_name), '') as first_name
       from public.bookings bk
       join public.clients c on c.id = bk.client_id
@@ -56,7 +60,7 @@ begin
     on conflict (deduplication_key) do nothing
     returning id into v_event;
     if v_event is null then continue; end if;
-    v_where := concat_ws(', ', b.address_line_1_snapshot, b.city_snapshot, b.postcode_snapshot);
+    v_where := b.address_snapshot;
     insert into public.notification_deliveries(event_id, channel, audience, recipient, title, body, link_path)
     values (v_event, 'email', 'client', btrim(b.booking_email_snapshot), 'Your appointment is today',
       format('Hi %s, a quick reminder: your appointment is today at %s%s. I''m looking forward to seeing you!',
