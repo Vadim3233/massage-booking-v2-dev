@@ -560,6 +560,22 @@ The Telegram message has no link to the booking page (a private link in an email
 
 **If it ever has to be taken back:** put the screens back, then drop `admin_day_hours(date, date)` and `day_hours(date)`.
 
+## ADR-062 — Cancelling says what happens to the money, and a refund can be recorded from the card (2026-10-19)
+
+**Decision:** Before a cancellation is confirmed, a box under the fee choice says what happens to the money, for the fee chosen: "No cancellation fee – Andreas gets a full £90.00 refund", "Late cancellation – you keep £45.00, refund £45.00", "Late cancellation – you keep the full £90.00, nothing to refund", "No money has been paid – nothing to refund" (with "A late fee of £X is recorded as due" when a fee is charged on a booking not paid). When there is a refund it adds "You send it yourself, then press Record refund." The red button says the same: "you keep £X" on a paid booking, "£X fee due" on one not paid. A cancelled card in the Calendar with a refund to send has a **Record refund** button at its foot, which asks the same question as on the booking sheet and clears the reminder.
+
+**Reason:** Vadim's admin UI notes (Part A §2): he cancelled a paid £90 booking with "No fee" and then saw "refund £90.00 to send" and took it for a bug; the behaviour was right but the screen had not said so. Drawn and approved on 2026-10-19.
+
+**How it was built:** No database change. The wording is in one place, `src/admin/cancelOutcome.js`, which follows the database's own rule in `admin_cancel_booking` (a paid booking keeps the fee and the rest is a refund to send; one not paid has nothing to refund and a fee on it is due); a browser test cancels a paid booking and checks the refund the database records is the one the box said. The card's button reuses the booking sheet's question (`ActionDialog`, `admin_record_refund`).
+
+## ADR-063 — The booking sheet can share a booking's details, mainly to the client on WhatsApp (2026-10-19)
+
+**Decision:** A share button at the top right of the booking sheet, beside the date and time, offers **WhatsApp client** (WhatsApp opens at the client's own chat with the details written in; hidden when the booking has no usable phone number) and **Share…** (the phone's share sheet; on a computer the text is copied and the screen says "Copied"), and **Copy** (always there: puts the same text on the clipboard). The message is WhatsApp plain text: a *bold* first line with the date and time, the address, the treatments with the total length and price, and the payment in plain words; while a bank transfer is still due it adds the bank details and reference the client's own booking page shows. It never includes the Admin's notes, the client's own phone or email, internal ids or the booking's history. A cancelled booking has no share button. Nothing is sent by itself; the text can be changed in WhatsApp before sending.
+
+**Reason:** Vadim's admin UI notes (Part A §3). Drawn and approved on 2026-10-19 (cancelled bookings: the share icon is hidden, the brief's first option).
+
+**How it was built:** No database change. The message is made in one place, `src/admin/shareBooking.js` (`shareText`), used by both actions; the bank details come from the same function and setting the client's page uses (`get_bank_details`, `bankFromSettings`, `chooseBank`). The button is `ShareBooking.jsx`. When the app becomes a phone app (Capacitor) the Share… action can use its Share plugin; the button stays the same.
+
 ## ADR-064 — The client's name in New booking opens their page, and the booking waits (2026-10-19)
 
 **Decision:** Once a client is chosen in New booking, their name is a link to their page. It opens without the "Discard this unsaved booking?" question, because the half-made booking is already kept as it is filled in. At the top of the client's page the back link then says "← Back to the booking" (the phone's back button does the same) and returns to the booking exactly as it was, with where it was started from. Coming back, the booking reads the client again, so a name, phone or email changed on their page shows at once, and a saved address chosen for the booking is used as it now reads (one removed there falls back to the client's default). A booking brought back keeps the treatment, area and payment she chose: the suggestions from the client's last booking fill in only when a client is chosen. Only New booking has the link (Vadim chose New booking only, not the booking sheet or To check). While a booking is being made the name is plain text.
