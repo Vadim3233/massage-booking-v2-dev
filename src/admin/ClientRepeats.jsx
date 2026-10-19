@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { CANCELLABLE, canPutBack, describeRepeat, seriesApi, SKIP_LABELS } from './seriesApi.js'
-import { dateLabel, label, today } from './calendarPresentation.js'
+import { dateLabel, getBookingStatusLabel, today } from './calendarPresentation.js'
 
 const day = date => dateLabel(date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
 const STATUS_TEXT = { active: 'Repeating', paused: 'Paused', ended: 'Ended' }
@@ -10,7 +10,7 @@ const FIRST_ROWS = 6
 
 // What a date in "Coming up" is: booked (and how far along), only being kept free for them, paused, or not booked (and why).
 function stateText(item) {
-  if (item.state === 'booked') return `Booked · ${label(item.booking_status)}`
+  if (item.state === 'booked') return `Booked · ${getBookingStatusLabel(item)}`
   if (item.state === 'held') return 'Kept free for them'
   if (item.state === 'paused') return 'Paused'
   return SKIP_LABELS[item.reason] || 'Not booked'
@@ -60,7 +60,7 @@ export default function ClientRepeats({ clientId, openBooking, api = seriesApi }
       return <article key={series.id} className="admin-repeat">
         <h3>{describeRepeat(series)}</h3>
         <p className="admin-detail-hint">{STATUS_TEXT[series.status]}{series.pattern === 'dates' ? '' : series.end_date ? ` · until ${day(series.end_date)}` : ' · no end date'} · {series.payment_arrangement === 'cash_appointment' ? 'cash' : 'bank transfer'}</p>
-        {series.next_booking && <p>Next booking: <button className="admin-link-button" onClick={() => openBooking(series.next_booking.id)}>{day(series.next_booking.date)} · {label(series.next_booking.booking_status)}</button></p>}
+        {series.next_booking && <p>Next booking: <button className="admin-link-button" onClick={() => openBooking(series.next_booking.id)}>{day(series.next_booking.date)} · {getBookingStatusLabel(series.next_booking)}</button></p>}
         {!series.next_booking && series.next_held_date && <p>Next session: {day(series.next_held_date)} (booked closer to the day, when payment is asked for)</p>}
         {upcoming.length > 0 && <fieldset className="admin-repeat-dates"><legend>Coming up</legend>
           <ul role="list">{rows.map(item => <li key={item.date}>

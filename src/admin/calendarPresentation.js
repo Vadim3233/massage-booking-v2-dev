@@ -70,22 +70,33 @@ export function sessionSummary(booking) {
   if (sessions.length === 1) return `${sessions[0].service_name_snapshot} · ${sessions[0].duration_minutes} min`
   return `${sessions.length} sessions · ${booking.treatment_duration_minutes} min`
 }
-// What state a booking is in, in words, and whose turn it is. `chip` picks the colour: needs = the Admin acts, wait = the client acts,
-// ok = settled, done = finished, cancel and noshow = it did not happen. Colour never carries the meaning alone: the words always do.
-export function bookingState(booking) {
+// What state a booking is in, in words, and whose turn it is. `chip` picks the colour of its pill: needs = the Admin acts, wait = the client acts,
+// ok = settled, done = finished, cancel and noshow = it did not happen. Colour never carries the meaning alone: the words always do. A booking that
+// is listed with no payment at all (a clash warning knows only its status) is named by its status alone.
+function stateOf(booking) {
   const status = booking.booking_status
   if (status === 'cancelled') return { text: 'Cancelled', tone: 'cancelled', chip: 'cancel' }
   const payment = booking.booking_payments?.status
   const paymentText = payment === 'approved' && booking.booking_payments?.method === 'cash' ? 'Cash approved' : label(payment)
-  if (status === 'no_show') return { text: `${label(status)} · ${paymentText}`, tone: 'muted', chip: 'noshow' }
+  const named = 'booking_payments' in booking ? `${label(status)} · ${paymentText}` : label(status)
+  if (status === 'no_show') return { text: named, tone: 'muted', chip: 'noshow' }
   if (status === 'awaiting_payment_verification' || payment === 'awaiting_verification') return { text: 'Awaiting payment verification', tone: 'pending', chip: 'needs' }
   if (status === 'awaiting_cash_approval' || payment === 'awaiting_approval') return { text: 'Awaiting cash approval', tone: 'pending', chip: 'needs' }
   if (status === 'awaiting_transfer') return { text: 'Awaiting transfer', tone: 'pending', chip: 'wait' }
-  const text = `${label(status)} · ${paymentText}`
+  const text = named
   if (status === 'completed') return { text, tone: 'confirmed', chip: 'done' }
   if (status === 'confirmed') return { text, tone: 'confirmed', chip: payment === 'awaiting_transfer' ? 'wait' : 'ok' }
   return { text, tone: 'muted', chip: 'wait' }
 }
+// The colour a booking is drawn in, the same in every list: sage = settled, sand = waiting on money or on the Admin, and the others as they always were.
+const VARIANT = { ok: 'sage', needs: 'sand', wait: 'sand', done: 'completed', cancel: 'cancelled', noshow: 'noshow' }
+export function bookingState(booking) {
+  const state = stateOf(booking)
+  return { ...state, variant: VARIANT[state.chip] }
+}
+// The two things every view takes from here, so no view keeps its own copy of the rules: the words of a booking's pill, and the colour of its box.
+export const getBookingStatusLabel = booking => bookingState(booking).text
+export const getBookingCardVariant = booking => bookingState(booking).variant
 
 // Presentation only: use the existing occupied intervals and persisted buffers.
 // Free intervals are context, not available slots or measured journey times.

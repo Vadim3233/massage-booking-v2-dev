@@ -3,7 +3,7 @@ import Icon from '../ui/icons.jsx'
 import { clientsApi, fullName } from './clientsApi.js'
 import { AddressForm, ClientForm } from './ClientForms.jsx'
 import { clientContactLinks } from './contactLinks.js'
-import { dateLabel, label, money, time } from './calendarPresentation.js'
+import { bookingState, dateLabel, money, time } from './calendarPresentation.js'
 import ClientRepeats from './ClientRepeats.jsx'
 import CombinePicker from './CombinePicker.jsx'
 import DeleteClient from './DeleteClient.jsx'
@@ -119,11 +119,13 @@ function History({ clientId, api, openBooking, version }) {
     {error && <p role="alert">{error}</p>}
     {!rows && !error && <p role="status">Loading bookings…</p>}
     {rows && !rows.length && <p>No bookings yet.</p>}
-    {rows?.length > 0 && <ul role="list" className="admin-client-bookings">{rows.map(row => <li key={row.id}><button onClick={() => openBooking(row.id)}>
+    {rows?.length > 0 && <ul role="list" className="admin-client-bookings">{rows.map(row => { const state = bookingState(row); const owing = [row.late_fee_status === 'due' ? `Late fee ${money(row.late_fee_due_gbp)} due` : '', Number(row.refund_due_gbp) > 0 ? `Refund ${money(row.refund_due_gbp)} to send` : ''].filter(Boolean).join(' · ')
+      return <li key={row.id}><button onClick={() => openBooking(row.id)} data-variant={state.variant}>
       <strong>{dateLabel(row.date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })} · {time(row.start_minutes)}</strong>
       <span>{[...(row.booking_sessions || [])].sort((a, b) => a.position - b.position).map(item => item.service_name_snapshot).join(', ') || 'Massage'} · {row.treatment_duration_minutes} min · {money(row.total_gbp)}</span>
-      <span className="admin-detail-hint">{label(row.booking_status)}{row.booking_payments ? ` · ${label(row.booking_payments.status)}` : ''}{row.late_fee_status === 'due' ? ` · Late fee ${money(row.late_fee_due_gbp)} due` : ''}{Number(row.refund_due_gbp) > 0 ? ` · Refund ${money(row.refund_due_gbp)} to send` : ''}</span>
-    </button></li>)}</ul>}
+      <span className={`chip chip--${state.chip} admin-status ${state.tone}`}>{state.text}</span>
+      {owing && <span className="admin-detail-hint">{owing}</span>}
+    </button></li> })}</ul>}
     {more && <button className="btn--tonal" onClick={() => setPages(value => value + 1)}>Show more</button>}
   </section>
 }
