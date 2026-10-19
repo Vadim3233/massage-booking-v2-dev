@@ -559,3 +559,11 @@ The Telegram message has no link to the booking page (a private link in an email
 **How it was built:** Migration `20261105100000_day_hours.sql` adds the two functions; the booking engine (`compute_booking_availability`) is not touched, so how times are offered does not change. The database test `day_hours.test.sql` checks each kind of day and that the engine agrees: nothing is offered on any day the Calendar calls a day off, and every time offered lies inside the day's hours. The Agenda and the Day view read the function instead of the special-day and usual-week tables (the day's settings page still reads those rows, because it edits them).
 
 **If it ever has to be taken back:** put the screens back, then drop `admin_day_hours(date, date)` and `day_hours(date)`.
+
+## ADR-064 — The client's name in New booking opens their page, and the booking waits (2026-10-19)
+
+**Decision:** Once a client is chosen in New booking, their name is a link to their page. It opens without the "Discard this unsaved booking?" question, because the half-made booking is already kept as it is filled in. At the top of the client's page the back link then says "← Back to the booking" (the phone's back button does the same) and returns to the booking exactly as it was, with where it was started from. Coming back, the booking reads the client again, so a name, phone or email changed on their page shows at once, and a saved address chosen for the booking is used as it now reads (one removed there falls back to the client's default). A booking brought back keeps the treatment, area and payment she chose: the suggestions from the client's last booking fill in only when a client is chosen. Only New booking has the link (Vadim chose New booking only, not the booking sheet or To check). While a booking is being made the name is plain text.
+
+**Reason:** Vadim asked to be able to look at, or fix, a client's details in the middle of making a booking for them without losing the booking.
+
+**How it was built:** No database change. `AdminWorkspace.jsx` opens the client's page with a marker in the browser history, and the page's back link goes one step back; `AdminNewBooking.jsx` reads the client and their addresses again when a kept booking opens. Browser test `newBookingClientLink.spec.js`.
