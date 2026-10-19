@@ -256,6 +256,13 @@ Booking, payment, cancellation and rescheduling rules did not change for clients
 - **Not changed.** What your clients see (Your bookings, the confirmation page) keeps its colours for now. A booking you make yourself with "payment pending" still says "Confirmed · Awaiting transfer", because it is confirmed (the time is held) and only the money is to come; it is drawn sand because of the money.
 - **To try it:** open the Agenda and look for a settled booking (sage), one waiting on a transfer (sand with a hollow dot) and one with a payment to check (sand); then open one, look at the line on its sheet, and look at the same bookings in To check and on the client's page.
 
+## New: cancelling says what happens to the money (2026-10-19)
+
+- **No database step.**
+- **Before you confirm a cancellation,** a box under the late fee says what happens to the money for the fee you chose, for example "No cancellation fee – Andreas gets a full £90.00 refund" or "Late cancellation – you keep £45.00, refund £45.00". It changes as you change the fee. The red button says the same.
+- **Record refund on the card.** A cancelled booking with a refund to send now has **Record refund** on its card in the Calendar. Press it once you have sent the money; it asks first, and the reminder goes.
+- **To try it:** on a test booking that has been paid, open Cancel booking and try No fee, Full price and another amount, and read the box; cancel it, find the card in the Agenda and press Record refund.
+
 ## What works now (tested locally)
 
 **For clients** (the website)

@@ -549,3 +549,11 @@ The Telegram message has no link to the booking page (a private link in an email
 **Limits, on purpose:** Only the Admin's boxes change. The client's own pages (Your bookings, the confirmation) keep the colours they have. A booking the Admin made herself with "payment pending" still reads "Confirmed · Awaiting transfer": it is confirmed (the time is held for the client) with the money still to come, and it is drawn sand because of the money. A pale card hovered or pressed gets a slightly deeper tint, never white.
 
 **If it ever has to be taken back:** revert the change; nothing in the database depends on it.
+
+## ADR-062 — Cancelling says what happens to the money, and a refund can be recorded from the card (2026-10-19)
+
+**Decision:** Before a cancellation is confirmed, a box under the fee choice says what happens to the money, for the fee chosen: "No cancellation fee – Andreas gets a full £90.00 refund", "Late cancellation – you keep £45.00, refund £45.00", "Late cancellation – you keep the full £90.00, nothing to refund", "No money has been paid – nothing to refund" (with "A late fee of £X is recorded as due" when a fee is charged on a booking not paid). When there is a refund it adds "You send it yourself, then press Record refund." The red button says the same: "you keep £X" on a paid booking, "£X fee due" on one not paid. A cancelled card in the Calendar with a refund to send has a **Record refund** button at its foot, which asks the same question as on the booking sheet and clears the reminder.
+
+**Reason:** Vadim's admin UI notes (Part A §2): he cancelled a paid £90 booking with "No fee" and then saw "refund £90.00 to send" and took it for a bug; the behaviour was right but the screen had not said so. Drawn and approved on 2026-10-19.
+
+**How it was built:** No database change. The wording is in one place, `src/admin/cancelOutcome.js`, which follows the database's own rule in `admin_cancel_booking` (a paid booking keeps the fee and the rest is a refund to send; one not paid has nothing to refund and a fee on it is due); a browser test cancels a paid booking and checks the refund the database records is the one the box said. The card's button reuses the booking sheet's question (`ActionDialog`, `admin_record_refund`).

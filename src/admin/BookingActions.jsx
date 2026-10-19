@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { feeChoices, lifecycleActions, lifecycleApi, lifecycleLabels } from './bookingLifecycleApi.js'
+import { DONE, feeChoices, lifecycleActions, lifecycleApi, lifecycleLabels } from './bookingLifecycleApi.js'
 import { clientName, dateLabel, label, money, time, today } from './calendarPresentation.js'
 import { acquireBodyScrollLock } from './dialogScrollLock.js'
 import { toast } from '../ui/toast.js'
+import { cancelOutcome, REFUND_HINT } from './cancelOutcome.js'
 import DayTimePicker from '../client/booking/components/DayTimePicker.jsx'
 
 const ACTION_STYLE = { complete: 'btn--primary', feeReceived: 'btn--primary', refund: 'btn--primary', cancel: 'btn--danger', feeWaive: 'btn--quiet', noShow: '', reschedule: '' }
@@ -11,7 +12,7 @@ const WHO = [['client', 'The client asked'], ['admin', 'It is my own decision']]
 const explanations = {
   complete: 'Mark this appointment as completed.',
   noShow: 'The client did not attend. The full price is recorded as a late fee unless you change it.',
-  refund: 'Confirm that you have sent the refund. This records the payment as refunded.',
+  refund: 'Confirm that you have sent the refund. This records the payment as refunded, and the reminder goes.',
   feeReceived: 'Confirm that the late fee has been paid.',
   feeWaive: 'The client will not be charged the late fee. The standard amount stays on record.',
 }
@@ -22,10 +23,9 @@ function Who({ value, onChange, disabled }) {
   </fieldset>
 }
 
-// What the sheet and the toast say once it is done: the outcome, not the name of the button that was pressed.
-const DONE = { complete: 'Marked completed', noShow: 'Marked no-show', reschedule: 'Booking moved', cancel: 'Booking cancelled', refund: 'Refund recorded', feeReceived: 'Fee recorded as received', feeWaive: 'Fee waived' }
 
-function ActionDialog({ kind, booking, api, close, done }) {
+// One question about one booking, with what it will do. It is used on the booking sheet, and for Record refund on a cancelled card in the Calendar.
+export function ActionDialog({ kind, booking, api, close, done }) {
   const ref = useRef(null)
   const request = useRef(null)
   // Set when she picks or types a fee, so a standard fee that arrives later never replaces it.
@@ -104,8 +104,8 @@ function ActionDialog({ kind, booking, api, close, done }) {
   const choices = feeChoices(kind, total, standardFee)
   // A no-show with nothing typed means the full price.
   const shownFee = fee === '' ? (kind === 'noShow' ? total : null) : Number(fee)
-  const refundNote = kind === 'cancel' && booking.booking_payments?.status === 'paid' && feeValid && fee !== ''
-    ? `Payment of ${money(booking.booking_payments.amount_gbp)} has been received. ${money(Math.max(Number(booking.booking_payments.amount_gbp) - Number(fee || 0), 0))} will be recorded as a refund due.` : ''
+  // What happens to the money, in plain words, for the fee chosen: said before she confirms, so a refund to send is never a surprise.
+  const outcome = kind === 'cancel' && feeValid && fee !== '' ? cancelOutcome(booking, fee) : null
   const lateFeeNote = feeAtStake && standardFee > 0
     ? `A late fee of ${money(standardFee)} will be recorded as due, because this change is inside the free cancellation window.` : ''
   const lateFeeWait = feeAtStake && lookup === 'loading' && slot ? 'Checking whether a late fee applies…' : ''
@@ -138,12 +138,12 @@ function ActionDialog({ kind, booking, api, close, done }) {
           <span className="admin-detail-hint">{kind === 'cancel' && standardFee !== null ? `Standard fee now: ${money(standardFee)}. ` : ''}Up to {money(total)}.</span>
         </label>
       </>}
+      {outcome && <div className="admin-money-outcome" role="status"><span>What happens to the money</span><strong>{outcome.text}</strong>{outcome.refund > 0 && <small>{REFUND_HINT}</small>}</div>}
       {kind === 'cancel' && <label className="admin-field">Reason (optional, kept in the booking history)<textarea maxLength={500} rows={2} value={reason} disabled={busy} onChange={event => setReason(event.target.value)} /></label>}
-      {refundNote && <p role="status">{refundNote}</p>}
 
       {error && <p role="alert">{error}</p>}
       <div className={`admin-payment-buttons ${kind === 'cancel' || kind === 'reschedule' ? 'admin-sticky-actions' : ''}`}>
-        <button type="submit" className={kind === 'cancel' ? 'btn--danger-solid' : 'btn--primary'} disabled={busy || !ready}>{busy ? 'Saving…' : kind === 'cancel' && Number(fee) > 0 ? `${lifecycleLabels[kind]} · £${Number(fee).toFixed(2)} fee due` : lifecycleLabels[kind]}</button>
+        <button type="submit" className={kind === 'cancel' ? 'btn--danger-solid' : 'btn--primary'} disabled={busy || !ready}>{busy ? 'Saving…' : kind === 'cancel' && Number(fee) > 0 ? `${lifecycleLabels[kind]} · ${booking.booking_payments?.status === 'paid' ? `you keep ${money(Math.min(Number(fee), Number(booking.booking_payments.amount_gbp)))}` : `${money(fee)} fee due`}` : lifecycleLabels[kind]}</button>
         <button type="button" className="btn--quiet" disabled={busy} onClick={close}>Go back</button>
       </div>
     </form>
