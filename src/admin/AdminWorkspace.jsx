@@ -20,6 +20,7 @@ const ReceiptSettings = lazy(() => import('./SettingsReceipts.jsx'))
 const RulesSettings = lazy(() => import('./SettingsRules.jsx'))
 const WelcomeSettings = lazy(() => import('./SettingsWelcome.jsx'))
 const ShareLink = lazy(() => import('./ShareLink.jsx'))
+const GoogleCalendarSettings = lazy(() => import('./SettingsGoogleCalendar.jsx'))
 const Waitlist = lazy(() => import('./Waitlist.jsx'))
 const ExtrasSettings = lazy(() => import('./SettingsCatalogue.jsx').then(module => ({ default: module.ExtrasSettings })))
 const ClientProfile = lazy(() => import('./ClientProfile.jsx'))
@@ -29,7 +30,7 @@ const AdminNewBooking = lazy(() => import('./AdminNewBooking.jsx'))
 
 // The More menu, grouped by what she is doing. Each pair is a route and the words on the link.
 const MORE_GROUPS = [
-  ['Every day', [['/admin/waitlist', 'Waitlist'], ['/admin/schedule', 'Working hours and special days'], ['/admin/settings/link', 'Your booking link']]],
+  ['Every day', [['/admin/waitlist', 'Waitlist'], ['/admin/schedule', 'Working hours and special days'], ['/admin/settings/link', 'Your booking link'], ['/admin/settings/google-calendar', 'Google Calendar']]],
   ['What you offer', [['/admin/settings/services', 'Services and prices'], ['/admin/settings/extras', 'Extras'], ['/admin/settings/areas', 'Areas and travel fees']]],
   ['Payments and rules', [['/admin/settings/bank', 'Bank transfer details'], ['/admin/settings/receipts', 'Receipt details'], ['/admin/settings/rules', 'Booking rules']]],
   ['What clients read', [['/admin/settings/welcome', 'Welcome message']]],
@@ -200,6 +201,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {surface === '/admin/settings/rules' && <RulesSettings />}
       {surface === '/admin/settings/welcome' && <WelcomeSettings />}
       {surface === '/admin/settings/link' && <ShareLink />}
+      {surface === '/admin/settings/google-calendar' && <GoogleCalendarSettings />}
       {surface === '/admin/waitlist' && <Waitlist bookFor={request => newBooking(request.requested_date, request.client_id)} />}
       {!creating && !match && !['/admin', '/admin/agenda', '/admin/day-settings', '/admin/review', '/admin/alerts', '/admin/more', '/admin/clients', ...SETTINGS_PAGES].includes(surface) && !profile && !combining && <section className="admin-review"><h1>Admin page not found</h1><a href="/admin">Back to Calendar</a></section>}
       </main>

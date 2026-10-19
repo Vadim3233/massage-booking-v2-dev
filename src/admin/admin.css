@@ -519,3 +519,16 @@
 .admin-repeat-dates li > label > span { display: grid; gap: 1px; min-width: 0; }
 .admin-repeat-dates input[type=checkbox] { flex: 0 0 24px; width: 24px; height: 24px; margin: 0; }
 .admin-repeat-dates small { color: var(--ink-soft); font-size: 13px; }
+
+/* More › Google Calendar */
+.admin-google-calendar > button, .admin-google-calendar > .admin-calendar-actions, .admin-google-calendar > dl { margin-top: 14px; margin-bottom: 14px; }
+.admin-calendar-state { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.admin-calendar-state > span { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; font-size: 14px; }
+.admin-calendar-state.is-connected > span { background: var(--sage-chip); color: var(--sage-ink, var(--primary)); }
+.admin-calendar-state.is-warning > span { background: var(--sand-chip); color: var(--sand-ink); }
+.admin-calendar-facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 14px; margin-top: 0; margin-bottom: 0; }
+.admin-calendar-facts dt { color: var(--ink-soft); }
+.admin-calendar-facts dd { margin: 0; overflow-wrap: anywhere; }
+.admin-calendar-problem { padding: 10px 12px; border-radius: var(--radius-sm); background: var(--sand-bg); color: var(--sand-ink); border: 1px solid var(--sand-line); }
+.admin-calendar-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.admin-calendar-actions button { min-height: 44px; }

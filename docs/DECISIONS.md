@@ -633,3 +633,27 @@ When Google is down or busy, the booking is tried again after 2, 8, 18 and 32 mi
 **Reason:** Vadim's brief asked for it to run on Vercel like the sender (the project has no Edge Functions), be state-based and idempotent, and keep Google problems away from bookings.
 
 **How it was built:** No new database change beyond part A (one fix there: Disconnect's delete needed a condition when called through Supabase's API). The test `server/calendarSync.integration.test.js` runs against local Supabase with a stand-in for Google. Eleven deliberate breakages of the job were all caught.
+
+## ADR-069 — Google Calendar copy, part C: connecting from More › Google Calendar (2026-10-19, draft)
+
+**Decision:** A page under More › Every day › Google Calendar (drawn and approved by Vadim on 19 Oct) shows one of three states:
+- **Not connected:** what the copy does and never shows, and **Connect Google Calendar**.
+- **Connected:** the account, the last copy, how many bookings are waiting or failed, **Resync now** and **Disconnect** (after a question), and how to share the calendar as free/busy.
+- **Needs reconnect:** why, and **Connect again**.
+
+The Google side runs on the server at `api/google-calendar`:
+- It sends only the Admin to Google, asking for the narrowest access: `calendar.app.created`, which covers the app's own calendar only, plus `openid email` to show which account.
+- It trusts Google's reply only with a signed, 10-minute state matching a cookie set at the start.
+- It keeps the lasting sign-in in Vault, and reuses the calendar made before or makes "VadMassage bookings".
+- On Disconnect, it withdraws the sign-in at Google before forgetting it.
+
+No token, code or secret is ever put in an address, logged or returned. Setting it up is in `docs/GOOGLE_CALENDAR_SETUP.md`.
+
+**Reason:** Part C of Vadim's brief (connect, status, resync, disconnect, and a plain-English handover).
+
+**How it was built:**
+- No database change beyond part A.
+- Tests:
+  - `server/googleCalendarConnect.test.js`: Admin only, the state and cookie, the scope check, calendar reuse, revoking, and that no secret is shown. Nine deliberate breakages were all caught.
+  - Browser test `googleCalendarSettings.spec.js`: the three states, the message on return from Google, Resync now and Disconnect, with Google stood in for.
+- Connecting works only on the live address, the one registered with Google.
