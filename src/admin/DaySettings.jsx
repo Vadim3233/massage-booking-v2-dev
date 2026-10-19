@@ -8,7 +8,7 @@ import { HoursFields } from './HoursFields.jsx'
 import BookingCard from './BookingCard.jsx'
 import CancelledToggle from './CancelledToggle.jsx'
 import { listedBookings, useShowCancelled } from './cancelledBookings.js'
-import { dateLabel, shiftDate, time, today } from './calendarPresentation.js'
+import { dateLabel, getBookingStatusLabel, shiftDate, time, today } from './calendarPresentation.js'
 import './daySettings.css'
 
 const BlockDialog = lazy(() => import('./BlockDialog.jsx'))
@@ -129,7 +129,7 @@ export default function DaySettings({ date, revision, openBooking, changed, api 
         {conflicts && <div role="alert" className="admin-conflicts"><strong>{form.available
           ? `${conflicts.length === 1 ? 'This booking would be' : `These ${conflicts.length} bookings would be`} outside your new hours, ${clock(form.start_minutes)}–${clock(form.end_minutes)}:`
           : `You are making this a day off, but it has ${conflicts.length === 1 ? 'a booking' : `${conflicts.length} bookings`}:`}</strong>
-          <ul>{conflicts.map(item => <li key={item.booking_id}>{item.client_name}, {clock(item.start_minutes)}–{clock(item.start_minutes + item.treatment_duration_minutes)} ({item.booking_status.replaceAll('_', ' ')})</li>)}</ul>
+          <ul>{conflicts.map(item => <li key={item.booking_id}>{item.client_name}, {clock(item.start_minutes)}–{clock(item.start_minutes + item.treatment_duration_minutes)} ({getBookingStatusLabel(item).toLowerCase()})</li>)}</ul>
           <p>Those appointments will not be moved or cancelled for you. Save again if you still want to make this change.</p></div>}
         {error && <p role="alert">{error}</p>}
         {message && !dirty && <p role="status">{message}</p>}

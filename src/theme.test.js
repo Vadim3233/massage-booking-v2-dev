@@ -34,11 +34,20 @@ const TEXT = [
   ['--ink', '--needs-tint'], ['--ink-soft', '--needs-tint'], ['--muted', '--needs-tint'], ['--needs-ink', '--needs-tint'],
   ['--block-ink', '--block-bg'], ['--ink-soft', '--buffer-bg'], ['--ok-ink', '--free-bg'], ['--primary', '--primary-line'], ['--ink', '--needs-badge'],
   ['--on-primary', '--ink'], ['--ink-soft', '--hairline'],
+  // The Admin's booking boxes: the name, time and price on the sage and sand tints (and on their pressed colour), the softer words under them, and the pill
+  // that names the state on its own, deeper, tint.
+  ...['--sage', '--sand'].flatMap(family => [
+    [`${family}-ink`, `${family}-bg`], [`${family}-ink`, `${family}-hover`], [`${family}-ink`, `${family}-chip`],
+    [`${family}-ink-soft`, `${family}-bg`], [`${family}-ink-soft`, `${family}-hover`],
+    [`${family}-ink`, '--paper'], [`${family}-ink`, '--surface'],
+  ]),
 ]
 const INTERFACE = [
   // The edge of a field, and of anything tapped that has no other outline, must be seen (3:1); so must the coloured edge of a card.
   ...['--paper', '--surface', '--cream'].map(ground => ['--control-border', ground]),
   ...['--ok-rail', '--needs-rail', '--wait-rail', '--cancel-rail', '--noshow-rail', '--danger-line'].map(rail => [rail, '--surface']),
+  // The rail of a sage or sand box stands out from white and from its own tint.
+  ...['--sage', '--sand'].flatMap(family => [[`${family}-rail`, '--surface'], [`${family}-rail`, `${family}-bg`]]),
   ['--primary', '--paper'],
 ]
 

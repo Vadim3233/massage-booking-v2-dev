@@ -11,7 +11,7 @@ import Icon from '../ui/icons.jsx'
 function Item({ booking, openBooking, refresh, reminder }) {
   const needs = needsYou(booking) && !reminder
   const cash = booking.booking_payments.method === 'cash'
-  return <li className={`admin-review-item ${needs ? '' : 'wait'}`}>
+  return <li className={`admin-review-item ${needs ? '' : 'wait'}`} data-variant="sand">
     <p className={`chip ${needs ? 'chip--needs' : 'chip--wait'} admin-status pending`}>{reminder ? `Reminder set · back ${reminderWhen(reminder.until)}` : cash ? 'Cash request to decide' : booking.booking_payments.status === 'awaiting_transfer' ? 'Transfer not yet declared by the client' : 'Bank transfer to verify'}</p>
     <div className="admin-card-heading"><h3>{clientName(booking)}</h3><strong className="admin-card-price">{money(booking.total_gbp)}</strong></div>
     <p className="admin-review-when">{time(booking.start_minutes)} · {sessionSummary(booking)}</p>

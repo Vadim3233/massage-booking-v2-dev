@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { clock, conflictRanges, DAY_OFF, DEFAULT_HOURS, groupBlocks, hoursLine, scheduleApi, usualHoursFor, validateHours, weekdayOf, WEEKDAYS } from './scheduleApi.js'
-import { dateLabel, today } from './calendarPresentation.js'
+import { dateLabel, getBookingStatusLabel, today } from './calendarPresentation.js'
 import { HoursFields } from './HoursFields.jsx'
 import BlockDialog from './BlockDialog.jsx'
 
@@ -150,7 +150,7 @@ function SpecialDays({ api }) {
       <label className="admin-field">Note (only you see this)<input value={form.note || ''} maxLength={200} disabled={busy} onChange={event => edit({ note: event.target.value })} /></label>
       {problem && <p role="alert" className="admin-field-error">{problem}</p>}
       {conflicts && <div role="alert" className="admin-conflicts"><strong>This clashes with {conflicts.length === 1 ? 'a booking' : `${conflicts.length} bookings`}:</strong>
-        <ul>{conflicts.map(item => <li key={item.booking_id}>{item.client_name}, {clock(item.start_minutes)} ({item.booking_status.replaceAll('_', ' ')})</li>)}</ul>
+        <ul>{conflicts.map(item => <li key={item.booking_id}>{item.client_name}, {clock(item.start_minutes)} ({getBookingStatusLabel(item).toLowerCase()})</li>)}</ul>
         <p>Those appointments will not be moved or cancelled for you. Save again if you still want to make this change.</p></div>}
       <div className="admin-payment-buttons">
         <button type="button" className="btn--quiet" disabled={busy} onClick={() => setForm(null)}>Cancel</button>

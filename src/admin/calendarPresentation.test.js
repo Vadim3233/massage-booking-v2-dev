@@ -1,5 +1,5 @@
-import { expect, it } from 'vitest'
-import { bookingEnd, canNavigateTo, dayContext, daySummary, nextUp, postcode, shiftDate, treatmentName } from './calendarPresentation.js'
+import { describe, expect, it } from 'vitest'
+import { bookingEnd, bookingState, canNavigateTo, dayContext, daySummary, getBookingCardVariant, getBookingStatusLabel, nextUp, postcode, shiftDate, treatmentName } from './calendarPresentation.js'
 
 it('a booking ends when its treatment ends, never counting the travel time either side', () => {
   expect(bookingEnd({ start_minutes: 870, treatment_duration_minutes: 60, travel_buffer_minutes: 60 })).toBe(930)
@@ -66,4 +66,36 @@ it('offers the way there only for an appointment that is going ahead and has not
   expect(canNavigateTo(make('confirmed', '2026-10-12', 660), noon)).toBe(false)
   expect(canNavigateTo(make('confirmed', '2026-10-11', 840), noon)).toBe(false)
   for (const status of ['cancelled', 'completed', 'no_show']) expect(canNavigateTo(make(status, '2026-10-13', 600), noon)).toBe(false)
+})
+
+// What every Admin view draws a booking as comes from this one place, so the same booking has the same words and the same colour wherever it is listed.
+const booked = (status, payment, method = 'bank_transfer') => ({ booking_status: status, booking_payments: { status: payment, method } })
+describe('how a booking is drawn', () => {
+  it.each([
+    { booking: booked('confirmed', 'paid'), words: 'Confirmed · Paid', variant: 'sage', chip: 'ok' },
+    { booking: booked('confirmed', 'approved', 'cash'), words: 'Confirmed · Cash approved', variant: 'sage', chip: 'ok' },
+    { booking: booked('confirmed', 'awaiting_transfer'), words: 'Confirmed · Awaiting transfer', variant: 'sand', chip: 'wait' },
+    { booking: booked('awaiting_transfer', 'awaiting_transfer'), words: 'Awaiting transfer', variant: 'sand', chip: 'wait' },
+    { booking: booked('awaiting_payment_verification', 'awaiting_verification'), words: 'Awaiting payment verification', variant: 'sand', chip: 'needs' },
+    { booking: booked('awaiting_cash_approval', 'awaiting_approval', 'cash'), words: 'Awaiting cash approval', variant: 'sand', chip: 'needs' },
+    { booking: booked('completed', 'paid'), words: 'Completed · Paid', variant: 'completed', chip: 'done' },
+    { booking: booked('no_show', 'paid'), words: 'No show · Paid', variant: 'noshow', chip: 'noshow' },
+    { booking: booked('cancelled', 'paid'), words: 'Cancelled', variant: 'cancelled', chip: 'cancel' },
+  ])('$words is drawn $variant', ({ booking, words, variant, chip }) => {
+    expect(getBookingStatusLabel(booking)).toBe(words)
+    expect(getBookingCardVariant(booking)).toBe(variant)
+    expect(bookingState(booking)).toMatchObject({ text: words, variant, chip })
+  })
+  it('keeps a confirmed booking whose money is still being checked or approved as waiting on the Admin: sand, in the words of what is waited for', () => {
+    expect(bookingState(booked('confirmed', 'awaiting_verification'))).toMatchObject({ text: 'Awaiting payment verification', variant: 'sand', chip: 'needs' })
+    expect(bookingState(booked('confirmed', 'awaiting_approval', 'cash'))).toMatchObject({ text: 'Awaiting cash approval', variant: 'sand', chip: 'needs' })
+  })
+  it('names a booking that is known only by its status (a clash warning, a repeat) by that status alone', () => {
+    expect(getBookingStatusLabel({ booking_status: 'confirmed' })).toBe('Confirmed')
+    expect(getBookingStatusLabel({ booking_status: 'awaiting_transfer' })).toBe('Awaiting transfer')
+    expect(getBookingStatusLabel({ booking_status: 'completed' })).toBe('Completed')
+    expect(getBookingStatusLabel({ booking_status: 'no_show' })).toBe('No show')
+    // A booking whose payment record is missing is still said so, as before.
+    expect(getBookingStatusLabel({ booking_status: 'confirmed', booking_payments: null })).toBe('Confirmed · Not recorded')
+  })
 })

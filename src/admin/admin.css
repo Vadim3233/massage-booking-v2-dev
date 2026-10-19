@@ -69,11 +69,24 @@
 .admin-shell .admin-card { --rail: var(--primary); position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; justify-content: stretch; align-items: start; justify-items: stretch; width: 100%; gap: 2px 10px; padding: 8px 12px 6px 17px; border: 0; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); color: var(--ink); font: 400 15px/1.35 var(--font-ui); text-align: left; overflow: hidden; }
 .admin-shell .admin-card:not(:disabled):hover { background: var(--surface); box-shadow: var(--shadow-card-raised); }
 .admin-card::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 4px; background: var(--rail); }
-.admin-card[data-chip="needs"] { --rail: var(--needs-rail); background: var(--needs-tint); }
-.admin-card[data-chip="wait"] { --rail: var(--wait-rail); }
 .admin-card[data-chip="done"] { --rail: var(--done-rail); }
 .admin-card[data-chip="noshow"] { --rail: var(--noshow-rail); }
 .admin-card[data-chip="cancel"] { --rail: var(--cancel-rail); }
+/* Sage and sand: a booking that is settled, and one still waiting on money or on the Admin, are drawn in a pale tint with a darker edge and rail, and text
+   darkened to match. Each variant sets its colours once, here, and every box that draws a booking reads them, so the same booking looks the same in
+   every list. (Which variant a booking is comes from one place: bookingState in calendarPresentation.js.) */
+[data-variant="sage"] { --tint: var(--sage-bg); --tint-hover: var(--sage-hover); --edge: var(--sage-line); --variant-rail: var(--sage-rail); --on-tint: var(--sage-ink); --on-tint-soft: var(--sage-ink-soft); --hair: var(--sage-hair); }
+[data-variant="sand"] { --tint: var(--sand-bg); --tint-hover: var(--sand-hover); --edge: var(--sand-line); --variant-rail: var(--sand-rail); --on-tint: var(--sand-ink); --on-tint-soft: var(--sand-ink-soft); --hair: var(--sand-hair); }
+.admin-shell .admin-card:is([data-variant="sage"], [data-variant="sand"]) { --rail: var(--variant-rail); background: var(--tint); box-shadow: 0 0 0 1px var(--edge), var(--shadow-1); color: var(--on-tint); }
+.admin-shell .admin-card:is([data-variant="sage"], [data-variant="sand"]):not(:disabled):hover { background: var(--tint-hover); box-shadow: 0 0 0 1px var(--edge), var(--shadow-2); }
+.admin-card:is([data-variant="sage"], [data-variant="sand"]) .admin-card-when { border-bottom-color: var(--hair); }
+.admin-card:is([data-variant="sage"], [data-variant="sand"]) :is(.admin-card-meta, .admin-card-postcode) { color: var(--on-tint-soft); }
+.admin-card:is([data-variant="sage"], [data-variant="sand"]) .admin-card-length { background: var(--card-wash); color: var(--on-tint); }
+/* The pill that names a booking's state, in the same two families wherever the Admin sees one (the Booking sheet, To check, a client's bookings). The client's own
+   pages keep the colours they have. A pill for "the client acts" keeps its hollow dot, so who has to act can still be told apart without colour. */
+.admin-shell .chip--ok { background: var(--sage-chip); color: var(--sage-ink); }
+.admin-shell .chip--needs { background: var(--sand-chip); color: var(--sand-ink); }
+.admin-shell .chip--wait { background: var(--sand-chip); color: var(--sand-ink); box-shadow: none; }
 .admin-card-heading { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: baseline; }
 .admin-card-heading strong { min-width: 0; overflow-wrap: anywhere; font: 600 17px/1.25 var(--font-ui); }
 .admin-card-price { font: 600 19px/1 var(--font-display); font-variant-numeric: lining-nums; white-space: nowrap; }
@@ -246,6 +259,9 @@
 .admin-review-item .admin-card-price { font-size: 22px; }
 .admin-review-item p { margin: 4px 0; color: var(--ink-soft); }
 .admin-review-item .admin-status { margin: 0 0 8px; }
+.admin-review-item[data-variant="sand"] { background: var(--tint); box-shadow: 0 0 0 1px var(--edge), var(--shadow-1); }
+.admin-review-item[data-variant="sand"]::before { background: var(--variant-rail); }
+.admin-review-item[data-variant="sand"] p:not(.chip) { color: var(--on-tint-soft); }
 .admin-review-reference { font-size: 13px; color: var(--muted) !important; letter-spacing: .02em; }
 .admin-review-item > a { display: inline-flex; align-items: center; min-height: 44px; color: var(--primary); font-weight: 600; }
 .admin-review-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
@@ -292,7 +308,10 @@
 .admin-client-text strong { color: var(--ink); }
 .admin-alert-also { font-size: 13px; }
 .admin-client-list strong, .admin-client-bookings strong { font-size: 17px; font-weight: 650; }
-.admin-client-list span, .admin-client-bookings span { font-size: 14px; color: var(--ink-soft); }
+.admin-client-list span, .admin-client-bookings span:not(.chip) { font-size: 14px; color: var(--ink-soft); }
+.admin-shell .admin-client-bookings button:is([data-variant="sage"], [data-variant="sand"]) { background: var(--tint); box-shadow: 0 0 0 1px var(--edge), var(--shadow-1); color: var(--on-tint); }
+.admin-client-bookings button:is([data-variant="sage"], [data-variant="sand"]) span:not(.chip) { color: var(--on-tint-soft); }
+.admin-client-bookings .chip { justify-self: start; margin-top: 4px; }
 .admin-client-profile section { margin-top: 24px; }
 .admin-client-profile h2 { margin: 0 0 8px; }
 .admin-client-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 16px 0; }

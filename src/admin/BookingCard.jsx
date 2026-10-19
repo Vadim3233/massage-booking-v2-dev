@@ -17,7 +17,7 @@ export default function BookingCard({ booking, open, now, tag }) {
   const directions = canNavigateTo(booking, now) ? directionsLink(booking) : null
   const where = postcode(booking.postcode_snapshot)
   return <div className={`admin-card-wrap ${directions ? 'has-directions' : ''}`}>
-    <button className={`admin-card ${booking.booking_status === 'cancelled' ? 'cancelled' : ''}`} data-chip={state.chip} onClick={open}>
+    <button className={`admin-card ${booking.booking_status === 'cancelled' ? 'cancelled' : ''}`} data-chip={state.chip} data-variant={state.variant} onClick={open}>
       <span className="admin-card-when">
         <span className="admin-card-times">{time(booking.start_minutes)}<span aria-hidden="true"> – </span><span className="admin-sr-only"> to </span>{time(bookingEnd(booking))}</span>
         {tag && <em className="admin-next-tag">{tag}</em>}

@@ -236,6 +236,15 @@ Booking, payment, cancellation and rescheduling rules did not change for clients
 - **To try it:** after the update, make a repeat every 2 weeks and one on chosen dates for a test client, then on the client's page cancel one date and then all upcoming, and check the cancellation email arrives for each booking that was cancelled.
 - **Not built yet:** clients making or changing a repeat themselves (a "Make this a regular booking" button for clients you choose). That is the next piece.
 
+## New: booking boxes in sage and sand (2026-10-19)
+
+- **No database step.** This changes only how the Admin looks.
+- **What you see.** A booking that is settled (confirmed and paid, or confirmed with its cash approved) is a pale **sage green** box. A booking still waiting on money or on you (waiting for a transfer, a payment to check, cash to approve, or confirmed with the transfer still to come) is a pale **warm sand** box. Completed, cancelled and no-show bookings look as they did. A glance down the Agenda now shows what still needs chasing.
+- **Where.** The cards in the Agenda and the Day view and on a day's own page, the status line on the booking sheet, the **To check** list, and the **Bookings** list on a client's page. They all take the colour and the words from one place, so the same booking looks the same in every one of them. On a client's page the line under each booking now reads like the card (before, a booking waiting for a transfer said "Awaiting transfer · Awaiting transfer").
+- **The words still carry the meaning.** The colour never has to be guessed: every box says in words what it is waiting for, and a status that is waiting for the client keeps its hollow dot.
+- **Not changed.** What your clients see (Your bookings, the confirmation page) keeps its colours for now. A booking you make yourself with "payment pending" still says "Confirmed · Awaiting transfer", because it is confirmed (the time is held) and only the money is to come; it is drawn sand because of the money.
+- **To try it:** open the Agenda and look for a settled booking (sage), one waiting on a transfer (sand with a hollow dot) and one with a payment to check (sand); then open one, look at the line on its sheet, and look at the same bookings in To check and on the client's page.
+
 ## What works now (tested locally)
 
 **For clients** (the website)

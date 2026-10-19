@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { clock, daysBetween, groupBlocks, scheduleApi, timeOptions, validateBlock } from './scheduleApi.js'
 import { acquireBodyScrollLock } from './dialogScrollLock.js'
-import { dateLabel, today } from './calendarPresentation.js'
+import { dateLabel, getBookingStatusLabel, today } from './calendarPresentation.js'
 
 const START_OPTIONS = timeOptions(false)
 const END_OPTIONS = timeOptions(true).filter(minutes => minutes > 0)
@@ -97,7 +97,7 @@ export default function BlockDialog({ date, block, close, saved, api = scheduleA
       <p className="admin-detail-hint">Travel time around a block is kept free too.</p>
       {problem && <p role="alert" className="admin-field-error">{problem}</p>}
       {conflicts && <div role="alert" className="admin-conflicts" ref={warning}><strong>This clashes with {conflicts.length === 1 ? 'a booking' : `${conflicts.length} bookings`}:</strong>
-        <ul>{conflicts.map(item => <li key={item.booking_id}>{dateLabel(item.date, { weekday: 'short', day: 'numeric', month: 'short' })}, {item.client_name}, {clock(item.start_minutes)} ({item.booking_status.replaceAll('_', ' ')})</li>)}</ul>
+        <ul>{conflicts.map(item => <li key={item.booking_id}>{dateLabel(item.date, { weekday: 'short', day: 'numeric', month: 'short' })}, {item.client_name}, {clock(item.start_minutes)} ({getBookingStatusLabel(item).toLowerCase()})</li>)}</ul>
         <p>Those appointments will not be moved or cancelled for you. Save again if you still want to block this time.</p></div>}
       {error && <p role="alert">{error}</p>}
       {block && !removing && <button type="button" className="btn--danger btn--small admin-remove" disabled={busy} onClick={() => setRemoving(true)}>Remove</button>}

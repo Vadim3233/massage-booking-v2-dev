@@ -51,6 +51,12 @@
   --cancel-ink: #915d43; --cancel-bg: #f8e7de; --cancel-rail: #a66a4d; --cancel-surface: #f6f4f1;
   --noshow-ink: #7a2740; --noshow-bg: #f7e1e7; --noshow-rail: #b04566;
   --needs-tint: #fdf6e6; --needs-badge: #f2b84b; --needs-outline: rgb(184 121 26 / .3);
+  /* The Admin's booking boxes (cards, the To check list, a client's bookings). Two pale tints carry the meaning, each with a darker edge and rail, text darkened
+     to match, and a chip a little deeper than the tint: sage = settled (confirmed and paid, or cash approved); sand = still waiting on money, or on the
+     Admin's say. Completed, cancelled and no-show bookings keep their own colours above. */
+  --sage-bg: #eaf3e6; --sage-hover: #e1eddb; --sage-line: #9cc092; --sage-rail: #66944d; --sage-chip: #d4e6c9; --sage-ink: #28461f; --sage-ink-soft: #46613f; --sage-hair: #cfe0c6;
+  --sand-bg: #fbf1df; --sand-hover: #f8e8c9; --sand-line: #e3be7c; --sand-rail: #b8791a; --sand-chip: #f4dca8; --sand-ink: #573b08; --sand-ink-soft: #6e5522; --sand-hair: #f0dcb6;
+  --card-wash: rgb(255 255 255 / .7);
   --block-bg: #eaeef1; --block-ink: #3d4f5f; --block-rail: #7f8b96;
   --free-bg: #f3f6ee; --buffer-bg: #f1eee9;
   --alert-dot: #a8321f;
