@@ -567,3 +567,27 @@ The Telegram message has no link to the booking page (a private link in an email
 **Reason:** Vadim's admin UI notes (Part A §2): he cancelled a paid £90 booking with "No fee" and then saw "refund £90.00 to send" and took it for a bug; the behaviour was right but the screen had not said so. Drawn and approved on 2026-10-19.
 
 **How it was built:** No database change. The wording is in one place, `src/admin/cancelOutcome.js`, which follows the database's own rule in `admin_cancel_booking` (a paid booking keeps the fee and the rest is a refund to send; one not paid has nothing to refund and a fee on it is due); a browser test cancels a paid booking and checks the refund the database records is the one the box said. The card's button reuses the booking sheet's question (`ActionDialog`, `admin_record_refund`).
+
+## ADR-067 — Google Calendar copy, part A: what the calendar should hold, worked out in the database (2026-10-19, draft for review)
+
+**Decision:** The rules of Vadim's Google Calendar brief (`docs/google-calendar-sync-brief.md`) live in one database function, `calendar_desired_events(from, to, booking ids)`. It gives the events the "VadMassage bookings" calendar should hold:
+- which bookings show, with their titles by status (cancelled never, and nothing lapses);
+- London times;
+- a description with the treatments and total length only;
+- a Travel event after each booking, as long as that booking's own travel buffer;
+- event ids fixed by the booking.
+
+A server job (part B, on Vercel like the email and Telegram sender) will make Google match it. The Google token is kept in Supabase Vault and only that job reads it. Bookings to check go into the calendar's own queue: triggers on bookings, sessions and client names note them. That catches every change, including ones made by hand in SQL and bookings deleted outright, and the queue cannot stop a booking being saved.
+
+**Reason:** The outbox report (19 Oct) found that client name changes and direct SQL changes write no outbox row. Extra rows in `event_outbox` would also change what the existing tests count, and would set off the message triggers. So the calendar has its own queue (the brief's "per-consumer delivery") fed by triggers, and the 15-minute and nightly checks stay as the safety net.
+
+**How it was built:**
+- Migration `20261107100000_calendar_sync.sql` adds:
+  - three tables with no browser access;
+  - the queue triggers;
+  - the rules function;
+  - claim and complete functions for the job;
+  - the token functions;
+  - two Admin functions for the settings screen: status, and Resync now.
+- Database test `calendar_sync.test.sql`: 47 checks, including every status, the 24, 25 and 26 Oct 2026 clock change, and that the address, phone, email, prices and notes never appear.
+- Rollback: `docs/rollbacks/20261107100000_calendar_sync_rollback.sql`.
