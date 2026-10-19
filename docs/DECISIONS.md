@@ -567,3 +567,13 @@ The Telegram message has no link to the booking page (a private link in an email
 **Reason:** Vadim's admin UI notes (Part A §3). Drawn and approved on 2026-10-19 (cancelled bookings: the share icon is hidden, the brief's first option).
 
 **How it was built:** No database change. The message is made in one place, `src/admin/shareBooking.js` (`shareText`), used by both actions; the bank details come from the same function and setting the client's page uses (`get_bank_details`, `bankFromSettings`, `chooseBank`). The button is `ShareBooking.jsx`. When the app becomes a phone app (Capacitor) the Share… action can use its Share plugin; the button stays the same.
+
+## ADR-066 — The share message can be reworded in Settings, with fixed blanks (2026-10-19)
+
+**Decision:** More › What clients read › Share message holds the wording the share button on a booking sends (WhatsApp client, Share… and Copy). It is ordinary text with blanks: {date}, {time}, {address}, {treatment}, {payment} and {bank details}. Buttons put a blank where the cursor is, an example made-up booking shows how it reads, and Reset to standard brings back the standard wording. A line whose blank has nothing to say is left out (no address; no bank details when nothing is due). No other blank can be saved, so the message can only ever say what the share button already said: never the notes, the client's phone or email, or anything internal. Saved empty or as the standard, nothing is kept and the standard wording is used.
+
+**Reason:** Vadim asked to be able to add or remove things in the shared message from Settings.
+
+**How it was built:** Migration `20261106100000_share_message.sql` adds `admin_save_share_message(text)` (Admin only, up to 1000 characters, only the listed blanks), which keeps the wording in `business_settings` under `share_message`; the Admin already reads that table, so the share button reads it with no new function. The wording is filled in one place, `src/admin/shareBooking.js`. Until the migration is applied, the share button keeps the standard wording and Save says that saving is not switched on yet. Database test `share_message.test.sql`.
+
+**If it ever has to be taken back:** put the screens back, drop `admin_save_share_message(text)` and delete the `share_message` setting.
