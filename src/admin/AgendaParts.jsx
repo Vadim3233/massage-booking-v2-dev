@@ -1,6 +1,6 @@
 import Icon from '../ui/icons.jsx'
 import { dateLabel, time } from './calendarPresentation.js'
-import { blockHeading, blockSpan, blockTitle, specialLine } from './agendaDays.js'
+import { blockHeading, blockSpan, blockTitle, dayHoursLine } from './agendaDays.js'
 
 // Time away: a block over several days, or a whole day. It is one banner at its first day, and pressing it opens the block to change or remove.
 export function AwayBanner({ group, open }) {
@@ -13,12 +13,13 @@ export function AwayBanner({ group, open }) {
   </div>
 }
 
-// What is special about a day that has bookings, said in words under its date: time away, a day off, or different hours.
-export function DayNotes({ special, away }) {
-  if (!special && !away) return null
+// Under a day's date: time away, and the day's working hours. Special hours keep their highlight; a day off is grey; usual hours are a plain line.
+export function DayNotes({ hours, away }) {
+  if (!hours && !away) return null
+  const kind = !hours?.available ? 'is-off' : hours.source === 'special' ? 'is-special' : 'is-usual'
   return <ul role="list" className="admin-agenda-notes">
     {away && <li className="is-away"><Icon name="calendar" size={16} /><span>{blockHeading(away)}</span></li>}
-    {special && <li className={special.available ? 'is-special' : 'is-off'}><Icon name="clock" size={16} /><span>{specialLine(special)}</span></li>}
+    {hours && <li className={kind}><Icon name="clock" size={16} /><span>{dayHoursLine(hours)}</span></li>}
   </ul>
 }
 

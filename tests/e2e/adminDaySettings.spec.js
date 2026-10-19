@@ -77,7 +77,7 @@ test('the hours, schedule mode, first appointment and release time are saved tog
   expect(await override(f.date)).toMatchObject({ available: true, start_minutes: 600, end_minutes: 1320, schedule_mode: 'flexible', start_mode: 'fixed', fixed_start_minutes: 900, anchor_release_minutes: 1020, note: 'Late start' })
   // The Agenda, and the Special days list, show the same day.
   await page.getByRole('link', { name: '← Agenda' }).click()
-  await expect(page.locator('.admin-agenda-notes').first()).toContainText('Late start')
+  await expect(page.locator('.admin-agenda-notes', { hasText: 'Late start' })).toContainText('Special hours 10:00–22:00')
   await page.goto('/admin/schedule')
   await page.getByRole('tab', { name: 'Special days' }).click()
   await expect(page.locator('.admin-special-list li', { hasText: 'Late start' })).toContainText('first appointment at 15:00 (released at 17:00 the day before), flexible schedule')
