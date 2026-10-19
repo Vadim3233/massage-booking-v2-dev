@@ -109,6 +109,8 @@ test('a very long name wraps inside the card, away from the price, and nothing g
 test('Directions sits beside the status at the foot of the card, looks 36px tall and is 44px to press, over nothing else', async ({ page }) => {
   await openAgenda(page)
   const wrap = page.locator('.admin-card-wrap.has-directions').first()
+  // Each day now says its hours, so the card may start below the fold: it is brought into view before points on screen are pressed.
+  await wrap.scrollIntoViewIfNeeded()
   const directions = await box(wrap.getByRole('link', { name: /^Directions to/ }))
   const status = await box(wrap.locator('.admin-status'))
   const card = await box(wrap.locator('.admin-card'))

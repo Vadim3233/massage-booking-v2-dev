@@ -1,4 +1,5 @@
 import { createAdminGate } from './adminGate.js'
+import { shiftDate } from './calendarPresentation.js'
 // All requests use the signed-in user's JWT; table RLS remains authoritative.
 const bookingFields = `*,clients!bookings_client_id_fkey(id,first_name,last_name,email,phone),
 booking_sessions(*,booking_session_preferences(*),booking_session_enhancements(*)),
@@ -15,6 +16,13 @@ export function validateRange(start, end) {
 }
 export function createCalendarApi(client) {
   const authorized = createAdminGate(client, { signedOut: 'Admin sign-in required.', denied: 'This account does not have Admin access.' })
+  // Each day's working hours, one row per date (end not included), worked out by the database the way the booking engine reads them: its special
+  // day if there is one, otherwise the usual week, and the name of a block that covers the whole day. The screens show them and work none of it out.
+  const readDayHours = async (start, end) => {
+    const { data, error } = await client.rpc('admin_day_hours', { p_from: start, p_to: shiftDate(end, -1) })
+    if (error) throw error
+    return data
+  }
   return {
     async loadCalendarRange(start, end) {
       validateRange(start, end)
@@ -22,15 +30,17 @@ export function createCalendarApi(client) {
       const bounded = (table, columns = '*') => client.from(table).select(columns, { count: 'exact' }).gte('date', start).lt('date', end)
       const weekdays = []
       for (let date = new Date(start + 'T12:00:00Z'); date < new Date(end + 'T12:00:00Z'); date.setUTCDate(date.getUTCDate() + 1)) weekdays.push(date.getUTCDay() || 7)
-      const [bookings, blocks, overrides, hours, holds] = await Promise.all([
+      // dayHours is what the screens show. The stored rows (a special day, the usual week) are read too, for the day's settings page, which edits them.
+      const [bookings, blocks, dayHours, overrides, hours, holds] = await Promise.all([
         read(bounded('bookings', bookingFields).order('date').order('start_minutes')),
         read(bounded('calendar_blocks').order('start_minutes')),
+        readDayHours(start, end),
         read(bounded('working_hours_overrides')),
         read(client.from('working_hours').select('*').in('weekday', [...new Set(weekdays)])),
         // Never request hold tokens or browser client keys.
         read(bounded('booking_holds', 'id,date,start_minutes,treatment_duration_minutes,travel_buffer_minutes,expires_at').eq('status', 'active').gt('expires_at', new Date().toISOString())),
       ])
-      return { bookings, blocks, overrides, hours, holds }
+      return { bookings, blocks, dayHours, overrides, hours, holds }
     },
     async loadAgendaRange(start, end) {
       validateRange(start, end)
@@ -44,17 +54,13 @@ export function createCalendarApi(client) {
       await authorized()
       const bounded = (table, columns) => client.from(table).select(columns, { count: 'exact' }).gte('date', start).lt('date', end)
       const blockColumns = 'id,group_id,kind,title,notes,date,start_minutes,end_minutes'
-      const [inRange, overrides] = await Promise.all([
+      const [inRange, hours] = await Promise.all([
         read(bounded('calendar_blocks', blockColumns).in('kind', ['blocked', 'personal_event']).order('date')),
-        read(bounded('working_hours_overrides', 'date,available,start_minutes,end_minutes,start_mode,fixed_start_minutes,note').order('date')),
+        readDayHours(start, end),
       ])
       const groups = [...new Set(inRange.map(row => row.group_id).filter(Boolean))]
       const whole = groups.length ? await read(client.from('calendar_blocks').select(blockColumns).in('group_id', groups).order('date')) : []
-      return { blocks: [...whole, ...inRange.filter(row => !row.group_id)], overrides }
-    },
-    async loadWeeklyHours() {
-      await authorized()
-      return read(client.from('working_hours').select('weekday,available,start_minutes,end_minutes,start_mode,fixed_start_minutes').order('weekday'))
+      return { blocks: [...whole, ...inRange.filter(row => !row.group_id)], hours }
     },
   }
 }

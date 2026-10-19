@@ -549,3 +549,13 @@ The Telegram message has no link to the booking page (a private link in an email
 **Limits, on purpose:** Only the Admin's boxes change. The client's own pages (Your bookings, the confirmation) keep the colours they have. A booking the Admin made herself with "payment pending" still reads "Confirmed · Awaiting transfer": it is confirmed (the time is held for the client) with the money still to come, and it is drawn sand because of the money. A pale card hovered or pressed gets a slightly deeper tint, never white.
 
 **If it ever has to be taken back:** revert the change; nothing in the database depends on it.
+
+## ADR-061 — Every day in the Calendar says its working hours, as the booking engine reads them (2026-10-19)
+
+**Decision:** Every day the Agenda lists says its working hours under its date: usual hours as a plain line ("Hours 14:30–21:00", with "first appointment at 12:00" when that is set), special hours with their highlight as before, and a day off as "Day off", or with its name ("Day off · Christmas Holidays"). With Show every day on, the empty days say their hours too ("free · 14:30–21:00"). The Day view's line says the same. The hours come from one read-only database function, `admin_day_hours(from, to)` (one row per date, Admin only, up to a year), built on `day_hours(date)`, which reads a date's hours the way the booking engine does: its special day if it has one, otherwise the usual week; it also names a block that covers the whole day. The screens show what it says and work none of it out.
+
+**Reason:** Vadim's admin UI notes (Part A §1, `docs/admin-ui-notes.md`): working hours on every day, from the same source the booking engine uses, never different from what clients can book, with no rules copied into React.
+
+**How it was built:** Migration `20261105100000_day_hours.sql` adds the two functions; the booking engine (`compute_booking_availability`) is not touched, so how times are offered does not change. The database test `day_hours.test.sql` checks each kind of day and that the engine agrees: nothing is offered on any day the Calendar calls a day off, and every time offered lies inside the day's hours. The Agenda and the Day view read the function instead of the special-day and usual-week tables (the day's settings page still reads those rows, because it edits them).
+
+**If it ever has to be taken back:** put the screens back, then drop `admin_day_hours(date, date)` and `day_hours(date)`.

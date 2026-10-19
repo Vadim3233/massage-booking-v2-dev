@@ -1,12 +1,24 @@
 import { describe, expect, it } from 'vitest'
-import { agendaDays, blockHeading, blockSpan, mergeExtras, specialLine } from './agendaDays.js'
+import { agendaDays, blockHeading, blockSpan, dayHoursLine, mergeExtras, specialCount, specialLine } from './agendaDays.js'
+import { shiftDate } from './calendarPresentation.js'
 
 // Today is Wednesday 14 October 2026. Saturdays are not worked in the usual week used here.
 const booking = (date, start = 840) => ({ id: `${date}-${start}`, date, start_minutes: start, booking_status: 'confirmed' })
 const block = (date, changes = {}) => ({ id: `${changes.group_id || 'g1'}-${date}`, group_id: 'g1', kind: 'blocked', title: 'Christmas Holidays', date, start_minutes: 0, end_minutes: 1440, ...changes })
 const wholeDays = (dates, changes = {}) => dates.map(date => block(date, changes))
-const special = (date, changes = {}) => ({ date, available: true, start_minutes: 720, end_minutes: 1020, start_mode: 'fixed', fixed_start_minutes: 870, note: null, ...changes })
-const week = [1, 2, 3, 4, 5, 6, 7].map(weekday => ({ weekday, available: weekday !== 6, start_minutes: 720, end_minutes: 1260, start_mode: 'flexible', fixed_start_minutes: null }))
+const special = (date, changes = {}) => ({ date, source: 'special', available: true, start_minutes: 720, end_minutes: 1020, start_mode: 'fixed', fixed_start_minutes: 870, note: null, ...changes })
+// What admin_day_hours answers for each date from start to end (end not included): the usual week, 12:00 to 21:00 with Saturdays off, unless a
+// special day is given for the date. The database works this out; here it is only the answer the tests are given.
+const hoursFrom = (start, end, specials = []) => {
+  const rows = []
+  for (let date = start; date < end; date = shiftDate(date, 1)) {
+    const own = specials.find(entry => entry.date === date)
+    const saturday = new Date(`${date}T12:00:00Z`).getUTCDay() === 6
+    rows.push(own || (saturday ? { date, source: 'usual', available: false, start_minutes: null, end_minutes: null, start_mode: 'flexible', fixed_start_minutes: null, note: null }
+      : { date, source: 'usual', available: true, start_minutes: 720, end_minutes: 1260, start_mode: 'flexible', fixed_start_minutes: null, note: null }))
+  }
+  return rows
+}
 const range = { start: '2026-10-14', end: '2026-11-14', day: '2026-10-14' }
 // Browsers and Node differ on whether a short date has a comma after the weekday ("Tue, 22 Dec" or "Tue 22 Dec").
 const plain = text => text.replace(/,/g, '')
@@ -21,14 +33,14 @@ describe('the days the Agenda lists', () => {
   })
 
   it('go with a special day when there are bookings, and stand alone as a quiet line when there are none', () => {
-    const entries = agendaDays({ ...range, bookings: [booking('2026-10-20')], overrides: [special('2026-10-20'), special('2026-10-25', { available: false, start_minutes: null, end_minutes: null, start_mode: 'flexible', fixed_start_minutes: null, note: 'Family day' })] })
+    const entries = agendaDays({ ...range, bookings: [booking('2026-10-20')], hours: [special('2026-10-20'), special('2026-10-25', { available: false, start_minutes: null, end_minutes: null, start_mode: 'flexible', fixed_start_minutes: null, note: 'Family day' })] })
     expect(shape(entries)).toEqual(['day:10-14', 'day:10-20', 'quiet:10-25 off'])
     expect(entries[1].special.fixed_start_minutes).toBe(870)
     expect(entries[2].items[0].text).toBe('Day off · Family day')
   })
 
   it('ignore a special day outside the days on show', () => {
-    expect(shape(agendaDays({ ...range, bookings: [], overrides: [special('2026-11-20'), special('2026-09-01')] }))).toEqual(['day:10-14'])
+    expect(shape(agendaDays({ ...range, bookings: [], hours: [special('2026-11-20'), special('2026-09-01')] }))).toEqual(['day:10-14'])
   })
 
   it('show time away as one banner at its first day, and not the days inside it', () => {
@@ -89,18 +101,18 @@ describe('the days the Agenda lists', () => {
 
 describe('Show every day', () => {
   it('lists every date once, with free days and the usual day off told apart and one run of quiet lines between bookings', () => {
-    const entries = agendaDays({ start: '2026-10-14', end: '2026-10-21', day: '2026-10-14', bookings: [booking('2026-10-16')], weekly: week, showEvery: true })
+    const entries = agendaDays({ start: '2026-10-14', end: '2026-10-21', day: '2026-10-14', bookings: [booking('2026-10-16')], hours: hoursFrom('2026-10-14', '2026-10-21'), showEvery: true })
     expect(shape(entries)).toEqual(['day:10-14', 'quiet:10-15 free', 'day:10-16', 'quiet:10-17 closed, 10-18 free, 10-19 free, 10-20 free'])
-    expect(entries[3].items.map(item => item.text)).toEqual(['usual day off', 'free', 'free', 'free'])
+    expect(entries[3].items.map(item => item.text)).toEqual(['usual day off', 'free · 12:00–21:00', 'free · 12:00–21:00', 'free · 12:00–21:00'])
   })
 
-  it('says nothing about the usual day off while the usual week is not known', () => {
-    const entries = agendaDays({ start: '2026-10-14', end: '2026-10-19', day: '2026-10-14', bookings: [], weekly: [], showEvery: true })
+  it('says nothing about hours or the usual day off while a day\'s hours are not known', () => {
+    const entries = agendaDays({ start: '2026-10-14', end: '2026-10-19', day: '2026-10-14', bookings: [], hours: [], showEvery: true })
     expect(entries[1].items.map(item => item.kind)).toEqual(['free', 'free', 'free', 'free'])
   })
 
   it('gives each day inside time away its own quiet line, counted, after the banner', () => {
-    const entries = agendaDays({ ...range, end: '2026-10-31', bookings: [], blocks: wholeDays(['2026-10-26', '2026-10-27', '2026-10-28']), weekly: week, showEvery: true })
+    const entries = agendaDays({ ...range, end: '2026-10-31', bookings: [], blocks: wholeDays(['2026-10-26', '2026-10-27', '2026-10-28']), hours: hoursFrom('2026-10-14', '2026-10-31'), showEvery: true })
     const from = entries.findIndex(entry => entry.type === 'away')
     expect(entries[from].date).toBe('2026-10-26')
     expect(entries[from + 1].items.map(item => `${item.date.slice(5)} ${item.kind} ${item.text}`).slice(0, 2)).toEqual([
@@ -111,12 +123,12 @@ describe('Show every day', () => {
   })
 
   it('shows a special day and a few hours blocked instead of "free" on their dates', () => {
-    const entries = agendaDays({ start: '2026-10-14', end: '2026-10-19', day: '2026-10-14', bookings: [], overrides: [special('2026-10-16')], blocks: [block('2026-10-17', { group_id: 'dentist', title: 'Dentist', start_minutes: 660, end_minutes: 720 })], weekly: week, showEvery: true })
+    const entries = agendaDays({ start: '2026-10-14', end: '2026-10-19', day: '2026-10-14', bookings: [], hours: hoursFrom('2026-10-14', '2026-10-19', [special('2026-10-16')]), blocks: [block('2026-10-17', { group_id: 'dentist', title: 'Dentist', start_minutes: 660, end_minutes: 720 })], showEvery: true })
     expect(entries[1].items.map(item => `${item.date.slice(5)} ${item.kind}`)).toEqual(['10-15 free', '10-16 special', '10-17 block', '10-18 free'])
   })
 
   it('keeps days with bookings as full days, and still starts the list with today', () => {
-    const entries = agendaDays({ start: '2026-10-10', end: '2026-10-16', day: '2026-10-14', bookings: [booking('2026-10-12')], weekly: week, showEvery: true })
+    const entries = agendaDays({ start: '2026-10-10', end: '2026-10-16', day: '2026-10-14', bookings: [booking('2026-10-12')], hours: hoursFrom('2026-10-10', '2026-10-16'), showEvery: true })
     expect(shape(entries).filter(text => text.startsWith('day:'))).toEqual(['day:10-12', 'day:10-14'])
   })
 })
@@ -129,14 +141,32 @@ describe('the words for blocks and special days', () => {
   })
 })
 
-describe('blocks and special days read a month at a time', () => {
-  it('are put together without repeating a block that ran over two months, or a special day', () => {
+describe('blocks and each day\'s hours read a month at a time', () => {
+  it('are put together without repeating a block that ran over two months, or a day', () => {
     const rows = wholeDays(['2026-10-30', '2026-10-31', '2026-11-01'])
     const merged = mergeExtras([
-      { blocks: rows, overrides: [special('2026-10-28')] },
-      { blocks: rows, overrides: [special('2026-10-28', { note: 'newer' }), special('2026-11-03')] },
+      { blocks: rows, hours: [special('2026-10-28'), ...hoursFrom('2026-10-29', '2026-10-31')] },
+      { blocks: rows, hours: [special('2026-10-28', { note: 'newer' }), special('2026-11-03')] },
     ])
     expect(merged.blocks).toHaveLength(3)
-    expect(merged.overrides.map(entry => `${entry.date} ${entry.note}`)).toEqual(['2026-10-28 newer', '2026-11-03 null'])
+    expect(merged.hours.map(entry => `${entry.date} ${entry.source} ${entry.note}`)).toEqual(['2026-10-28 special newer', '2026-10-29 usual null', '2026-10-30 usual null', '2026-11-03 special null'])
+    // Only special days count as something in a month; every date has hours.
+    expect(specialCount(merged)).toBe(2)
+  })
+})
+
+describe('every day says its hours', () => {
+  it('a day with bookings carries its hours, whatever kind of day it is', () => {
+    const entries = agendaDays({ ...range, end: '2026-10-21', bookings: [booking('2026-10-15'), booking('2026-10-16'), booking('2026-10-17')], hours: hoursFrom('2026-10-14', '2026-10-21', [special('2026-10-16')]) })
+    expect(entries.map(entry => `${entry.date.slice(5)} ${dayHoursLine(entry.hours)}`)).toEqual([
+      '10-14 Hours 12:00–21:00', '10-15 Hours 12:00–21:00', '10-16 Special hours 12:00–17:00, first appointment at 14:30', '10-17 Day off',
+    ])
+  })
+  it('says usual hours plainly, with a first appointment when there is one, and a day off by its name', () => {
+    expect(dayHoursLine({ source: 'usual', available: true, start_minutes: 870, end_minutes: 1260, start_mode: 'flexible' })).toBe('Hours 14:30–21:00')
+    expect(dayHoursLine({ source: 'usual', available: true, start_minutes: 600, end_minutes: 1200, start_mode: 'fixed', fixed_start_minutes: 720 })).toBe('Hours 10:00–20:00, first appointment at 12:00')
+    expect(dayHoursLine({ source: 'usual', available: false })).toBe('Day off')
+    expect(dayHoursLine({ source: 'special', available: false, note: 'Christmas Holidays' })).toBe('Day off · Christmas Holidays')
+    expect(dayHoursLine(null)).toBe('')
   })
 })
