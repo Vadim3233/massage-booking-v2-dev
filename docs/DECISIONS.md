@@ -568,6 +568,30 @@ The Telegram message has no link to the booking page (a private link in an email
 
 **How it was built:** No database change. The wording is in one place, `src/admin/cancelOutcome.js`, which follows the database's own rule in `admin_cancel_booking` (a paid booking keeps the fee and the rest is a refund to send; one not paid has nothing to refund and a fee on it is due); a browser test cancels a paid booking and checks the refund the database records is the one the box said. The card's button reuses the booking sheet's question (`ActionDialog`, `admin_record_refund`).
 
+## ADR-063 — The booking sheet can share a booking's details, mainly to the client on WhatsApp (2026-10-19)
+
+**Decision:** A share button at the top right of the booking sheet, beside the date and time, offers **WhatsApp client** (WhatsApp opens at the client's own chat with the details written in; hidden when the booking has no usable phone number) and **Share…** (the phone's share sheet; on a computer the text is copied and the screen says "Copied"), and **Copy** (always there: puts the same text on the clipboard). The message is WhatsApp plain text: a *bold* first line with the date and time, the address, the treatments with the total length and price, and the payment in plain words; while a bank transfer is still due it adds the bank details and reference the client's own booking page shows. It never includes the Admin's notes, the client's own phone or email, internal ids or the booking's history. A cancelled booking has no share button. Nothing is sent by itself; the text can be changed in WhatsApp before sending.
+
+**Reason:** Vadim's admin UI notes (Part A §3). Drawn and approved on 2026-10-19 (cancelled bookings: the share icon is hidden, the brief's first option).
+
+**How it was built:** No database change. The message is made in one place, `src/admin/shareBooking.js` (`shareText`), used by both actions; the bank details come from the same function and setting the client's page uses (`get_bank_details`, `bankFromSettings`, `chooseBank`). The button is `ShareBooking.jsx`. When the app becomes a phone app (Capacitor) the Share… action can use its Share plugin; the button stays the same.
+
+## ADR-064 — The client's name in New booking opens their page, and the booking waits (2026-10-19)
+
+**Decision:** Once a client is chosen in New booking, their name is a link to their page. It opens without the "Discard this unsaved booking?" question, because the half-made booking is already kept as it is filled in. At the top of the client's page the back link then says "← Back to the booking" (the phone's back button does the same) and returns to the booking exactly as it was, with where it was started from. Coming back, the booking reads the client again, so a name, phone or email changed on their page shows at once, and a saved address chosen for the booking is used as it now reads (one removed there falls back to the client's default). A booking brought back keeps the treatment, area and payment she chose: the suggestions from the client's last booking fill in only when a client is chosen. Only New booking has the link (Vadim chose New booking only, not the booking sheet or To check). While a booking is being made the name is plain text.
+
+**Reason:** Vadim asked to be able to look at, or fix, a client's details in the middle of making a booking for them without losing the booking.
+
+**How it was built:** No database change. `AdminWorkspace.jsx` opens the client's page with a marker in the browser history, and the page's back link goes one step back; `AdminNewBooking.jsx` reads the client and their addresses again when a kept booking opens. Browser test `newBookingClientLink.spec.js`.
+
+## ADR-065 — New booking suggests the area of a client whose bookings were all cancelled (2026-10-19)
+
+**Decision:** When a client is chosen in New booking, the treatment, length, area and payment are still suggested from their last booking that was not cancelled. A client whose bookings were all cancelled now gets the area of the last of them suggested too (only the area: a cancelled booking says nothing sure about the treatment or the payment). Nothing already chosen is changed.
+
+**Reason:** Vadim found a returning client with no area suggested; their only bookings had been cancelled, and chose this fallback.
+
+**How it was built:** No database change. `lastBooking` in `src/admin/newBookingApi.js` reads the last cancelled booking's area when there is no other booking; `defaultsFromLast` is unchanged.
+
 ## ADR-067 — Google Calendar copy, part A: what the calendar should hold, worked out in the database (2026-10-19, draft for review)
 
 **Decision:** The rules of Vadim's Google Calendar brief (`docs/google-calendar-sync-brief.md`) live in one database function, `calendar_desired_events(from, to, booking ids)`. It gives the events the "VadMassage bookings" calendar should hold:
