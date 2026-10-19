@@ -5,7 +5,8 @@ export const money = (value) => new Intl.NumberFormat('en-GB', { style: 'currenc
 export const label = (value) => ({ awaiting_transfer: 'Awaiting transfer', awaiting_payment_verification: 'Awaiting payment verification', awaiting_cash_approval: 'Awaiting cash approval', awaiting_verification: 'Awaiting verification', awaiting_approval: 'Awaiting approval', bank_transfer: 'Bank transfer', no_show: 'No show' }[value] || (value ? value[0].toUpperCase() + value.slice(1).replaceAll('_', ' ') : 'Not recorded'))
 export const clientName = (booking) => [booking.clients?.first_name, booking.clients?.last_name].filter(Boolean).join(' ') || 'Name not recorded'
 export function dayContext(data, date, now) {
-  const hours = data.overrides.find(row => row.date === date) || data.hours.find(row => row.weekday === (new Date(date + 'T12:00:00Z').getUTCDay() || 7))
+  // The day's hours as the database works them out (admin_day_hours), the way the booking engine reads them; nothing is worked out here.
+  const hours = data.dayHours.find(row => row.date === date)
   const holds = data.holds.filter(row => Date.parse(row.expires_at) > now)
   if (!hours?.available) return { hours, holds, gaps: [] }
   const occupied = [...data.blocks.map(row => [row.start_minutes, row.end_minutes]), ...data.bookings.filter(row => ['confirmed', 'completed', 'awaiting_payment_verification', 'awaiting_cash_approval', 'awaiting_transfer'].includes(row.booking_status)).map(row => [row.start_minutes - row.travel_buffer_minutes, row.start_minutes + row.treatment_duration_minutes + row.travel_buffer_minutes]), ...holds.map(row => [row.start_minutes - row.travel_buffer_minutes, row.start_minutes + row.treatment_duration_minutes + row.travel_buffer_minutes])].sort((a, b) => a[0] - b[0])

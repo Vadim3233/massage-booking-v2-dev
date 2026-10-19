@@ -4,7 +4,7 @@ import { createCalendarApi } from './calendarApi.js'
 import PaymentActions from './PaymentActions.jsx'
 import Icon from '../ui/icons.jsx'
 import { reanchored } from './agendaRange.js'
-import { agendaDays, mergeExtras } from './agendaDays.js'
+import { agendaDays, mergeExtras, specialCount } from './agendaDays.js'
 import { AwayBanner, DayNotes, QuietDays, TimedBlock } from './AgendaParts.jsx'
 import { useQuietRetry, useReturnRefresh } from './useReturnRefresh.js'
 import BookingCard from './BookingCard.jsx'
@@ -39,7 +39,7 @@ function loadSpan(start, end, version) {
   return Promise.all(parts).then(lists => lists.flat())
 }
 
-// Blocked time and special days are read the same way, a month at a time, and the usual week once, so the Agenda can say what changes the diary.
+// Blocked time and each day's hours are read the same way, a month at a time, so the Agenda can say what changes the diary and when each day is worked.
 function loadExtrasRange(start, end, version) {
   const key = `extras:${start}:${end}:${version}`
   if (!pending.has(key)) pending.set(key, api.loadAgendaExtras(start, end).finally(() => pending.delete(key)))
@@ -52,11 +52,6 @@ function loadExtrasSpan(start, end, version) {
     parts.push(loadExtrasRange(from, to < end ? to : end, version))
   }
   return Promise.all(parts).then(mergeExtras)
-}
-function loadWeekly(version) {
-  const key = `weekly:${version}`
-  if (!pending.has(key)) pending.set(key, api.loadWeeklyHours().finally(() => pending.delete(key)))
-  return pending.get(key)
 }
 // Whether "Show every day" was left on, on this device. Unreadable storage just means off.
 function readShowEvery() {
@@ -119,15 +114,15 @@ export default function Agenda({ openBooking, openDay, revision, toCheck, checke
     // Left open past midnight and never scrolled back, the list starts again from today.
     const { start, end } = reanchored(base, anchor.current, day) ?? { start: day, end: shiftDate(day, CHUNK_DAYS) }
     const version = `${attempt}:${revision}`
-    Promise.all([loadSpan(start, end, version), loadExtrasSpan(start, end, version), loadWeekly(version)]).then(([bookings, extras, weekly]) => {
+    Promise.all([loadSpan(start, end, version), loadExtrasSpan(start, end, version)]).then(([bookings, extras]) => {
       if (!live) return
       // More was scrolled into view while this was being read: the range on show has moved, so read it again.
       const current = shown.current
       if (base && current && (current.start !== base.start || current.end !== base.end)) { reread(); return }
       anchor.current = day
       quiet.succeeded()
-      setData({ start, end, bookings, ...extras, weekly })
-      if (first) setLastChunk(bookings.length + extras.blocks.length + extras.overrides.length || 1)
+      setData({ start, end, bookings, ...extras })
+      if (first) setLastChunk(bookings.length + extras.blocks.length + specialCount(extras) || 1)
       setError('')
       setRefreshing(false)
     }, failure => {
@@ -142,7 +137,7 @@ export default function Agenda({ openBooking, openDay, revision, toCheck, checke
   useReturnRefresh(reread)
 
   // Cancelled bookings are left out unless asked for (one with money still to sort out stays), so a day left with nothing drops out of the list.
-  const entries = data ? agendaDays({ bookings: listedBookings(data.bookings, showCancelled), blocks: data.blocks, overrides: data.overrides, weekly: data.weekly, start: data.start, end: data.end, day: today(), showEvery }) : []
+  const entries = data ? agendaDays({ bookings: listedBookings(data.bookings, showCancelled), blocks: data.blocks, hours: data.hours, start: data.start, end: data.end, day: today(), showEvery }) : []
   const upNext = data ? nextUp(data.bookings, new Date(now)) : null
 
   async function extend(direction) {
@@ -154,7 +149,7 @@ export default function Agenda({ openBooking, openDay, revision, toCheck, checke
     try {
       const version = `${attempt}:${revision}`
       const [bookings, extras] = await Promise.all([loadRange(start, end, version), loadExtrasRange(start, end, version)])
-      if (direction === 'newer') setLastChunk(bookings.length + extras.blocks.length + extras.overrides.length)
+      if (direction === 'newer') setLastChunk(bookings.length + extras.blocks.length + specialCount(extras))
       setData(previous => {
         if (!previous) return previous
         const more = mergeExtras([previous, extras])
@@ -224,8 +219,8 @@ export default function Agenda({ openBooking, openDay, revision, toCheck, checke
               <span>{daySummary(group.bookings)}</span>
               {openDay && <button type="button" className="btn--quiet btn--small admin-day-settings-button" aria-label={`Day settings for ${full}`} title="Day settings" onClick={() => openDay(group.date)}><Icon name="clock" size={20} /></button>}
             </header>
-            <DayNotes special={group.special} away={group.away} />
-            {!group.bookings.length && <p className="admin-agenda-empty"><strong>{group.special?.available === false || group.away ? 'A day off.' : 'A free day.'}</strong>Nothing is booked.</p>}
+            <DayNotes hours={group.hours} away={group.away} />
+            {!group.bookings.length && <p className="admin-agenda-empty"><strong>{group.hours?.available === false || group.away ? 'A day off.' : 'A free day.'}</strong>Nothing is booked.</p>}
             {group.rows.length > 0 && <ol role="list" className="admin-timeline" aria-label={`Appointments${group.rows.some(row => row.kind === 'block') ? ' and blocked time' : ''} for ${full}`}>
               {group.rows.map(({ kind, booking, row: blocked }) => kind === 'block' ? <TimedBlock key={`block-${blocked.id}`} row={blocked} open={openBlock} /> : <li key={booking.id} className="admin-timeline-row admin-timeline-booking">
                 <BookingCard booking={booking} open={() => openBooking(booking.id)} changed={reread} now={new Date(now)} tag={upNext?.id === booking.id ? (upNext.now ? 'Now' : 'Next') : null} />

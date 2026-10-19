@@ -7,6 +7,7 @@ import CancelledToggle from './CancelledToggle.jsx'
 import { listedBookings, useShowCancelled } from './cancelledBookings.js'
 import { dateLabel, dayTimeline, shiftDate, time, today } from './calendarPresentation.js'
 import Icon from '../ui/icons.jsx'
+import { dayHoursLine } from './agendaDays.js'
 const BlockDialog = lazy(() => import('./BlockDialog.jsx'))
 const api = createCalendarApi(supabase)
 // The small picture at the start of a free, travel or held stretch of the day.
@@ -104,7 +105,7 @@ export default function Calendar({ signOut, openBooking, openDay, revision, init
       {!data && !failed && <div className="skeleton-rows" role="status" aria-label="Loading calendar"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>}
       {failed && <div role={data ? 'status' : 'alert'} className="error"><p>{data ? 'Could not refresh the calendar just now.' : 'Could not load calendar. Please check your connection and try again.'}</p><button className="btn--small" onClick={() => { quiet.asked(); reread() }}>{data ? 'Try again' : 'Retry calendar'}</button></div>}
       {data && <>
-        <p className="admin-working-hours"><Icon name="clock" size={20} /><span>{timeline.hours?.available ? `Working hours ${time(timeline.hours.start_minutes)}–${time(timeline.hours.end_minutes)}` : 'Not a working day'}</span></p>
+        <p className="admin-working-hours"><Icon name="clock" size={20} /><span>{dayHoursLine(timeline.hours) || 'Not a working day'}</span></p>
         {!listed.length && <p className="admin-day-note">No appointments for this day.</p>}
         <CancelledToggle bookings={data.bookings} on={showCancelled} change={setShowCancelled} />
         <ol role="list" className="admin-timeline" aria-label="Day timeline">
