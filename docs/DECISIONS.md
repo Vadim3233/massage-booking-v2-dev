@@ -617,3 +617,25 @@ The Telegram message has no link to the booking page (a private link in an email
 - Migration `20261108100000_money_groundwork.sql`: two columns, a backfill, a rule that a refund is never more than was paid, and `admin_record_refund` setting them. Its fingerprint matched the live function before the change.
 - Database test `money_groundwork.test.sql`.
 - `hasStarted` in calendarPresentation.js, and browser test `cashReceivedCard.spec.js`.
+
+## ADR-071 — The Income screen: money received, by the date of the appointment (2026-10-20)
+
+**Decision:** More › Money › **Income** shows the money actually received for appointments in a week (Monday to Sunday), a month, a calendar year or a UK tax year (6 April to 5 April). The arrows move between periods, and a period not yet over is marked Upcoming. It shows:
+- the total, compared with the period before ("+12% vs last month", or "—" when that brought nothing);
+- bank transfer and cash;
+- the number of bookings and the average per booking;
+- bars for the days, weeks or months;
+- "£… still to come" for a period not yet over: bookings going ahead and not yet paid, never added into the total;
+- **Money owed to you**: past appointments with a transfer not received, cash not marked received, or a late fee unpaid, each opening its booking;
+- the bookings behind the total, each opening its booking;
+- **Download for accountant**: a CSV of date, reference, client, method, amount received, refund and net.
+
+**The money rule, in one place in the database (`income_lines`):** payments received (bank transfers verified, cash marked received), plus late fees received that were not kept out of a payment, less refunds sent. Each amount counts on its appointment's London date. A fee kept out of a payment, or a fee still "due" on a prepaid no-show, is never counted twice. Older refunds without a recorded amount count as what was paid less the fee kept.
+
+**Reason:** Vadim's change requests 3 and 4 (`docs/change-requests-2026-10-20.md`), with his answers: "bookings" counts bookings; "still to come" includes bookings still waiting for payment.
+
+**How it was built:**
+- Migration `20261109100000_income.sql`: Admin-only `admin_income_summary(kind, anchor)`, `admin_income_rows(from, to)` and `admin_money_owed()`, with internal helpers that browsers cannot call. Nothing is added up in the browser.
+- Database test `income.test.sql`: every money rule, weeks, months, tax years, the clocks-change week, still to come, money owed, and Admin only.
+- The page `Income.jsx`, with its words in `incomePresentation.js` (unit tests), and browser test `income.spec.js`.
+- The client page's "Paid so far" is left as it is (a simpler sum) until Vadim decides.
