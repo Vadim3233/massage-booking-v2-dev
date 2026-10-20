@@ -622,3 +622,15 @@ The step keeps its number (3 of 8), so links that open a later step by number, s
 - **The limits** (4 people, 240 minutes) are the database quote's own. `server/bookingLimits.integration.test.js` checks against local Supabase that they still agree, and that an option's price is exactly the database's quote for it.
 - **Browser tests** that went through the old length screen now answer "Just me" first (helper `tests/bookingSteps.js`). The new `peopleLength.spec.js` covers people first, the prices, mixed lengths, the 4-hour limit and the way back.
 - **Not in this change:** the same sentence in the emails, the Admin's card and the share message. That is change 2b, which puts the wording in the database for the emails.
+
+## ADR-073 — The Admin's card and the share message say how many people too (2026-10-20)
+
+**Decision:**
+- **Booking card:** it shows how many people and how long each, "1 person · 120 min", "3 people · 3 × 60 min" or "2 people · 60 + 90 min", where it showed only the total minutes.
+- **Share message:** the `{treatment}` line is the treatment and the same sentence the client saw when booking, for example "Massage: One 2-hour massage for 1 person – £170.00" or "Deep tissue: Two sessions for 2 people, one after the other (60 min + 90 min) – 2 hours 30 minutes in total – £215.00".
+
+Both use `src/booking/bookingWords.js`, the one place this wording is made.
+
+**Reason:** Vadim's change request 2: the same sentence in the WhatsApp share message, and the number of people on the Admin's booking card.
+
+**How it was built:** No database change. The unit tests for the share message and the card's browser tests were updated to the new wording. The emails, whose words are made in the database, come in a later change.
