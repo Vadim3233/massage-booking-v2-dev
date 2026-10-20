@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bookingEnd, bookingState, canNavigateTo, dayContext, daySummary, getBookingCardVariant, getBookingStatusLabel, nextUp, shiftDate, treatmentName } from './calendarPresentation.js'
+import { bookingEnd, bookingState, canNavigateTo, dayContext, hasStarted, daySummary, getBookingCardVariant, getBookingStatusLabel, nextUp, shiftDate, treatmentName } from './calendarPresentation.js'
 
 it('a booking ends when its treatment ends, never counting the travel time either side', () => {
   expect(bookingEnd({ start_minutes: 870, treatment_duration_minutes: 60, travel_buffer_minutes: 60 })).toBe(930)
@@ -96,5 +96,15 @@ describe('how a booking is drawn', () => {
     expect(getBookingStatusLabel({ booking_status: 'no_show' })).toBe('No show')
     // A booking whose payment record is missing is still said so, as before.
     expect(getBookingStatusLabel({ booking_status: 'confirmed', booking_payments: null })).toBe('Confirmed · Not recorded')
+  })
+})
+
+describe('whether an appointment has started, in London time', () => {
+  const booking = { date: '2026-10-25', start_minutes: 600 }
+  it('is false before its start and true from it, using London time on the day the clocks go back', () => {
+    expect(hasStarted(booking, new Date('2026-10-25T09:59:00Z'))).toBe(false)
+    expect(hasStarted(booking, new Date('2026-10-25T10:00:00Z'))).toBe(true)
+    expect(hasStarted(booking, new Date('2026-10-24T23:30:00Z'))).toBe(false)
+    expect(hasStarted({ date: '2026-10-24', start_minutes: 1380 }, new Date('2026-10-25T00:30:00Z'))).toBe(true)
   })
 })
