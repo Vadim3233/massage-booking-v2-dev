@@ -4,6 +4,10 @@ import AdminWorkspace from './AdminWorkspace.jsx'
 import PasswordResetRequest from './PasswordResetRequest.jsx'
 import './admin.css'
 
+// How long the Admin waits for the sign-in check before offering a way out, and how long the "are you the Admin?" question may take.
+const SLOW_CHECK_MS = 8000
+const ADMIN_CHECK_TIMEOUT_MS = 10000
+
 export default function AdminApp() {
   const [requestReset, setRequestReset] = useState(new URLSearchParams(window.location.search).get('reset') === 'request')
   const passwordChanged = new URLSearchParams(window.location.search).get('password') === 'changed'
@@ -11,6 +15,14 @@ export default function AdminApp() {
   const [attempt, setAttempt] = useState(0)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  // The check never hangs for good: after a few seconds the screen says so and offers to try again or reload the page.
+  const [slowAttempt, setSlowAttempt] = useState(null)
+  useEffect(() => {
+    if (auth.state !== 'checking') return undefined
+    const timer = setTimeout(() => setSlowAttempt(attempt), SLOW_CHECK_MS)
+    return () => clearTimeout(timer)
+  }, [auth.state, attempt])
+  const slow = auth.state === 'checking' && slowAttempt === attempt
   useEffect(() => {
     let live = true, revision = 0, checkedUser = null
     async function check(session) {
@@ -20,10 +32,11 @@ export default function AdminApp() {
       // That must not rebuild the screen: an open confirmation and the scroll position would be lost.
       if (checkedUser === session.user.id) return
       if (live) setAuth({ state: 'checking' })
-      const { data, error } = await supabase.rpc('is_booking_admin')
+      // A question that does not come back within a few seconds is treated as a failed one, which offers Retry.
+      const { data, error } = await supabase.rpc('is_booking_admin').abortSignal(AbortSignal.timeout(ADMIN_CHECK_TIMEOUT_MS))
       if (live && ticket === revision) {
         checkedUser = error ? null : session.user.id
-        setAuth(error ? { state: 'error', error: error.message } : { state: data ? 'admin' : 'denied', userId: session.user.id })
+        setAuth(error ? { state: 'error', error: /abort|timed? ?out/i.test(`${error.name || ''} ${error.message || ''}`) ? 'The connection is slow, so your sign-in could not be checked.' : error.message } : { state: data ? 'admin' : 'denied', userId: session.user.id })
       }
     }
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => { void check(session) })
@@ -53,6 +66,9 @@ export default function AdminApp() {
       {passwordChanged && <p role="status">Password changed. Please sign in with your new password.</p>}
       {requestReset && <PasswordResetRequest onBack={() => setRequestReset(false)} />}
       {!requestReset && auth.state === 'checking' && <p role="status">Checking authentication…</p>}
+      {!requestReset && auth.state === 'checking' && slow && <div className="admin-slow-check" role="alert"><p>This is taking longer than usual.</p>
+        <button type="button" onClick={() => setAttempt(value => value + 1)}>Try again</button>
+        <button type="button" className="btn--quiet" onClick={() => window.location.reload()}>Reload the page</button></div>}
       {!requestReset && auth.state === 'signed-out' && <form onSubmit={signIn}><h2>Admin sign in</h2><label>Email<input name="email" type="email" autoComplete="username" required /></label><label>Password<input name="password" type="password" autoComplete="current-password" required /></label><button className="admin-forgot" type="button" disabled={busy} onClick={() => setRequestReset(true)}>Forgot password?</button><button disabled={busy}>Sign in</button></form>}
       {!requestReset && auth.state === 'signed-out' && error && <p role="alert" className="error">{error}</p>}
       {!requestReset && auth.state === 'denied' && <><p role="alert">This account does not have Admin access.</p><button onClick={signOut}>Sign out</button></>}

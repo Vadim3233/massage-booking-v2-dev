@@ -568,3 +568,7 @@
 .admin-income-count { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 8px; border-radius: var(--radius-pill); background: var(--sand-rail); color: var(--surface); font: 700 13px/1 var(--font-ui); }
 .admin-income-list small { color: var(--ink-soft); font-size: 13px; overflow-wrap: anywhere; }
 .admin-income-list .figure { font-weight: 600; white-space: nowrap; }
+
+/* A sign-in check that takes too long offers a way out instead of waiting for ever. */
+.admin-slow-check { display: grid; gap: 10px; margin-top: 12px; }
+.admin-slow-check p { margin: 0; color: var(--ink-soft); }

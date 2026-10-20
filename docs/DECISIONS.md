@@ -799,3 +799,11 @@ The page stays where the Admin needs it:
 **Reason:** Vadim asked not to have to press Back after every save.
 
 **How it was built:** No database change. `DaySettings` takes a `done` callback from `AdminWorkspace` (the same place its "← Agenda / ← Day" link goes). The Day settings browser tests now expect the return, and open the day again to check what was saved.
+
+## ADR-078 — The Admin never waits for ever on "Checking authentication…" (2026-10-20)
+
+**Decision:** If the sign-in check has not finished after 8 seconds, the Admin page says "This is taking longer than usual." and offers **Try again** and **Reload the page**. The "are you the Admin?" question to the database is given up after 10 seconds. The page then says "The connection is slow, so your sign-in could not be checked." with **Retry authentication**.
+
+**Reason:** Vadim's screen once stayed on "Checking authentication…" with no way out except closing the app. The logs showed nothing wrong on the server side, so the most likely cause is a slow or dropped phone connection. The cause could not be proven, so the fix makes sure the screen always offers a way out.
+
+**How it was built:** No database change. In `AdminApp.jsx`, a timer shows the note for the current attempt only. The `is_booking_admin` call carries `AbortSignal.timeout(10000)`, and its timeout error is shown in plain words. A new browser test (`adminSlowCheck.spec.js`) holds the question back on purpose. It checks the note, the plain-words error, and that Retry then signs in.
