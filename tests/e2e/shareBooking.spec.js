@@ -29,6 +29,8 @@ test('WhatsApp client opens the client\'s own chat with the booking details, and
   const text = decodeURIComponent(href.split('?text=')[1])
   expect(text).toMatch(/^\*Massage booking – .+, 10:00–11:00\*\n/)
   expect(text).toContain('Payment: cash, due at the appointment')
+  // Until when the client can cancel or move for free, from the database's rule (the booking is days away, so the free period is still open).
+  expect(text).toMatch(/\nFree to cancel or move until \w{3} \d{1,2} \w{3}, \d{2}:\d{2}\. After that, the full price may be charged\.$/m)
   for (const secret of ['canonical@example.test', 'booking@example.test', '07700', '+44', 'Exact persisted note', f.bookings[0].id]) expect(text).not.toContain(secret)
   await page.screenshot({ path: 'test-results/share-booking-menu.png' })
 })

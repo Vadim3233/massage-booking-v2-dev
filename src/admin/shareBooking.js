@@ -41,10 +41,10 @@ function treatments(booking) {
 
 // The Admin can reword the message (Settings › Share message), with these blanks and no others: the database refuses any other,
 // so nothing but what is filled in here can ever be sent. Empty means the standard wording.
-export const SHARE_BLANKS = ['date', 'time', 'address', 'treatment', 'payment', 'bank details']
-export const STANDARD_SHARE_MESSAGE = '*Massage booking – {date}, {time}*\n{address}\n{treatment}\n{payment}\n\n{bank details}'
+export const SHARE_BLANKS = ['date', 'time', 'address', 'treatment', 'payment', 'cancellation', 'bank details']
+export const STANDARD_SHARE_MESSAGE = '*Massage booking – {date}, {time}*\n{address}\n{treatment}\n{payment}\n{cancellation}\n\n{bank details}'
 export const SHARE_MESSAGE_LIMIT = 1000
-const BLANK = /\{(date|time|address|treatment|payment|bank details)\}/g
+const BLANK = /\{(date|time|address|treatment|payment|bank details|cancellation)\}/g
 
 // What is wrong with a wording, in the words the database uses when it refuses one ('' when it can be saved).
 export function shareMessageProblem(text) {
@@ -65,7 +65,18 @@ function bankLines(booking, bank) {
 }
 
 // What each blank says for this booking.
-export function shareValues(booking, bank) {
+// Until when the client can cancel or move for free, from the database's own rule (admin_cancellation_terms): only the date is put into words
+// here. Nothing is said for a booking that can no longer change, or when the terms could not be read.
+const londonDay = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short' })
+const londonTime = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+export function cancellationWords(terms) {
+  if (!terms?.open || !terms.free_until) return ''
+  if (terms.ended) return 'The free cancellation period has ended.'
+  const until = new Date(terms.free_until)
+  return `Free to cancel or move until ${londonDay.format(until).replace(',', '')}, ${londonTime.format(until)}. After that, the full price may be charged.`
+}
+
+export function shareValues(booking, bank, terms) {
   const end = booking.start_minutes + booking.treatment_duration_minutes
   return {
     date: dateLabel(booking.date).replace(',', ''),
@@ -74,6 +85,7 @@ export function shareValues(booking, bank) {
     treatment: treatments(booking),
     payment: paymentWords(booking),
     'bank details': bankLines(booking, bank),
+    cancellation: cancellationWords(terms),
   }
 }
 
@@ -88,8 +100,8 @@ export function fillShareMessage(wording, values) {
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
 }
 
-export function shareText(booking, bank, wording = STANDARD_SHARE_MESSAGE) {
-  return fillShareMessage(wording, shareValues(booking, bank))
+export function shareText(booking, bank, wording = STANDARD_SHARE_MESSAGE, terms = null) {
+  return fillShareMessage(wording, shareValues(booking, bank, terms))
 }
 
 // WhatsApp straight to the client's chat with the message in it, or nothing when the booking has no usable phone number.

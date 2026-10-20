@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canShare, fillShareMessage, paymentWords, SHARE_BLANKS, shareMessageProblem, shareText, shareValues, STANDARD_SHARE_MESSAGE, whatsappShareLink } from './shareBooking.js'
+import { canShare, cancellationWords, fillShareMessage, paymentWords, SHARE_BLANKS, shareMessageProblem, shareText, shareValues, STANDARD_SHARE_MESSAGE, whatsappShareLink } from './shareBooking.js'
 import { createShareMessageApi } from './shareMessageApi.js'
 
 const bank = { configured: true, accountName: 'V Massage', bankName: 'WISE', sortCode: '00-00-00', accountNumber: '00000000', note: '' }
@@ -83,5 +83,26 @@ describe('reading and saving the share message', () => {
     await expect(createShareMessageApi(settings(null, { message: 'Only the blanks listed can be used, each in curly brackets' })).save('{x}')).rejects.toThrow('Only the blanks listed can be used, each in curly brackets.')
     await expect(createShareMessageApi(settings(null, { code: 'PGRST202', message: 'Could not find the function public.admin_save_share_message(p_text)' })).save('Hi')).rejects.toThrow('Saving your own wording is not switched on yet.')
     await expect(createShareMessageApi(settings(null, { message: 'permission denied for table secrets' })).save('Hi')).rejects.toThrow('Could not save. Please check your connection and try again.')
+  })
+})
+
+describe('the cancellation line', () => {
+  const terms = (changes = {}) => ({ open: true, ended: false, free_until: '2026-10-28T17:30:00Z', ...changes })
+  it('says until when the client can cancel or move for free, in London time, and what happens after', () => {
+    expect(cancellationWords(terms())).toBe('Free to cancel or move until Wed 28 Oct, 17:30. After that, the full price may be charged.')
+    // Summer time: 18:00 UTC on Saturday 24 Oct is 19:00 in London; the clocks go back the next day.
+    expect(cancellationWords(terms({ free_until: '2026-10-24T18:00:00Z' }))).toBe('Free to cancel or move until Sat 24 Oct, 19:00. After that, the full price may be charged.')
+  })
+  it('says plainly when the free period has ended, and says nothing for a booking that can no longer change or when the terms are unknown', () => {
+    expect(cancellationWords(terms({ ended: true }))).toBe('The free cancellation period has ended.')
+    expect(cancellationWords(terms({ open: false }))).toBe('')
+    expect(cancellationWords(null)).toBe('')
+  })
+  it('comes after the payment line in the standard message, and can be used in the Admin\'s own wording', () => {
+    const lines = shareText(booking({ booking_payments: { method: 'cash', status: 'approved' } }), bank, undefined, terms()).split('\n')
+    expect(lines.slice(-2)).toEqual(['Payment: cash, due at the appointment', 'Free to cancel or move until Wed 28 Oct, 17:30. After that, the full price may be charged.'])
+    expect(shareMessageProblem('Terms: {cancellation}')).toBe('')
+    expect(SHARE_BLANKS).toContain('cancellation')
+    expect(shareText(booking(), bank, 'Terms: {cancellation}', terms({ ended: true }))).toBe('Terms: The free cancellation period has ended.')
   })
 })
