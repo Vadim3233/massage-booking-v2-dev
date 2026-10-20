@@ -786,3 +786,16 @@ No token, code or secret is ever put in an address, logged or returned. Setting 
 - **The job** sends `location` to Google.
 - **The settings page and `docs/GOOGLE_CALENDAR_SETUP.md`** say so.
 - **Tests:** database checks that the location is the address, and that travel events have none. The sync test checks the address is only in the location. Its check for the price now looks for "85.00", because the random booking id could contain "85".
+
+## ADR-077 — Saving a day's settings goes back to where the day was opened from (2026-10-20)
+
+**Decision:** On a day's settings page, **Save this day** goes straight back to where the day was opened from once it has saved, with a short note ("Saved · Sun 25 Oct"). That is the Agenda, or the Day view of that date; a day opened by its own address goes back to the Day view of that date. The day already shows its new hours there. **Yes, use my usual week** does the same ("Back to your usual Sunday · Sun 25 Oct").
+
+The page stays where the Admin needs it:
+- the warning about a booking outside the new hours, until it is answered;
+- an error, with its reason;
+- the blocked-time controls, so several blocks can be added in a row.
+
+**Reason:** Vadim asked not to have to press Back after every save.
+
+**How it was built:** No database change. `DaySettings` takes a `done` callback from `AdminWorkspace` (the same place its "← Agenda / ← Day" link goes). The Day settings browser tests now expect the return, and open the day again to check what was saved.
