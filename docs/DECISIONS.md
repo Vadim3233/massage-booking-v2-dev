@@ -600,6 +600,11 @@ The Telegram message has no link to the booking page (a private link in an email
 
 **How it was built:** Migration `20261106100000_share_message.sql` adds `admin_save_share_message(text)` (Admin only, up to 1000 characters, only the listed blanks), which keeps the wording in `business_settings` under `share_message`; the Admin already reads that table, so the share button reads it with no new function. The wording is filled in one place, `src/admin/shareBooking.js`. Until the migration is applied, the share button keeps the standard wording and Save says that saving is not switched on yet. Database test `share_message.test.sql`.
 
+**If it ever has to be taken back:** put the screens back, drop `admin_cancellation_terms(uuid)`, `booking_free_until(timestamptz, date, integer)` and `admin_save_share_message(text)`, and delete the `share_message` setting.
+**Added 2026-10-20 (Vadim's change request 1):** the message also says until when the client can cancel or move for free, for example "Free to cancel or move until Wed 28 Oct, 17:30. After that, the full price may be charged.", or "The free cancellation period has ended." once that time has passed. The line is left out for a booking that can no longer change. It is the `{cancellation}` blank, placed after the payment line in the standard wording.
+
+The moment comes from the database: `booking_free_until(created_at, date, start)` uses the same settings as the fee rule `late_fee_standard_gbp`, so the cancellation is free within the grace period after booking and until 24 hours before the start, in London time. The database test checks that the fee rule charges nothing one second before that moment and the full price at it, including across the clocks change on 25 Oct 2026. `admin_cancellation_terms(booking)` returns it to the Admin only. The message says "the full price" because a late cancellation keeps the whole booking price, travel fee and extras included.
+
 **If it ever has to be taken back:** put the screens back, drop `admin_save_share_message(text)` and delete the `share_message` setting.
 
 ## ADR-070 — Money groundwork: refunds keep their amount and date, and cash can be marked received from the card (2026-10-20)

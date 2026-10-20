@@ -13,6 +13,14 @@ export default function ShareBooking({ booking, wordingApi = shareMessageApi }) 
   const [open, setOpen] = useState(false)
   const [bank, setBank] = useState(null)
   const [wording, setWording] = useState(null)
+  const [terms, setTerms] = useState(undefined)
+  // Until when the client can cancel or move for free (left out of the message if it cannot be read).
+  useEffect(() => {
+    if (!open || terms !== undefined) return undefined
+    let live = true
+    supabase.rpc('admin_cancellation_terms', { p_booking_id: booking.id }).then(({ data, error }) => { if (live) setTerms(error ? null : data) }, () => { if (live) setTerms(null) })
+    return () => { live = false }
+  }, [open, terms, booking.id])
   // The Admin's own wording (Settings › Share message), or the standard one when there is none or it cannot be read.
   useEffect(() => {
     if (!open || wording !== null) return undefined
@@ -40,8 +48,8 @@ export default function ShareBooking({ booking, wordingApi = shareMessageApi }) 
     return () => { document.removeEventListener('pointerdown', away); node?.removeEventListener('keydown', escape) }
   }, [open])
   if (!canShare(booking)) return null
-  const waiting = open && ((transferDue(booking) && !bank) || wording === null)
-  const text = shareText(booking, bank, wording || undefined)
+  const waiting = open && ((transferDue(booking) && !bank) || wording === null || terms === undefined)
+  const text = shareText(booking, bank, wording || undefined, terms)
   const whatsapp = whatsappShareLink(booking, text)
   async function share() {
     setSaid('')
