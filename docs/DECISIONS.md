@@ -639,3 +639,24 @@ Both use `src/booking/bookingWords.js`, the one place this wording is made.
 **Reason:** Vadim's change request 2: the same sentence in the WhatsApp share message, and the number of people on the Admin's booking card.
 
 **How it was built:** No database change. The unit tests for the share message and the card's browser tests were updated to the new wording. The emails, whose words are made in the database, come in a later change.
+
+## ADR-074 — Client emails say who, how long and the price in the booking screens' own words (2026-10-20)
+
+**Decision:** The booking emails to a client, confirmed (booked by Vadim), moved and confirmed (paid or cash approved), and the regular-booking email, no longer say only "(120 minutes)". After the day, time and address they give the same sentence as the booking screens, on its own line, for example:
+
+"Thank you. Your appointment is confirmed for Mon 5 May at 10:00 at 1 Sentence Road, London.
+One 2-hour massage for 1 person – £170.00.
+Reference: …"
+
+The regular-booking email leaves the price out of the sentence, because it states the cost on its own.
+
+**Reason:** Vadim's change request 2 (`docs/change-requests-2026-10-20.md`), with his answer "Yes, change emails".
+
+**How it was built:**
+- **Migration `20261110100000_people_sentence_emails.sql`:**
+  - `people_sentence(durations, noun)` and `booking_people_sentence(booking, with_price)`. Browsers cannot call them.
+  - It replaces `plan_event_notifications` and `plan_series_notifications`, generated from their exact current text, so only the four email lines differ. Both live fingerprints matched before the change. The morning reminder, which is not online, is not touched.
+- **Tests:**
+  - `server/bookingSentence.integration.test.js` checks the database's sentence is word for word `src/booking/bookingWords.js` for every booking that can be made (1 to 4 people, 60/90/120 minutes, at most 4 hours).
+  - Database test `people_sentence.test.sql`.
+  - The one existing check that pinned the old "(90 minutes)" wording (`notifications.test.sql` test 24) was updated to the new wording, as Vadim approved changing the emails.
