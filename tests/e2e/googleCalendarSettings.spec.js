@@ -33,7 +33,7 @@ test('not connected: what it does, and Connect sends the Admin to Google with th
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.getByRole('region', { name: 'Every day' }).getByRole('link', { name: 'Google Calendar' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Google Calendar' })).toBeVisible()
-  await expect(page.getByText('Never the address, phone, price or notes.')).toBeVisible()
+  await expect(page.getByText(/the address \(with directions, even offline\).*Never the phone, price or notes\./)).toBeVisible()
   await page.setViewportSize({ width: 390, height: 844 })
   await page.screenshot({ path: 'test-results/google-calendar-not-connected.png' })
   await page.getByRole('button', { name: 'Connect Google Calendar' }).click()

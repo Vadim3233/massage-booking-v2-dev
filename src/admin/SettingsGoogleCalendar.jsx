@@ -63,7 +63,7 @@ export default function SettingsGoogleCalendar({ api = googleCalendarApi, go = u
     </>}
     {state !== 'connected' && state !== 'needs_reconnect' && <>
       <p>Copies your bookings into a calendar of their own, “VadMassage bookings”, on your Google account. You can see them on your phone, even offline. Changes made in Google never change a booking.</p>
-      <p className="admin-detail-hint">Events show the client’s name, the treatment and its length, and your travel time after it. Never the address, phone, price or notes.</p>
+      <p className="admin-detail-hint">Events show the client’s name, the treatment and its length, the address (with directions, even offline), and your travel time after it. Never the phone, price or notes.</p>
       <button type="button" className="btn--primary btn--block" disabled={busy} onClick={connect}>{busy ? 'Opening Google…' : 'Connect Google Calendar'}</button>
     </>}
   </section>

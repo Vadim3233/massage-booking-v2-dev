@@ -60,7 +60,7 @@ Google stopped accepting the saved sign-in. This happens if you removed the app'
 
 ## Good to know
 
-- **What an event shows:** the status and the client's name (for example `Massage – Anna Smith`, `⏳ Awaiting payment – …`, `✓ Massage – …` when done), the treatment and its length, and a **Travel** event after it. It never shows the address, phone, email, prices, payment or notes.
+- **What an event shows:** the status and the client's name (for example `Massage – Anna Smith`, `⏳ Awaiting payment – …`, `✓ Massage – …` when done), the treatment and its length, the **address** as the event's location (your phone offers directions, and keeps it offline), and a **Travel** event after it. It never shows the phone, email, prices, payment or notes. Someone you share the calendar with as free/busy sees none of this, only that you are busy.
 - **When it updates:** about a minute after any change. It also checks every 15 minutes, and rewrites everything at about 3 a.m.
 - **Resync now** puts every booking in again, which is useful if you edited events in Google by mistake.
 - **Disconnect** stops the copying and withdraws the app's access. The calendar stays in Google; delete it there if you want (Settings and sharing › Remove calendar).

@@ -774,3 +774,15 @@ No token, code or secret is ever put in an address, logged or returned. Setting 
 **How it was checked:** A fresh database rebuilt from all the migrations, with no automatic grants, now has exactly the live list, line for line, nothing missing and nothing extra. All 1931 database checks pass. The new test `table_grants.test.sql` fails if any table cannot be reached by the server, if visitors can read more than the catalogue or change anything, or if a table lacks row security. It was seen to fail when the server's grants were removed.
 
 **Left as it is, for later:** the signed-in role still has the broad grants the automatic defaults gave many tables (including truncate). Row security and the database functions limit what anyone can actually do, and truncate is not reachable through the Data API. Narrowing these would be a separate, deliberate change.
+
+## ADR-076 — The Google Calendar copy shows each booking's address, as its location (2026-10-20)
+
+**Decision:** Each booking event in the "VadMassage bookings" calendar now has the booking's address as its location. The phone's calendar keeps it offline and offers directions. Travel events have none. Titles and descriptions are unchanged and still never contain the address, phone, email, prices, payment or notes. Someone the calendar is shared with as free/busy still sees no details.
+
+**Reason:** Vadim asked for it, to find his way to an appointment with no signal. This reverses the brief's original "no address in events" choice, at his request.
+
+**How it was built:**
+- **Migration `20261112100000_calendar_address.sql`:** `calendar_desired_events` gains a `location` column. A new return type means the function is dropped and made again, with the same server-only permission. Each event's fingerprint now includes the location, so the 15-minute check rewrites the events already in Google with their address by itself. A change of a booking's address now also queues it.
+- **The job** sends `location` to Google.
+- **The settings page and `docs/GOOGLE_CALENDAR_SETUP.md`** say so.
+- **Tests:** database checks that the location is the address, and that travel events have none. The sync test checks the address is only in the location. Its check for the price now looks for "85.00", because the random booking id could contain "85".
