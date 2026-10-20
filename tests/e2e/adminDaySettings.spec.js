@@ -69,15 +69,19 @@ test('the hours, schedule mode, first appointment and release time are saved tog
   await page.getByLabel('This day release time').selectOption('1020')
   await page.getByLabel('Note (only you see this)').fill('Late start')
   await save(page).click()
-  await expect(page.getByText('Saved. This day now has its own settings.')).toBeVisible()
+  // Saving goes straight back to where the day was opened from, with a short note.
+  await expect(page).toHaveURL(/\/admin\/agenda$/)
+  await expect(page.getByText(`Saved · ${dateLabel(f.date)}`).last()).toBeVisible()
+  // The Agenda already shows the day as saved.
+  await expect(page.locator('.admin-agenda-notes', { hasText: 'Late start' })).toContainText('Special hours 10:00–22:00')
+  expect(await override(f.date)).toMatchObject({ available: true, start_minutes: 600, end_minutes: 1320, schedule_mode: 'flexible', start_mode: 'fixed', fixed_start_minutes: 900, anchor_release_minutes: 1020, note: 'Late start' })
+  // Opened again, the day says what was saved, with nothing left to save.
+  await dayButton(page, f.date).click()
   const glance = page.getByRole('region', { name: 'This day at a glance' })
   await expect(glance).toContainText('Working 10:00–22:00 · Flexible · First appointment 15:00, released 17:00 the day before')
   await expect(glance).toContainText('A special day: Late start')
   await expect(save(page)).toBeDisabled()
-  expect(await override(f.date)).toMatchObject({ available: true, start_minutes: 600, end_minutes: 1320, schedule_mode: 'flexible', start_mode: 'fixed', fixed_start_minutes: 900, anchor_release_minutes: 1020, note: 'Late start' })
-  // The Agenda, and the Special days list, show the same day.
-  await page.getByRole('link', { name: '← Agenda' }).click()
-  await expect(page.locator('.admin-agenda-notes', { hasText: 'Late start' })).toContainText('Special hours 10:00–22:00')
+  // The Special days list shows the same day.
   await page.goto('/admin/schedule')
   await page.getByRole('tab', { name: 'Special days' }).click()
   await expect(page.locator('.admin-special-list li', { hasText: 'Late start' })).toContainText('first appointment at 15:00 (released at 17:00 the day before), flexible schedule')
@@ -97,14 +101,18 @@ test('different hours that leave a booking outside them are warned about once, a
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   expect((await override(f.date)).start_minutes).toBe(600)
   await page.getByRole('button', { name: 'Save anyway' }).click()
-  await expect(page.getByText('Saved. This day now has its own settings.')).toBeVisible()
+  // Saving goes straight back to where the day was opened from, with a short note.
+  await expect(page).toHaveURL(/\/admin\/agenda$/)
+  await expect(page.getByText(`Saved · ${dateLabel(f.date)}`).last()).toBeVisible()
   expect((await override(f.date)).start_minutes).toBe(660)
   expect((await f.admin.from('bookings').select('booking_status,start_minutes').eq('id', f.bookings[0].id).single()).data).toEqual({ booking_status: 'confirmed', start_minutes: 600 })
-  // The hours are as saved now, so changing only how the day fills up is not a reason to warn again.
+  // The hours are as saved now, so changing only how the day fills up is not a reason to warn again: it saves and goes straight back.
+  await dayButton(page, f.date).click()
   await page.getByLabel('This day schedule mode').selectOption('flexible')
   await save(page).click()
-  await expect(page.getByText('Saved. This day now has its own settings.')).toBeVisible()
-  await expect(page.locator('.admin-conflicts')).toHaveCount(0)
+  // Saving goes straight back to where the day was opened from, with a short note.
+  await expect(page).toHaveURL(/\/admin\/agenda$/)
+  await expect(page.getByText(`Saved · ${dateLabel(f.date)}`).last()).toBeVisible()
   expect(await override(f.date)).toMatchObject({ start_minutes: 660, schedule_mode: 'flexible' })
 })
 
@@ -115,8 +123,10 @@ test('shortening the end of a day does not warn about a booking that is well ins
   // The booking is at 10:00 for an hour on a day that opens at 10:00, so its hour of travel before it falls before the day opens. That is not a clash.
   await page.getByLabel('This day end').selectOption('1200')
   await save(page).click()
-  await expect(page.getByText('Saved. This day now has its own settings.')).toBeVisible()
-  await expect(page.locator('.admin-conflicts')).toHaveCount(0)
+  // No warning held it back: it saved and went straight back.
+  // Saving goes straight back to where the day was opened from, with a short note.
+  await expect(page).toHaveURL(/\/admin\/agenda$/)
+  await expect(page.getByText(`Saved · ${dateLabel(f.date)}`).last()).toBeVisible()
   expect(await override(f.date)).toMatchObject({ start_minutes: 600, end_minutes: 1200 })
 })
 
@@ -133,8 +143,11 @@ test('a day can be switched off, switched on again from its usual hours, and put
   // Whatever the weekday usually is, make the day the other way round.
   if (usuallyWorking) await working.uncheck(); else await working.check()
   await save(page).click()
-  await expect(page.getByText('Saved. This day now has its own settings.')).toBeVisible()
+  // Opened by its own address, the day goes back to the Day view of that date.
+  await expect(page).toHaveURL(new RegExp(`/admin\\?date=${date}$`))
+  await expect(page.getByText(`Saved · ${dateLabel(date)}`)).toBeVisible()
   expect((await override(date)).available).toBe(!usuallyWorking)
+  await page.getByRole('button', { name: 'Day settings', exact: true }).click()
   await expect(page.getByRole('region', { name: 'This day at a glance' })).toContainText(usuallyWorking ? 'Not a working day' : 'Working 10:00–20:00 · Chain')
   // Pressing it only asks: the day keeps its own settings until it is answered, and the question starts on the safe answer.
   await page.getByRole('button', { name: 'Use my usual week', exact: true }).click()
@@ -149,8 +162,10 @@ test('a day can be switched off, switched on again from its usual hours, and put
   expect(await override(date)).not.toBeNull()
   await page.getByRole('button', { name: 'Use my usual week', exact: true }).click()
   await page.getByRole('button', { name: 'Yes, use my usual week' }).click()
-  await expect(page.getByText(`Removed. This day follows your usual ${weekday} again.`)).toBeVisible()
+  await expect(page).toHaveURL(new RegExp(`/admin\\?date=${date}$`))
+  await expect(page.getByText(`Back to your usual ${weekday} · ${dateLabel(date)}`)).toBeVisible()
   expect(await override(date)).toBeNull()
+  await page.getByRole('button', { name: 'Day settings', exact: true }).click()
   await expect(page.getByRole('region', { name: 'This day at a glance' })).toContainText(`Follows your usual ${weekday}`)
   await expect(page.getByRole('button', { name: 'Use my usual week' })).toHaveCount(0)
 })

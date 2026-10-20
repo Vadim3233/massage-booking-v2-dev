@@ -9,6 +9,7 @@ import BookingCard from './BookingCard.jsx'
 import CancelledToggle from './CancelledToggle.jsx'
 import { listedBookings, useShowCancelled } from './cancelledBookings.js'
 import { dateLabel, getBookingStatusLabel, shiftDate, time, today } from './calendarPresentation.js'
+import { toast } from '../ui/toast.js'
 import './daySettings.css'
 
 const BlockDialog = lazy(() => import('./BlockDialog.jsx'))
@@ -16,7 +17,9 @@ const calendar = createCalendarApi(supabase)
 
 // One date on its own: what it is set to and why, the hours and schedule that can be changed for just this date, the time blocked on it and
 // the bookings on it. The hours are saved as a special day, the same record the Special days list shows.
-export default function DaySettings({ date, revision, openBooking, changed, api = scheduleApi }) {
+// `done` takes the Admin back to where the day was opened from (the Agenda or the Day view): saving the hours, or putting the day back to the usual
+// week, goes straight back there with a short note. A change that needs a question first (a booking outside the new hours) stays until it is answered.
+export default function DaySettings({ date, revision, openBooking, changed, done, api = scheduleApi }) {
   const valid = isDate(date)
   const [data, setData] = useState(null)
   const [loadError, setLoadError] = useState('')
@@ -80,9 +83,10 @@ export default function DaySettings({ date, revision, openBooking, changed, api 
       }
       await api.saveOverride({ ...form, date })
       setEdits(null); setConflicts(null); confirmed.current = false
-      setMessage('Saved. This day now has its own settings.')
       refresh({ special: true, saved: { ...cleanDay(form), note: (form.note || '').trim() } })
       changed?.()
+      if (done) { toast(`Saved · ${dateLabel(date)}`); done(); return }
+      setMessage('Saved. This day now has its own settings.')
     } catch (failure) { setError(failure.message) }
     finally { setBusy(false) }
   }
@@ -92,9 +96,10 @@ export default function DaySettings({ date, revision, openBooking, changed, api 
     try {
       await api.deleteOverride(date)
       setEdits(null); setConflicts(null); confirmed.current = false
-      setMessage(`Removed. This day follows your usual ${weekday} again.`)
       refresh({ special: false, saved: { ...state.usual, note: '' } })
       changed?.()
+      if (done) { toast(`Back to your usual ${weekday} · ${dateLabel(date)}`); done(); return }
+      setMessage(`Removed. This day follows your usual ${weekday} again.`)
     } catch (failure) { setError(failure.message) }
     finally { setBusy(false); setConfirmingUsual(false) }
   }
