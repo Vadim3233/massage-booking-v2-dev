@@ -698,3 +698,69 @@ The regular-booking email leaves the price out of the sentence, because it state
   - `server/bookingSentence.integration.test.js` checks the database's sentence is word for word `src/booking/bookingWords.js` for every booking that can be made (1 to 4 people, 60/90/120 minutes, at most 4 hours).
   - Database test `people_sentence.test.sql`.
   - The one existing check that pinned the old "(90 minutes)" wording (`notifications.test.sql` test 24) was updated to the new wording, as Vadim approved changing the emails.
+
+## ADR-067 — Google Calendar copy, part A: what the calendar should hold, worked out in the database (2026-10-19, draft for review)
+
+**Decision:** The rules of Vadim's Google Calendar brief (`docs/google-calendar-sync-brief.md`) live in one database function, `calendar_desired_events(from, to, booking ids)`. It gives the events the "VadMassage bookings" calendar should hold:
+- which bookings show, with their titles by status (cancelled never, and nothing lapses);
+- London times;
+- a description with the treatments and total length only;
+- a Travel event after each booking, as long as that booking's own travel buffer;
+- event ids fixed by the booking.
+
+A server job (part B, on Vercel like the email and Telegram sender) will make Google match it. The Google token is kept in Supabase Vault and only that job reads it. Bookings to check go into the calendar's own queue: triggers on bookings, sessions and client names note them. That catches every change, including ones made by hand in SQL and bookings deleted outright, and the queue cannot stop a booking being saved.
+
+**Reason:** The outbox report (19 Oct) found that client name changes and direct SQL changes write no outbox row. Extra rows in `event_outbox` would also change what the existing tests count, and would set off the message triggers. So the calendar has its own queue (the brief's "per-consumer delivery") fed by triggers, and the 15-minute and nightly checks stay as the safety net.
+
+**How it was built:**
+- Migration `20261107100000_calendar_sync.sql` adds:
+  - three tables with no browser access;
+  - the queue triggers;
+  - the rules function;
+  - claim and complete functions for the job;
+  - the token functions;
+  - two Admin functions for the settings screen: status, and Resync now.
+- Database test `calendar_sync.test.sql`: 47 checks, including every status, the 24, 25 and 26 Oct 2026 clock change, and that the address, phone, email, prices and notes never appear.
+- Rollback: `docs/rollbacks/20261107100000_calendar_sync_rollback.sql`.
+
+## ADR-068 — Google Calendar copy, part B: the job that makes Google match, run by the every-minute sender (2026-10-19, draft)
+
+**Decision:** `server/calendarSync.js` makes the "VadMassage bookings" calendar match `calendar_desired_events`. It runs inside the existing every-minute call (`api/dispatch-notifications.js`), beside the email and Telegram messages, with its own 4-second budget. So no new scheduled job, and no new secret, has to be set up online. It does nothing until `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set in Vercel and the calendar is connected.
+
+On each run it:
+- takes a few queued bookings at a time;
+- puts in, changes or removes their events, using event ids fixed by the booking, so nothing can be put in twice;
+- brings back an event deleted in Google (Google refuses the same id with 409, so it is updated instead);
+- skips events that have not changed;
+- every 15 minutes, queues anything out of step;
+- at about 3 a.m., puts everything in again, which undoes changes made in Google.
+
+When Google is down or busy, the booking is tried again after 2, 8, 18 and 32 minutes, then marked failed with the reason. When Google refuses the saved sign-in, the job stops, forgets the token and marks the connection "needs reconnect". It never changes a booking, and never logs or returns a token or Google's own error text.
+
+**Reason:** Vadim's brief asked for it to run on Vercel like the sender (the project has no Edge Functions), be state-based and idempotent, and keep Google problems away from bookings.
+
+**How it was built:** No new database change beyond part A (one fix there: Disconnect's delete needed a condition when called through Supabase's API). The test `server/calendarSync.integration.test.js` runs against local Supabase with a stand-in for Google. Eleven deliberate breakages of the job were all caught.
+
+## ADR-069 — Google Calendar copy, part C: connecting from More › Google Calendar (2026-10-19, draft)
+
+**Decision:** A page under More › Every day › Google Calendar (drawn and approved by Vadim on 19 Oct) shows one of three states:
+- **Not connected:** what the copy does and never shows, and **Connect Google Calendar**.
+- **Connected:** the account, the last copy, how many bookings are waiting or failed, **Resync now** and **Disconnect** (after a question), and how to share the calendar as free/busy.
+- **Needs reconnect:** why, and **Connect again**.
+
+The Google side runs on the server at `api/google-calendar`:
+- It sends only the Admin to Google, asking for the narrowest access: `calendar.app.created`, which covers the app's own calendar only, plus `openid email` to show which account.
+- It trusts Google's reply only with a signed, 10-minute state matching a cookie set at the start.
+- It keeps the lasting sign-in in Vault, and reuses the calendar made before or makes "VadMassage bookings".
+- On Disconnect, it withdraws the sign-in at Google before forgetting it.
+
+No token, code or secret is ever put in an address, logged or returned. Setting it up is in `docs/GOOGLE_CALENDAR_SETUP.md`.
+
+**Reason:** Part C of Vadim's brief (connect, status, resync, disconnect, and a plain-English handover).
+
+**How it was built:**
+- No database change beyond part A.
+- Tests:
+  - `server/googleCalendarConnect.test.js`: Admin only, the state and cookie, the scope check, calendar reuse, revoking, and that no secret is shown. Nine deliberate breakages were all caught.
+  - Browser test `googleCalendarSettings.spec.js`: the three states, the message on return from Google, Resync now and Disconnect, with Google stood in for.
+- Connecting works only on the live address, the one registered with Google.
