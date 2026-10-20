@@ -91,17 +91,20 @@ afterEach(async () => {
 afterAll(async () => { await admin.from('calendar_connection').delete().eq('id', true) })
 
 describe('the Google Calendar copy against local Supabase', () => {
-  it('puts a new booking in as one booking event and one travel event, and says nothing private', async () => {
+  it('puts a new booking in as one booking event (with its address, for directions) and one travel event, and says nothing else private', async () => {
     const summary = await sync().run()
     expect(summary).toMatchObject({ synced: 1, failed: 0 })
     const [booking, travel] = google.live().sort((a, b) => a.start.dateTime.localeCompare(b.start.dateTime))
     expect(booking).toMatchObject({ summary: 'Massage – Calendar Copy', description: 'Deep tissue 60 min · 60 min total', transparency: 'opaque', status: 'confirmed',
       start: { dateTime: '2031-06-02T09:00:00.000Z', timeZone: 'Europe/London' }, end: { dateTime: '2031-06-02T10:00:00.000Z', timeZone: 'Europe/London' },
-      extendedProperties: { private: { bookingId: ids.booking, kind: 'booking' } } })
+      location: '7 Private Lane, London, SW1A 1AA', extendedProperties: { private: { bookingId: ids.booking, kind: 'booking' } } })
     expect(travel).toMatchObject({ summary: 'Travel', start: { dateTime: '2031-06-02T10:00:00.000Z' }, end: { dateTime: '2031-06-02T11:00:00.000Z' }, reminders: { useDefault: false } })
     expect(travel).not.toHaveProperty('description')
+    expect(travel).not.toHaveProperty('location')
+    // The address is only the booking's location: never in a title or description, and nothing else private anywhere.
+    for (const event of google.live()) expect(`${event.summary} ${event.description || ''}`).not.toContain('Private Lane')
     const sent = JSON.stringify(google.live())
-    for (const secret of ['Private Lane', 'SW1A', 'Secret note', '85', '07700', '447700', '@example.test', 'CAL-']) expect(sent).not.toContain(secret)
+    for (const secret of ['Secret note', '85.00', '£', '07700', '447700', '@example.test', 'CAL-']) expect(sent).not.toContain(secret)
     expect(await queueRow(ids.booking)).toBeNull()
     const connection = (await admin.from('calendar_connection').select('last_success_at,last_error').single()).data
     expect(connection.last_success_at).not.toBeNull()

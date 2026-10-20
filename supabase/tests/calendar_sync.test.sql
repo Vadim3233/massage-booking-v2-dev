@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions, pg_temp;
-select plan(54);
+select plan(56);
 
 -- Privileges: nothing new can be read or changed from a browser, the token least of all.
 select ok(not exists (
@@ -70,7 +70,10 @@ select is((select description from public.calendar_desired_events(null, null, ar
 select ok(not exists (
   select 1 from public.calendar_desired_events() d, unnest(array['Secret Road', 'SW9', 'amelia-secret', '07700', '447700', '123.45', '£', 'Bad knee', '4321', 'Guest Name', 'CAL-', 'c0001']) secret
   where d.booking_id::text like '00000000-0000-4000-8000-0000000c%' and (d.title || ' ' || d.description) ilike '%' || secret || '%'
-), 'Never the address, email, phone, price, notes, a guest''s name, the reference or an id');
+), 'Never the address, email, phone, price, notes, a guest''s name, the reference or an id in a title or description');
+select is((select location from public.calendar_desired_events(null, null, array['00000000-0000-4000-8000-0000000c0001'::uuid]) where kind = 'booking'),
+  (select address_snapshot from public.bookings where id = '00000000-0000-4000-8000-0000000c0001'), 'The booking event''s location is its address, for directions');
+select ok((select bool_and(location is null) from public.calendar_desired_events() where kind = 'travel'), 'A travel event has no location');
 select ok((select bool_and(google_event_id ~ '^vm[0-9a-v]{32}[bt]$') from public.calendar_desired_events()), 'Event ids are fixed by the booking, in the letters Google allows');
 select is((select google_event_id from public.calendar_desired_events(null, null, array['00000000-0000-4000-8000-0000000c0001'::uuid]) where kind = 'travel'), 'vm000000000000400080000000000c0001t', 'The travel event id is the booking''s with t');
 

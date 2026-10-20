@@ -24,12 +24,14 @@ export class GoogleError extends Error {
 // Google will not work with the saved sign-in any more: the Admin has to connect again.
 export class NeedsReconnect extends Error {}
 
-// One booking's event as Google takes it. Travel events have no reminders of their own.
+// One booking's event as Google takes it: the booking event has the address as its location (the phone offers directions, even offline).
+// Travel events have no location and no reminders of their own.
 export function eventBody(event) {
   return {
     id: event.google_event_id,
     summary: event.title,
     ...(event.description ? { description: event.description } : {}),
+    ...(event.location ? { location: event.location } : {}),
     start: { dateTime: new Date(event.starts_at).toISOString(), timeZone: 'Europe/London' },
     end: { dateTime: new Date(event.ends_at).toISOString(), timeZone: 'Europe/London' },
     transparency: 'opaque',
