@@ -8,6 +8,8 @@ const EXAMPLE_BOOKING = {
   booking_sessions: [{ position: 1, service_name_snapshot: 'Deep tissue', duration_minutes: 90 }],
   booking_payments: { method: 'bank_transfer', status: 'awaiting_transfer', payment_reference: 'VM-0000' },
 }
+// The example's cancellation line: free until 24 hours before the made-up appointment.
+const EXAMPLE_TERMS = { open: true, ended: false, free_until: '2026-11-11T17:30:00Z' }
 const EXAMPLE_BANK = { configured: true, accountName: 'Your name', bankName: 'Your bank', sortCode: '00-00-00', accountNumber: '00000000', note: '' }
 
 // Settings › Share message: the wording of the booking details sent from a booking's share button, with blanks for what each booking fills in.
@@ -61,7 +63,7 @@ export default function SettingsShareMessage({ api = shareMessageApi }) {
     </form>
     <section aria-labelledby="share-preview-title"><h2 id="share-preview-title">Example</h2>
       <p className="admin-detail-hint">A made-up booking still to be paid by bank transfer, with sample bank details. A real one uses the booking and your bank details.</p>
-      <pre className="admin-share-preview">{problem ? '' : fillShareMessage(text, shareValues(EXAMPLE_BOOKING, EXAMPLE_BANK))}</pre>
+      <pre className="admin-share-preview">{problem ? '' : fillShareMessage(text, shareValues(EXAMPLE_BOOKING, EXAMPLE_BANK, EXAMPLE_TERMS))}</pre>
     </section>
   </section>
 }
