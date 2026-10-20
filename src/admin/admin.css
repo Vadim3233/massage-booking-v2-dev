@@ -535,3 +535,36 @@
 .admin-calendar-problem { padding: 10px 12px; border-radius: var(--radius-sm); background: var(--sand-bg); color: var(--sand-ink); border: 1px solid var(--sand-line); }
 .admin-calendar-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .admin-calendar-actions button { min-height: 44px; }
+/* More › Income */
+.admin-income-tabs { grid-template-columns: repeat(3, 1fr); }
+.admin-income-yeartype { display: flex; gap: 8px; margin: 0 0 6px; }
+.admin-shell .admin-income-yeartype button { min-height: 40px; padding: 0 14px; border: 1.5px solid var(--line); border-radius: var(--radius-pill); background: var(--surface); color: var(--ink-soft); font: 600 14px/1 var(--font-ui); }
+.admin-shell .admin-income-yeartype button[aria-pressed="true"] { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
+.admin-income-period { display: grid; grid-template-columns: 48px minmax(0, 1fr) 48px; align-items: center; gap: 4px; margin: 6px 0; }
+.admin-income-period h2 { text-align: center; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; }
+.admin-shell .admin-income-arrow { width: 48px; min-height: 48px; padding: 0; border: 0; border-radius: 50%; background: var(--primary-soft); color: var(--primary); font: 600 26px/1 var(--font-ui); }
+.admin-income-upcoming { padding: 3px 10px; border-radius: var(--radius-pill); background: var(--sand-chip); color: var(--sand-ink); font: 600 12px/1.3 var(--font-ui); }
+.admin-income-total { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; margin-top: 10px; }
+.admin-income-total strong { font: 600 40px/1.05 var(--font-display); color: var(--ink); }
+.admin-income-compare { color: var(--ink-soft); font-size: 15px; }
+.admin-review .admin-income-still { margin: 2px 0 8px; color: var(--sand-ink); font-weight: 600; }
+.admin-income-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
+.admin-income-facts div { padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface); box-shadow: var(--shadow-card); }
+.admin-income-facts dt { color: var(--ink-soft); font-size: 13px; }
+.admin-income-facts dd { margin: 2px 0 0; font: 600 18px/1.2 var(--font-ui); color: var(--ink); }
+.admin-income-bars { list-style: none; display: flex; align-items: flex-end; gap: 4px; height: 150px; margin: 14px 0 6px; padding: 0 2px; }
+.admin-income-bars li { flex: 1 1 0; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; }
+.admin-income-bar { display: block; width: 100%; max-width: 40px; height: calc(var(--share) * 120px); min-height: 2px; border-radius: 6px 6px 2px 2px; background: var(--sage-rail); }
+.admin-income-bar-label { font-size: 11px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: clip; max-width: 100%; }
+.admin-income-bars.is-year .admin-income-bar-label, .admin-income-bars.is-tax_year .admin-income-bar-label { font-size: 10px; }
+.admin-income-owed { margin: 16px 0; padding: 12px 14px; border-radius: var(--radius); background: var(--sand-bg); border: 1px solid var(--sand-line); }
+.admin-income-owed summary { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 32px; font-weight: 600; color: var(--sand-ink); cursor: pointer; }
+.admin-income-section { margin-top: 16px; }
+.admin-income-list-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.admin-income-list { list-style: none; margin: 10px 0; padding: 0; display: grid; gap: 6px; }
+.admin-shell .admin-income-list button { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 56px; padding: 8px 12px; border: 0; border-radius: var(--radius-sm); background: var(--surface); box-shadow: var(--shadow-card); text-align: left; color: var(--ink); }
+.admin-income-list button > span:first-child { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; }
+.admin-income-list strong { overflow-wrap: anywhere; }
+.admin-income-count { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 8px; border-radius: var(--radius-pill); background: var(--sand-rail); color: var(--surface); font: 700 13px/1 var(--font-ui); }
+.admin-income-list small { color: var(--ink-soft); font-size: 13px; overflow-wrap: anywhere; }
+.admin-income-list .figure { font-weight: 600; white-space: nowrap; }

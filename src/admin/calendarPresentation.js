@@ -44,6 +44,11 @@ export function daySummary(bookings) {
   return `${live.length} ${live.length === 1 ? 'booking' : 'bookings'}${total > 0 ? ` · ${money(total)}` : ''}`
 }
 // Whether there is still somewhere to travel to: the appointment is going ahead and has not yet ended (London time).
+// Whether the appointment's start time has come, in London time.
+export function hasStarted(booking, now = new Date()) {
+  const { date, minutes } = londonNow(now)
+  return booking.date < date || (booking.date === date && booking.start_minutes <= minutes)
+}
 export function canNavigateTo(booking, now = new Date()) {
   if (!GOING_AHEAD.includes(booking.booking_status)) return false
   const { date, minutes } = londonNow(now)
