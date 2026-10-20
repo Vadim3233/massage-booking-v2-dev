@@ -601,3 +601,19 @@ The Telegram message has no link to the booking page (a private link in an email
 **How it was built:** Migration `20261106100000_share_message.sql` adds `admin_save_share_message(text)` (Admin only, up to 1000 characters, only the listed blanks), which keeps the wording in `business_settings` under `share_message`; the Admin already reads that table, so the share button reads it with no new function. The wording is filled in one place, `src/admin/shareBooking.js`. Until the migration is applied, the share button keeps the standard wording and Save says that saving is not switched on yet. Database test `share_message.test.sql`.
 
 **If it ever has to be taken back:** put the screens back, drop `admin_save_share_message(text)` and delete the `share_message` setting.
+
+## ADR-070 — Money groundwork: refunds keep their amount and date, and cash can be marked received from the card (2026-10-20)
+
+**Decision:**
+- **Refunds:** recording a refund sent now also keeps how much went back and when (`booking_payments.refunded_gbp`, `refunded_at`). The one refund already online is filled in from what was paid less the fee kept, at the time the payment became refunded.
+- **Cash:** once a cash appointment's start time has passed, its card offers **Cash received**, the same action as "Mark payment received" on the booking, after a question. Agreed ("approved") cash counts as income only once it is received.
+- **Nothing else changes.**
+
+**Reason:** Vadim's Income screen (change requests 3 and 4, `docs/change-requests-2026-10-20.md`) counts money actually received. A refund's amount and date were not kept, and cash received was easy to forget, being only on the booking sheet.
+
+**Left as it is, on purpose:** marking a prepaid no-show records the full fee as "due" on top of the payment. An existing database test asserts this, so it was not changed without Vadim's say. The Income screen counts a fee only when the booking was not already paid, so nothing is counted twice.
+
+**How it was built:**
+- Migration `20261108100000_money_groundwork.sql`: two columns, a backfill, a rule that a refund is never more than was paid, and `admin_record_refund` setting them. Its fingerprint matched the live function before the change.
+- Database test `money_groundwork.test.sql`.
+- `hasStarted` in calendarPresentation.js, and browser test `cashReceivedCard.spec.js`.
