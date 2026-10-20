@@ -37,22 +37,69 @@ function treatments(booking) {
   return [names || 'Massage', `${booking.treatment_duration_minutes} min`, money(booking.total_gbp)].join(' · ')
 }
 
-export function shareText(booking, bank) {
-  const end = booking.start_minutes + booking.treatment_duration_minutes
-  const lines = [
-    `*Massage booking – ${dateLabel(booking.date).replace(',', '')}, ${time(booking.start_minutes)}–${time(end)}*`,
-    booking.address_snapshot,
-    treatments(booking),
-    paymentWords(booking),
-  ].filter(Boolean)
-  if (transferDue(booking) && bank?.configured) {
-    const payment = paymentOf(booking)
-    lines.push('', 'Please pay by bank transfer to:', `Name: ${bank.accountName}`)
-    if (bank.bankName) lines.push(`Bank: ${bank.bankName}`)
-    lines.push(`Sort code: ${bank.sortCode}`, `Account number: ${bank.accountNumber}`, `Reference: ${payment.payment_reference || booking.booking_reference}`)
-    if (bank.note) lines.push(bank.note)
-  }
+// The Admin can reword the message (Settings › Share message), with these blanks and no others: the database refuses any other,
+// so nothing but what is filled in here can ever be sent. Empty means the standard wording.
+export const SHARE_BLANKS = ['date', 'time', 'address', 'treatment', 'payment', 'cancellation', 'bank details']
+export const STANDARD_SHARE_MESSAGE = '*Massage booking – {date}, {time}*\n{address}\n{treatment}\n{payment}\n{cancellation}\n\n{bank details}'
+export const SHARE_MESSAGE_LIMIT = 1000
+const BLANK = /\{(date|time|address|treatment|payment|bank details|cancellation)\}/g
+
+// What is wrong with a wording, in the words the database uses when it refuses one ('' when it can be saved).
+export function shareMessageProblem(text) {
+  const value = text.trim()
+  if (value.length > SHARE_MESSAGE_LIMIT) return `The share message can be up to ${SHARE_MESSAGE_LIMIT} characters.`
+  if (/[{}]/.test(value.replace(BLANK, ''))) return 'Only the blanks listed can be used, each in curly brackets.'
+  return ''
+}
+
+function bankLines(booking, bank) {
+  if (!transferDue(booking) || !bank?.configured) return ''
+  const payment = paymentOf(booking)
+  const lines = ['Please pay by bank transfer to:', `Name: ${bank.accountName}`]
+  if (bank.bankName) lines.push(`Bank: ${bank.bankName}`)
+  lines.push(`Sort code: ${bank.sortCode}`, `Account number: ${bank.accountNumber}`, `Reference: ${payment.payment_reference || booking.booking_reference}`)
+  if (bank.note) lines.push(bank.note)
   return lines.join('\n')
+}
+
+// What each blank says for this booking.
+// Until when the client can cancel or move for free, from the database's own rule (admin_cancellation_terms): only the date is put into words
+// here. Nothing is said for a booking that can no longer change, or when the terms could not be read.
+const londonDay = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short' })
+const londonTime = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+export function cancellationWords(terms) {
+  if (!terms?.open || !terms.free_until) return ''
+  if (terms.ended) return 'The free cancellation period has ended.'
+  const until = new Date(terms.free_until)
+  return `Free to cancel or move until ${londonDay.format(until).replace(',', '')}, ${londonTime.format(until)}. After that, the full price may be charged.`
+}
+
+export function shareValues(booking, bank, terms) {
+  const end = booking.start_minutes + booking.treatment_duration_minutes
+  return {
+    date: dateLabel(booking.date).replace(',', ''),
+    time: `${time(booking.start_minutes)}–${time(end)}`,
+    address: booking.address_snapshot || '',
+    treatment: treatments(booking),
+    payment: paymentWords(booking),
+    'bank details': bankLines(booking, bank),
+    cancellation: cancellationWords(terms),
+  }
+}
+
+// The wording with its blanks filled. A line whose blanks have nothing to say (no address; no bank details when nothing is due) is left out,
+// and so is a run of empty lines that leaves behind.
+export function fillShareMessage(wording, values) {
+  const lines = (wording?.trim() ? wording.trim() : STANDARD_SHARE_MESSAGE).split('\n').flatMap(line => {
+    if (!line.match(BLANK)) return [line]
+    const filled = line.replace(BLANK, (_, name) => values[name] || '')
+    return filled.trim() ? [filled] : []
+  })
+  return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
+export function shareText(booking, bank, wording = STANDARD_SHARE_MESSAGE, terms = null) {
+  return fillShareMessage(wording, shareValues(booking, bank, terms))
 }
 
 // WhatsApp straight to the client's chat with the message in it, or nothing when the booking has no usable phone number.

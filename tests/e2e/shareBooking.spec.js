@@ -29,6 +29,8 @@ test('WhatsApp client opens the client\'s own chat with the booking details, and
   const text = decodeURIComponent(href.split('?text=')[1])
   expect(text).toMatch(/^\*Massage booking – .+, 10:00–11:00\*\n/)
   expect(text).toContain('Payment: cash, due at the appointment')
+  // Until when the client can cancel or move for free, from the database's rule (the booking is days away, so the free period is still open).
+  expect(text).toMatch(/\nFree to cancel or move until \w{3} \d{1,2} \w{3}, \d{2}:\d{2}\. After that, the full price may be charged\.$/m)
   for (const secret of ['canonical@example.test', 'booking@example.test', '07700', '+44', 'Exact persisted note', f.bookings[0].id]) expect(text).not.toContain(secret)
   await page.screenshot({ path: 'test-results/share-booking-menu.png' })
 })
@@ -72,4 +74,47 @@ test('a cancelled booking has no share button', async ({ page }) => {
   await openBooking(page, f.bookings[1].id)
   await expect(sheet(page).getByText('Cancelled').first()).toBeVisible()
   await expect(shareButton(page)).toHaveCount(0)
+})
+
+test('Settings › Share message: blanks, an example, Reset, and the share button then uses the saved wording', async ({ page }) => {
+  await f.authorize()
+  await page.setViewportSize({ width: 390, height: 844 })
+  try {
+    await page.addInitScript(() => { Object.defineProperty(navigator, 'clipboard', { value: { writeText: async text => { window.copiedText = text } } }) })
+    await page.goto('/admin/settings/share-message')
+    await page.getByLabel('Email', { exact: true }).fill(f.email)
+    await page.getByLabel('Password', { exact: true }).fill(f.password)
+    await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+    const box = page.getByRole('textbox', { name: 'Message', exact: true })
+    await expect(box).toHaveValue(/^\*Massage booking – \{date\}, \{time\}\*/)
+    await expect(page.getByRole('button', { name: 'Reset to standard' })).toBeDisabled()
+    // A blank that is not on the list cannot be saved.
+    await box.fill('Your number {phone}')
+    await expect(page.getByRole('alert')).toHaveText('Only the blanks listed can be used, each in curly brackets.')
+    await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeDisabled()
+    await box.fill('Hi! See you ')
+    await page.getByRole('group', { name: 'Add a blank' }).getByRole('button', { name: '{date}' }).click()
+    await box.press('End')
+    await box.pressSequentially(' at ')
+    await page.getByRole('group', { name: 'Add a blank' }).getByRole('button', { name: '{time}' }).click()
+    await expect(box).toHaveValue('Hi! See you {date} at {time}')
+    await expect(page.locator('.admin-share-preview')).toHaveText('Hi! See you Thu 12 Nov at 17:30–19:00')
+    await page.screenshot({ path: 'test-results/share-message-settings.png', fullPage: true })
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(page.getByText('Saved. The share button uses it now.')).toBeVisible()
+    // The share button now sends that wording.
+    await page.goto(`/admin/bookings/${f.bookings[0].id}`)
+    await shareButton(page).click()
+    await sheet(page).getByRole('button', { name: 'Copy', exact: true }).click()
+    await expect(sheet(page).getByText('Copied', { exact: true })).toBeVisible()
+    expect(await page.evaluate(() => window.copiedText)).toMatch(/^Hi! See you .+ at 10:00–11:00$/)
+    // Reset to standard, saved, gives the standard message again.
+    await page.goto('/admin/settings/share-message')
+    await page.getByRole('button', { name: 'Reset to standard' }).click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(page.getByText('Saved. The share button uses it now.')).toBeVisible()
+    expect((await f.admin.from('business_settings').select('key').eq('key', 'share_message')).data).toEqual([])
+  } finally {
+    await f.admin.from('business_settings').delete().eq('key', 'share_message')
+  }
 })
