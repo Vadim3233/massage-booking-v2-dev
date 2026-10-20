@@ -1,8 +1,7 @@
-import { useState } from 'react'
 import Icon from '../../../ui/icons.jsx'
 import WaitlistPanel from './WaitlistPanel.jsx'
 import Welcome, { HowItWorks } from './Welcome.jsx'
-import { activeHold, durationOf, money, newSession, timeLabel } from '../bookingDraft.js'
+import { activeHold, durationOf, money, timeLabel } from '../bookingDraft.js'
 import DayTimePicker from './DayTimePicker.jsx'
 import { dayParts } from '../dateStrip.js'
 
@@ -38,45 +37,6 @@ export function TreatmentStep({ catalogue, choose }) {
       </span>
       <span className="tile-side">{from(service.id) !== null && <span className="tile-from">From <b className="figure">{money(from(service.id))}</b></span>}<Icon name="right" size={20} className="tile-chevron" /></span>
     </button>)}</div>{!catalogue.services.length && <p>No treatments are currently available. Please contact Vad.</p>}
-  </>
-}
-
-export function DurationStep({ draft, catalogue, change, choose, next }) {
-  const [group, setGroup] = useState(draft.sessions.length > 1)
-  const total = durationOf(draft)
-  const prices = catalogue.prices.filter((price) => price.service_id === draft.serviceId)
-  const treatments = draft.sessions.reduce((sum, session) => sum + Number(prices.find((price) => price.duration_minutes === session.duration_minutes)?.price_gbp || 0), 0)
-  return <><h1 tabIndex={-1}>How much time would <em>you like?</em></h1>
-    {!group && <>
-      <p className="lede">Choose a length and you'll go straight on to picking a time.</p>
-      <div className="tiles tiles--durations">{prices.map((price) => <button className="tile tile--duration" key={price.duration_minutes} aria-label={`${price.duration_minutes} minutes ${money(price.price_gbp)} per person`}
-        aria-pressed={draft.sessions.length === 1 && draft.sessions[0].duration_minutes === price.duration_minutes} onClick={() => choose(price.duration_minutes)}>
-        <span className="figure tile-figure">{price.duration_minutes}</span>{' '}<span className="tile-unit">minutes</span>{' '}<span className="tile-price">{money(price.price_gbp)}</span>
-      </button>)}</div>
-      {prices.length > 0 && <button className="btn--quiet group-toggle" onClick={() => setGroup(true)}>Booking for more than one person?</button>}
-    </>}
-    {group && <>
-      <p className="lede">Choose a session for each person. Sessions run one after another at the same address.</p>
-      {prices.map((price) => {
-        const count = draft.sessions.filter((session) => session.duration_minutes === price.duration_minutes).length
-        return <div className="quantity" key={price.duration_minutes}>
-          <div><strong>{price.duration_minutes} minutes</strong><span>{money(price.price_gbp)} per person</span></div>
-          <div className="stepper-control">
-            <button type="button" aria-label={`Remove ${price.duration_minutes} minutes`} aria-disabled={!count} onClick={() => {
-              if (!count) return
-              const index = draft.sessions.findLastIndex((session) => session.duration_minutes === price.duration_minutes)
-              change(draft.sessions.filter((_, i) => i !== index))
-            }}><Icon name="minus" size={20} /></button>
-            <output aria-label={`${price.duration_minutes} minute sessions`}>{count}</output>
-            <button type="button" aria-label={`Add ${price.duration_minutes} minutes`} aria-disabled={total + price.duration_minutes > 240} onClick={() => { if (total + price.duration_minutes <= 240) change([...draft.sessions, newSession(price.duration_minutes)]) }}><Icon name="plus" size={20} /></button>
-          </div>
-        </div>
-      })}
-      <p className="total-line">{total ? <><b>{draft.sessions.length} {draft.sessions.length === 1 ? 'session' : 'sessions'}</b> · {total} minutes · treatments {money(treatments)}</> : 'No sessions chosen yet.'} <span className="fine">Up to 240 minutes per visit.</span></p>
-      <div className="action-bar"><button className="btn--primary btn--lg btn--block" disabled={!total} onClick={next}>Choose date &amp; time</button></div>
-      <button className="btn--quiet group-toggle" onClick={() => setGroup(false)}>Just me</button>
-    </>}
-    {!prices.length && <p>There are no lengths available for this treatment right now. Please choose another treatment.</p>}
   </>
 }
 

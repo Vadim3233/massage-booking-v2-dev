@@ -601,3 +601,24 @@ The Telegram message has no link to the booking page (a private link in an email
 **How it was built:** Migration `20261106100000_share_message.sql` adds `admin_save_share_message(text)` (Admin only, up to 1000 characters, only the listed blanks), which keeps the wording in `business_settings` under `share_message`; the Admin already reads that table, so the share button reads it with no new function. The wording is filled in one place, `src/admin/shareBooking.js`. Until the migration is applied, the share button keeps the standard wording and Save says that saving is not switched on yet. Database test `share_message.test.sql`.
 
 **If it ever has to be taken back:** put the screens back, drop `admin_save_share_message(text)` and delete the `share_message` setting.
+
+## ADR-072 — Booking asks "How many people?" first, and says who, how long and the price in one sentence (2026-10-20)
+
+**Decision:** Step 3 of the client booking is now **People & length**, in two screens.
+- **First, "How many people?":** "Just me", "2 people", "3 people", "4 people", with nothing chosen for the client.
+- **Then the lengths for that many.** Every option says how many people, how long each and the price for the whole visit, the area's travel or congestion fee included, for example "2 people × 60 min · One after the other · 2 hours in total · £180.00".
+- **Only what fits:** lengths that would make the visit longer than 4 hours are not offered, so 3 or 4 people get 60 minutes each.
+- **"Different length for each person"** lists Person 1, Person 2… with their own lengths.
+- **"Change number of people"** goes back to the question.
+- **Review:** it opens with one bold sentence, such as "One 2-hour massage for 1 person – £170.00", with **Change number of people** under it.
+- **Payment and confirmation:** the booking summary shows the same sentence.
+
+The step keeps its number (3 of 8), so links that open a later step by number, such as sign-in returns, still land in the right place.
+
+**Reason:** Vadim's change request 2. A client booked 1 person × 120 minutes and said they had read it as 2 people × 60 minutes, because "per person" was easy to miss.
+
+**How it was built:**
+- **No database change.** The wording is in one place, `src/booking/bookingWords.js`, with unit tests.
+- **The limits** (4 people, 240 minutes) are the database quote's own. `server/bookingLimits.integration.test.js` checks against local Supabase that they still agree, and that an option's price is exactly the database's quote for it.
+- **Browser tests** that went through the old length screen now answer "Just me" first (helper `tests/bookingSteps.js`). The new `peopleLength.spec.js` covers people first, the prices, mixed lengths, the 4-hour limit and the way back.
+- **Not in this change:** the same sentence in the emails, the Admin's card and the share message. That is change 2b, which puts the wording in the database for the emails.

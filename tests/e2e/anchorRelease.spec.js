@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { chooseLength } from '../bookingSteps.js'
 import { localFixture } from '../localSupabase.js'
 import { unwrap } from '../../src/client/booking/bookingApi.js'
 import { addDays } from '../../src/client/booking/dateStrip.js'
@@ -35,7 +36,7 @@ test('a day nobody has booked opens to every usual time once it is released, and
   await page.goto('/')
   await page.getByRole('button', { name: /Integration area/ }).click()
   await page.getByRole('button', { name: /Integration massage/ }).click()
-  await page.getByRole('button', { name: /^60 minutes/ }).click()
+  await chooseLength(page, 60)
 
   // Released: any usual time between 10:00 and the last that finishes by 22:00, not just the first appointment.
   await page.getByLabel('Appointment date').fill(fixture.date)
@@ -55,7 +56,7 @@ test('without a release time the first appointment is kept until someone books, 
   await page.goto('/')
   await page.getByRole('button', { name: /Integration area/ }).click()
   await page.getByRole('button', { name: /Integration massage/ }).click()
-  await page.getByRole('button', { name: /^60 minutes/ }).click()
+  await chooseLength(page, 60)
   await page.getByLabel('Appointment date').fill(fixture.date)
   await expect(page.getByRole('button', { name: '15:00', exact: true })).toBeVisible()
   await expect(page.locator('.slots button')).toHaveCount(1)

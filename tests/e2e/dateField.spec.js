@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { chooseLength } from '../bookingSteps.js'
 import { localFixture } from '../localSupabase.js'
 
 test.use({ hasTouch: true })
@@ -13,7 +14,7 @@ for (const mode of ['native', 'unavailable', 'restricted']) {
     await page.goto('/')
     await page.getByRole('button', { name: /Integration area/ }).click()
     await page.getByRole('button', { name: /Integration massage/ }).click()
-    await page.getByRole('button', { name: /^60 minutes/ }).click()
+    await chooseLength(page, 60)
     const field = page.getByLabel('Appointment date')
     await field.fill(fixture.date)
     await field.evaluate((input, mode) => {

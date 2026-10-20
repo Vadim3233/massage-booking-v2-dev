@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { chooseLength } from '../bookingSteps.js'
 import { localFixture } from '../localSupabase.js'
 import { unwrap } from '../../src/client/booking/bookingApi.js'
 
@@ -13,10 +14,7 @@ async function toReview(page) {
   await page.goto('/')
   await page.getByRole('button', { name: /Integration area/ }).click()
   await page.getByRole('button', { name: /Integration massage/ }).click()
-  await page.getByRole('button', { name: /more than one person/ }).click()
-  await page.getByRole('button', { name: 'Add 60 minutes', exact: true }).click()
-  await page.getByRole('button', { name: 'Add 60 minutes', exact: true }).click()
-  await page.getByRole('button', { name: 'Choose date & time' }).click()
+  await chooseLength(page, 60, 2)
   await page.getByLabel('Appointment date').fill(fixture.date)
   await page.getByRole('button', { name: '10:00', exact: true }).click()
   await page.getByRole('button', { name: 'Review booking', exact: true }).click()
@@ -49,6 +47,9 @@ async function toPayment(page) {
 test('mobile bank-transfer journey, browser Back, reload and real persisted result', async ({ page }) => {
   const errors = []; page.on('pageerror', (error) => errors.push(error.message))
   await toReview(page)
+  // One plain sentence of who and how long, with the price from the quote, and a way back to the number of people.
+  await expect(page.locator('.people-sentence strong')).toHaveText(/^Two 60-minute massages for 2 people, one after the other – 2 hours in total – £\d+\.\d\d$/)
+  await expect(page.getByRole('button', { name: 'Change number of people' })).toBeVisible()
   await page.getByLabel('Anything I should know? (optional)').fill('Keep this note')
   await page.goBack()
   await expect(page.getByRole('heading', { name: 'Choose date and time' })).toBeVisible()
@@ -72,6 +73,7 @@ test('mobile bank-transfer journey, browser Back, reload and real persisted resu
   await expect(page.locator('.summary-hint')).toContainText('My emails come from hello@book.vadmassage.com.')
   await expect(page.locator('.summary-hint')).toContainText('Look in your spam folder')
   await expect(page.getByRole('listitem').filter({ hasText: 'Integration massage · 60 minutes' })).toHaveCount(2)
+  await expect(page.locator('.summary-sentence')).toHaveText(/^Two 60-minute massages for 2 people, one after the other – 2 hours in total – £\d+\.\d\d$/)
   await page.screenshot({ path: 'test-results/mobile-confirmation.png', fullPage: true })
   await page.reload()
   await expect(page.getByText("Payment: Transfer sent — I'll check it shortly", { exact: true })).toBeVisible()
@@ -147,11 +149,10 @@ test('changing duration releases the old hold and refreshes availability', async
   await toReview(page)
   const original = await page.evaluate(() => JSON.parse(sessionStorage.getItem('vad-v2-booking-draft-v1')).draft.hold)
   await page.getByRole('button', { name: 'Change length' }).click()
-  await page.getByRole('button', { name: 'Remove 60 minutes', exact: true }).click()
-  await expect(page.getByRole('status', { name: '60 minute sessions' })).toHaveText('1')
-  const rows = await unwrap(fixture.admin.from('booking_holds').select('status').eq('id', original.hold_id))
-  expect(rows[0].status).toBe('released')
-  await page.getByRole('button', { name: 'Choose date & time' }).click()
+  // Back at People & length with the two people chosen; going to one person releases the held time.
+  await page.getByRole('button', { name: 'Change number of people' }).click()
+  await chooseLength(page, 60)
+  await expect.poll(async () => (await unwrap(fixture.admin.from('booking_holds').select('status').eq('id', original.hold_id)))[0].status).toBe('released')
   await expect(page.getByRole('button', { name: 'Review booking', exact: true })).toBeDisabled()
   await page.getByRole('button', { name: '10:00', exact: true }).click()
   await page.getByRole('button', { name: 'Review booking', exact: true }).click()
