@@ -764,3 +764,13 @@ No token, code or secret is ever put in an address, logged or returned. Setting 
   - `server/googleCalendarConnect.test.js`: Admin only, the state and cookie, the scope check, calendar reuse, revoking, and that no secret is shown. Nine deliberate breakages were all caught.
   - Browser test `googleCalendarSettings.spec.js`: the three states, the message on return from Google, Resync now and Disconnect, with Google stood in for.
 - Connecting works only on the live address, the one registered with Google.
+
+## ADR-075 — Every table states its own Data API permissions (2026-10-20)
+
+**Decision:** Migration `20261111100000_explicit_table_grants.sql` writes down, table by table, exactly the permissions the live database had on 20 Oct 2026 for the visitor (anon), signed-in (authenticated) and server (service_role) roles: 73 grants. On the live database it changes nothing. From now on, a migration that creates a table in "public" grants that table's permissions itself, in the same file, as the Google Calendar tables already do.
+
+**Reason:** Supabase emailed on 20 Oct that from 30 Oct 2026 it stops granting permissions on new tables automatically, for any database built from these files: a new project, a preview branch, a local reset, or a rebuild after a disaster. Most tables here relied on the automatic grants. A fresh rebuild without them, which the replay test already does, came out with 35 of the 73 grants: the server could not reach bookings, payments, the email queue and more.
+
+**How it was checked:** A fresh database rebuilt from all the migrations, with no automatic grants, now has exactly the live list, line for line, nothing missing and nothing extra. All 1931 database checks pass. The new test `table_grants.test.sql` fails if any table cannot be reached by the server, if visitors can read more than the catalogue or change anything, or if a table lacks row security. It was seen to fail when the server's grants were removed.
+
+**Left as it is, for later:** the signed-in role still has the broad grants the automatic defaults gave many tables (including truncate). Row security and the database functions limit what anyone can actually do, and truncate is not reachable through the Data API. Narrowing these would be a separate, deliberate change.
