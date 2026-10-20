@@ -3,6 +3,7 @@ import { money, timeLabel, durationOf } from '../bookingDraft.js'
 import { quoteParams } from '../bookingApi.js'
 import { dayParts } from '../dateStrip.js'
 import { guestLabel } from '../../../booking/guestNames.js'
+import { bookingSentence, peopleSentence, treatmentNoun } from '../../../booking/bookingWords.js'
 
 const PREFERENCE_GROUPS = [
   { title: 'Focus on', aliases: ['Focus on', 'Focus area', 'Focus'] },
@@ -75,7 +76,12 @@ export default function ReviewStep({ draft, catalogue, quote, quoteError, edit, 
   const service = catalogue.services.find((item) => item.id === draft.serviceId)?.name
   const many = draft.sessions.length > 1
   const row = (label, text, step) => <div><dt>{label}</dt><dd><span className="row-text">{text}</span><button className="btn--quiet btn--small" aria-label={`Change ${label.toLowerCase()}`} onClick={() => navigate(step)}>Change</button></dd></div>
+  const durations = draft.sessions.map((session) => session.duration_minutes)
+  // One plain sentence of who, how long and the price (from the database's quote), so the number of people cannot be misread.
+  const sentence = quote ? bookingSentence(durations, quote.total_gbp, treatmentNoun(service)) : peopleSentence(durations, treatmentNoun(service))
   return <><h1 tabIndex={-1}>Review your <em>booking</em></h1><p className="lede">Nothing is booked yet, so you can still change anything here.</p>
+    <div className="people-sentence"><p><strong>{sentence}</strong></p>
+      <button type="button" className="btn--quiet btn--small" onClick={() => { edit({ askPeople: true }); navigate(2) }}>Change number of people</button></div>
     <section className="ticket" aria-label="Your appointment">
       <div className="ticket-head">
         <div>

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { chooseLength } from '../bookingSteps.js'
 import { localFixture } from '../localSupabase.js'
 import { unwrap } from '../../src/client/booking/bookingApi.js'
 
@@ -20,7 +21,7 @@ async function toDetails(page) {
   await expect(page.getByRole('banner').getByRole('button', { name: 'Sign out' })).toBeVisible()
   await page.getByRole('button', { name: /Integration area/ }).click()
   await page.getByRole('button', { name: /Integration massage/ }).click()
-  await page.getByRole('button', { name: /^60 minutes/ }).click()
+  await chooseLength(page, 60)
   await page.getByLabel('Appointment date').fill(fixture.date)
   await page.getByRole('button', { name: '10:00', exact: true }).click()
   await page.getByRole('button', { name: 'Review booking', exact: true }).click()

@@ -3,6 +3,7 @@ import { EMAIL_SENDER } from '../../emailSender.js'
 import { paymentStatus } from '../paymentPresentation.js'
 import { CopyValue } from './BankDetails.jsx'
 import { PriceSummary } from './ReviewStep.jsx'
+import { bookingSentence, treatmentNoun } from '../../../booking/bookingWords.js'
 
 // `emailHint` adds, under the address, where my emails come from and where to look for one that has not come. The payment step leaves it out: no email has gone yet.
 export default function BookingSummary({ booking, paymentLabel, quote, emailHint }) {
@@ -13,7 +14,8 @@ export default function BookingSummary({ booking, paymentLabel, quote, emailHint
   return <section className="panel ticket ticket--summary" aria-label="Appointment summary">
     <dl className="prices bank-list"><CopyValue label="Booking reference" value={booking.booking_reference} /></dl>
     <p className="summary-when">{dateLabel(booking.date)} · {timeLabel(booking.start_minutes)}–{timeLabel(endMinutes)} (London time)</p>
-    <p className="summary-line">{booking.treatment_duration_minutes} minutes in total</p>
+    {/* Who, how long and the price, in the words the booking screens used. */}
+    <p className="summary-sentence"><strong>{bookingSentence([...booking.booking_sessions].sort((a, b) => a.position - b.position).map((session) => session.duration_minutes), booking.total_gbp, treatmentNoun(booking.booking_sessions[0]?.service_name_snapshot))}</strong></p>
     <p className="summary-line">{booking.address_snapshot}</p>
     <p className="summary-line">Confirmation email: <strong>{booking.booking_email_snapshot || 'Please contact Vad to confirm your email'}</strong></p>
     {/* A new sender's first email can land in spam, and one "Not spam" teaches the inbox. */}

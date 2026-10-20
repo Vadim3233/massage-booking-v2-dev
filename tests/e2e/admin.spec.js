@@ -26,7 +26,7 @@ for (const width of [320, 360, 390, 412]) test(`real calendar and exact persiste
   await expect(page.locator('.admin-card')).toHaveCount(2)
   await expect(page.getByRole('list', { name: 'Day timeline' })).toBeVisible()
   await expect(page.locator('.admin-card').first().locator('.admin-card-heading')).toContainText('£85.00')
-  await expect(page.locator('.admin-card').first().locator('.admin-card-length')).toHaveText('60 min')
+  await expect(page.locator('.admin-card').first().locator('.admin-card-length')).toHaveText('1 person · 60 min')
   await expect(page.locator('.admin-card').first().locator('.admin-card-postcode')).toHaveText('SW1A 1AA')
   await expect(page.locator('.admin-card').first().locator('.admin-status')).toHaveText('Confirmed · Cash approved')
   expect((await page.locator('.admin-header').boundingBox()).height).toBeLessThanOrEqual(110)

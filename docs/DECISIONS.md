@@ -644,3 +644,57 @@ The moment comes from the database: `booking_free_until(created_at, date, start)
 - Database test `income.test.sql`: every money rule, weeks, months, tax years, the clocks-change week, still to come, money owed, and Admin only.
 - The page `Income.jsx`, with its words in `incomePresentation.js` (unit tests), and browser test `income.spec.js`.
 - The client page's "Paid so far" is left as it is (a simpler sum) until Vadim decides.
+
+## ADR-072 — Booking asks "How many people?" first, and says who, how long and the price in one sentence (2026-10-20)
+
+**Decision:** Step 3 of the client booking is now **People & length**, in two screens.
+- **First, "How many people?":** "Just me", "2 people", "3 people", "4 people", with nothing chosen for the client.
+- **Then the lengths for that many.** Every option says how many people, how long each and the price for the whole visit, the area's travel or congestion fee included, for example "2 people × 60 min · One after the other · 2 hours in total · £180.00".
+- **Only what fits:** lengths that would make the visit longer than 4 hours are not offered, so 3 or 4 people get 60 minutes each.
+- **"Different length for each person"** lists Person 1, Person 2… with their own lengths.
+- **"Change number of people"** goes back to the question.
+- **Review:** it opens with one bold sentence, such as "One 2-hour massage for 1 person – £170.00", with **Change number of people** under it.
+- **Payment and confirmation:** the booking summary shows the same sentence.
+
+The step keeps its number (3 of 8), so links that open a later step by number, such as sign-in returns, still land in the right place.
+
+**Reason:** Vadim's change request 2. A client booked 1 person × 120 minutes and said they had read it as 2 people × 60 minutes, because "per person" was easy to miss.
+
+**How it was built:**
+- **No database change.** The wording is in one place, `src/booking/bookingWords.js`, with unit tests.
+- **The limits** (4 people, 240 minutes) are the database quote's own. `server/bookingLimits.integration.test.js` checks against local Supabase that they still agree, and that an option's price is exactly the database's quote for it.
+- **Browser tests** that went through the old length screen now answer "Just me" first (helper `tests/bookingSteps.js`). The new `peopleLength.spec.js` covers people first, the prices, mixed lengths, the 4-hour limit and the way back.
+- **Not in this change:** the same sentence in the emails, the Admin's card and the share message. That is change 2b, which puts the wording in the database for the emails.
+
+## ADR-073 — The Admin's card and the share message say how many people too (2026-10-20)
+
+**Decision:**
+- **Booking card:** it shows how many people and how long each, "1 person · 120 min", "3 people · 3 × 60 min" or "2 people · 60 + 90 min", where it showed only the total minutes.
+- **Share message:** the `{treatment}` line is the treatment and the same sentence the client saw when booking, for example "Massage: One 2-hour massage for 1 person – £170.00" or "Deep tissue: Two sessions for 2 people, one after the other (60 min + 90 min) – 2 hours 30 minutes in total – £215.00".
+
+Both use `src/booking/bookingWords.js`, the one place this wording is made.
+
+**Reason:** Vadim's change request 2: the same sentence in the WhatsApp share message, and the number of people on the Admin's booking card.
+
+**How it was built:** No database change. The unit tests for the share message and the card's browser tests were updated to the new wording. The emails, whose words are made in the database, come in a later change.
+
+## ADR-074 — Client emails say who, how long and the price in the booking screens' own words (2026-10-20)
+
+**Decision:** The booking emails to a client, confirmed (booked by Vadim), moved and confirmed (paid or cash approved), and the regular-booking email, no longer say only "(120 minutes)". After the day, time and address they give the same sentence as the booking screens, on its own line, for example:
+
+"Thank you. Your appointment is confirmed for Mon 5 May at 10:00 at 1 Sentence Road, London.
+One 2-hour massage for 1 person – £170.00.
+Reference: …"
+
+The regular-booking email leaves the price out of the sentence, because it states the cost on its own.
+
+**Reason:** Vadim's change request 2 (`docs/change-requests-2026-10-20.md`), with his answer "Yes, change emails".
+
+**How it was built:**
+- **Migration `20261110100000_people_sentence_emails.sql`:**
+  - `people_sentence(durations, noun)` and `booking_people_sentence(booking, with_price)`. Browsers cannot call them.
+  - It replaces `plan_event_notifications` and `plan_series_notifications`, generated from their exact current text, so only the four email lines differ. Both live fingerprints matched before the change. The morning reminder, which is not online, is not touched.
+- **Tests:**
+  - `server/bookingSentence.integration.test.js` checks the database's sentence is word for word `src/booking/bookingWords.js` for every booking that can be made (1 to 4 people, 60/90/120 minutes, at most 4 hours).
+  - Database test `people_sentence.test.sql`.
+  - The one existing check that pinned the old "(90 minutes)" wording (`notifications.test.sql` test 24) was updated to the new wording, as Vadim approved changing the emails.

@@ -1,4 +1,4 @@
-export const STEPS = ['Area', 'Treatment', 'Duration', 'Date & Time', 'Review', 'Your Details', 'Payment', 'Confirmation']
+export const STEPS = ['Area', 'Treatment', 'People & length', 'Date & Time', 'Review', 'Your Details', 'Payment', 'Confirmation']
 export const draftKey = 'vad-v2-booking-draft-v1'
 export const holdKey = 'vad-v2-hold-client-v1'
 // The address is one text (ADR-059): whatever the client writes or pastes.

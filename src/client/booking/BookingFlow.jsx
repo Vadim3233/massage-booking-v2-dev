@@ -11,7 +11,8 @@ import { useBookingHistory } from './useBookingHistory.js'
 import { useClientAuth } from '../auth/useClientAuth.js'
 import { useLinkProblem } from '../auth/linkProblem.js'
 import AuthPanel from '../auth/AuthPanel.jsx'
-import { AreaStep, DurationStep, TimeStep, TreatmentStep } from './components/SelectionSteps.jsx'
+import { AreaStep, TimeStep, TreatmentStep } from './components/SelectionSteps.jsx'
+import PeopleLengthStep from './components/PeopleLengthStep.jsx'
 import ReviewStep from './components/ReviewStep.jsx'
 import DetailsStep from './components/DetailsStep.jsx'
 import PaymentStep from './components/PaymentStep.jsx'
@@ -196,8 +197,11 @@ export default function BookingFlow() {
         <fieldset className={`screen enter ${busy ? 'is-busy' : ''}`} key={step}>
           {step === 0 && <AreaStep welcome={welcome} rules={rules} catalogue={catalogue} usual={usual} bookUsual={bookUsual} choose={async (areaId) => { if (areaId === draft.areaId || await store.changeSelection({ areaId })) navigate(1) }} />}
           {step === 1 && <TreatmentStep catalogue={catalogue} choose={async (serviceId) => { if (serviceId === draft.serviceId || await store.changeSelection({ serviceId, sessions: [], enhancementIds: [] })) navigate(2) }} />}
-          {step === 2 && <DurationStep draft={draft} catalogue={catalogue} change={(sessions) => store.changeSelection({ sessions })}
-            choose={async (minutes) => { if ((draft.sessions.length === 1 && draft.sessions[0].duration_minutes === minutes) || await store.changeSelection({ sessions: [newSession(minutes)] })) navigate(3) }} next={() => navigate(3)} />}
+          {step === 2 && <PeopleLengthStep draft={draft} catalogue={catalogue} edit={store.edit}
+            choose={async (durations) => {
+              const same = durations.length === draft.sessions.length && durations.every((minutes, index) => draft.sessions[index].duration_minutes === minutes)
+              if (same || await store.changeSelection({ sessions: durations.map(newSession) })) navigate(3)
+            }} />}
           {step === 3 && <TimeStep rules={rules} joinWaitlist={api.joinWaitlist} draft={draft} loadAvailability={store.availability} selectSlot={store.selectSlot} next={() => goWithQuote(4)} />}
           {step === 4 && <ReviewStep draft={draft} catalogue={catalogue} quote={quote} quoteError={quoteError} edit={store.edit} navigate={navigate} refreshQuote={store.refreshQuote} retryQuote={store.retryQuote} next={() => goWithQuote(5)} />}
           {!auth.ready && step >= 5 && <p role="status">Checking your account…</p>}
