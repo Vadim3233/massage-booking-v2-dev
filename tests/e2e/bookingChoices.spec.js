@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { chooseLength } from '../bookingSteps.js'
 import { localFixture } from '../localSupabase.js'
 import { unwrap } from '../../src/client/booking/bookingApi.js'
 import { addDays } from '../../src/client/booking/dateStrip.js'
@@ -34,13 +35,18 @@ test('each screen has its question as the heading, named in the tab and read out
   await expect(page).toHaveTitle('Treatment · Book a massage · VadMassage')
   await expect(page.getByRole('heading', { level: 1 })).toBeFocused()
   await page.getByRole('button', { name: /Integration massage/ }).click()
-  await expect(page).toHaveTitle('Duration · Book a massage · VadMassage')
+  await expect(page).toHaveTitle('People & length · Book a massage · VadMassage')
   await expect(page.getByRole('heading', { level: 1 })).toBeFocused()
 })
 
 test('tapping a length goes straight on to the time, and the first free day is already open', async ({ page }) => {
   await toDuration(page)
-  await expect(page.getByRole('button', { name: /^60 minutes £85\.00 per person/ })).toBeVisible()
+  // How many people comes first, and nothing is chosen for the client.
+  await expect(page.getByRole('heading', { name: 'How many people?' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Just me/ })).toHaveAttribute('aria-pressed', 'false')
+  await page.getByRole('button', { name: /^Just me/ }).click()
+  // Every length says how many people and the price, not "per person".
+  await expect(page.getByRole('button', { name: /^60 minutes · 1 person · £\d+\.\d\d$/ })).toBeVisible()
   await page.getByRole('button', { name: /^90 minutes/ }).click()
   await expect(page.getByRole('heading', { name: 'Choose date and time' })).toBeVisible()
   const draft = await readDraft(page)
@@ -59,7 +65,7 @@ test('looking at another day does not let go of the time already held', async ({
   extraDays.push(second)
   await fixture.admin.from('working_hours_overrides').upsert({ date: second, available: true, start_minutes: 600, end_minutes: 1320, start_mode: 'flexible', fixed_start_minutes: null })
   await toDuration(page)
-  await page.getByRole('button', { name: /^60 minutes/ }).click()
+  await chooseLength(page, 60)
   await page.getByLabel('Appointment date').fill(fixture.date)
   await page.getByRole('button', { name: '11:00', exact: true }).click()
   await expect(page.getByRole('button', { name: '11:00', exact: true })).toHaveAttribute('aria-pressed', 'true')
@@ -82,7 +88,7 @@ test('looking at another day does not let go of the time already held', async ({
 
 test('the price follows the choices by itself, with no button to press', async ({ page }) => {
   await toDuration(page)
-  await page.getByRole('button', { name: /^60 minutes/ }).click()
+  await chooseLength(page, 60)
   await page.getByLabel('Appointment date').fill(fixture.date)
   await page.getByRole('button', { name: '10:00', exact: true }).click()
   await page.getByRole('button', { name: 'Review booking', exact: true }).click()
@@ -99,7 +105,7 @@ test('the price follows the choices by itself, with no button to press', async (
 
 test('the guest way on is the big button, with signing in and creating an account plainly beside it', async ({ page }) => {
   await toDuration(page)
-  await page.getByRole('button', { name: /^60 minutes/ }).click()
+  await chooseLength(page, 60)
   await page.getByLabel('Appointment date').fill(fixture.date)
   await page.getByRole('button', { name: '10:00', exact: true }).click()
   await page.getByRole('button', { name: 'Review booking', exact: true }).click()
@@ -134,10 +140,12 @@ test('every booking screen fits a 320px phone, and the usual booking is offered 
   expect(await noSideways(page)).toBe(true)
   await page.getByRole('button', { name: /Integration massage/ }).click()
   expect(await noSideways(page)).toBe(true)
-  await page.getByRole('button', { name: /more than one person/ }).click()
+  await page.getByRole('button', { name: /^2 people/ }).click()
   expect(await noSideways(page)).toBe(true)
-  await page.getByRole('button', { name: 'Just me' }).click()
-  await page.getByRole('button', { name: /^60 minutes/ }).click()
+  await page.getByRole('button', { name: 'Different length for each person' }).click()
+  expect(await noSideways(page)).toBe(true)
+  await page.getByRole('button', { name: 'Change number of people' }).click()
+  await chooseLength(page, 60)
   await page.getByLabel('Appointment date').fill(fixture.date)
   await page.getByRole('button', { name: '10:00', exact: true }).click()
   expect(await noSideways(page)).toBe(true)
@@ -213,7 +221,7 @@ test('a link with the area, treatment and length in it opens the booking part-wa
 
 test('a time someone else has just taken says so kindly and leaves the list', async ({ page }) => {
   await toDuration(page)
-  await page.getByRole('button', { name: /^60 minutes/ }).click()
+  await chooseLength(page, 60)
   await page.getByLabel('Appointment date').fill(fixture.date)
   await expect(page.getByRole('button', { name: '10:00', exact: true })).toBeVisible()
   // Another visitor takes 10:00 while this one is looking at the list.
@@ -226,7 +234,7 @@ test('a time someone else has just taken says so kindly and leaves the list', as
 
 test('the details button is never greyed out: what is missing is said in words', async ({ page }) => {
   await toDuration(page)
-  await page.getByRole('button', { name: /^60 minutes/ }).click()
+  await chooseLength(page, 60)
   await page.getByLabel('Appointment date').fill(fixture.date)
   await page.getByRole('button', { name: '10:00', exact: true }).click()
   await page.getByRole('button', { name: 'Review booking', exact: true }).click()
@@ -250,7 +258,7 @@ test('the details button is never greyed out: what is missing is said in words',
 
 test('a phone number that cannot be right is named beside the field, before anything is reserved', async ({ page }) => {
   await toDuration(page)
-  await page.getByRole('button', { name: /^60 minutes/ }).click()
+  await chooseLength(page, 60)
   await page.getByLabel('Appointment date').fill(fixture.date)
   await page.getByRole('button', { name: '10:00', exact: true }).click()
   await page.getByRole('button', { name: 'Review booking', exact: true }).click()
@@ -278,7 +286,7 @@ test('a phone number that cannot be right is named beside the field, before anyt
 
 test('a whole address can be pasted in one go, and one with no postcode gets a gentle note but never a stop', async ({ page }) => {
   await toDuration(page)
-  await page.getByRole('button', { name: /^60 minutes/ }).click()
+  await chooseLength(page, 60)
   await page.getByLabel('Appointment date').fill(fixture.date)
   await page.getByRole('button', { name: '10:00', exact: true }).click()
   await page.getByRole('button', { name: 'Review booking', exact: true }).click()
@@ -316,7 +324,7 @@ test('a whole address can be pasted in one go, and one with no postcode gets a g
 
 test('the bar at the bottom of the review is one row on phones from 360 to 430 px wide', async ({ page }) => {
   await toDuration(page)
-  await page.getByRole('button', { name: /^60 minutes/ }).click()
+  await chooseLength(page, 60)
   await page.getByLabel('Appointment date').fill(fixture.date)
   await page.getByRole('button', { name: '10:00', exact: true }).click()
   await page.getByRole('button', { name: 'Review booking', exact: true }).click()
@@ -348,13 +356,13 @@ test.describe('a double tap', () => {
     // Time moves on, the screen settles, and a tap works as it always did.
     await page.clock.runFor(500)
     await page.locator('.tiles .tile').first().tap()
-    await expect(page.getByRole('heading', { name: 'How much time would you like?' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'How many people?' })).toBeVisible()
   })
 })
 
 test('the payment button explains why it is waiting, and a technical error never reaches the screen', async ({ page }) => {
   await toDuration(page)
-  await page.getByRole('button', { name: /^60 minutes/ }).click()
+  await chooseLength(page, 60)
   await page.getByLabel('Appointment date').fill(fixture.date)
   await page.getByRole('button', { name: '10:00', exact: true }).click()
   await page.getByRole('button', { name: 'Review booking', exact: true }).click()

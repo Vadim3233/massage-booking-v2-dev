@@ -53,7 +53,7 @@ test('the time is inside the card, from when the treatment starts to when it end
   await openAgenda(page)
   await expect(first(page).locator('.admin-card-times')).toContainText('10:00')
   await expect(first(page).locator('.admin-card-times')).toContainText('11:00')
-  await expect(first(page).locator('.admin-card-length')).toHaveText('60 min')
+  await expect(first(page).locator('.admin-card-length')).toHaveText('1 person · 60 min')
   // Said in words for a screen reader, not as two numbers with a dash between them.
   await expect(first(page)).toHaveAccessibleName(/10:00 to 11:00/)
   // The treatment's name is no longer followed by its length, which is on its own at the top.
@@ -70,7 +70,7 @@ test("the end is the treatment's own end, not the start plus an hour and not the
   await unwrap(f.admin.from('bookings').update({ treatment_duration_minutes: 120, travel_buffer_minutes: 45 }).eq('id', booking.id))
   await openAgenda(page)
   await expect(page.getByRole('button', { name: /10:00 to 12:00/ })).toHaveCount(1)
-  await expect(first(page).locator('.admin-card-length')).toHaveText('120 min')
+  await expect(first(page).locator('.admin-card-length')).toHaveText('2 people · 2 × 60 min')
   await expect(first(page).locator('.admin-card-treatment')).toHaveText('2 sessions')
 })
 

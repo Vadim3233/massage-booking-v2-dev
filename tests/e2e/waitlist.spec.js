@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { chooseLength } from '../bookingSteps.js'
 import { paymentReviewFixture } from '../paymentReviewFixture.js'
 import { localFixture } from '../localSupabase.js'
 
@@ -23,7 +24,7 @@ test.describe('the client leaves their details when a day is full', () => {
       await page.goto('/')
       await page.getByRole('button', { name: /Integration area/ }).click()
       await page.getByRole('button', { name: /Integration massage/ }).click()
-      await page.getByRole('button', { name: /^60 minutes/ }).click()
+      await chooseLength(page, 60)
       await page.getByLabel('Appointment date').fill(closedDay)
       await expect(page.getByText('No suitable times on this day.')).toBeVisible()
       const panel = page.locator('section.panel').filter({ hasText: 'Nothing free that day?' })
@@ -49,7 +50,7 @@ test.describe('the client leaves their details when a day is full', () => {
       await page.goto('/')
       await page.getByRole('button', { name: /Integration area/ }).click()
       await page.getByRole('button', { name: /Integration massage/ }).click()
-      await page.getByRole('button', { name: /^60 minutes/ }).click()
+      await chooseLength(page, 60)
       await page.getByLabel('Appointment date').fill(closedDay)
       const panel = page.locator('section.panel').filter({ hasText: 'Nothing free that day?' })
       await panel.getByLabel('Your name').fill('E2E Waiting Wendy')

@@ -1,5 +1,6 @@
 import { dateLabel, money, time } from './calendarPresentation.js'
 import { whatsappNumber } from './contactLinks.js'
+import { bookingSentence, treatmentNoun } from '../booking/bookingWords.js'
 
 // The booking details the Admin sends a client, as plain text WhatsApp shows well (*bold* with single asterisks, no headings or HTML). This is the only
 // place the message is made: "WhatsApp client" and "Share…" both use it. It never says the Admin's notes, the client's own phone or email, internal
@@ -29,12 +30,13 @@ export const transferDue = booking => {
   return payment?.method === 'bank_transfer' && payment.status === 'awaiting_transfer'
 }
 
+// The treatment, then the same sentence the client saw when booking: who, how long and the price ("Deep tissue: One 2-hour session for
+// 1 person – £120.00"), so the number of people can never be misread.
 function treatments(booking) {
   const sessions = [...(booking.booking_sessions || [])].sort((a, b) => a.position - b.position)
-  const names = sessions.length === 1
-    ? sessions[0].service_name_snapshot
-    : sessions.map(session => `${session.service_name_snapshot} ${session.duration_minutes} min`).join(' + ')
-  return [names || 'Massage', `${booking.treatment_duration_minutes} min`, money(booking.total_gbp)].join(' · ')
+  if (!sessions.length) return [`${booking.treatment_duration_minutes} min`, money(booking.total_gbp)].join(' · ')
+  const names = [...new Set(sessions.map(session => session.service_name_snapshot).filter(Boolean))].join(' + ') || 'Massage'
+  return `${names}: ${bookingSentence(sessions.map(session => session.duration_minutes), booking.total_gbp, treatmentNoun(names))}`
 }
 
 // The Admin can reword the message (Settings › Share message), with these blanks and no others: the database refuses any other,

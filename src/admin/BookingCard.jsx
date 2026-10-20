@@ -8,6 +8,7 @@ import { paymentActions, paymentReviewApi } from './paymentReviewApi.js'
 import { shortWhere } from '../lib/address.js'
 import { cancelledNote, moneyToSort } from './cancelledBookings.js'
 import { directionsLink } from './contactLinks.js'
+import { peopleShort } from '../booking/bookingWords.js'
 
 // One appointment as a card, as wide as the screen allows. Its time is at the top of the card, so a list of cards needs no column of times
 // beside it: when the treatment starts and ends, then how long it is. Tapping the card opens the details. An appointment still to come also
@@ -48,7 +49,8 @@ export default function BookingCard({ booking, open, now, tag, changed }) {
       <span className="admin-card-when">
         <span className="admin-card-times">{time(booking.start_minutes)}<span aria-hidden="true"> – </span><span className="admin-sr-only"> to </span>{time(bookingEnd(booking))}</span>
         {tag && <em className="admin-next-tag">{tag}</em>}
-        <span className="admin-card-length">{booking.treatment_duration_minutes} min</span>
+        {/* How many people and how long each ("1 person · 120 min", "3 people · 3 × 60 min"), so a group can never be mistaken for one long session. */}
+        <span className="admin-card-length">{booking.booking_sessions?.length ? peopleShort([...booking.booking_sessions].sort((a, b) => a.position - b.position).map(session => session.duration_minutes)) : `${booking.treatment_duration_minutes} min`}</span>
       </span>
       <span className="admin-card-heading"><strong>{clientName(booking)}</strong><span className="admin-card-price">{money(booking.total_gbp)}</span></span>
       <span className="admin-card-meta">

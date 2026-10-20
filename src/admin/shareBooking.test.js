@@ -16,7 +16,7 @@ describe('the booking details the Admin sends a client', () => {
     expect(shareText(booking({ booking_payments: { method: 'bank_transfer', status: 'paid' } }), bank).split('\n')).toEqual([
       '*Massage booking – Thu 29 Oct, 17:30–19:30*',
       '55 Altenburg Gardens, London SW11 1JH',
-      'Deep tissue · 120 min · £120.00',
+      'Deep tissue: One 2-hour session for 1 person – £120.00',
       'Payment: paid',
     ])
   })
@@ -30,7 +30,7 @@ describe('the booking details the Admin sends a client', () => {
   it('names two sessions with their lengths, and says cash plainly', () => {
     const two = booking({ treatment_duration_minutes: 90, total_gbp: 135, booking_sessions: [{ position: 2, service_name_snapshot: 'Sports', duration_minutes: 30 }, { position: 1, service_name_snapshot: 'Deep tissue', duration_minutes: 60 }],
       booking_payments: { method: 'cash', status: 'approved' } })
-    expect(shareText(two, bank)).toContain('Deep tissue 60 min + Sports 30 min · 90 min · £135.00\nPayment: cash, due at the appointment')
+    expect(shareText(two, bank)).toContain('Deep tissue + Sports: Two sessions for 2 people, one after the other (60 min + 30 min) – 1 hour 30 minutes in total – £135.00\nPayment: cash, due at the appointment')
     expect(paymentWords(booking({ booking_payments: { method: 'cash', status: 'awaiting_approval' } }))).toBe('Payment: cash, waiting for my approval')
   })
   it('never says the notes, the client\'s own phone or email, or the booking\'s id', () => {
@@ -44,7 +44,7 @@ describe('the booking details the Admin sends a client', () => {
   it('fills the Admin\'s own wording, leaving out a line whose blank has nothing to say', () => {
     const wording = 'Hi! See you {date} at {time}.\n\n{address}\n{treatment}\n{payment}\n\n{bank details}\n\nThanks, V'
     expect(shareText(booking({ booking_payments: { method: 'cash', status: 'approved' }, address_snapshot: '' }), bank, wording))
-      .toBe('Hi! See you Thu 29 Oct at 17:30–19:30.\n\nDeep tissue · 120 min · £120.00\nPayment: cash, due at the appointment\n\nThanks, V')
+      .toBe('Hi! See you Thu 29 Oct at 17:30–19:30.\n\nDeep tissue: One 2-hour session for 1 person – £120.00\nPayment: cash, due at the appointment\n\nThanks, V')
     expect(shareText(booking(), bank, wording)).toContain('Payment: bank transfer – awaiting payment\n\nPlease pay by bank transfer to:\nName: V Massage')
     // Empty wording is the standard one, which reads exactly as before there was a choice.
     expect(shareText(booking(), bank, '  ')).toBe(shareText(booking(), bank))
