@@ -44,11 +44,15 @@ function fakeGoogle() {
     }
     return reply(400)
   }
-  const live = () => [...events.values()].filter(event => event.status !== 'cancelled')
+  const live = () => [...events.values()].filter(event => event.status !== 'cancelled' && ids.bookings.includes(event.extendedProperties?.private?.bookingId))
   return { events, calls, state, fetchImpl, live }
 }
 
-const sync = (options = {}) => createCalendarSync({ client: admin, config, fetchImpl: google.fetchImpl, ...options })
+// Other test files add bookings to the shared local database at the same time: the queue is trimmed to this test's bookings just before each run.
+const sync = (options = {}) => {
+  const job = createCalendarSync({ client: admin, config, fetchImpl: google.fetchImpl, ...options })
+  return { run: async (...args) => { await keepOnlyMine(); return job.run(...args) } }
+}
 const queueRow = async id => (await admin.from('calendar_sync_queue').select('*').eq('booking_id', id).maybeSingle()).data
 // Only this test's bookings are worked on: the shared local database has other tests' bookings too.
 async function keepOnlyMine() { await admin.from('calendar_sync_queue').delete().not('booking_id', 'in', `(${ids.bookings.join(',')})`) }
