@@ -3,7 +3,8 @@ import Icon from '../ui/icons.jsx'
 import { ActionDialog } from './BookingActions.jsx'
 import { DONE, lifecycleActions, lifecycleApi } from './bookingLifecycleApi.js'
 import { toast } from '../ui/toast.js'
-import { bookingEnd, bookingState, canNavigateTo, clientName, money, time, treatmentName } from './calendarPresentation.js'
+import { bookingEnd, bookingState, canNavigateTo, clientName, hasStarted, money, time, treatmentName } from './calendarPresentation.js'
+import { paymentActions, paymentReviewApi } from './paymentReviewApi.js'
 import { shortWhere } from '../lib/address.js'
 import { cancelledNote, moneyToSort } from './cancelledBookings.js'
 import { directionsLink } from './contactLinks.js'
@@ -17,9 +18,21 @@ import { peopleShort } from '../booking/bookingWords.js'
 // itself stays grey: it is cancelled, and the money is what is left to do. A cancelled card also says who cancelled it and when, after its
 // status (on the next line when the status is long), so a late cancellation shows without opening the booking.
 // `changed` is how the list is read again after a refund is recorded from the card; without it, the card offers no Record refund.
+// Cash agreed for the appointment is not income until it is received: once the appointment has started, the card offers Cash received
+// (the same action as Mark payment received on the booking), after a question, so it is one tap from the list.
 export default function BookingCard({ booking, open, now, tag, changed }) {
   const [refunding, setRefunding] = useState(false)
   const refundable = Boolean(changed) && lifecycleActions(booking).includes('refund')
+  const [receiving, setReceiving] = useState(false)
+  const cashDue = Boolean(changed) && paymentActions(booking).includes('receive') && hasStarted(booking, now)
+  const cashAmount = money(booking.booking_payments?.amount_gbp ?? booking.total_gbp)
+  async function receiveCash() {
+    if (receiving || !window.confirm(`Mark ${cashAmount} cash received from ${clientName(booking)}?`)) return
+    setReceiving(true)
+    try { await paymentReviewApi.act('receive', booking, crypto.randomUUID()); toast(`Cash received · ${clientName(booking)}`) } catch (failure) { toast(failure.message) }
+    setReceiving(false)
+    await changed()
+  }
   async function refunded(text, isError = false) {
     setRefunding(false)
     if (!isError) toast(`${DONE.refund} · ${clientName(booking)}`)
@@ -31,7 +44,7 @@ export default function BookingCard({ booking, open, now, tag, changed }) {
   const cancelled = cancelledNote(booking)
   const directions = canNavigateTo(booking, now) ? directionsLink(booking) : null
   const where = shortWhere(booking.address_snapshot)
-  return <div className={`admin-card-wrap ${directions ? 'has-directions' : ''} ${refundable ? 'has-card-action' : ''}`}>
+  return <div className={`admin-card-wrap ${directions ? 'has-directions' : ''} ${refundable || cashDue ? 'has-card-action' : ''}`}>
     <button className={`admin-card ${booking.booking_status === 'cancelled' ? 'cancelled' : ''}`} data-chip={state.chip} data-variant={state.variant} onClick={open}>
       <span className="admin-card-when">
         <span className="admin-card-times">{time(booking.start_minutes)}<span aria-hidden="true"> – </span><span className="admin-sr-only"> to </span>{time(bookingEnd(booking))}</span>
@@ -50,6 +63,7 @@ export default function BookingCard({ booking, open, now, tag, changed }) {
       </span>
     </button>
     {refundable && <button type="button" className="admin-card-refund" aria-label={`Record refund sent to ${clientName(booking)}`} onClick={() => setRefunding(true)}><Icon name="check" size={15} />Record refund</button>}
+    {cashDue && <button type="button" className="admin-card-refund admin-card-cash" disabled={receiving} aria-label={`Mark ${cashAmount} cash received from ${clientName(booking)}`} onClick={receiveCash}><Icon name="check" size={15} />Cash received</button>}
     {refunding && <ActionDialog kind="refund" booking={booking} api={lifecycleApi} close={() => setRefunding(false)} done={refunded} />}
     {directions && <a className="admin-card-directions" href={directions.href} target="_blank" rel="noopener noreferrer" aria-label={`Directions to ${clientName(booking)}`}><Icon name="pin" size={15} />Directions</a>}
   </div>
