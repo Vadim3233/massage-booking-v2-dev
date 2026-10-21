@@ -71,6 +71,16 @@ export function treatmentName(booking) {
   if (sessions.length === 1) return sessions[0].service_name_snapshot
   return sessions.length ? `${sessions.length} sessions` : 'Appointment'
 }
+// The extras a booking has, in words, for its card: the ones chosen for the whole appointment, then any chosen for one person. With more than
+// one person, an extra chosen for one of them says whose it is. A quantity above one shows as "× 2". Nothing when there are none.
+export function extrasList(booking) {
+  const label = (extra, whose) => `${extra.enhancement_name_snapshot}${extra.quantity > 1 ? ` × ${extra.quantity}` : ''}${whose ? ` (person ${whose})` : ''}`
+  const sessions = [...(booking.booking_sessions || [])].sort((a, b) => a.position - b.position)
+  return [
+    ...(booking.booking_enhancements || []).map(extra => label(extra)),
+    ...sessions.flatMap((session, index) => (session.booking_session_enhancements || []).map(extra => label(extra, sessions.length > 1 ? index + 1 : 0))),
+  ].filter(Boolean)
+}
 export function sessionSummary(booking) {
   const sessions = booking.booking_sessions || []
   if (sessions.length === 1) return `${sessions[0].service_name_snapshot} · ${sessions[0].duration_minutes} min`

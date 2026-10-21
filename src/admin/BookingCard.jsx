@@ -3,7 +3,7 @@ import Icon from '../ui/icons.jsx'
 import { ActionDialog } from './BookingActions.jsx'
 import { DONE, lifecycleActions, lifecycleApi } from './bookingLifecycleApi.js'
 import { toast } from '../ui/toast.js'
-import { bookingEnd, bookingState, canNavigateTo, clientName, hasStarted, money, time, treatmentName } from './calendarPresentation.js'
+import { bookingEnd, bookingState, canNavigateTo, clientName, extrasList, hasStarted, money, time, treatmentName } from './calendarPresentation.js'
 import { paymentActions, paymentReviewApi } from './paymentReviewApi.js'
 import { shortWhere } from '../lib/address.js'
 import { cancelledNote, moneyToSort } from './cancelledBookings.js'
@@ -18,6 +18,8 @@ import { peopleShort } from '../booking/bookingWords.js'
 // itself stays grey: it is cancelled, and the money is what is left to do. A cancelled card also says who cancelled it and when, after its
 // status (on the next line when the status is long), so a late cancellation shows without opening the booking.
 // `changed` is how the list is read again after a refund is recorded from the card; without it, the card offers no Record refund.
+// Extras the client added (a heated table cover, hot stones) get a line of their own under the treatment, so they are seen without opening the booking;
+// a cancelled card leaves them out. A booking with none is no taller than before.
 // Cash agreed for the appointment is not income until it is received: once the appointment has started, the card offers Cash received
 // (the same action as Mark payment received on the booking), after a question, so it is one tap from the list.
 export default function BookingCard({ booking, open, now, tag, changed }) {
@@ -44,6 +46,7 @@ export default function BookingCard({ booking, open, now, tag, changed }) {
   const cancelled = cancelledNote(booking)
   const directions = canNavigateTo(booking, now) ? directionsLink(booking) : null
   const where = shortWhere(booking.address_snapshot)
+  const extras = booking.booking_status === 'cancelled' ? [] : extrasList(booking)
   return <div className={`admin-card-wrap ${directions ? 'has-directions' : ''} ${refundable || cashDue ? 'has-card-action' : ''}`}>
     <button className={`admin-card ${booking.booking_status === 'cancelled' ? 'cancelled' : ''}`} data-chip={state.chip} data-variant={state.variant} onClick={open}>
       <span className="admin-card-when">
@@ -57,6 +60,7 @@ export default function BookingCard({ booking, open, now, tag, changed }) {
         <span className="admin-card-treatment">{treatmentName(booking)}</span>
         {where && <><span aria-hidden="true">·</span><span className="admin-card-postcode">{where}</span></>}
       </span>
+      {extras.length > 0 && <span className="admin-card-extras"><Icon name="plus" size={14} /><span><span className="admin-sr-only">Extras: </span>{extras.join(' · ')}</span></span>}
       <span className="admin-card-foot">
         <span className={`chip chip--${owed ? 'needs' : state.chip} admin-status ${state.tone}`}>{owed ? `${state.text} · ${owed}` : state.text}</span>
         {cancelled && <span className="admin-card-cancelled-when">{cancelled}</span>}

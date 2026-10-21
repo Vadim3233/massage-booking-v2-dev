@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bookingEnd, bookingState, canNavigateTo, dayContext, hasStarted, daySummary, getBookingCardVariant, getBookingStatusLabel, nextUp, shiftDate, treatmentName } from './calendarPresentation.js'
+import { bookingEnd, bookingState, canNavigateTo, dayContext, hasStarted, daySummary, getBookingCardVariant, getBookingStatusLabel, extrasList, nextUp, shiftDate, treatmentName } from './calendarPresentation.js'
 
 it('a booking ends when its treatment ends, never counting the travel time either side', () => {
   expect(bookingEnd({ start_minutes: 870, treatment_duration_minutes: 60, travel_buffer_minutes: 60 })).toBe(930)
@@ -106,5 +106,20 @@ describe('whether an appointment has started, in London time', () => {
     expect(hasStarted(booking, new Date('2026-10-25T10:00:00Z'))).toBe(true)
     expect(hasStarted(booking, new Date('2026-10-24T23:30:00Z'))).toBe(false)
     expect(hasStarted({ date: '2026-10-24', start_minutes: 1380 }, new Date('2026-10-25T00:30:00Z'))).toBe(true)
+  })
+})
+
+describe('the extras on a booking card', () => {
+  it('lists appointment extras by name, with a quantity above one as × n', () => {
+    expect(extrasList({ booking_enhancements: [{ enhancement_name_snapshot: 'Heated table cover', quantity: 1 }, { enhancement_name_snapshot: 'Hot stones', quantity: 2 }] })).toEqual(['Heated table cover', 'Hot stones × 2'])
+  })
+  it('says whose a per-person extra is only when there is more than one person', () => {
+    const extra = { enhancement_name_snapshot: 'Hot stones', quantity: 1 }
+    expect(extrasList({ booking_sessions: [{ position: 1, booking_session_enhancements: [extra] }] })).toEqual(['Hot stones'])
+    expect(extrasList({ booking_sessions: [{ position: 2, booking_session_enhancements: [] }, { position: 1, booking_session_enhancements: [extra] }] })).toEqual(['Hot stones (person 1)'])
+  })
+  it('is empty when there are none, or the data is missing', () => {
+    expect(extrasList({ booking_enhancements: [], booking_sessions: [{ position: 1, booking_session_enhancements: [] }] })).toEqual([])
+    expect(extrasList({})).toEqual([])
   })
 })
