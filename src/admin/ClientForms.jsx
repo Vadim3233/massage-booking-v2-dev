@@ -11,7 +11,7 @@ export function AddressFields({ value, onChange, disabled }) {
     <p className="admin-detail-hint" id="admin-address-hint">Paste or type the whole address: house or flat number, street, town and postcode.</p>
     {needsPostcodeNote(value.address) && <p className="admin-detail-hint" role="status">{NO_POSTCODE_NOTE_ADMIN}</p>}
     <label className="admin-field">Entry instructions (optional)<input value={value.entry_instructions || ''} maxLength={300} disabled={disabled} onChange={event => set({ entry_instructions: event.target.value })} /></label>
-    <label className="admin-field">Label (optional, for example Home or Office)<input value={value.label || ''} maxLength={60} disabled={disabled} onChange={event => set({ label: event.target.value })} /></label>
+    <label className="admin-field">Label (optional, for example Home or Hotel)<input value={value.label || ''} maxLength={60} disabled={disabled} onChange={event => set({ label: event.target.value })} /></label>
   </>
 }
 
