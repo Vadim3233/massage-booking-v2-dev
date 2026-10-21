@@ -14,18 +14,32 @@ const booking = (changes = {}) => ({
 describe('the booking details the Admin sends a client', () => {
   it('says the date, time, address, treatment, length, price and how the money stands, with *bold* for WhatsApp', () => {
     expect(shareText(booking({ booking_payments: { method: 'bank_transfer', status: 'paid' } }), bank).split('\n')).toEqual([
+      'Hi! Thank you so much for booking with me, I am really looking forward to seeing you.',
+      '',
       '*Massage booking – Thu 29 Oct, 17:30–19:30*',
       '55 Altenburg Gardens, London SW11 1JH',
       'Deep tissue: One 2-hour session for 1 person – £120.00',
       'Payment: paid',
+      '',
+      'If anything changes or you have any questions, just message me here. See you soon!',
+      '',
+      'Warm wishes,',
+      'Vad',
     ])
   })
-  it('adds the bank details the client already sees, with the reference, while a transfer is still due', () => {
+  it('keeps the bank details out of the standard message, which is warm and signed', () => {
     const text = shareText(booking(), bank)
+    expect(text).toContain('Payment: bank transfer – awaiting payment')
+    expect(text).not.toContain('Please pay')
+    expect(text.startsWith('Hi! Thank you')).toBe(true)
+    expect(text.endsWith('Warm wishes,\nVad')).toBe(true)
+  })
+  it('adds the bank details the client already sees, with the reference, while a transfer is still due, when the wording has the blank', () => {
+    const text = shareText(booking(), bank, '{payment}\n\n{bank details}')
     expect(text).toContain('Payment: bank transfer – awaiting payment')
     expect(text).toContain('Please pay by bank transfer to:\nName: V Massage\nBank: WISE\nSort code: 00-00-00\nAccount number: 00000000\nReference: VM-1234')
     // No bank details are made up when none are set.
-    expect(shareText(booking(), { configured: false })).not.toContain('Please pay')
+    expect(shareText(booking(), { configured: false }, '{bank details}')).toBe('')
   })
   it('names two sessions with their lengths, and says cash plainly', () => {
     const two = booking({ treatment_duration_minutes: 90, total_gbp: 135, booking_sessions: [{ position: 2, service_name_snapshot: 'Sports', duration_minutes: 30 }, { position: 1, service_name_snapshot: 'Deep tissue', duration_minutes: 60 }],
@@ -100,7 +114,8 @@ describe('the cancellation line', () => {
   })
   it('comes after the payment line in the standard message, and can be used in the Admin\'s own wording', () => {
     const lines = shareText(booking({ booking_payments: { method: 'cash', status: 'approved' } }), bank, undefined, terms()).split('\n')
-    expect(lines.slice(-2)).toEqual(['Payment: cash, due at the appointment', 'Free to cancel or move until Wed 28 Oct, 17:30. After that, the full price may be charged.'])
+    const at = lines.indexOf('Payment: cash, due at the appointment')
+    expect(lines.slice(at, at + 2)).toEqual(['Payment: cash, due at the appointment', 'Free to cancel or move until Wed 28 Oct, 17:30. After that, the full price may be charged.'])
     expect(shareMessageProblem('Terms: {cancellation}')).toBe('')
     expect(SHARE_BLANKS).toContain('cancellation')
     expect(shareText(booking(), bank, 'Terms: {cancellation}', terms({ ended: true }))).toBe('Terms: The free cancellation period has ended.')

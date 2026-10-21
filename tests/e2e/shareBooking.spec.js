@@ -27,7 +27,7 @@ test('WhatsApp client opens the client\'s own chat with the booking details, and
   const href = await link.getAttribute('href')
   expect(href).toMatch(/^https:\/\/wa\.me\/447700900002\?text=/)
   const text = decodeURIComponent(href.split('?text=')[1])
-  expect(text).toMatch(/^\*Massage booking – .+, 10:00–11:00\*\n/)
+  expect(text).toMatch(/\n\*Massage booking – .+, 10:00–11:00\*\n/)
   expect(text).toContain('Payment: cash, due at the appointment')
   // Until when the client can cancel or move for free, from the database's rule (the booking is days away, so the free period is still open).
   expect(text).toMatch(/\nFree to cancel or move until \w{3} \d{1,2} \w{3}, \d{2}:\d{2}\. After that, the full price may be charged\.$/m)
@@ -86,7 +86,7 @@ test('Settings › Share message: blanks, an example, Reset, and the share butto
     await page.getByLabel('Password', { exact: true }).fill(f.password)
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()
     const box = page.getByRole('textbox', { name: 'Message', exact: true })
-    await expect(box).toHaveValue(/^\*Massage booking – \{date\}, \{time\}\*/)
+    await expect(box).toHaveValue(/^Hi! Thank you so much for booking with me[\s\S]*\*Massage booking – \{date\}, \{time\}\*/)
     await expect(page.getByRole('button', { name: 'Reset to standard' })).toBeDisabled()
     // A blank that is not on the list cannot be saved.
     await box.fill('Your number {phone}')
