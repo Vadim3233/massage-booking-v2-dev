@@ -102,6 +102,8 @@
 .admin-card-meta { grid-column: 1 / -1; display: flex; flex-wrap: wrap; column-gap: 6px; min-width: 0; color: var(--ink-soft); font-size: 13px; }
 .admin-card-treatment { min-width: 0; overflow-wrap: anywhere; }
 .admin-card-postcode { color: var(--muted); letter-spacing: .02em; white-space: nowrap; }
+.admin-card-extras { grid-column: 1 / -1; display: flex; align-items: flex-start; gap: 6px; min-width: 0; margin-top: 3px; font-size: 13px; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.admin-card-extras .icon { flex: none; margin-top: 2px; }
 .admin-card-foot { grid-column: 1 / -1; display: flex; align-items: center; min-width: 0; margin-top: 2px; }
 .admin-shell .admin-card.cancelled { gap: 1px 10px; padding-block: 6px; background: var(--cancel-surface); box-shadow: var(--shadow-ring); color: var(--muted); }
 .admin-card.cancelled .admin-card-when { margin-bottom: 4px; padding-bottom: 5px; border-bottom-color: var(--hairline); }
