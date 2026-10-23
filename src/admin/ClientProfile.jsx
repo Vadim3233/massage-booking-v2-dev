@@ -5,6 +5,7 @@ import { AddressForm, ClientForm } from './ClientForms.jsx'
 import { clientContactLinks } from './contactLinks.js'
 import { bookingState, dateLabel, money, time } from './calendarPresentation.js'
 import ClientRepeats from './ClientRepeats.jsx'
+import ClientTelegram from './ClientTelegram.jsx'
 import CombinePicker from './CombinePicker.jsx'
 import DeleteClient from './DeleteClient.jsx'
 import { deletedMessage } from './clientDelete.js'
@@ -164,6 +165,7 @@ export default function ClientProfile({ id, back, backLabel = 'Clients', openBoo
     <Notes clientId={id} api={api} />
     <ClientRepeats clientId={id} openBooking={openBooking} />
     <Addresses clientId={id} api={api} changed={changed} />
+    <ClientTelegram key={client.id} client={client} api={api} />
     <section aria-labelledby="online-title"><h2 id="online-title">Online booking</h2>
       <p>{client.online_booking_enabled ? 'This client can book online.' : 'Online booking is switched off for this client. They cannot book on the website.'}</p>
       <button className="btn--small" disabled={busy} onClick={toggleOnline}>{client.online_booking_enabled ? 'Switch off online booking' : 'Switch on online booking'}</button>

@@ -104,3 +104,17 @@ describe('deleting a client', () => {
     await expect(failing('permission denied for table users').deleteCheck('c1')).rejects.toThrow('Could not complete that.')
   })
 })
+
+describe('the Telegram link for a client', () => {
+  const asked = []
+  const fake = (data, error = null) => ({ rpc: (name, args) => { asked.push([name, args]); return Promise.resolve({ data, error }) } })
+  it('asks the database whether a client has linked, and for a one-time code', async () => {
+    expect(await createClientsApi(fake({ linked: true })).telegramStatus('c1')).toEqual({ linked: true })
+    expect(await createClientsApi(fake('abc')).createTelegramLink('c1')).toBe('abc')
+    expect(asked).toEqual([['admin_client_telegram_status', { p_client_id: 'c1' }], ['admin_create_client_telegram_link', { p_client_id: 'c1' }]])
+  })
+  it('says plainly when to wait, and nothing technical otherwise', async () => {
+    await expect(createClientsApi(fake(null, { message: 'Please wait a little before asking again.' })).createTelegramLink('c1')).rejects.toThrow('Please wait a little before asking again.')
+    await expect(createClientsApi(fake(null, { message: 'permission denied for table client_telegram_tokens' })).createTelegramLink('c1')).rejects.toThrow('Could not complete that. Please check your connection and try again.')
+  })
+})

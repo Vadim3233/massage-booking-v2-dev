@@ -799,3 +799,13 @@ The page stays where the Admin needs it:
 **Reason:** Vadim asked not to have to press Back after every save.
 
 **How it was built:** No database change. `DaySettings` takes a `done` callback from `AdminWorkspace` (the same place its "← Agenda / ← Day" link goes). The Day settings browser tests now expect the return, and open the day again to check what was saved.
+
+## ADR-078 — The Admin can send a client a Telegram link (2026-10-23)
+
+**Decision:** On a client's profile, "Telegram updates" lets the Admin make a one-time link for a client who did not press "Get updates on Telegram" themselves, and share it on WhatsApp or copy it. Migration `20261113100000_admin_telegram_link.sql` adds two functions, `admin_create_client_telegram_link` and `admin_client_telegram_status`, both for a signed-in Admin only. The code is the same kind as the client's own (same table, same webhook, same `link_client_telegram`), so pressing Start links that chat to that client exactly as before. The profile says "Telegram is on" once they have.
+
+**Reason:** A code can only be made from the client's own session (ADR for client Telegram), so a client who missed the button on their confirmation screen had no way to be sent one except through their email's booking link.
+
+**Differences from the client's own code:** it lasts 24 hours instead of 2, because it is sent to a phone and opened later; it is still single use, only its hash is kept, and at most ten an hour are made per client (together with the client's own). The bot names the client's first name when a chat links, so a link that reached the wrong person shows. No table is added, so no table grants are needed (ADR-075); the two functions state their own.
+
+**Left for later:** sending the link by email (it needs a message type and a template), and ending a client's link from the profile.
