@@ -118,3 +118,16 @@ describe('the Telegram link for a client', () => {
     await expect(createClientsApi(fake(null, { message: 'permission denied for table client_telegram_tokens' })).createTelegramLink('c1')).rejects.toThrow('Could not complete that. Please check your connection and try again.')
   })
 })
+
+describe('the bank transfers a client has not yet paid', () => {
+  it('asks only for the unpaid bank transfers of that one client, oldest first', async () => {
+    const calls = []
+    const chain = new Proxy({}, { get: (_, name) => name === 'then' ? resolve => resolve({ data: [{ id: 'b1' }], error: null }) : (...args) => { calls.push([name, ...args]); return chain } })
+    const rows = await createClientsApi({ from: table => { calls.push(['from', table]); return chain } }).outstandingPayments('c1')
+    expect(rows).toEqual([{ id: 'b1' }])
+    expect(calls).toContainEqual(['from', 'bookings'])
+    expect(calls).toContainEqual(['eq', 'client_id', 'c1'])
+    expect(calls).toContainEqual(['eq', 'booking_payments.method', 'bank_transfer'])
+    expect(calls).toContainEqual(['in', 'booking_payments.status', ['awaiting_transfer', 'awaiting_verification']])
+  })
+})

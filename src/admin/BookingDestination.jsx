@@ -3,6 +3,8 @@ import BookingDetails from './BookingDetails.jsx'
 import BookingActions from './BookingActions.jsx'
 import PaymentActions from './PaymentActions.jsx'
 import ReceiptPanel, { ReceiptNote } from './ReceiptPanel.jsx'
+import PaymentReminder from './PaymentReminder.jsx'
+import { reminderDue } from './shareBooking.js'
 import { label } from './calendarPresentation.js'
 import { loadReviewResource, paymentReviewApi } from './paymentReviewApi.js'
 export default function BookingDestination({ id, close, changed, returnFocus, openPage }) {
@@ -30,6 +32,7 @@ export default function BookingDestination({ id, close, changed, returnFocus, op
   return <BookingDetails booking={booking} close={close} returnFocus={returnFocus} payment={<>
     <p className="admin-next-status">{label(booking.booking_payments?.method)} · {label(booking.booking_payments?.status)}</p>
     {error ? <p role="alert">{error}</p> : <PaymentActions booking={booking} refresh={refresh} />}
+    {!error && reminderDue(booking, new Date()) && <PaymentReminder key={booking.id} booking={booking} />}
     {!error && canHaveReceipt && <ReceiptPanel key={booking.id} booking={booking} openPage={openPage} />}
     {!error && !canHaveReceipt && receiptClosed && <ReceiptNote key={booking.id} booking={booking} />}
     <button className="btn--quiet btn--small" onClick={() => setAttempt(value => value + 1)}>Check for changes</button>

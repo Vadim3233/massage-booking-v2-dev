@@ -6,6 +6,7 @@ import { clientContactLinks } from './contactLinks.js'
 import { bookingState, dateLabel, money, time } from './calendarPresentation.js'
 import ClientRepeats from './ClientRepeats.jsx'
 import ClientTelegram from './ClientTelegram.jsx'
+import ClientPaymentReminder from './ClientPaymentReminder.jsx'
 import CombinePicker from './CombinePicker.jsx'
 import DeleteClient from './DeleteClient.jsx'
 import { deletedMessage } from './clientDelete.js'
@@ -161,6 +162,7 @@ export default function ClientProfile({ id, back, backLabel = 'Clients', openBoo
     {editing && <section aria-label="Edit details"><ClientForm initial={client} submitLabel="Save details" onCancel={() => setEditing(false)} onSubmit={async details => { await api.update(id, details); setEditing(false); changed() }} /></section>}
     {error && <p role="alert">{error}</p>}
     <Summary clientId={id} api={api} version={version} />
+    <ClientPaymentReminder key={client.id} client={client} api={api} version={version} />
     <History clientId={id} api={api} openBooking={openBooking} version={version} />
     <Notes clientId={id} api={api} />
     <ClientRepeats clientId={id} openBooking={openBooking} />

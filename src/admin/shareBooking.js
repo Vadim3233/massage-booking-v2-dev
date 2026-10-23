@@ -1,4 +1,4 @@
-import { dateLabel, money, time } from './calendarPresentation.js'
+import { dateLabel, hasStarted, money, time } from './calendarPresentation.js'
 import { whatsappNumber } from './contactLinks.js'
 import { bookingSentence, treatmentNoun } from '../booking/bookingWords.js'
 
@@ -102,6 +102,58 @@ export function fillShareMessage(wording, values) {
 
 export function shareText(booking, bank, wording = STANDARD_SHARE_MESSAGE, terms = null) {
   return fillShareMessage(wording, shareValues(booking, bank, terms))
+}
+
+// The payment reminder, for a client who pays later: after the session, a friendly note that the payment is still outstanding, with the bank details
+// to pay it to and the reference ("If you've already sent it, please ignore this"). It is for a bank transfer not yet received, whether the client has
+// said they sent it or not, once the appointment has started, and never for a cancelled or missed one. Nothing is sent by itself: it opens in
+// WhatsApp, or is copied.
+export const reminderDue = (booking, now = new Date()) => {
+  const payment = paymentOf(booking)
+  return payment?.method === 'bank_transfer' && ['awaiting_transfer', 'awaiting_verification'].includes(payment.status)
+    && !['cancelled', 'no_show'].includes(booking.booking_status) && hasStarted(booking, now)
+}
+export function reminderText(booking, bank) {
+  const payment = paymentOf(booking)
+  const first = booking.clients?.first_name?.trim()
+  const amount = money(paymentOf(booking)?.amount_gbp ?? booking.total_gbp)
+  const details = bank?.configured
+    ? [`Sort code: ${bank.sortCode}`, `Account number: ${bank.accountNumber}`, `Reference: ${payment?.payment_reference || booking.booking_reference}`].join('\n')
+    : 'Let me know if you would like my bank details again.'
+  return [
+    `${first ? `Hi ${first}, hope` : 'Hi, hope'} you're feeling good after your session! Just a quick reminder that payment of ${amount} is still outstanding. Here are my details in case they're handy:`,
+    '',
+    details,
+    '',
+    "If you've already sent it, please ignore this. Thanks so much!",
+    'Vad',
+  ].join('\n')
+}
+
+// One reminder for a client who owes for more than one booking: each session with what it comes to, the total, and the details to pay it all in one
+// transfer, with the first booking's reference. The bookings are the ones reminderDue accepts; they are listed by date.
+const owed = booking => Number(paymentOf(booking)?.amount_gbp ?? booking.total_gbp) || 0
+export function combinedReminderText(bookings, bank, firstName) {
+  const sorted = [...bookings].sort((a, b) => a.date.localeCompare(b.date) || a.start_minutes - b.start_minutes)
+  const first = String(firstName || '').trim()
+  const lines = sorted.map(booking => `${dateLabel(booking.date).replace(',', '')} - ${money(owed(booking))}`)
+  const reference = paymentOf(sorted[0])?.payment_reference || sorted[0]?.booking_reference
+  const details = bank?.configured
+    ? [`Sort code: ${bank.sortCode}`, `Account number: ${bank.accountNumber}`, `Reference: ${reference}`].join('\n')
+    : 'Let me know if you would like my bank details again.'
+  return [
+    `${first ? `Hi ${first}, hope` : 'Hi, hope'} you're feeling good after your sessions! Just a quick reminder that payment is still outstanding:`,
+    '',
+    ...lines,
+    `Total: ${money(sorted.reduce((sum, booking) => sum + owed(booking), 0))}`,
+    '',
+    "Here are my details in case they're handy:",
+    '',
+    details,
+    '',
+    "If you've already sent it, please ignore this. Thanks so much!",
+    'Vad',
+  ].join('\n')
 }
 
 // WhatsApp straight to the client's chat with the message in it, or nothing when the booking has no usable phone number.

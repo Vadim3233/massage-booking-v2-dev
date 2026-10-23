@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canShare, cancellationWords, fillShareMessage, paymentWords, SHARE_BLANKS, shareMessageProblem, shareText, shareValues, STANDARD_SHARE_MESSAGE, whatsappShareLink } from './shareBooking.js'
+import { canShare, cancellationWords, fillShareMessage, paymentWords, combinedReminderText, reminderDue, reminderText, SHARE_BLANKS, shareMessageProblem, shareText, shareValues, STANDARD_SHARE_MESSAGE, whatsappShareLink } from './shareBooking.js'
 import { createShareMessageApi } from './shareMessageApi.js'
 
 const bank = { configured: true, accountName: 'V Massage', bankName: 'WISE', sortCode: '00-00-00', accountNumber: '00000000', note: '' }
@@ -119,5 +119,50 @@ describe('the cancellation line', () => {
     expect(shareMessageProblem('Terms: {cancellation}')).toBe('')
     expect(SHARE_BLANKS).toContain('cancellation')
     expect(shareText(booking(), bank, 'Terms: {cancellation}', terms({ ended: true }))).toBe('Terms: The free cancellation period has ended.')
+  })
+})
+
+describe('the payment reminder', () => {
+  const after = new Date('2026-10-29T20:00:00Z')
+  const before = new Date('2026-10-20T09:00:00Z')
+  const pay = (status, method = 'bank_transfer') => booking({ booking_payments: { method, status, payment_reference: 'VM-1234' } })
+  it('is for a bank transfer not yet received, once the appointment has started', () => {
+    expect(reminderDue(pay('awaiting_transfer'), after)).toBe(true)
+    expect(reminderDue(pay('awaiting_verification'), after)).toBe(true)
+    expect(reminderDue(pay('awaiting_transfer'), before)).toBe(false)
+  })
+  it('is not for a paid, refunded, cash, cancelled or missed booking', () => {
+    expect(reminderDue(pay('paid'), after)).toBe(false)
+    expect(reminderDue(pay('refunded'), after)).toBe(false)
+    expect(reminderDue(pay('approved', 'cash'), after)).toBe(false)
+    expect(reminderDue(booking({ booking_status: 'cancelled' }), after)).toBe(false)
+    expect(reminderDue(booking({ booking_status: 'no_show' }), after)).toBe(false)
+  })
+  it('is friendly, says the payment is outstanding, gives the sort code, account number and reference, and says to ignore it if already sent', () => {
+    expect(reminderText(pay('awaiting_transfer'), bank)).toBe(
+      "Hi Andreas, hope you're feeling good after your session! Just a quick reminder that payment of £120.00 is still outstanding. Here are my details in case they're handy:\n\nSort code: 00-00-00\nAccount number: 00000000\nReference: VM-1234\n\nIf you've already sent it, please ignore this. Thanks so much!\nVad")
+  })
+  it('offers the bank details again when none are saved, and never says the notes, phone, email or id', () => {
+    expect(reminderText(pay('awaiting_transfer'), { configured: false })).toContain('Let me know if you would like my bank details again.')
+    const text = reminderText(pay('awaiting_transfer'), bank)
+    for (const secret of ['Bad knee', 'Parking', '07700', 'andreas@example.test', '0b1c2d3e']) expect(text).not.toContain(secret)
+  })
+  it('still greets a client with no first name', () => {
+    expect(reminderText(booking({ clients: { phone: '07700 900123' } }), bank).startsWith("Hi, hope you're feeling good")).toBe(true)
+  })
+})
+
+describe('the combined payment reminder', () => {
+  const owing = (id, date, amount) => ({ id, date, start_minutes: 600, booking_reference: 'VM-' + id, total_gbp: amount, booking_payments: { method: 'bank_transfer', status: 'awaiting_transfer', amount_gbp: amount, payment_reference: 'REF-' + id } })
+  it('lists each session by date with what it comes to, the total, and one reference to pay it all by', () => {
+    const text = combinedReminderText([owing('2', '2026-10-25', 135), owing('1', '2026-10-18', 120)], bank, 'Dan')
+    expect(text).toBe(
+      "Hi Dan, hope you're feeling good after your sessions! Just a quick reminder that payment is still outstanding:\n\nSun 18 Oct - £120.00\nSun 25 Oct - £135.00\nTotal: £255.00\n\nHere are my details in case they're handy:\n\nSort code: 00-00-00\nAccount number: 00000000\nReference: REF-1\n\nIf you've already sent it, please ignore this. Thanks so much!\nVad")
+  })
+  it('offers the bank details again when none are saved, and copes with no first name', () => {
+    const text = combinedReminderText([owing('1', '2026-10-18', 120), owing('2', '2026-10-25', 135)], { configured: false }, '')
+    expect(text.startsWith("Hi, hope you're feeling good")).toBe(true)
+    expect(text).toContain('Let me know if you would like my bank details again.')
+    expect(text).not.toContain('Sort code')
   })
 })

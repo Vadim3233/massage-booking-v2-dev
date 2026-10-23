@@ -79,6 +79,9 @@ export function createClientsApi(client) {
     // The Telegram link the Admin sends a client who did not press the button themselves: whether they have linked a chat, and a one-time code to link one.
     telegramStatus: id => run(client.rpc('admin_client_telegram_status', { p_client_id: id })),
     createTelegramLink: id => run(client.rpc('admin_create_client_telegram_link', { p_client_id: id })),
+    // A client's bank transfers not yet received (for the combined payment reminder); which of them are due is decided in shareBooking.js.
+    outstandingPayments: id => run(client.from('bookings').select('id,booking_reference,date,start_minutes,treatment_duration_minutes,total_gbp,booking_status,booking_payments!inner(method,status,amount_gbp,payment_reference)')
+      .eq('client_id', id).eq('booking_payments.method', 'bank_transfer').in('booking_payments.status', ['awaiting_transfer', 'awaiting_verification']).order('date').order('start_minutes').limit(50)),
     notes: id => run(client.from('client_notes').select('id,note,created_at').eq('client_id', id).order('created_at', { ascending: false }).limit(100)),
     async addNote(id, note) {
       const { data: user } = await client.auth.getUser()
