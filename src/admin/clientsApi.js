@@ -19,6 +19,8 @@ export const SAFE_MESSAGES = new Set([
   'Someone is in the middle of booking right now. Try again in a few minutes.',
   'This client is signed in as an Admin, so they cannot be deleted here.',
   'Something changed while you were deciding. Please look at the question again.',
+  // The Telegram link
+  'Please wait a little before asking again.',
 ])
 const GENERIC = 'Could not complete that. Please check your connection and try again.'
 const failure = error => new Error(SAFE_MESSAGES.has(error?.message) ? error.message : GENERIC)
@@ -74,6 +76,9 @@ export function createClientsApi(client) {
     // question said would go (see deleteScope) and is refused if anything about that changed in between.
     deleteCheck: id => run(client.rpc('admin_client_delete_check', { p_client_id: id })),
     deleteClient: (id, requestId, expected) => run(client.rpc('admin_delete_client', { p_client_id: id, p_request_id: requestId, p_expected: expected })),
+    // The Telegram link the Admin sends a client who did not press the button themselves: whether they have linked a chat, and a one-time code to link one.
+    telegramStatus: id => run(client.rpc('admin_client_telegram_status', { p_client_id: id })),
+    createTelegramLink: id => run(client.rpc('admin_create_client_telegram_link', { p_client_id: id })),
     notes: id => run(client.from('client_notes').select('id,note,created_at').eq('client_id', id).order('created_at', { ascending: false }).limit(100)),
     async addNote(id, note) {
       const { data: user } = await client.auth.getUser()
