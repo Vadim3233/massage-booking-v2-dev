@@ -48,7 +48,7 @@ Booking, payment, cancellation and rescheduling rules did not change for clients
 - **What the times mean.** Solid times are the usual ones. Dashed times are ones the booking page would not offer (a shorter gap than your usual hour, outside your working hours, a day off, or during blocked time); choosing one tells you what you are setting aside, and says it again beside the price. Grey times overlap another appointment (or a time a client is booking right now) and cannot be chosen; tapping one tells you what it clashes with.
 - **Never a double booking.** Also refused: a time that has already begun, one that would run past midnight, and one more than a year away. Everything else is yours to decide, except that while a client is part-way through booking that day (a few minutes), unusual times wait and the screen says so, so that the time held for the client is never taken away.
 - **Clients see nothing different.** They are still offered only the usual times. After you book an unusual time, the rest of that day usually has no times left for clients, because the first and last appointments of a day set what is offered.
-- **Repeating bookings** are only offered at usual times: choosing an unusual time turns the repeat off for that booking. If a repeating client's time is kept free on that day, the screen warns that an unusual booking may stop that week's repeat. **Moving** an existing appointment still offers the usual times only; say if you want the same there.
+- **Repeating bookings** are only offered at usual times: choosing an unusual time turns the repeat off for that booking. If a repeating client's time is kept free on that day, the screen warns that an unusual booking may stop that week's repeat. **Moving** an existing appointment has the same button too (see "any time when you move a booking" below).
 
 ## New: delete a client (2026-10-13)
 
@@ -277,6 +277,15 @@ Booking, payment, cancellation and rescheduling rules did not change for clients
 - **What it says:** the date and time, the address, the treatments with the length and price, and how the payment stands; if a bank transfer is still due, the bank details and reference your clients already see. Never your notes, the client's phone or email, or anything internal.
 - **Not on a cancelled booking.** WhatsApp client is not offered when the client has no usable phone number.
 - **To try it:** open a test booking, press the share button, choose WhatsApp client and look at the message (do not send it to a real client), then try Share….
+
+## New: any time when you move a booking (2026-10-24)
+
+- **One step for you first:** the database needs an update, `supabase/migrations/20261114100000_admin_reschedule_any_time.sql`, applied in the Supabase SQL Editor like the earlier ones. **Apply it before this goes live.** It is safe to apply early: the screens that are live today keep working exactly as they do now. Without it, **Show all times** in the Reschedule sheet says it could not load the times, and the usual times work as before.
+- **Why.** Moving a booking offered only the usual times. When it was the only booking of a day that starts at a set time (a Sunday that starts at 12:00, say), the day looked empty once the booking was set aside, so the only time offered was that 12:00 and you could not move it to 17:30, even when you and the client had agreed.
+- **Where.** **Reschedule** on a booking, under the usual times: **Show all times**, the same button as on New booking. Solid times are the usual ones. Dashed times are not; choosing one says what you are setting aside (a shorter gap than your usual hour, outside your working hours, a day off, blocked time), and the **New time** line reminds you. Grey times overlap another appointment and cannot be chosen. The booking you are moving never gets in its own way.
+- **Never a double booking.** Also refused, as for a new booking: a time that has already begun, one that would run past midnight, one more than a year away, and, while a client is part-way through booking that day (a few minutes), any time outside the usual ones.
+- **Nothing else changes.** The late fee for a change the client asks for, the history and the message to the client are exactly as before. Clients are still offered only the usual times, including when they move their own booking.
+- **To try it:** on a test booking, press Reschedule, press Show all times and choose a dashed time; read what it says; move it, then open History on the booking.
 
 ## What works now (tested locally)
 

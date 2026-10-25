@@ -3,6 +3,8 @@ import { timeLabel } from '../../client/booking/bookingDraft.js'
 import { groupSlots } from '../../client/booking/timeOfDay.js'
 import { time } from '../calendarPresentation.js'
 import { clashNote, CLIENT_BOOKING_NOTE, unusualNotes } from './times.js'
+// Its styles live with the New booking page, which is loaded on demand; moving a booking uses this too, so it brings them along.
+import './newBooking.css'
 
 const message = error => error?.message || 'Something went wrong. Please retry.'
 const span = item => `${time(item.start)}–${time(item.end)}`

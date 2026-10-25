@@ -66,11 +66,11 @@ select is((select array_agg(start_minutes order by start_minutes) from public.co
 -- ---------------------------------------------------------------------------------------------
 -- Who may ask
 -- ---------------------------------------------------------------------------------------------
-select has_function('public', 'admin_booking_times', array['date', 'integer']);
-select ok(not has_function_privilege('anon', 'public.admin_booking_times(date,integer)', 'EXECUTE'), 'Anonymous callers cannot ask for all the times');
-select ok(has_function_privilege('authenticated', 'public.admin_booking_times(date,integer)', 'EXECUTE'), 'A signed-in caller can (and is then checked as the Admin)');
-select ok(not has_function_privilege('authenticated', 'public.admin_time_clash(date,integer,integer,timestamptz)', 'EXECUTE')
-  and not has_function_privilege('anon', 'public.admin_time_clash(date,integer,integer,timestamptz)', 'EXECUTE'), 'The overlap check is an inside helper, closed to outside callers');
+select has_function('public', 'admin_booking_times', array['date', 'integer', 'uuid']);
+select ok(not has_function_privilege('anon', 'public.admin_booking_times(date,integer,uuid)', 'EXECUTE'), 'Anonymous callers cannot ask for all the times');
+select ok(has_function_privilege('authenticated', 'public.admin_booking_times(date,integer,uuid)', 'EXECUTE'), 'A signed-in caller can (and is then checked as the Admin)');
+select ok(not has_function_privilege('authenticated', 'public.admin_time_clash(date,integer,integer,timestamptz,uuid)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.admin_time_clash(date,integer,integer,timestamptz,uuid)', 'EXECUTE'), 'The overlap check is an inside helper, closed to outside callers');
 select ok(not exists (
   select 1 from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname in ('admin_booking_times', 'admin_time_clash', 'admin_create_booking', 'admin_create_series')
     and not coalesce(p.prosecdef and p.proconfig @> array['search_path=""'], false)), 'These are definers with an empty search path');

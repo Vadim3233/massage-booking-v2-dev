@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { DONE, feeChoices, lifecycleActions, lifecycleApi, lifecycleLabels } from './bookingLifecycleApi.js'
 import { clientName, dateLabel, label, money, time, today } from './calendarPresentation.js'
 import { acquireBodyScrollLock } from './dialogScrollLock.js'
 import { toast } from '../ui/toast.js'
 import { cancelOutcome, REFUND_HINT } from './cancelOutcome.js'
 import DayTimePicker from '../client/booking/components/DayTimePicker.jsx'
+import AllTimes from './newBooking/AllTimes.jsx'
 
 const ACTION_STYLE = { complete: 'btn--primary', feeReceived: 'btn--primary', refund: 'btn--primary', cancel: 'btn--danger', feeWaive: 'btn--quiet', noShow: '', reschedule: '' }
 
@@ -38,7 +39,12 @@ export function ActionDialog({ kind, booking, api, close, done }) {
   const [standardFee, setStandardFee] = useState(null)
   // Whether the standard fee has been looked up: loading, ok or failed.
   const [lookup, setLookup] = useState('loading')
+  // The time chosen for a move: usual, or one from "Show all times" (anyTime) with what is being set aside (notes).
   const [slot, setSlot] = useState(null)
+  // Raised after a refusal, so the times on show are asked for again.
+  const [reloadKey, setReloadKey] = useState(0)
+  // All the times of a day, with the booking being moved left out so it is never in its own way.
+  const loadTimes = useCallback((date, minutes) => api.times(date, minutes, booking.id), [api, booking.id])
   const total = Number(booking.total_gbp)
 
   useEffect(() => {
@@ -75,7 +81,7 @@ export function ActionDialog({ kind, booking, api, close, done }) {
   function input() {
     if (kind === 'cancel') return { reason: reason.trim() || null, initiatedBy, fee: fee === '' ? null : Number(fee) }
     if (kind === 'noShow') return { fee: fee === '' ? null : Number(fee) }
-    if (kind === 'reschedule') return { date: slot.date, start: slot.start, initiatedBy }
+    if (kind === 'reschedule') return { date: slot.date, start: slot.start, initiatedBy, anyTime: slot.anyTime }
     return {}
   }
   const feeValid = fee === '' || (Number(fee) >= 0 && Number(fee) <= total)
@@ -97,6 +103,7 @@ export function ActionDialog({ kind, booking, api, close, done }) {
       await done(`${DONE[kind] || 'Saved'}.`)
     } catch (failure) {
       setError(failure.message)
+      if (kind === 'reschedule') setReloadKey(value => value + 1)
       if (failure.conflict) await done(failure.message, true)
     } finally { setBusy(false) }
   }
@@ -120,10 +127,16 @@ export function ActionDialog({ kind, booking, api, close, done }) {
 
       {(kind === 'cancel' || kind === 'reschedule') && <Who value={initiatedBy} onChange={changeWho} disabled={busy} />}
       {kind === 'reschedule' && <>
-        <DayTimePicker horizonDays={365} dateLabel="New date" initialDate={booking.date >= today() ? booking.date : today()}
+        {/* The usual times as ever. "Show all times" is the same button as on New booking, for the others: a shorter gap, an evening, a day off,
+            or the only booking of a day that starts at a set time (set aside to be moved, that day looks empty and offers just that time). */}
+        <DayTimePicker horizonDays={365} dateLabel="New date" initialDate={booking.date >= today() ? booking.date : today()} reloadKey={reloadKey}
           loadDay={date => api.availability(date, booking.treatment_duration_minutes, booking.id)}
-          selected={slot} onPick={(date, start) => { setSlot({ date, start }); setError('') }} emptyMessage="No available times. Choose another date." />
-        {slot && <p className="admin-new-time" role="status">New time: {dateLabel(slot.date, { weekday: 'short', day: 'numeric', month: 'short' })} · {time(slot.start)}</p>}
+          selected={slot} onPick={(date, start) => { setSlot({ date, start, anyTime: false, notes: [] }); setError('') }} emptyMessage="No available times. Choose another date."
+          renderFooter={date => <AllTimes date={date} duration={booking.treatment_duration_minutes} selectedStart={slot?.date === date ? slot.start : null}
+            selectedNotes={slot?.anyTime ? slot.notes : []} onPick={(day, start, choice) => { setSlot({ date: day, start, ...choice }); setError('') }}
+            loadTimes={loadTimes} reloadKey={reloadKey} />} />
+        {/* What is being set aside is said under the times, where she tapped; here, beside the button that confirms, it is only a reminder. */}
+        {slot && <p className="admin-new-time" role="status">New time: {dateLabel(slot.date, { weekday: 'short', day: 'numeric', month: 'short' })} · {time(slot.start)}{slot.anyTime && ' · outside your usual times'}</p>}
         {lateFeeNote && <p role="status">{lateFeeNote}</p>}
         {lateFeeWait && <p className="admin-detail-hint" role="status">{lateFeeWait}</p>}
         {lateFeeUnknown && <p role="status">{lateFeeUnknown}</p>}

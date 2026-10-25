@@ -50,6 +50,46 @@ describe('Admin booking lifecycle against local Supabase', () => {
     }
   })
 
+  it('moves the only booking of a day that starts at a set time to another time of that day, once "any time" is asked for', async () => {
+    await f.authorize()
+    const b = await fresh(f.bookings[2].id)
+    // The reported case: the day starts at 10:00, the booking is the only one that day and is at 10:00. Set aside to be moved, the day looks
+    // empty, so the usual list is that one time and nothing else.
+    const hours = await unwrap(f.admin.from('working_hours_overrides').select().eq('date', b.date))
+    await unwrap(f.admin.from('working_hours_overrides').upsert({ date: b.date, available: true, start_minutes: 540, end_minutes: 1260, start_mode: 'fixed', fixed_start_minutes: b.start_minutes }))
+    try {
+      expect(await api.availability(b.date, b.treatment_duration_minutes, b.id)).toEqual([b.start_minutes])
+      const day = await api.times(b.date, b.treatment_duration_minutes, b.id)
+      const evening = day.slots.find(slot => slot.start === 1050)
+      expect(evening).toEqual({ start: 1050, usual: false, clash: false })
+      await expect(api.act('reschedule', b, crypto.randomUUID(), { date: b.date, start: 1050, initiatedBy: 'admin' }))
+        .rejects.toMatchObject({ message: 'This time is not available. Choose another time.', conflict: false })
+      await api.act('reschedule', b, crypto.randomUUID(), { date: b.date, start: 1050, initiatedBy: 'admin', anyTime: true })
+      expect((await fresh(b.id)).start_minutes).toBe(1050)
+      expect((await api.history(b.id)).some(event => event.kind === 'schedule' && event.from_start_minutes === b.start_minutes && event.to_start_minutes === 1050)).toBe(true)
+    } finally {
+      if (hours.length) await unwrap(f.admin.from('working_hours_overrides').upsert(hours))
+      else await unwrap(f.admin.from('working_hours_overrides').delete().eq('date', b.date))
+    }
+  })
+
+  it('leaves the booking being moved out of the list of all the times, and still refuses a double booking at any time', async () => {
+    await f.authorize()
+    const [first, , outside] = f.bookings
+    const duration = first.treatment_duration_minutes
+    // f.date has the 10:00 booking and a 13:00 one waiting for approval.
+    const all = await api.times(f.date, duration, null)
+    const withoutFirst = await api.times(f.date, duration, first.id)
+    expect(all.booked.map(item => item.start)).toEqual([600, 780])
+    expect(withoutFirst.booked.map(item => item.start)).toEqual([780])
+    expect(all.slots.find(slot => slot.start === 600).clash).toBe(true)
+    expect(withoutFirst.slots.find(slot => slot.start === 600).clash).toBe(false)
+    const b = await fresh(outside.id)
+    await expect(api.act('reschedule', b, crypto.randomUUID(), { date: f.date, start: 630, initiatedBy: 'admin', anyTime: true }))
+      .rejects.toMatchObject({ message: 'That time overlaps another appointment, so it is not available. Choose another time.', conflict: false })
+    expect((await fresh(b.id)).start_minutes).toBe(b.start_minutes)
+  })
+
   it('refuses a clash with another booking and explains it, without raw errors', async () => {
     await f.authorize()
     const other = await fresh(f.bookings[2].id)
