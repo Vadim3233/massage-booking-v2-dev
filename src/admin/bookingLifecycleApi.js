@@ -10,7 +10,13 @@ const SAFE_MESSAGES = new Set([
   'The fee must be between zero and the appointment price',
   'A cancellation reason can be up to 500 characters',
   'Choose a date within the next 365 days and a 30-minute start',
+  // Moving a booking to a time from "Show all times": the same words as for a new booking.
+  'That time overlaps another appointment, so it is not available. Choose another time.',
+  'That time is in the past. Choose another time.',
+  'That appointment would run past midnight. Choose an earlier time.',
+  'A client is in the middle of booking that day. Try again in a few minutes.',
 ])
+const TIMES_UNAVAILABLE = "I couldn't load all the times just now. Please try again in a moment."
 
 export const lifecycleActions = booking => {
   const status = booking.booking_status
@@ -54,7 +60,8 @@ export function createLifecycleApi(client) {
     complete: (booking, id) => ['admin_complete_booking', { ...versions(booking), p_request_id: id }],
     noShow: (booking, id, input) => ['admin_mark_no_show', { ...versions(booking), p_request_id: id, p_fee_gbp: input.fee }],
     cancel: (booking, id, input) => ['admin_cancel_booking', { ...withPayment(booking), p_request_id: id, p_reason: input.reason, p_initiated_by: input.initiatedBy, p_fee_gbp: input.fee }],
-    reschedule: (booking, id, input) => ['admin_reschedule_booking', { ...versions(booking), p_request_id: id, p_new_date: input.date, p_new_start_minutes: input.start, p_initiated_by: input.initiatedBy }],
+    // "Any time" is sent only for a time from "Show all times" that is not a usual one, so a usual move is exactly the call it always was.
+    reschedule: (booking, id, input) => ['admin_reschedule_booking', { ...versions(booking), p_request_id: id, p_new_date: input.date, p_new_start_minutes: input.start, p_initiated_by: input.initiatedBy, ...(input.anyTime ? { p_any_time: true } : {}) }],
     feeReceived: (booking, id) => ['admin_settle_late_fee', { ...versions(booking), p_request_id: id, p_action: 'received' }],
     feeWaive: (booking, id) => ['admin_settle_late_fee', { ...versions(booking), p_request_id: id, p_action: 'waive' }],
     refund: (booking, id) => ['admin_record_refund', { ...withPayment(booking), p_request_id: id }],
@@ -75,6 +82,12 @@ export function createLifecycleApi(client) {
       const { data, error } = await client.rpc('admin_booking_availability', { p_date: date, p_treatment_duration_minutes: minutes, p_exclude_booking_id: bookingId })
       if (error) throw failure(error)
       return data.map(row => row.start_minutes)
+    },
+    // Every half hour of the day for "Show all times", with the booking being moved left out so it is never in its own way.
+    async times(date, minutes, bookingId) {
+      const { data, error } = await client.rpc('admin_booking_times', { p_date: date, p_treatment_duration_minutes: minutes, p_exclude_booking_id: bookingId })
+      if (error) throw new Error(TIMES_UNAVAILABLE)
+      return data
     },
     async history(bookingId) {
       const [status, schedule] = await Promise.all([

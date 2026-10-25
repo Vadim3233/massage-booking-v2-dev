@@ -54,6 +54,38 @@ describe('commands sent to the server', () => {
     await api.act('feeWaive', booking(), 'req-3')
     expect(calls.at(-1)).toEqual(['admin_settle_late_fee', expect.objectContaining({ p_action: 'waive' })])
   })
+  it('asks for "any time" only when the new time is not a usual one', async () => {
+    await api.act('reschedule', booking(), 'req-4', { date: '2031-02-01', start: 1050, initiatedBy: 'admin', anyTime: true })
+    expect(calls.at(-1)[1]).toMatchObject({ p_new_date: '2031-02-01', p_new_start_minutes: 1050, p_initiated_by: 'admin', p_any_time: true })
+    // A usual time is the call it always was, so a screen that is live before the database is updated keeps working.
+    await api.act('reschedule', booking(), 'req-5', { date: '2031-02-01', start: 720, initiatedBy: 'admin', anyTime: false })
+    expect(calls.at(-1)[1]).not.toHaveProperty('p_any_time')
+    await api.act('reschedule', booking(), 'req-6', { date: '2031-02-01', start: 720, initiatedBy: 'admin' })
+    expect(calls.at(-1)[1]).not.toHaveProperty('p_any_time')
+  })
+  it('asks for all the times of a day, leaving out the booking being moved', async () => {
+    const day = { working: { open: true, start: 540, end: 1260 }, booked: [], blocks: [], slots: [{ start: 1050, usual: false, clash: false }] }
+    const rpc = vi.fn(async () => ({ data: day, error: null }))
+    await expect(createLifecycleApi({ rpc }).times('2031-02-01', 90, 'b1')).resolves.toBe(day)
+    expect(rpc).toHaveBeenCalledWith('admin_booking_times', { p_date: '2031-02-01', p_treatment_duration_minutes: 90, p_exclude_booking_id: 'b1' })
+  })
+  it('says plainly why a time from Show all times is refused, in the words the database wrote', async () => {
+    const refusals = [
+      ['PT409', 'That time overlaps another appointment, so it is not available. Choose another time.'],
+      ['PT409', 'That time is in the past. Choose another time.'],
+      ['22023', 'That appointment would run past midnight. Choose an earlier time.'],
+      ['PT409', 'A client is in the middle of booking that day. Try again in a few minutes.'],
+    ]
+    for (const [code, message] of refusals) {
+      const refusing = createLifecycleApi({ rpc: async () => ({ error: { code, message } }) })
+      // Not "the booking changed, so it was reloaded": the dialog stays open so another time can be chosen.
+      await expect(refusing.act('reschedule', booking(), 'r', { date: '2031-02-01', start: 1050, initiatedBy: 'admin', anyTime: true })).rejects.toMatchObject({ message, conflict: false })
+    }
+  })
+  it('never shows a raw server error when the times cannot be loaded', async () => {
+    const failing = createLifecycleApi({ rpc: async () => ({ error: { code: 'XX000', message: 'secret SQL detail' } }) })
+    await expect(failing.times('2031-02-01', 60, 'b1')).rejects.toThrow("I couldn't load all the times just now. Please try again in a moment.")
+  })
   it('never shows raw server errors, but shows the messages written for the Admin', async () => {
     const failing = createLifecycleApi({ rpc: async () => ({ error: { code: 'XX000', message: 'secret SQL detail' } }) })
     await expect(failing.act('complete', booking(), 'r')).rejects.toThrow('Could not complete the action. Refresh the booking before trying again.')

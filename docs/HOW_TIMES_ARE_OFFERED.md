@@ -54,6 +54,12 @@ On a **Flexible** day, once there are appointments, clients are offered every ha
 - **Where it is set.** On a weekday of the usual week and on a special day. A special day starts from the usual week's mode, like its hours, and has its own mode from then on.
 - **Holds and moves work as in a chain.** A time a client is holding counts as an appointment, and a booking that is being moved is not in its own way.
 
+## Moving a booking
+
+When you move a booking, it is set aside while the times are worked out, so it is never in its own way. That has one surprise. If it is the only booking of a day whose first appointment is **At a set time**, the day looks empty without it, and an empty day offers only that set time. A Sunday that starts at 12:00, with one booking at 12:00, offers 12:00 and nothing else when you press Reschedule.
+
+**Show all times** is there for this, under the usual times, as on New booking. It lists every half hour of the day: solid times are the usual ones, dashed times are not (it says what you are setting aside), and grey times overlap another appointment. A time that has already begun, one that would run past midnight and one more than a year away are not offered. While a client is part-way through booking that day, times outside the usual ones wait a few minutes. Clients are still offered only the usual times, including when they move their own booking.
+
 ## Your usual week
 
 Each weekday has its own hours, a first appointment setting, or is a day off. For example Monday to Wednesday and Friday 10:00 to 20:00, Thursday off. A date follows the usual week unless it has a special day.
