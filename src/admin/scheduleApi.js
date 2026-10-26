@@ -116,7 +116,13 @@ export function createScheduleApi(client) {
     deleteBlock: groupId => run(client.from('calendar_blocks').delete().eq('group_id', groupId)),
     // A day as 48 half hours, and saving the ones the Admin wants open (ADR-080). A refusal the database explains (a past day, a first appointment
     // that would be closed, the day changing while it was edited) is shown in its own words.
-    dayGrid: date => run(client.rpc('admin_day_grid', { p_date: date })),
+    // Each booking half hour also carries its booking's real times, which need not end on the half hour, for its label.
+    async dayGrid(date) {
+      const [rows, bookings] = await Promise.all([run(client.rpc('admin_day_grid', { p_date: date })),
+        run(client.from('bookings').select('id,start_minutes,treatment_duration_minutes').eq('date', date))])
+      const times = new Map((bookings || []).map(booking => [booking.id, [booking.start_minutes, booking.start_minutes + booking.treatment_duration_minutes]]))
+      return (rows || []).map(row => times.has(row.booking_id) ? { ...row, booking_times: times.get(row.booking_id) } : row)
+    },
     async saveDayGrid(date, open, closeHeld = false) {
       const { data, error } = await client.rpc('admin_save_day_grid', { p_date: date, p_open: open, p_close_held: closeHeld })
       if (error) throw ['22023', '55000'].includes(error.code) ? Object.assign(new Error(error.message), { code: error.code }) : failure()
