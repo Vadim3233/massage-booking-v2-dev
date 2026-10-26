@@ -49,12 +49,17 @@ export function closeAll(rows) {
   return Object.fromEntries(rows.filter(row => !row.locked).map(row => [row.start_minutes, false]))
 }
 
-// A booking or blocked time is named once, on its first half hour on screen.
+// A booking or blocked time is named once, on its first half hour on screen. A booking also says its times, so its last half hour is not
+// mistaken for the one after it: "Andreas · 17:30–19:30".
 export function withLabels(rows) {
   return rows.map((row, index) => {
     const before = rows[index - 1]
     const first = row.label && !(before && before.label === row.label && before.locked === row.locked)
-    return { ...row, showLabel: first ? row.label : '' }
+    if (!first) return { ...row, showLabel: '' }
+    if (row.locked !== 'booking') return { ...row, showLabel: row.label }
+    const own = rows.filter(other => other.locked === 'booking' && other.booking_id === row.booking_id)
+    const [from, to] = row.booking_times || [own[0].start_minutes, own.at(-1).start_minutes + 30]
+    return { ...row, showLabel: `${row.label} · ${clock(from)}–${clock(to)}` }
   })
 }
 

@@ -30,6 +30,8 @@ test('the day opens from the Day view as half hours: working ones pressed, the b
   await expect(cell(page, '12:00')).toHaveAttribute('aria-pressed', 'true')
   await expect(cell(page, '22:00')).toHaveAttribute('aria-pressed', 'false')
   await expect(cell(page, '10:00')).toHaveAccessibleName(/booking/)
+  // The booking says its times, so its last half hour is not mistaken for the travel after it.
+  await expect(cell(page, '10:00')).toContainText('· 10:00–11:00')
   await expect(cell(page, '11:00')).toHaveAccessibleName(/travel time/)
   // Nothing has been tapped, so there is nothing to save.
   await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeDisabled()

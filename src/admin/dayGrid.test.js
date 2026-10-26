@@ -39,9 +39,12 @@ describe('the day grid', () => {
     expect(openMinutes(rows)).toEqual([930, 960, 990, 1020])
     expect(isDayOff(day())).toBe(false)
   })
-  it('names a booking once, on its first half hour', () => {
+  it('names a booking once, on its first half hour, with its times', () => {
     const labels = withLabels(day()).filter(row => row.showLabel).map(row => [row.start_minutes, row.showLabel])
-    expect(labels).toEqual([[960, 'Andreas Grid']])
+    expect(labels).toEqual([[960, 'Andreas Grid · 16:00–17:00']])
+    // A booking that ends on the quarter hour says its real end.
+    const quarter = day().map(row => row.booking_id ? { ...row, booking_times: [960, 1035] } : row)
+    expect(withLabels(quarter).find(row => row.showLabel).showLabel).toBe('Andreas Grid · 16:00–17:15')
   })
   it('describes held time in runs', () => {
     expect(heldLine([1200, 1230, 1290])).toBe('20:00–21:00, 21:30–22:00')
