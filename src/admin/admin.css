@@ -443,6 +443,13 @@
 .admin-shell .admin-card-directions:hover { background: var(--primary-line); }
 .admin-shell .admin-card-directions::after { content: ''; position: absolute; inset: -4px; }
 .admin-card-wrap.has-directions .admin-status { max-width: calc(100% - 108px); white-space: normal; border-radius: var(--radius); }
+/* The appointment and its money as two pills side by side; they wrap onto two lines when the card is narrow. */
+.admin-status-pair { display: inline-flex; flex-wrap: wrap; gap: 4px 6px; min-width: 0; }
+/* Side by side the pills drop their dot and some padding, so the pair stays on one line beside Directions on most phones. */
+.admin-status-pair .chip { padding-inline: 9px; }
+.admin-status-pair .chip::before { display: none; }
+.admin-card-wrap.has-directions .admin-status-pair { max-width: calc(100% - 108px); }
+.admin-card-wrap.has-directions .admin-status-pair .admin-status { max-width: 100%; }
 /* Record refund on a cancelled card with a refund to send: at the foot of the card, where Directions sits on a card still to come. */
 .admin-shell .admin-card-refund { position: absolute; right: 8px; bottom: 6px; z-index: 1; display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 0 12px; border: 1.5px solid var(--primary); border-radius: var(--radius-pill); background: var(--surface); color: var(--primary); font: 600 13px/1 var(--font-ui); white-space: nowrap; }
 .admin-shell .admin-card-refund:hover { background: var(--primary-soft); }

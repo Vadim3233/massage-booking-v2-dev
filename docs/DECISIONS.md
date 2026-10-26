@@ -838,3 +838,14 @@ The page stays where the Admin needs it:
 - **Tests:** `day_grid.test.sql` (40 checks, including that the engine reads the saved hours and that a refused save changes nothing; it fails when the lock check is taken out), `dayGrid.test.js`, and the browser test `adminDayHoursGrid.spec.js` (tap, slide, undo, Cancel, Day off, a held time).
 
 **Limits, on purpose:** Half hours only, as the rest of the scheduling works in 30-minute steps. A booking's travel time is the travel allowance stored on the booking. Blocked time made elsewhere with a label stays as it is and is changed from the Day view.
+
+## ADR-081 — Confirm a booking now, payment later (2026-10-26)
+
+**Why:** Some clients book by bank transfer and pay later (Vadim, 26 Oct 2026). A booking the client made stayed "Awaiting transfer" until the money was recorded or the booking was cancelled, so there was no way to say "the appointment is on, the money is still to come". Bookings the Admin makes could already be confirmed with the transfer still awaited.
+
+**Decision:** The booking and its payment are shown and moved separately.
+- **Migration `20261116100000_confirm_pay_later.sql`:** `admin_confirm_pay_later` moves a bank-transfer booking from awaiting transfer (or awaiting verification, after the client said they paid) to confirmed and leaves the payment as it was. It is idempotent and checks versions like the other payment commands, and writes `booking.confirmed_payment_due`. `admin_record_bank_transfer_received` ("Mark paid") now also takes a confirmed booking whose payment is awaiting verification. Both moves were already allowed by the status guards; nothing else in the state machine changes.
+- **Client message:** `booking.confirmed_payment_due` emails "Your appointment is confirmed", what is still to pay, the payment reference and the saved bank details (or "just ask me" when none are saved), and the same words go to a linked Telegram chat. Marking it paid later sends nothing new.
+- **Screens:** "Confirm, pay later" sits beside Verify payment and Cancel on a waiting transfer, on the booking and on the To check page (the Agenda's Needs you box keeps its two buttons, so it stays short). Cards and the booking sheet show two pills, the appointment ("Confirmed", "Not confirmed yet", "Completed") and the money ("Payment awaited", "Transfer to check", "Paid"…); the card stays sand until the money arrives. **Mark paid** is on the booking, and on the card once the appointment is over. Income already counts only money received and lists confirmed-but-unpaid appointments as owed.
+- **Cash** is unchanged: approve now, mark cash received later.
+- **Tests:** `confirm_pay_later.test.sql` (23 checks), `paymentReview.integration.test.js`, `calendarPresentation.test.js`, and the card browser tests.

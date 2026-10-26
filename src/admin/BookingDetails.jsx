@@ -26,7 +26,9 @@ export default function BookingDetails({ booking: b, close, payment, lifecycle, 
     <div className="admin-details-content">
       <section className="admin-details-client"><h2 id="booking-title">{clientName(b)}</h2>
         <p className="admin-when">{dateLabel(b.date, { weekday: 'short', day: 'numeric', month: 'short' })} · {time(b.start_minutes)}–{time(b.start_minutes + b.treatment_duration_minutes)}</p>
-        <p><span className={`chip chip--${state.chip} admin-status ${state.tone}`}>{state.text}</span></p>
+        <p>{state.pills
+          ? <span className="admin-status-pair">{state.pills.map(pill => <span key={pill.text} className={`chip chip--${pill.chip} admin-status`}>{pill.text}</span>)}</span>
+          : <span className={`chip chip--${state.chip} admin-status ${state.tone}`}>{state.text}</span>}</p>
         <address className="admin-where">{b.address_snapshot}</address>
         <nav className="admin-contact-actions" aria-label="Quick contact">{contactLinks(b).map(link => <a key={link.key} href={link.href} {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}><Icon name={link.icon} />{link.label}</a>)}</nav></section>
       {payment && <section className="admin-next"><h3>Payment</h3>{payment}</section>}

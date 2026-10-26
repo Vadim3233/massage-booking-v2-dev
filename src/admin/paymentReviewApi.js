@@ -12,16 +12,17 @@ export const NEEDS_YOU = ['awaiting_verification', 'awaiting_approval']
 export const needsYou = booking => NEEDS_YOU.includes(booking.booking_payments?.status)
 export const paymentActions = booking => {
   const payment = booking.booking_payments
-  // A booking waiting for payment is never cancelled automatically: the Admin confirms the payment or removes it.
-  if (booking.booking_status === 'awaiting_transfer' && payment?.method === 'bank_transfer' && payment.status === 'awaiting_transfer') return ['verify', 'remove']
-  if (booking.booking_status === 'awaiting_payment_verification' && payment?.method === 'bank_transfer' && payment.status === 'awaiting_verification') return ['verify', 'remove']
+  // A booking waiting for payment is never cancelled automatically: the Admin confirms the payment, confirms the booking with the payment
+  // still to come ("Confirm, pay later"), or removes it.
+  if (booking.booking_status === 'awaiting_transfer' && payment?.method === 'bank_transfer' && payment.status === 'awaiting_transfer') return ['verify', 'payLater', 'remove']
+  if (booking.booking_status === 'awaiting_payment_verification' && payment?.method === 'bank_transfer' && payment.status === 'awaiting_verification') return ['verify', 'payLater', 'remove']
   if (booking.booking_status === 'awaiting_cash_approval' && payment?.method === 'cash' && payment.status === 'awaiting_approval') return ['approve', 'remove']
   if (['confirmed', 'completed'].includes(booking.booking_status) && payment?.method === 'cash' && payment.status === 'approved') return ['receive']
-  if (['confirmed', 'completed'].includes(booking.booking_status) && payment?.method === 'bank_transfer' && payment.status === 'awaiting_transfer') return ['receiveBank']
+  if (['confirmed', 'completed'].includes(booking.booking_status) && payment?.method === 'bank_transfer' && ['awaiting_transfer', 'awaiting_verification'].includes(payment.status)) return ['receiveBank']
   return []
 }
-export const actionLabels = { verify: 'Verify payment', approve: 'Approve', remove: 'Cancel unpaid booking', receive: 'Mark payment received', receiveBank: 'Mark bank transfer received' }
-const operations = { verify: 'admin_verify_bank_transfer', approve: 'admin_approve_cash_request', remove: 'admin_remove_pending_booking', receive: 'admin_record_payment_received', receiveBank: 'admin_record_bank_transfer_received' }
+export const actionLabels = { verify: 'Verify payment', payLater: 'Confirm, pay later', approve: 'Approve', remove: 'Cancel unpaid booking', receive: 'Mark payment received', receiveBank: 'Mark paid' }
+const operations = { verify: 'admin_verify_bank_transfer', payLater: 'admin_confirm_pay_later', approve: 'admin_approve_cash_request', remove: 'admin_remove_pending_booking', receive: 'admin_record_payment_received', receiveBank: 'admin_record_bank_transfer_received' }
 export function createPaymentReviewApi(client) {
   const authorized = createAdminGate(client, { signedOut: 'Admin sign-in required.', denied: 'Admin access required.' })
   return {
