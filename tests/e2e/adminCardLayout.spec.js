@@ -106,13 +106,15 @@ test('a very long name wraps inside the card, away from the price, and nothing g
   expect(price.right).toBeLessThanOrEqual(card.right)
 })
 
+// The status at the foot of a card: one pill, or the pair of pills (the appointment and its money) as one box.
+const statusOf = scope => scope.locator('.admin-card-foot > .admin-status, .admin-card-foot > .admin-status-pair')
 test('Directions sits beside the status at the foot of the card, looks 36px tall and is 44px to press, over nothing else', async ({ page }) => {
   await openAgenda(page)
   const wrap = page.locator('.admin-card-wrap.has-directions').first()
   // Each day now says its hours, so the card may start below the fold: it is brought into view before points on screen are pressed.
   await wrap.scrollIntoViewIfNeeded()
   const directions = await box(wrap.getByRole('link', { name: /^Directions to/ }))
-  const status = await box(wrap.locator('.admin-status'))
+  const status = await box(statusOf(wrap))
   const card = await box(wrap.locator('.admin-card'))
   expect(directions.height).toBeGreaterThanOrEqual(36)
   expect(directions.bottom).toBeLessThanOrEqual(card.bottom)
@@ -130,11 +132,12 @@ test('Directions sits beside the status at the foot of the card, looks 36px tall
 // Every state a booking can be in keeps the same card: time at the top, name and price, treatment and postcode, then its status in words.
 // The database does not let a confirmed booking be moved straight to a waiting state, so each is made as a new booking at 15:00.
 const STATES = [
-  { status: 'awaiting_cash_approval', method: 'cash', payment: 'awaiting_approval', words: 'Awaiting cash approval' },
-  { status: 'awaiting_transfer', method: 'bank_transfer', payment: 'awaiting_transfer', words: 'Awaiting transfer' },
-  { status: 'awaiting_payment_verification', method: 'bank_transfer', payment: 'awaiting_verification', words: 'Awaiting payment verification' },
-  { status: 'completed', method: 'bank_transfer', payment: 'paid', words: 'Completed · Paid' },
-  { status: 'no_show', method: 'bank_transfer', payment: 'paid', words: 'No show · Paid' },
+  { status: 'awaiting_cash_approval', method: 'cash', payment: 'awaiting_approval', words: 'Awaiting cash approval', pills: ['Not confirmed yet', 'Cash to approve'] },
+  { status: 'awaiting_transfer', method: 'bank_transfer', payment: 'awaiting_transfer', words: 'Awaiting transfer', pills: ['Not confirmed yet', 'Payment awaited'] },
+  { status: 'awaiting_payment_verification', method: 'bank_transfer', payment: 'awaiting_verification', words: 'Awaiting payment verification', pills: ['Not confirmed yet', 'Transfer to check'] },
+  { status: 'confirmed', method: 'bank_transfer', payment: 'awaiting_transfer', words: 'Confirmed · Awaiting transfer', pills: ['Confirmed', 'Payment awaited'] },
+  { status: 'completed', method: 'bank_transfer', payment: 'paid', words: 'Completed · Paid', pills: ['Completed', 'Paid'] },
+  { status: 'no_show', method: 'bank_transfer', payment: 'paid', words: 'No show · Paid', pills: ['No show · Paid'] },
 ]
 for (const state of STATES) {
   test(`a booking that is ${state.words.toLowerCase()} has the same card, with nothing clipped or overlapping`, async ({ page }) => {
@@ -146,15 +149,15 @@ for (const state of STATES) {
     await openAgenda(page, 320, 4)
     const card = page.locator('.admin-card', { hasText: '15:00' })
     await expect(card).toHaveCount(1)
-    await expect(card.locator('.admin-status')).toHaveText(state.words)
+    await expect(card.locator('.admin-status')).toHaveText(state.pills)
     for (const part of ['.admin-card-when', '.admin-card-heading', '.admin-card-meta']) await expect(card.locator(part)).toBeVisible()
-    expect(await card.locator('.admin-status').evaluate(chip => chip.scrollWidth <= chip.clientWidth + 1)).toBe(true)
+    expect(await card.locator('.admin-status').evaluateAll(chips => chips.every(chip => chip.scrollWidth <= chip.clientWidth + 1))).toBe(true)
     expect(await noSideways(page)).toBe(true)
     const wrap = page.locator('.admin-card-wrap', { has: card })
     const links = wrap.getByRole('link', { name: /^Directions to/ })
     if (await links.count()) {
       expect(overlap(await box(links), await box(wrap.locator('.admin-card-meta')))).toBe(false)
-      expect(overlap(await box(links), await box(wrap.locator('.admin-status')))).toBe(false)
+      expect(overlap(await box(links), await box(statusOf(wrap)))).toBe(false)
     }
     await card.scrollIntoViewIfNeeded()
     await wrap.screenshot({ path: `test-results/card-layout-${state.status}.png` })

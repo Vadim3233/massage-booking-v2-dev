@@ -340,6 +340,11 @@ Booking, payment, cancellation and rescheduling rules did not change for clients
 - Fees and refunds are records for you; the app does not take or send money.
 - GitHub runs the build, the database tests, the unit tests and the lint check on every pull request. The browser tests (Playwright) run on my computer only, not on GitHub.
 
+## New: Confirm now, pay later (2026-10-26)
+
+- **One step for you first:** the database needs an update, `supabase/migrations/20261116100000_confirm_pay_later.sql`, applied in the Supabase SQL Editor like the earlier ones. **Apply it before this goes live.** It is safe to apply early: it adds one new command, lets Mark paid take one more case, and adds the new client message. Without it, **Confirm, pay later** shows an error and nothing changes.
+- **Where.** A booking waiting for a bank transfer now has **Confirm, pay later** beside Verify payment and Cancel. The appointment is confirmed and the client is told so, with the amount still to pay, the reference and your bank details (email, and Telegram if they linked it). The card then shows two pills, **Confirmed** and **Payment awaited**, and stays sand. When the money arrives, open the booking and tap **Mark paid** (after the appointment it is also on the card). The card turns green and the money counts in Income from then.
+
 ## New: Edit hours, a day as half-hour blocks (2026-10-26)
 
 - **One step for you first:** the database needs an update, `supabase/migrations/20261115100000_day_grid.sql`, applied in the Supabase SQL Editor like the earlier ones. **Apply it before this goes live.** It is safe to apply early: it only adds new functions, and nothing live uses them. Without it, **Edit hours** says it could not load the day; everything else works as before.

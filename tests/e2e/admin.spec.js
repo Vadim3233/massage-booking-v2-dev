@@ -28,7 +28,7 @@ for (const width of [320, 360, 390, 412]) test(`real calendar and exact persiste
   await expect(page.locator('.admin-card').first().locator('.admin-card-heading')).toContainText('£85.00')
   await expect(page.locator('.admin-card').first().locator('.admin-card-length')).toHaveText('1 person · 60 min')
   await expect(page.locator('.admin-card').first().locator('.admin-card-postcode')).toHaveText('SW1A 1AA')
-  await expect(page.locator('.admin-card').first().locator('.admin-status')).toHaveText('Confirmed · Cash approved')
+  await expect(page.locator('.admin-card').first().locator('.admin-status')).toHaveText(['Confirmed', 'Cash approved'])
   expect((await page.locator('.admin-header').boundingBox()).height).toBeLessThanOrEqual(110)
   await expect(page.getByText('Day context', { exact: true })).toHaveCount(0)
   await expect(page.getByText('Unoccupied intervals', { exact: true })).toHaveCount(0)

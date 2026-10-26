@@ -11,12 +11,14 @@ test.beforeEach(async () => { f = await adminFixture(5) })
 test.afterEach(async () => { await f?.cleanup() })
 
 const MADE = [
-  { at: '15:00', start: 900, status: 'confirmed', method: 'bank_transfer', payment: 'awaiting_transfer', words: 'Confirmed · Awaiting transfer', variant: 'sand', chip: 'wait' },
-  { at: '18:00', start: 1080, status: 'awaiting_payment_verification', method: 'bank_transfer', payment: 'awaiting_verification', words: 'Awaiting payment verification', variant: 'sand', chip: 'needs' },
-  { at: '21:00', start: 1260, status: 'completed', method: 'bank_transfer', payment: 'paid', words: 'Completed · Paid', variant: 'completed', chip: 'done' },
+  { at: '15:00', start: 900, status: 'confirmed', method: 'bank_transfer', payment: 'awaiting_transfer', words: 'Confirmed · Awaiting transfer', pills: 'Confirmed | Payment awaited', variant: 'sand', chip: 'wait' },
+  { at: '18:00', start: 1080, status: 'awaiting_payment_verification', method: 'bank_transfer', payment: 'awaiting_verification', words: 'Awaiting payment verification', pills: 'Not confirmed yet | Transfer to check', variant: 'sand', chip: 'needs' },
+  { at: '21:00', start: 1260, status: 'completed', method: 'bank_transfer', payment: 'paid', words: 'Completed · Paid', pills: 'Completed | Paid', variant: 'completed', chip: 'done' },
 ]
-const SETTLED = { at: '10:00', words: 'Confirmed · Cash approved', variant: 'sage', chip: 'ok' }
-const CANCELLED = { at: '13:00', words: 'Cancelled', variant: 'cancelled', chip: 'cancel' }
+// On a card and the booking sheet a booking that is going ahead shows two pills, the appointment and its money (`pills`); a client's list keeps
+// one pill in words (`words`). A cancelled booking has one pill everywhere.
+const SETTLED = { at: '10:00', words: 'Confirmed · Cash approved', pills: 'Confirmed | Cash approved', variant: 'sage', chip: 'ok' }
+const CANCELLED = { at: '13:00', words: 'Cancelled', pills: 'Cancelled', variant: 'cancelled', chip: 'cancel' }
 
 async function makeBookings() {
   const { id, created_at, updated_at, ...copy } = f.bookings[0]
@@ -44,13 +46,16 @@ const token = (page, name) => page.evaluate(variable => {
   probe.remove()
   return colour
 }, name)
+// A card's pills: their words, joined with " | ", and their colours. The pill in the card's own colour family is the one checked against it
+// (a confirmed booking still waiting for money has a sage "Confirmed" pill and a sand "Payment awaited" pill on a sand card).
 const look = card => card.evaluate(node => {
-  const chip = node.querySelector('.chip')
+  const chips = [...node.querySelectorAll('.chip')]
   return {
     variant: node.dataset.variant, background: getComputedStyle(node).backgroundColor, ink: getComputedStyle(node.querySelector('.admin-card-times')).color,
-    words: chip.textContent, chipBackground: getComputedStyle(chip).backgroundColor, chipInk: getComputedStyle(chip).color,
+    words: chips.map(chip => chip.textContent).join(' | '), chips: chips.map(chip => ({ chipBackground: getComputedStyle(chip).backgroundColor, chipInk: getComputedStyle(chip).color })),
   }
 })
+const inFamily = (seen, colours) => seen.chips.some(chip => chip.chipBackground === colours.chipBackground && chip.chipInk === colours.chipInk)
 const cardAt = (page, at) => page.locator('.admin-card', { hasText: at }).first()
 const EXPECTED = page => async () => ({
   sage: { background: await token(page, '--sage-bg'), ink: await token(page, '--sage-ink'), chipBackground: await token(page, '--sage-chip'), chipInk: await token(page, '--sage-ink') },
@@ -69,8 +74,10 @@ test('a settled booking is sage and one waiting on money is sand, in the words o
   for (const state of [SETTLED, ...MADE, CANCELLED]) {
     const seen = await look(cardAt(page, state.at))
     expect(seen.variant, state.words).toBe(state.variant)
-    expect(seen.words, state.words).toBe(state.words)
-    expect(seen, state.words).toMatchObject(colours[state.variant])
+    expect(seen.words, state.words).toBe(state.pills)
+    const { chipBackground, chipInk, ...card } = colours[state.variant]
+    expect(seen, state.words).toMatchObject(card)
+    expect(inFamily(seen, { chipBackground, chipInk }), state.words).toBe(true)
   }
   // Both kinds of waiting are the same sand, and a booking that is settled is not.
   const waiting = await look(cardAt(page, '15:00'))
@@ -127,9 +134,9 @@ test('the booking sheet and a client\'s list use the same words and colours as t
   const card = cardAt(page, '15:00')
   const onCard = await look(card)
   await card.click()
-  const chip = page.getByRole('dialog').locator('.admin-status').first()
-  await expect(chip).toHaveText(onCard.words)
-  expect(await chip.evaluate(node => getComputedStyle(node).backgroundColor)).toBe(onCard.chipBackground)
+  const chips = page.getByRole('dialog').locator('.admin-details-client .admin-status')
+  await expect(chips).toHaveText(onCard.words.split(' | '))
+  expect(await chips.evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))).toEqual(onCard.chips.map(chip => chip.chipBackground))
   await page.getByRole('button', { name: 'Close details' }).click()
   await page.goto(`/admin/clients/${f.bookings[0].client_id}`)
   for (const state of [SETTLED, ...MADE]) {

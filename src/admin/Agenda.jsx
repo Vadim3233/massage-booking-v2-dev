@@ -78,7 +78,7 @@ function ToCheck({ toCheck, checked, seeAll }) {
         <strong>{clientName(booking)}</strong>
         <span className="when">{dateLabel(booking.date)} · {time(booking.start_minutes)} · {booking.booking_payments.method === 'cash' ? 'Cash request' : 'Bank transfer'} · {money(booking.total_gbp)}</span>
       </div>
-      <PaymentActions booking={booking} refresh={checked} only={['verify', 'approve']} compact later onReminded={moved} />
+      <PaymentActions booking={booking} refresh={checked} only={['verify', 'payLater', 'approve']} compact later onReminded={moved} />
     </li>)}</ul>
   </section>
 }

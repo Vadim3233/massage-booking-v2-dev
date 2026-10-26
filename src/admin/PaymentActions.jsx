@@ -11,14 +11,16 @@ const CONSEQUENCES = {
   remove: 'Cancel this booking. Its time is released and it is recorded as cancelled. No charge is made and nothing is deleted.',
   approve: 'Approve cash and confirm the appointment. This does not record payment received.',
   verify: 'Check that the transfer has reached your bank. This records the payment as received and confirms the appointment.',
+  payLater: 'Confirm the appointment now. The payment stays open until you mark it paid. The client is told the appointment is confirmed and what is still to pay.',
   receive: 'Confirm that you have actually received this cash payment.',
   receiveBank: 'Check that the transfer has reached your bank. This records the payment as received.',
 }
-const SHORT = { verify: 'Verify', approve: 'Approve', remove: 'Cancel', receive: 'Received', receiveBank: 'Received' }
+const SHORT = { verify: 'Verify', payLater: 'Pay later', approve: 'Approve', remove: 'Cancel', receive: 'Received', receiveBank: 'Received' }
 const confirmLabel = (action, booking) => ({
   remove: 'Yes, cancel this booking',
   approve: 'Yes, approve cash',
   verify: `Yes, ${money(booking.total_gbp)} has arrived`,
+  payLater: 'Yes, confirm now',
   receive: `Yes, ${money(booking.total_gbp)} cash received`,
   receiveBank: `Yes, ${money(booking.total_gbp)} has arrived`,
 }[action])
@@ -26,6 +28,7 @@ const doneMessage = (action, booking) => ({
   remove: `Booking cancelled · ${clientName(booking)}`,
   approve: `Cash approved · ${clientName(booking)}`,
   verify: `Transfer verified · ${clientName(booking)} ${money(booking.total_gbp)}`,
+  payLater: `Confirmed, payment to come · ${clientName(booking)}`,
   receive: `Cash received · ${clientName(booking)} ${money(booking.total_gbp)}`,
   receiveBank: `Transfer received · ${clientName(booking)} ${money(booking.total_gbp)}`,
 }[action])
@@ -59,7 +62,7 @@ function Confirmation({ action, booking, cancel, confirm, busy }) {
 function buttonClass(action, booking) {
   if (action === 'remove') return 'btn--danger'
   const status = booking.booking_payments?.status
-  if (action === 'approve' || (action === 'verify' && status === 'awaiting_verification')) return 'btn--primary'
+  if (action === 'approve' || (action === 'verify' && status === 'awaiting_verification') || (action === 'payLater' && status === 'awaiting_transfer')) return 'btn--primary'
   return ''
 }
 

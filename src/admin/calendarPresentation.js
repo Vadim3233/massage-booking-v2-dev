@@ -89,6 +89,23 @@ export function sessionSummary(booking) {
 // What state a booking is in, in words, and whose turn it is. `chip` picks the colour of its pill: needs = the Admin acts, wait = the client acts,
 // ok = settled, done = finished, cancel and noshow = it did not happen. Colour never carries the meaning alone: the words always do. A booking that
 // is listed with no payment at all (a clash warning knows only its status) is named by its status alone.
+// A booking that is going ahead (or waiting for the Admin) is also drawn as two pills side by side, one for the appointment and one for the
+// money, because the two move separately: a booking can be confirmed while its payment is still to come ("Confirm, pay later").
+const PAYMENT_PILL = {
+  paid: { text: 'Paid', chip: 'ok' },
+  awaiting_transfer: { text: 'Payment awaited', chip: 'wait' },
+  awaiting_verification: { text: 'Transfer to check', chip: 'needs' },
+  awaiting_approval: { text: 'Cash to approve', chip: 'needs' },
+  approved: { text: 'Cash approved', chip: 'ok' },
+  refunded: { text: 'Refunded', chip: 'done' },
+  rejected: { text: 'No payment', chip: 'cancel' },
+}
+function pillsOf(booking) {
+  const status = booking.booking_status
+  if (!('booking_payments' in booking) || ['cancelled', 'no_show'].includes(status)) return null
+  const appointment = status === 'completed' ? { text: 'Completed', chip: 'done' } : status === 'confirmed' ? { text: 'Confirmed', chip: 'ok' } : { text: 'Not confirmed yet', chip: 'needs' }
+  return [appointment, PAYMENT_PILL[booking.booking_payments?.status] || { text: 'Payment not recorded', chip: 'wait' }]
+}
 function stateOf(booking) {
   const status = booking.booking_status
   if (status === 'cancelled') return { text: 'Cancelled', tone: 'cancelled', chip: 'cancel' }
@@ -108,7 +125,7 @@ function stateOf(booking) {
 const VARIANT = { ok: 'sage', needs: 'sand', wait: 'sand', done: 'completed', cancel: 'cancelled', noshow: 'noshow' }
 export function bookingState(booking) {
   const state = stateOf(booking)
-  return { ...state, variant: VARIANT[state.chip] }
+  return { ...state, variant: VARIANT[state.chip], pills: pillsOf(booking) }
 }
 // The two things every view takes from here, so no view keeps its own copy of the rules: the words of a booking's pill, and the colour of its box.
 export const getBookingStatusLabel = booking => bookingState(booking).text

@@ -89,6 +89,16 @@ describe('how a booking is drawn', () => {
     expect(bookingState(booked('confirmed', 'awaiting_verification'))).toMatchObject({ text: 'Awaiting payment verification', variant: 'sand', chip: 'needs' })
     expect(bookingState(booked('confirmed', 'awaiting_approval', 'cash'))).toMatchObject({ text: 'Awaiting cash approval', variant: 'sand', chip: 'needs' })
   })
+  it('draws a booking that is going ahead as two pills, the appointment and its money, which move separately', () => {
+    expect(bookingState(booked('confirmed', 'awaiting_transfer')).pills).toEqual([{ text: 'Confirmed', chip: 'ok' }, { text: 'Payment awaited', chip: 'wait' }])
+    expect(bookingState(booked('confirmed', 'paid')).pills).toEqual([{ text: 'Confirmed', chip: 'ok' }, { text: 'Paid', chip: 'ok' }])
+    expect(bookingState(booked('confirmed', 'awaiting_verification')).pills).toEqual([{ text: 'Confirmed', chip: 'ok' }, { text: 'Transfer to check', chip: 'needs' }])
+    expect(bookingState(booked('awaiting_transfer', 'awaiting_transfer')).pills).toEqual([{ text: 'Not confirmed yet', chip: 'needs' }, { text: 'Payment awaited', chip: 'wait' }])
+    expect(bookingState(booked('completed', 'paid')).pills).toEqual([{ text: 'Completed', chip: 'done' }, { text: 'Paid', chip: 'ok' }])
+    expect(bookingState(booked('cancelled', 'paid')).pills).toBeNull()
+    expect(bookingState(booked('no_show', 'paid')).pills).toBeNull()
+    expect(bookingState({ booking_status: 'confirmed' }).pills).toBeNull()
+  })
   it('names a booking that is known only by its status (a clash warning, a repeat) by that status alone', () => {
     expect(getBookingStatusLabel({ booking_status: 'confirmed' })).toBe('Confirmed')
     expect(getBookingStatusLabel({ booking_status: 'awaiting_transfer' })).toBe('Awaiting transfer')
