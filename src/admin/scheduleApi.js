@@ -114,6 +114,14 @@ export function createScheduleApi(client) {
     blockGroup: groupId => run(client.from('calendar_blocks').select('id,group_id,kind,title,notes,date,start_minutes,end_minutes').eq('group_id', groupId).order('date')),
     blocksFrom: from => run(client.from('calendar_blocks').select('id,group_id,kind,title,notes,date,start_minutes,end_minutes').in('kind', ['blocked', 'personal_event']).gte('date', from).order('date').order('start_minutes').limit(800)),
     deleteBlock: groupId => run(client.from('calendar_blocks').delete().eq('group_id', groupId)),
+    // A day as 48 half hours, and saving the ones the Admin wants open (ADR-080). A refusal the database explains (a past day, a first appointment
+    // that would be closed, the day changing while it was edited) is shown in its own words.
+    dayGrid: date => run(client.rpc('admin_day_grid', { p_date: date })),
+    async saveDayGrid(date, open, closeHeld = false) {
+      const { data, error } = await client.rpc('admin_save_day_grid', { p_date: date, p_open: open, p_close_held: closeHeld })
+      if (error) throw ['22023', '55000'].includes(error.code) ? Object.assign(new Error(error.message), { code: error.code }) : failure()
+      return data
+    },
   }
 }
 export const scheduleApi = createScheduleApi(supabase)

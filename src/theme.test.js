@@ -34,6 +34,8 @@ const TEXT = [
   ['--ink', '--needs-tint'], ['--ink-soft', '--needs-tint'], ['--muted', '--needs-tint'], ['--needs-ink', '--needs-tint'],
   ['--block-ink', '--block-bg'], ['--ink-soft', '--buffer-bg'], ['--ok-ink', '--free-bg'], ['--primary', '--primary-line'], ['--ink', '--needs-badge'],
   ['--on-primary', '--ink'], ['--ink-soft', '--hairline'],
+  // Edit hours: the words on a working half hour, a booking and its travel.
+  ['--grid-open-ink', '--grid-open-bg'], ['--grid-open-ink', '--grid-open-line'], ['--grid-booking-ink', '--grid-booking-bg'], ['--grid-travel-ink', '--grid-travel-bg'],
   // The Admin's booking boxes: the name, time and price on the sage and sand tints (and on their pressed colour), the softer words under them, and the pill
   // that names the state on its own, deeper, tint.
   ...['--sage', '--sand'].flatMap(family => [
@@ -49,6 +51,8 @@ const INTERFACE = [
   // The rail of a sage or sand box stands out from white and from its own tint.
   ...['--sage', '--sand'].flatMap(family => [[`${family}-rail`, '--surface'], [`${family}-rail`, `${family}-bg`]]),
   ['--primary', '--paper'],
+  // Edit hours: a changed half hour's edge, and the Day off switch when on.
+  ['--grid-changed', '--surface'], ['--grid-changed', '--grid-open-bg'], ['--grid-switch-on', '--surface'],
 ]
 
 describe('the colour tokens', () => {

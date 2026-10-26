@@ -339,3 +339,9 @@ Booking, payment, cancellation and rescheduling rules did not change for clients
 - The waitlist never contacts anyone: it shows you who to message and when a time opens up.
 - Fees and refunds are records for you; the app does not take or send money.
 - GitHub runs the build, the database tests, the unit tests and the lint check on every pull request. The browser tests (Playwright) run on my computer only, not on GitHub.
+
+## New: Edit hours, a day as half-hour blocks (2026-10-26)
+
+- **One step for you first:** the database needs an update, `supabase/migrations/20261115100000_day_grid.sql`, applied in the Supabase SQL Editor like the earlier ones. **Apply it before this goes live.** It is safe to apply early: it only adds new functions, and nothing live uses them. Without it, **Edit hours** says it could not load the day; everything else works as before.
+- **Where.** The Day view, beside the day's hours: **Edit hours**. Green half hours are working, empty ones are not. Tap one to change it, or slide your finger down several. Scroll with the times on the left. **Save** writes the day's hours and blocked time; **Cancel** asks before throwing changes away. **Day off** closes everything except your bookings.
+- **What it will not do.** A booking and its travel time are locked, and so is blocked time with a name (a dentist, a holiday): change those from the Day view. If a client is in the middle of booking a time you close, it asks first.

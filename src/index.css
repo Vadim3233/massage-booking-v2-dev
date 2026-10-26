@@ -59,6 +59,10 @@
   --card-wash: rgb(255 255 255 / .7);
   --block-bg: #eaeef1; --block-ink: #3d4f5f; --block-rail: #7f8b96;
   --free-bg: #f3f6ee; --buffer-bg: #f1eee9;
+  /* Edit hours (ADR-080): a working half hour is a soft green with no words on it, a changed one has a dark green dashed edge, a booking is blue and its
+     travel a pale blue. */
+  --grid-open-bg: #cdebdd; --grid-open-line: #a6d6bf; --grid-open-ink: #0e3d32; --grid-changed: #1f6f5c; --grid-switch-on: #2f8a64;
+  --grid-booking-bg: #4a5c9e; --grid-booking-ink: #ffffff; --grid-travel-bg: #e6eaf7; --grid-travel-ink: #34437a;
   --alert-dot: #a8321f;
 
   /* Type. */

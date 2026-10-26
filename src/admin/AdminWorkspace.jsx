@@ -12,6 +12,7 @@ const PaymentReview = lazy(() => import('./PaymentReview.jsx'))
 const Alerts = lazy(() => import('./Alerts.jsx'))
 const ScheduleSettings = lazy(() => import('./ScheduleSettings.jsx'))
 const DaySettings = lazy(() => import('./DaySettings.jsx'))
+const DayHoursGrid = lazy(() => import('./DayHoursGrid.jsx'))
 const Clients = lazy(() => import('./Clients.jsx'))
 const ServicesSettings = lazy(() => import('./SettingsCatalogue.jsx').then(module => ({ default: module.ServicesSettings })))
 const AreasSettings = lazy(() => import('./SettingsCatalogue.jsx').then(module => ({ default: module.AreasSettings })))
@@ -100,6 +101,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
   const calendarSurface = ['/admin', '/admin/agenda'].includes(surface)
   const daySettingsSurface = surface === '/admin/day-settings'
   const daySettingsBack = (!match && route.returnTo) || (date ? `/admin?date=${date}` : '/admin')
+  const dayHoursSurface = surface === '/admin/day-hours'
   const clientsSurface = surface === '/admin/clients' || Boolean(profile) || combining
   function close() {
     if (route.background) window.history.back()
@@ -122,6 +124,12 @@ export default function AdminWorkspace({ signOut, ownerId }) {
   // One date's settings, a page of its own with the date in the address. Back goes to where it was opened from.
   const openDaySettings = (day, returnTo) => {
     window.history.pushState({ adminReturnTo: returnTo }, '', `/admin/day-settings?date=${day}`)
+    setRoute(readRoute())
+    window.scrollTo(0, 0)
+  }
+  // A day as half-hour blocks, opened with Edit hours from the Day view. Cancel and Save go back to that day.
+  const openDayHours = day => {
+    window.history.pushState({ adminReturnTo: `/admin?date=${day}` }, '', `/admin/day-hours?date=${day}`)
     setRoute(readRoute())
     window.scrollTo(0, 0)
   }
@@ -168,7 +176,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
   return <>
     <a className="skip-link" href="#admin-main">Skip to the page</a>
     {!creating && <nav inert={Boolean(match)} className="admin-primary-nav" aria-label="Admin navigation">
-      <AdminLink href="/admin" navigate={navigate} aria-current={calendarSurface || daySettingsSurface ? 'page' : undefined}><Icon name="calendar" /><span>Calendar</span></AdminLink>
+      <AdminLink href="/admin" navigate={navigate} aria-current={calendarSurface || daySettingsSurface || dayHoursSurface ? 'page' : undefined}><Icon name="calendar" /><span>Calendar</span></AdminLink>
       <AdminLink href="/admin/review" navigate={navigate} aria-current={surface === '/admin/review' ? 'page' : undefined}><Icon name="check" /><span>To check</span>{needsYou > 0 && <small className="admin-badge admin-badge--needs" aria-label={`${needsYou} to check`}>{needsYou > 99 ? '99+' : needsYou}</small>}</AdminLink>
       <AdminLink href="/admin/alerts" navigate={navigate} aria-current={surface === '/admin/alerts' ? 'page' : undefined}><Icon name="bell" /><span>Alerts</span>{unreadAlerts > 0 && <small className="admin-badge" aria-label={`${unreadAlerts} unread`}>{unreadAlerts > 99 ? '99+' : unreadAlerts}</small>}</AdminLink>
       <AdminLink href="/admin/clients" navigate={navigate} aria-current={clientsSurface ? 'page' : undefined}><Icon name="users" /><span>Clients</span></AdminLink>
@@ -180,9 +188,10 @@ export default function AdminWorkspace({ signOut, ownerId }) {
         <AdminLink href="/admin/day" navigate={navigate} aria-current={surface === '/admin' ? 'page' : undefined}>Day</AdminLink>
         <AdminLink href="/admin/agenda" navigate={navigate} aria-current={surface === '/admin/agenda' ? 'page' : undefined}>Agenda</AdminLink>
       </nav>}
-      {surface === '/admin' && <Calendar key={date || 'today'} initialDate={date} signOut={signOut} openBooking={openBooking} openDay={day => openDaySettings(day, `/admin?date=${day}`)} revision={revision} onDate={rememberDay} />}
+      {surface === '/admin' && <Calendar key={date || 'today'} initialDate={date} signOut={signOut} openBooking={openBooking} openDay={day => openDaySettings(day, `/admin?date=${day}`)} openHours={openDayHours} revision={revision} onDate={rememberDay} />}
       {daySettingsSurface && <AdminLink className="admin-back-link" href={daySettingsBack} navigate={navigate}>← {daySettingsBack === '/admin/agenda' ? 'Agenda' : 'Day'}</AdminLink>}
       {daySettingsSurface && <DaySettings key={date} date={date} revision={revision} openBooking={openBooking} changed={() => setRevision(value => value + 1)} done={() => navigate(daySettingsBack)} />}
+      {dayHoursSurface && <DayHoursGrid key={date} date={date} changed={() => setRevision(value => value + 1)} done={() => navigate(daySettingsBack)} />}
       {surface === '/admin/agenda' && <Agenda openBooking={openBooking} openDay={day => openDaySettings(day, '/admin/agenda')} revision={revision} toCheck={toCheck} checked={() => { setRevision(value => value + 1); refreshToCheck() }} seeAll={() => navigate('/admin/review')} />}
       {creating && <AdminNewBooking initialDate={date} initialClientId={clientParam} ownerId={ownerId} registerGuard={registerGuard} onCancel={() => navigate(route.returnTo || '/admin')} onCreated={created} openClient={openClientFromBooking} />}
       {surface === '/admin/review' && <PaymentReview openBooking={openBooking} revision={revision} changed={refreshToCheck} />}

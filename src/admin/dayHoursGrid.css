@@ -1,0 +1,36 @@
+/* Edit hours: a day as half-hour blocks. Working is a soft green with no words on it, not working is empty, bookings are blue (ADR-080). */
+.admin-day-grid { padding-bottom: 96px; }
+.admin-day-grid-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.admin-day-grid-head h1 { margin: 0; }
+.admin-day-grid-head p { margin: 2px 0 0; }
+.admin-day-grid-date { color: var(--ink-soft); }
+.admin-day-grid-summary { font-weight: 600; font-variant-numeric: tabular-nums; }
+.admin-day-grid-off { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 16px 0 8px; padding: 12px 16px;
+  border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); }
+.admin-day-grid-off > div { display: grid; gap: 2px; }
+.admin-day-grid-off-title { font-weight: 600; }
+.admin-shell .admin-day-grid-switch { flex: 0 0 auto; width: 56px; min-height: 34px; height: 34px; padding: 3px; border: 0; border-radius: var(--radius-pill);
+  background: var(--field-border); justify-content: flex-start; }
+.admin-shell .admin-day-grid-switch[aria-checked=true] { background: var(--grid-switch-on); justify-content: flex-end; }
+.admin-day-grid-switch span { display: block; width: 28px; height: 28px; border-radius: 50%; background: var(--surface); }
+.admin-shell .admin-day-grid-more { justify-self: center; display: flex; margin: 4px auto; }
+.admin-day-grid-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; margin: 8px 0; padding: 0; list-style: none; }
+.admin-day-grid-list li { display: flex; align-items: center; gap: 12px; min-width: 0; }
+/* The times stay scrollable by touch; the blocks take the finger for tapping and sliding. */
+.admin-day-grid-time { flex: 0 0 48px; padding-block: 12px; color: var(--ink-soft); font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; touch-action: pan-y; }
+.admin-shell .admin-day-grid-cell { flex: 1 1 auto; min-width: 0; min-height: 44px; padding: 0 14px; justify-content: flex-start; border: 2px solid var(--line);
+  border-radius: var(--radius-sm); background: var(--surface); color: var(--grid-open-ink); font-size: 14px; font-weight: 600; text-align: left;
+  touch-action: none; user-select: none; -webkit-user-select: none; box-shadow: none; overflow: hidden; }
+.admin-day-grid-cell span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-shell .admin-day-grid-cell.is-open { border-color: var(--grid-open-line); background: var(--grid-open-bg); }
+.admin-shell .admin-day-grid-cell.is-changed { border-style: dashed; border-color: var(--grid-changed); }
+.admin-shell .admin-day-grid-cell.is-booking { border-color: var(--grid-booking-bg); background: var(--grid-booking-bg); color: var(--grid-booking-ink); }
+.admin-shell .admin-day-grid-cell.is-travel { border-color: var(--grid-travel-bg); background: var(--grid-travel-bg); color: var(--grid-travel-ink); font-weight: 500; }
+.admin-shell .admin-day-grid-cell.is-block { border-color: var(--block-rail); background: var(--block-bg); color: var(--block-ink); }
+.admin-shell .admin-day-grid-cell.is-held { border-color: var(--needs-rail); color: var(--needs-ink); }
+@media (hover: hover) { .admin-shell .admin-day-grid-cell.is-open:not(:disabled, .is-booking, .is-travel, .is-block):hover { background: var(--grid-open-line); } }
+.admin-day-grid-hint, .admin-day-grid-why { margin: 4px 0; text-align: center; }
+.admin-day-grid-actions { position: sticky; bottom: calc(71px + env(safe-area-inset-bottom)); z-index: 2; margin: 12px -16px 0; padding: 12px 16px 16px; background: var(--paper);
+  box-shadow: 0 -1px 0 var(--hairline); }
+.admin-shell .admin-day-grid-save { border-color: var(--grid-open-line); background: var(--grid-open-bg); color: var(--grid-open-ink); }
+.admin-shell .admin-day-grid-save:not(:disabled):hover { background: var(--grid-open-line); }

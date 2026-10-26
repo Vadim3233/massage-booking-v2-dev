@@ -20,7 +20,7 @@ function load(date, version) {
   const promise = api.loadCalendarRange(date, shiftDate(date, 1)).finally(() => { if (inFlight?.promise === promise) inFlight = null })
   inFlight = { key, promise }; return promise
 }
-export default function Calendar({ signOut, openBooking, openDay, revision, initialDate, onDate }) {
+export default function Calendar({ signOut, openBooking, openDay, openHours, revision, initialDate, onDate }) {
   const [date, setDate] = useState(() => initialDate || today())
   // The day last read stays on screen while it is read again, so a change never blanks the page or loses the place.
   const [loaded, setLoaded] = useState(null)
@@ -105,7 +105,10 @@ export default function Calendar({ signOut, openBooking, openDay, revision, init
       {!data && !failed && <div className="skeleton-rows" role="status" aria-label="Loading calendar"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>}
       {failed && <div role={data ? 'status' : 'alert'} className="error"><p>{data ? 'Could not refresh the calendar just now.' : 'Could not load calendar. Please check your connection and try again.'}</p><button className="btn--small" onClick={() => { quiet.asked(); reread() }}>{data ? 'Try again' : 'Retry calendar'}</button></div>}
       {data && <>
-        <p className="admin-working-hours"><Icon name="clock" size={20} /><span>{dayHoursLine(timeline.hours) || 'Not a working day'}</span></p>
+        <div className="admin-working-hours-row">
+          <p className="admin-working-hours"><Icon name="clock" size={20} /><span>{dayHoursLine(timeline.hours) || 'Not a working day'}</span></p>
+          {openHours && date >= today() && <button className="admin-edit-hours btn--small" onClick={() => openHours(date)}>Edit hours</button>}
+        </div>
         {!listed.length && <p className="admin-day-note">No appointments for this day.</p>}
         <CancelledToggle bookings={data.bookings} on={showCancelled} change={setShowCancelled} />
         <ol role="list" className="admin-timeline" aria-label="Day timeline">

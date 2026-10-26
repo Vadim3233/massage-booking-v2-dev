@@ -154,6 +154,11 @@
 .admin-day-caption { display: none; }
 .admin-working-hours { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; padding: 11px 14px; border-radius: var(--radius); background: var(--primary-soft); color: var(--primary-strong); font-size: 15px; font-weight: 500; }
 .admin-working-hours .icon { flex: none; color: var(--primary); }
+/* Edit hours sits beside the day's hours; it opens the day as half-hour blocks (ADR-080). */
+.admin-working-hours-row { display: flex; align-items: center; gap: 8px; margin: 2px 0 10px; }
+.admin-working-hours-row .admin-working-hours { flex: 1 1 auto; min-width: 0; margin: 0; }
+.admin-shell .admin-edit-hours { flex: 0 0 auto; border-color: var(--grid-open-line); border-radius: var(--radius-pill); background: var(--grid-open-bg); color: var(--grid-open-ink); }
+.admin-shell .admin-edit-hours:not(:disabled):hover { background: var(--grid-open-line); }
 .admin-day-note { margin: 6px 0 14px; padding: 18px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); color: var(--ink-soft); }
 /* The one line that puts cancelled bookings on show or away in the Day view and on a day's own page. */
 .admin-cancelled-toggle { margin: 0 0 8px; }
