@@ -142,6 +142,18 @@ export function checkVerdict(goodNames, now, maxDays = 3) {
   return { ok: true, latest, ageDays, message: `The last good backup was on ${when}${days >= 1 ? ` (${days} day${days === 1 ? '' : 's'} ago)` : ' (less than a day ago)'}.` }
 }
 
+/**
+ * Where the Docker Desktop program can be on Windows: installed for everyone, or (the default when it was installed
+ * without administrator rights) for this user only. `env` is the process environment.
+ */
+export function dockerDesktopCandidates(env = {}) {
+  const exe = 'Docker Desktop.exe'
+  return [
+    path.win32.join(env.ProgramFiles || 'C:\\Program Files', 'Docker', 'Docker', exe),
+    env.LOCALAPPDATA && path.win32.join(env.LOCALAPPDATA, 'Programs', 'DockerDesktop', exe),
+  ].filter(Boolean)
+}
+
 /** True when `child` is the same folder as `parent` or sits inside it. */
 export function isInside(child, parent) {
   const rel = path.relative(path.resolve(parent), path.resolve(child))

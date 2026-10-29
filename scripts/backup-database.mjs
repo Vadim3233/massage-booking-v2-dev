@@ -16,7 +16,7 @@ import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renam
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { checkVerdict, chooseToKeep, humanSize, isBackupName, parseDbUrl, redact, stamp, suspiciousDrops, verifyDump } from './backup-lib.mjs'
+import { checkVerdict, chooseToKeep, dockerDesktopCandidates, humanSize, isBackupName, parseDbUrl, redact, stamp, suspiciousDrops, verifyDump } from './backup-lib.mjs'
 
 const args = process.argv.slice(2)
 const flag = name => args.includes(`--${name}`)
@@ -63,16 +63,19 @@ const dockerReady = () => spawnSync('docker', ['info'], { stdio: 'ignore', timeo
 
 async function ensureDocker() {
   if (dockerReady()) return
-  const exe = path.join(process.env.ProgramFiles ?? 'C:\\Program Files', 'Docker', 'Docker', 'Docker Desktop.exe')
-  if (process.platform === 'win32' && existsSync(exe)) {
+  const exe = process.platform === 'win32' ? dockerDesktopCandidates(process.env).find(existsSync) : undefined
+  if (exe) {
     log('Docker is not running. Starting Docker Desktop (this can take a minute or two)...')
-    spawn(exe, [], { detached: true, stdio: 'ignore' }).unref()
+    const child = spawn(exe, [], { detached: true, stdio: 'ignore' })
+    child.on('error', () => {}) // a start that fails shows up below as Docker never getting ready
+    child.unref()
     for (let waited = 0; waited < 180; waited += 5) {
       await sleep(5000)
       if (dockerReady()) return
     }
+    throw new Error('Docker Desktop was started but was not ready after 3 minutes. Wait until it has finished starting, then run the backup again.')
   }
-  throw new Error('Docker Desktop is not running and the backup needs it. Start Docker Desktop and run the backup again.')
+  throw new Error('Docker Desktop is not running, and the backup could not find it to start it. Start Docker Desktop and run the backup again.')
 }
 
 /** The nearest folder that already exists, so a folder-to-be can still be checked. */
