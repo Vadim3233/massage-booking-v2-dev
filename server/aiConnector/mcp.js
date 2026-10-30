@@ -93,7 +93,10 @@ export async function handleMcp(request, response, { env = process.env, makeClie
   const token = /^Bearer\s+(.+)$/i.exec(request.headers.authorization || '')?.[1]?.trim()
   if (!token) { send(response, 401, failure(null, -32001, 'Sign-in needed'), { 'www-authenticate': challenge() }); return }
   const client = makeClient(url, key, { auth: { persistSession: false, autoRefreshToken: false }, global: { headers: { Authorization: `Bearer ${token}` } } })
-  const { data, error } = await client.auth.getUser(token)
+  // If the sign-in service cannot be reached, the assistant gets a plain JSON-RPC error rather than the platform's own error page.
+  let data, error
+  try { ({ data, error } = await client.auth.getUser(token)) }
+  catch { send(response, 503, failure(null, -32603, 'The sign-in check is not available just now. Please try again in a moment.')); return }
   if (error || !data?.user) { send(response, 401, failure(null, -32001, 'Sign-in expired'), { 'www-authenticate': challenge('invalid_token') }); return }
   // A guest's session is not an account: the assistant has to sign in with a real one.
   if (data.user.is_anonymous) { send(response, 401, failure(null, -32001, 'Sign in with a Vad Massage account'), { 'www-authenticate': challenge('invalid_token') }); return }

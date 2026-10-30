@@ -53,6 +53,11 @@ describe('the connector at /mcp', () => {
     expect(five.json).toHaveLength(5)
     expect(most).toBe(1)
   })
+  it('answers a plain error when the sign-in check itself fails', async () => {
+    const down = await exchange({ headers: { host: 'book.example.com', authorization: 'Bearer t' }, body: {} }, { env, makeClient: () => ({ auth: { getUser: async () => { throw new Error('fetch failed') } } }) })
+    expect(down.statusCode).toBe(503)
+    expect(down.json.error.message).toMatch(/not available just now/)
+  })
   it('only takes POST once signed in', async () => {
     const result = await exchange({ method: 'GET', headers: { host: 'book.example.com', authorization: 'Bearer t' } }, { env, makeClient: signedIn(), makeTools: () => fakeTools })
     expect(result.statusCode).toBe(405)
