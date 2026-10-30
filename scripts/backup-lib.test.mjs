@@ -4,6 +4,7 @@ import {
   checkVerdict,
   chooseToKeep,
   countCopyRows,
+  dockerDesktopCandidates,
   humanSize,
   isInside,
   parseDbUrl,
@@ -211,6 +212,20 @@ describe('isInside', () => {
     expect(isInside(root, root)).toBe(true)
     expect(isInside(path.resolve('somewhere-else'), root)).toBe(false)
     expect(isInside(path.resolve('project-backups'), root)).toBe(false)
+  })
+})
+
+describe('dockerDesktopCandidates', () => {
+  it('looks for Docker Desktop installed for everyone, then for this user only', () => {
+    expect(dockerDesktopCandidates({ ProgramFiles: 'C:\\Program Files', LOCALAPPDATA: 'C:\\Users\\someone\\AppData\\Local' })).toEqual([
+      'C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe',
+      'C:\\Users\\someone\\AppData\\Local\\Programs\\DockerDesktop\\Docker Desktop.exe',
+    ])
+  })
+
+  it('still has a place to look when the environment says little', () => {
+    expect(dockerDesktopCandidates({})).toEqual(['C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe'])
+    expect(dockerDesktopCandidates()).toEqual(['C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe'])
   })
 })
 
