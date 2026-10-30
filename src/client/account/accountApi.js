@@ -51,6 +51,7 @@ export function createAccountApi(client, link = null) {
         return rows.map(row => row.start_minutes)
       },
       cancel: (id, requestId, fee, reason) => by('cancel_by_key', { p_request_id: requestId, p_acknowledged_fee: fee, p_reason: reason || null }),
+      receipt: () => by('receipt_by_key'),
       reschedule: (id, requestId, date, start, fee) => by('reschedule_by_key', { p_request_id: requestId, p_new_date: date, p_new_start_minutes: start, p_acknowledged_fee: fee }),
     }
   }
@@ -63,6 +64,8 @@ export function createAccountApi(client, link = null) {
       return rows.map(row => row.start_minutes)
     },
     cancel: (id, requestId, fee, reason) => call('client_cancel_booking', { p_booking_id: id, p_request_id: requestId, p_acknowledged_fee: fee, p_reason: reason || null }),
+    // The receipt for a paid booking, to download as a PDF, or nothing when the booking has none.
+    receipt: id => call('get_my_receipt', { p_booking_id: id }),
     reschedule: (id, requestId, date, start, fee) => call('client_reschedule_booking', { p_booking_id: id, p_request_id: requestId, p_new_date: date, p_new_start_minutes: start, p_acknowledged_fee: fee }),
   }
 }

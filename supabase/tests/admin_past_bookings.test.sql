@@ -233,7 +233,7 @@ select is((select (s->>'paid_gbp')::numeric from t_summary), (select sum(b.total
   'and what they paid is counted');
 select is((select (s->>'last_visit')::date from t_summary), pg_temp.day(-10), 'The last visit is the later of the two');
 select is((select (s->>'upcoming')::integer from t_summary), 0, 'None of them is upcoming');
-select lives_ok($$select public.admin_save_receipt_details('{"name":"VadMassage","phone":"07700 900123"}')$$, 'Her receipt details are saved');
+select lives_ok($$select public.admin_save_receipt_details('{"name":"VadMassage","phone":"07700 900123","practitioner_name":"Vad Test","association":"Test Association","membership_number":"123"}')$$, 'Her receipt details are saved');
 select lives_ok($$select public.admin_issue_receipt((select b.id from public.bookings b where b.client_id = '00000000-0000-4000-8000-00000000d915' and b.booking_status = 'completed' order by b.date desc limit 1))$$,
   'A booking recorded as completed and paid can have a receipt');
 select throws_ok($$select public.admin_issue_receipt((select b.id from public.bookings b where b.client_id = '00000000-0000-4000-8000-00000000d915' and b.booking_status = 'confirmed' limit 1))$$, 'PT409', null,

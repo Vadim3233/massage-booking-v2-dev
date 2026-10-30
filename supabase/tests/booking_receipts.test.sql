@@ -137,11 +137,11 @@ set local role authenticated;
 select is(public.admin_receipt_details(), null, 'Nothing is saved to start with');
 select throws_ok($$select public.admin_issue_receipt('00000000-0000-4000-8000-00000000c301')$$, 'PT409', 'Save your receipt details first', 'No receipt is made before her details are saved');
 select throws_ok($$select public.admin_save_receipt_details('{"phone":"07700 900123"}')$$, '22023', 'Enter your business name', 'A business name is needed');
-select throws_ok($$select public.admin_save_receipt_details('{"name":"VadMassage"}')$$, '22023', 'Add a phone number or an email address for the receipt', 'Some way to reach her is needed');
+select throws_ok($$select public.admin_save_receipt_details('{"name":"VadMassage"}')$$, '22023', 'Add a phone number, an email address or a website for the receipt', 'Some way to reach her is needed');
 select throws_ok($$select public.admin_save_receipt_details('{"name":"VadMassage","email":"not-an-email"}')$$, '22023', 'That email address does not look right', 'The email must look like an email');
 select throws_ok($$select public.admin_save_receipt_details(jsonb_build_object('name', repeat('x', 121), 'phone', '07700 900123'))$$, '22023', 'That is too long', 'A name that is too long is refused');
 select throws_ok($$select public.admin_save_receipt_details('{"name":"VadMassage","phone":"07700 900123","vat_number":"GB123"}')$$, '22023', 'Invalid receipt details', 'Nothing else can be stored with her details');
-select lives_ok($$select public.admin_save_receipt_details('{"name":" VadMassage ","phone":"07700 900123","email":"Hello@VadMassage.example","address":"1 Example Street\nLondon","closing":"Thank you."}')$$, 'She can save her details');
+select lives_ok($$select public.admin_save_receipt_details('{"name":" VadMassage ","phone":"07700 900123","email":"Hello@VadMassage.example","address":"1 Example Street\nLondon","closing":"Thank you.","practitioner_name":"Vad Test","practitioner_title":"Therapist","association":"Test Association","membership_number":"123"}')$$, 'She can save her details');
 select results_eq($$select v->>'name', v->>'email', v->>'closing' from (select public.admin_receipt_details() v) q$$, $$values ('VadMassage'::text, 'hello@vadmassage.example'::text, 'Thank you.'::text)$$, 'They come back tidied, the email in lower case');
 reset role;
 
@@ -169,8 +169,8 @@ create temp table first_receipt as select public.admin_issue_receipt('00000000-0
 create temp table second_receipt as select public.admin_issue_receipt('00000000-0000-4000-8000-00000000c302') r;
 grant select on first_receipt, second_receipt to authenticated;
 reset role;
-select is((select r->>'number' from first_receipt), 'VM-' || pg_temp.year_now() || '-0001', 'The first receipt is number 1 of the year');
-select is((select r->>'number' from second_receipt), 'VM-' || pg_temp.year_now() || '-0002', 'The next is number 2');
+select is((select r->>'number' from first_receipt), 'VAD-' || pg_temp.year_now() || '-0001', 'The first receipt is number 1 of the year');
+select is((select r->>'number' from second_receipt), 'VAD-' || pg_temp.year_now() || '-0002', 'The next is number 2');
 select results_eq($$select l->>'label', (l->>'amount')::numeric from jsonb_array_elements((select r->'snapshot'->'lines' from first_receipt)) l$$,
   $$values ('Massage, 90 minutes'::text, 115.00::numeric), ('Travel, Chelsea', 12.00::numeric)$$, 'The lines are what the booking shows');
 select results_eq($$select r->'snapshot'->>'billed_to', r->'snapshot'->>'reference', (r->'snapshot'->>'total')::numeric, r->'snapshot'->'payment'->>'method' from first_receipt$$,
@@ -179,9 +179,9 @@ select results_eq($$select l->>'label', (l->>'amount')::numeric from jsonb_array
   $$values ('Massage, 60 minutes'::text, 85.00::numeric), ('Aftercare advice', 10.00::numeric), ('Travel, Chelsea', 12.00::numeric), ('Congestion charge', 8.00::numeric)$$, 'Extras and the congestion charge are lines of their own');
 select is((select sum((l->>'amount')::numeric) from jsonb_array_elements((select r->'snapshot'->'lines' from second_receipt)) l), 115.00::numeric, 'The lines always add up to the total');
 select ok(not (select (r->'snapshot')::text ~ 'Test Road|SW1A' or r->>'message' ~ 'Test Road|SW1A' from first_receipt), 'The treatment address is not on the receipt');
-select ok((select r->>'message' like 'Receipt VM-%-0001' || E'\nIssued ' || to_char(pg_temp.today_plus(0), 'FMDD FMMonth YYYY') || E'\n\nVadMassage\n07700 900123 · hello@vadmassage.example\n1 Example Street\nLondon\n\nReceived from: Clara Jensen\nBooking reference: RCPT-%' from first_receipt),
+select ok((select r->>'message' like 'Receipt VAD-%-0001' || E'\nIssued ' || to_char(pg_temp.today_plus(0), 'FMDD FMMonth YYYY') || E'\n\nVadMassage\n07700 900123 · hello@vadmassage.example\n1 Example Street\nLondon\n\nReceived from: Clara Jensen\nBooking reference: RCPT-%' from first_receipt),
   'The top of the message has the number, the day, and her details');
-select ok((select r->>'message' like '%Appointment: ' || to_char(pg_temp.today_plus(5), 'FMDay FMDD FMMonth YYYY') || E' at 14:30 (90 minutes)\n\nMassage, 90 minutes: £115.00\nTravel, Chelsea: £12.00\nTotal paid: £127.00\nPaid by bank transfer on ' || to_char(pg_temp.today_plus(-2), 'FMDD FMMonth YYYY') || E'.\n\nThank you.' from first_receipt),
+select ok((select r->>'message' like '%Appointment: ' || to_char(pg_temp.today_plus(5), 'FMDay FMDD FMMonth YYYY') || E' at 14:30 (90 minutes)\n\nMassage, 90 minutes: £115.00\nTravel, Chelsea: £12.00\nTotal paid: £127.00\nPaid by bank transfer on ' || to_char(pg_temp.today_plus(-2), 'FMDD FMMonth YYYY') || E'.\n\nPractitioner: Vad Test, Therapist\nTest Association, membership number 123\n\nThank you.' from first_receipt),
   'The message lists the appointment, the lines, the total and how it was paid, and ends with her closing line');
 select ok((select r->>'message' like '%Paid by cash on%' from second_receipt), 'A cash payment says so');
 -- The same one every time.
@@ -206,7 +206,7 @@ update public.bookings set service_subtotal_gbp = 999, total_gbp = 1086, service
 update public.booking_sessions set unit_price_gbp = 999 where booking_id = '00000000-0000-4000-8000-00000000c301';
 select pg_temp.as_user('00000000-0000-0000-0000-00000000c101');
 set local role authenticated;
-select lives_ok($$select public.admin_save_receipt_details('{"name":"A New Name","email":"new@vadmassage.example"}')$$, 'Her details can change later');
+select lives_ok($$select public.admin_save_receipt_details('{"name":"A New Name","email":"new@vadmassage.example","practitioner_name":"Vad Test","practitioner_title":"Therapist","association":"Test Association","membership_number":"123"}')$$, 'Her details can change later');
 select is((select md5((public.admin_issue_receipt('00000000-0000-4000-8000-00000000c301')->'snapshot')::text)), (select md5((r->'snapshot')::text) from first_receipt), 'A receipt that exists does not change when the booking or her details do');
 reset role;
 select is((select public.receipt_message(snapshot) from public.booking_receipts where booking_id = '00000000-0000-4000-8000-00000000c301'), (select message from frozen), 'Its words do not change either');
@@ -223,11 +223,11 @@ reset role;
 select pg_temp.as_user('00000000-0000-0000-0000-00000000c101');
 set local role authenticated;
 create temp table edited as select public.admin_edit_receipt('00000000-0000-4000-8000-00000000c301',
-  '{"billed_to":"Jensen Holdings Ltd","note":"Order 4471","lines":["Sports massage, 90 minutes","Travel to Chelsea"],"business":{"name":"VadMassage Ltd","phone":"07700 900123","address":"2 Other Street"}}') r;
+  '{"billed_to":"Jensen Holdings Ltd","note":"Order 4471","lines":["Sports massage, 90 minutes","Travel to Chelsea"],"business":{"name":"VadMassage Ltd","phone":"07700 900123","address":"2 Other Street","practitioner_name":"Vad Test","practitioner_title":"Therapist","association":"Test Association","membership_number":"123"}}') r;
 grant select on edited to authenticated;
 reset role;
 select results_eq($$select r->'snapshot'->>'billed_to', r->'snapshot'->>'note', r->'snapshot'#>>'{business,name}', r->'snapshot'#>>'{business,address}', r->>'number', (r->>'edit_count')::integer from edited$$,
-  $$select 'Jensen Holdings Ltd'::text, 'Order 4471'::text, 'VadMassage Ltd'::text, '2 Other Street'::text, 'VM-' || pg_temp.year_now() || '-0001', 1$$, 'Who it is for, a note and her details change; the number does not');
+  $$select 'Jensen Holdings Ltd'::text, 'Order 4471'::text, 'VadMassage Ltd'::text, '2 Other Street'::text, 'VAD-' || pg_temp.year_now() || '-0001', 1$$, 'Who it is for, a note and her details change; the number does not');
 select results_eq($$select l->>'label', (l->>'amount')::numeric from jsonb_array_elements((select r->'snapshot'->'lines' from edited)) l$$,
   $$values ('Sports massage, 90 minutes'::text, 115.00::numeric), ('Travel to Chelsea', 12.00::numeric)$$, 'The words of each line change; the amounts do not');
 select results_eq($$select r->'snapshot'->>'total', r->'snapshot'#>>'{payment,method}', r->'snapshot'->'appointment'->>'start_minutes' from edited$$, $$values ('127.00'::text, 'bank_transfer'::text, '870'::text)$$, 'The total, how it was paid and the appointment are untouched');
@@ -264,8 +264,8 @@ create temp table emailed as select public.admin_email_receipt('00000000-0000-40
 grant select on emailed to authenticated;
 reset role;
 select results_eq($$select d.channel, d.audience, d.recipient, d.title, d.status from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id where e.event_type = 'booking.receipt_emailed' and e.aggregate_id = '00000000-0000-4000-8000-00000000c301'$$,
-  $$values ('email'::text, 'client'::text, 'clara.booking@example.test'::text, 'Your receipt from VadMassage Ltd (VM-' || pg_temp.year_now() || '-0001)', 'pending'::text)$$, 'One email is queued for the address on the booking, for the sender to deliver');
-select ok((select d.body like E'Hello Clara,\n\nHere is your receipt for your appointment on ' || to_char(pg_temp.today_plus(5), 'FMDay FMDD FMMonth YYYY') || E' at 14:30.\n\nReceipt VM-%' || E'\n\nWarm wishes,\nVad' from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id where e.event_type = 'booking.receipt_emailed' and e.aggregate_id = '00000000-0000-4000-8000-00000000c301'),
+  $$values ('email'::text, 'client'::text, 'clara.booking@example.test'::text, 'Your receipt from VadMassage Ltd (VAD-' || pg_temp.year_now() || '-0001)', 'pending'::text)$$, 'One email is queued for the address on the booking, for the sender to deliver');
+select ok((select d.body like E'Hello Clara,\n\nHere is your receipt for your appointment on ' || to_char(pg_temp.today_plus(5), 'FMDay FMDD FMMonth YYYY') || E' at 14:30.\n\nReceipt VAD-%' || E'\n\nWarm wishes,\nVad' from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id where e.event_type = 'booking.receipt_emailed' and e.aggregate_id = '00000000-0000-4000-8000-00000000c301'),
   'It greets the client by first name and carries the receipt, edited as it is now');
 select results_eq($$select r->>'emailed_to', r->>'emailed_at' is not null from emailed$$, $$values ('clara.booking@example.test'::text, true)$$, 'The receipt records who it was sent to and when');
 select pg_temp.as_user('00000000-0000-0000-0000-00000000c101');
@@ -286,7 +286,7 @@ reset role;
 select ok((select edited_at > emailed_at from public.booking_receipts where booking_id = '00000000-0000-4000-8000-00000000c301'), 'The receipt shows it changed after the email went');
 select pg_temp.as_user('00000000-0000-0000-0000-00000000c101');
 set local role authenticated;
-select is((public.admin_issue_receipt('00000000-0000-4000-8000-00000000c309')->>'number'), 'VM-' || pg_temp.year_now() || '-0004', 'Numbers carry on in order: the fourth receipt of the year');
+select is((public.admin_issue_receipt('00000000-0000-4000-8000-00000000c309')->>'number'), 'VAD-' || pg_temp.year_now() || '-0004', 'Numbers carry on in order: the fourth receipt of the year');
 select throws_ok($$select public.admin_email_receipt('00000000-0000-4000-8000-00000000c309', gen_random_uuid())$$, 'PT409', 'There is no email address on this booking', 'A booking with no email address cannot be emailed');
 select throws_ok($$select public.admin_email_receipt('00000000-0000-4000-8000-00000000c303', gen_random_uuid())$$, 'P0002', 'This booking has no receipt yet', 'A booking with no receipt cannot be emailed');
 select throws_ok($$select public.admin_email_receipt(gen_random_uuid(), gen_random_uuid())$$, 'P0002', 'Booking unavailable', 'A booking that does not exist cannot be emailed');
@@ -363,7 +363,7 @@ select throws_ok($$select public.admin_email_receipt('00000000-0000-4000-8000-00
 select throws_ok($$select public.admin_edit_receipt('00000000-0000-4000-8000-00000000c311', '{"note":"x"}')$$, 'PT409', 'This payment was refunded, so its receipt can no longer be sent or changed', 'Nor changed');
 select throws_ok($$select public.admin_email_receipt('00000000-0000-4000-8000-00000000c312', gen_random_uuid())$$, 'PT409', 'This appointment was marked as missed, so its receipt can no longer be sent or changed', 'A receipt for a missed appointment cannot be emailed');
 select throws_ok($$select public.admin_edit_receipt('00000000-0000-4000-8000-00000000c312', '{"note":"x"}')$$, 'PT409', 'This appointment was marked as missed, so its receipt can no longer be sent or changed', 'Nor changed');
-select is((select public.admin_get_receipt('00000000-0000-4000-8000-00000000c310')->>'number'), 'VM-' || pg_temp.year_now() || '-0005', 'A receipt that was made can still be looked at after the booking is cancelled');
+select is((select public.admin_get_receipt('00000000-0000-4000-8000-00000000c310')->>'number'), 'VAD-' || pg_temp.year_now() || '-0005', 'A receipt that was made can still be looked at after the booking is cancelled');
 select is(public.admin_get_receipt('00000000-0000-4000-8000-00000000c303'), null, 'A booking that has no receipt shows none, and does not make one');
 select results_eq($$select (c->>'appointment')::boolean, (c->>'total')::boolean from (select public.admin_get_receipt('00000000-0000-4000-8000-00000000c301')->'changes' c) q$$,
   $$values (false, false)$$, 'A receipt whose booking has not changed says nothing is out of date');

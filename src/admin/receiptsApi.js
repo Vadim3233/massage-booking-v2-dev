@@ -3,7 +3,8 @@ import { whatsappNumber } from './contactLinks.js'
 
 // Messages written for the Admin on the server. Anything else becomes a generic line.
 export const SAFE_MESSAGES = new Set([
-  'Enter your business name', 'Add a phone number or an email address for the receipt', 'That email address does not look right', 'That is too long',
+  'Enter your business name', 'Add a phone number, an email address or a website for the receipt',
+  'Add your full name, professional association and membership number', 'That email address does not look right', 'That is too long',
   'Invalid receipt details', 'Invalid receipt changes', 'Enter who the receipt is for', 'Every line of the receipt needs its words',
   'Save your receipt details first', 'A receipt can be made once the payment is marked as received', 'This payment was refunded, so there is no receipt',
   'A cancelled booking has no receipt', 'A missed appointment has no receipt', 'The amount paid does not match the booking, so a receipt cannot be made',
@@ -16,14 +17,19 @@ export const SAFE_MESSAGES = new Set([
 const GENERIC = 'Could not complete that. Please check your connection and try again.'
 export const NEEDS_DETAILS = 'Save your receipt details first'
 
-export const EMPTY_DETAILS = { name: '', phone: '', email: '', address: '', closing: '' }
+export const DETAIL_FIELDS = ['name', 'tagline', 'phone', 'email', 'website', 'address', 'closing', 'practitioner_name', 'practitioner_title', 'association', 'membership_number']
+export const EMPTY_DETAILS = Object.fromEntries(DETAIL_FIELDS.map(field => [field, '']))
+// Her details as the database takes them: every field, trimmed, with an empty one left out.
+export const detailsPayload = details => Object.fromEntries(DETAIL_FIELDS.map(field => [field, (details[field] || '').trim() || null]))
 
 // The same checks the database makes, so a slip is caught with a plain sentence before anything is sent.
 export function validateReceiptDetails(details) {
   if (!details.name?.trim()) return 'Enter your business name.'
   const email = (details.email || '').trim()
-  if (!details.phone?.trim() && !email) return 'Add a phone number or an email address.'
+  if (!details.phone?.trim() && !email && !details.website?.trim()) return 'Add a phone number, an email address or a website.'
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return 'That email address does not look right.'
+  // Insurers ask for these, so every receipt carries them.
+  if (!details.practitioner_name?.trim() || !details.association?.trim() || !details.membership_number?.trim()) return 'Add your full name, professional association and membership number.'
   return ''
 }
 
@@ -48,7 +54,7 @@ export function createReceiptsApi(client) {
   }
   return {
     details: () => call('admin_receipt_details'),
-    saveDetails: details => call('admin_save_receipt_details', { p_details: { name: details.name, phone: details.phone || null, email: details.email || null, address: details.address || null, closing: details.closing || null } }),
+    saveDetails: details => call('admin_save_receipt_details', { p_details: detailsPayload(details) }),
     issue: bookingId => call('admin_issue_receipt', { p_booking_id: bookingId }),
     // The receipt that already exists for a booking, or nothing. Never makes one.
     get: bookingId => call('admin_get_receipt', { p_booking_id: bookingId }),

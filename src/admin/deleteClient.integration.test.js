@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createClient } from '@supabase/supabase-js'
 import { adminFixture } from '../../tests/adminFixture.js'
+import { removeReceipts } from '../../tests/localSupabase.js'
 import { unwrap } from '../client/booking/bookingApi.js'
 import { shiftDate } from './calendarPresentation.js'
 import { createClientsApi } from './clientsApi.js'
@@ -80,6 +81,7 @@ describe('deleting a client through the Admin API, against local Supabase', () =
     for (const id of made.clients) {
       const ids = ((await f.admin.from('bookings').select('id').eq('client_id', id)).data ?? []).map(row => row.id)
       if (ids.length) await f.admin.from('event_outbox').delete().in('aggregate_id', ids)
+      await removeReceipts(f.admin, { clientId: id })
       await f.admin.from('bookings').delete().eq('client_id', id)
       await f.admin.from('event_outbox').delete().eq('aggregate_id', id)
       await f.admin.from('client_merges').delete().eq('kept_client_id', id)

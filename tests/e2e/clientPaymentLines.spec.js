@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { localFixture } from '../localSupabase.js'
+import { localFixture, removeReceipts } from '../localSupabase.js'
 import { unwrap } from '../../src/client/booking/bookingApi.js'
 import { londonDate } from '../../src/client/booking/bookingDraft.js'
 
@@ -15,6 +15,7 @@ test.afterEach(async () => {
     if (events.length) await unwrap(fixture.admin.from('notification_deliveries').delete().in('event_id', events.map(event => event.id)))
     await unwrap(fixture.admin.from('event_outbox').delete().in('aggregate_id', mine.map(booking => booking.id)))
   }
+  await removeReceipts(fixture.admin, { bookingIds: (await unwrap(fixture.admin.from('bookings').select('id').like('booking_reference', 'PAYLINES-%'))).map(row => row.id) })
   await unwrap(fixture.admin.from('bookings').delete().like('booking_reference', 'PAYLINES-%'))
   await fixture?.cleanup()
 })

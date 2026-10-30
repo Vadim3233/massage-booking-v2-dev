@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { adminFixture } from '../adminFixture.js'
+import { removeReceipts } from '../localSupabase.js'
 import { londonSlot } from '../londonSlot.js'
 import { unwrap } from '../../src/client/booking/bookingApi.js'
 import { shiftDate, today } from '../../src/admin/calendarPresentation.js'
@@ -11,6 +12,7 @@ test.afterEach(async () => {
   for (const id of clients) {
     const ids = ((await f.admin.from('bookings').select('id').eq('client_id', id)).data ?? []).map(row => row.id)
     if (ids.length) await f.admin.from('event_outbox').delete().in('aggregate_id', ids)
+    await removeReceipts(f.admin, { clientId: id })
     await f.admin.from('bookings').delete().eq('client_id', id)
     await f.admin.from('clients').delete().eq('id', id)
   }
@@ -243,4 +245,23 @@ test('the page fits a phone, a very small phone and a wide screen', async ({ pag
     await expect(page.getByRole('alert')).toBeVisible()
     expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0)
   }
+})
+
+test('a paid booking offers its receipt as a PDF, for the client to keep or send to their insurer', async ({ page }) => {
+  await unwrap(f.admin.from('business_settings').upsert({ key: 'receipt_details', value: { name: 'VAD Soft Tissue & Massage Therapy', website: 'vadmassage.com',
+    practitioner_name: 'Vadim Susarin', association: 'Institute for Soft Tissue Therapists (ISRM)', membership_number: '9555' } }))
+  const one = await made({ date: shiftDate(today(), 5) })
+  await page.goto(one.link)
+  await expect(heading(page, 'Your appointment is confirmed')).toBeVisible()
+  // Not paid yet: no receipt.
+  await expect(page.getByRole('button', { name: 'Download receipt (PDF)' })).toHaveCount(0)
+  // Marking the payment as received makes the receipt there and then.
+  await unwrap(f.admin.from('booking_payments').update({ status: 'paid', paid_at: new Date().toISOString() }).eq('booking_id', one.booking.id))
+  const number = (await unwrap(f.admin.from('booking_receipts').select('receipt_number').eq('booking_id', one.booking.id).single())).receipt_number
+  expect(number).toMatch(/^VAD-\d{4}-\d{4}$/)
+  await page.reload()
+  await expect(page.getByText(`Receipt ${number}`)).toBeVisible()
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download receipt (PDF)' }).click()
+  expect((await download).suggestedFilename()).toBe(`Receipt ${number}.pdf`)
 })
