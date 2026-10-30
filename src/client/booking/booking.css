@@ -272,3 +272,14 @@
 .telegram-box p.fine { margin: 10px 0 0; }
 .telegram-box[data-state=linked] { border-color: var(--ok-rail); background: var(--ok-bg); }
 .telegram-box[data-state=linked] p { margin-bottom: 4px; color: var(--ok-ink); }
+
+/* Book with your AI assistant (/book-with-ai) and the consent page (/oauth/consent). */
+.ai-connect { margin-bottom: 16px; }
+.ai-connect h2 { margin-top: 0; font-size: 19px; }
+.ai-connect h3 { margin: 16px 0 4px; font-size: 16px; }
+.ai-connect ol, .ai-connect ul { padding-left: 20px; line-height: 1.55; }
+.ai-address { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ai-address code { flex: 1 1 200px; padding: 10px 12px; border-radius: var(--radius-xs); background: var(--primary-soft); overflow-wrap: anywhere; font-size: 15px; }
+.consent-list { padding-left: 20px; line-height: 1.6; }
+.ai-grants { list-style: none; padding: 0; }
+.ai-grants li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }

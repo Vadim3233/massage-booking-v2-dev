@@ -11,8 +11,14 @@ const ClientResetPassword = lazy(() => import('./client/reset/ResetPassword.jsx'
 
 const AdminApp = lazy(() => import('./admin/AdminApp.jsx'))
 const AccountApp = lazy(() => import('./client/account/AccountApp.jsx'))
+const ConsentPage = lazy(() => import('./client/ai/ConsentPage.jsx'))
+const BookWithAi = lazy(() => import('./client/ai/BookWithAi.jsx'))
 
 export default function App() {
+  const path = window.location.pathname.replace(/\/$/, '')
+  // Booking through a client's own AI assistant: where it sends them to allow it, and how to connect one.
+  if (supabase && path === '/oauth/consent') return <ErrorBoundary><Suspense fallback={<p role="status">Loading…</p>}><ConsentPage /></Suspense></ErrorBoundary>
+  if (supabase && path === '/book-with-ai') return <ErrorBoundary><Suspense fallback={<p role="status">Loading…</p>}><BookWithAi /></Suspense></ErrorBoundary>
   if (supabase && /^\/account(?:\/|$)/.test(window.location.pathname)) return <ErrorBoundary><Suspense fallback={<p role="status">Loading your bookings…</p>}><AccountApp /></Suspense></ErrorBoundary>
   if (supabase && window.location.pathname.replace(/\/$/, '') === '/reset-password') return <ErrorBoundary><Suspense fallback={<p role="status">Loading…</p>}><ClientResetPassword /></Suspense></ErrorBoundary>
   if (supabase && window.location.pathname.replace(/\/$/, '') === '/admin/reset-password') return <ErrorBoundary><Suspense fallback={<p role="status">Loading Admin…</p>}><ResetPassword linkError={recoveryLinkError} /></Suspense></ErrorBoundary>
