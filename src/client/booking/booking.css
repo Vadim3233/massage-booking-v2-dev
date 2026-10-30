@@ -260,6 +260,8 @@
 /* A second tap that lands just after a screen has changed is the first tap arriving twice, so for a moment the new screen takes no taps. */
 .booking-main.is-settling :is(button, a, input, select, textarea, summary, label) { pointer-events: none; }
 .field-problem { margin: -6px 0 10px; color: var(--danger); font-size: 14px; font-weight: 500; }
+.field-problem.area-check { margin: 4px 0 12px; display: grid; gap: 8px; justify-items: start; }
+.field-problem.area-check p { margin: 0; }
 
 /* The box offering Telegram updates, near the top of a confirmed booking (shown only when the clients-only bot is set up). */
 .telegram-box { margin: 4px 0 18px; padding: 14px 16px 12px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); }

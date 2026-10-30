@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { addressFields, addressTyped, blankAddressFields, contactComplete, detailProblems, usualAddress, validDetails } from '../bookingDraft.js'
 import { friendlyError } from '../friendlyError.js'
-import { MAX_ADDRESS, needsPostcodeNote, NO_POSTCODE_NOTE } from '../../../lib/address.js'
+import { MAX_ADDRESS, needsPostcodeNote, NO_POSTCODE_NOTE, postcodeCheck } from '../../../lib/address.js'
 
 function buildTestClient() {
   const id = crypto.randomUUID().replaceAll('-', '').slice(0, 12)
@@ -19,7 +19,7 @@ function buildTestClient() {
 
 const UNAVAILABLE = "Online booking isn't available on this account just now. Please get in touch and I'll arrange your appointment."
 
-export default function DetailsStep({ draft, user, api, edit, next, report, newTestGuest, onSwitchToAccount, guest = false }) {
+export default function DetailsStep({ draft, areas = [], user, api, edit, next, report, newTestGuest, onSwitchToAccount, chooseArea, guest = false }) {
   const [addresses, setAddresses] = useState([])
   const [loading, setLoading] = useState(!guest)
   const [saving, setSaving] = useState(false)
@@ -61,6 +61,9 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
   // A returning client's name and phone are saved on their account, and pressing Continue saves what is here back to it. So they are locked until
   // "Edit my details" is pressed, and nothing changes by accident. A guest, and anyone with something still missing, has open boxes.
   const locked = !guest && !loading && !unlocked && contactComplete(details)
+  // Is the postcode in the area chosen at the start? In another area, the booking cannot go ahead (its price would be wrong); in none of them, or with no
+  // postcode, it can, and waits for Vad to look before anything is paid.
+  const check = postcodeCheck(areas, areas.find(item => item.id === draft.areaId), details.address)
   function unlock() {
     setUnlocked(true)
     requestAnimationFrame(() => document.getElementById('details-first-name')?.focus())
@@ -91,6 +94,7 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
     if (saving) return
     // The button is never greyed out; what is missing is said in words instead.
     if (!validDetails(details)) { report('Please fill in everything that is not marked optional.'); return }
+    if (check?.kind === 'other') { report(''); document.getElementById('details-area-check')?.scrollIntoView({ block: 'center' }); return }
     // What is plainly wrong is said beside the field, and she is taken to it.
     const found = detailProblems(details)
     if (Object.keys(found).length) {
@@ -138,8 +142,14 @@ export default function DetailsStep({ draft, user, api, edit, next, report, newT
       <fieldset disabled={!guest && Boolean(details.savedAddressId)}>
         <label>Address<textarea id="details-address" autoComplete="street-address" rows={3} maxLength={MAX_ADDRESS} required aria-describedby="details-address-hint" value={details.address} onChange={(event) => field('address', event.target.value)} /></label>
         <p className="fine" id="details-address-hint">Paste or type the whole address: house or flat number, street, town and postcode.</p>
-        {!details.savedAddressId && needsPostcodeNote(details.address) && <p className="fine address-note" role="status">{NO_POSTCODE_NOTE}</p>}
+        {!details.savedAddressId && !check && needsPostcodeNote(details.address) && <p className="fine address-note" role="status">{NO_POSTCODE_NOTE}</p>}
       </fieldset>
+      {check?.kind === 'other' && <div className="field-problem area-check" id="details-area-check" role="alert">
+        <p>{check.postcode} is in {check.area.name}. Please choose {check.area.name} as your area, so the price includes the right travel fees.</p>
+        {chooseArea && <button type="button" className="btn--tonal btn--small" onClick={() => chooseArea(check.area.id)}>Choose {check.area.name}</button>}
+      </div>}
+      {check?.kind === 'outside' && <p className="fine address-note" id="details-area-check" role="status">{check.postcode} is outside my usual areas. You can still send your booking: I'll check I can come to you, and let you know before you pay anything.</p>}
+      {check?.kind === 'none' && <p className="fine address-note" id="details-area-check" role="status">I can't see a postcode in that address. Please add it. Without one, I'll check the address and let you know before you pay anything.</p>}
       <details className="more more--flat">
         <summary><span className="more-title">How to get in</span><span className="more-hint">Optional</span></summary>
         <div className="more-body">

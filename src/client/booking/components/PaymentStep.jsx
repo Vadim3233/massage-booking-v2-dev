@@ -5,6 +5,7 @@ import { friendlyError } from '../friendlyError.js'
 import { PriceSummary } from './ReviewStep.jsx'
 import BankDetails from './BankDetails.jsx'
 import BookingSummary from './BookingSummary.jsx'
+import { postcodeOf } from '../../../lib/address.js'
 
 export default function PaymentStep({ rules, draft, quote, quoteError, bank, api, store, finalize, held, error, chooseTimeAgain }) {
   const [acknowledged, setAcknowledged] = useState(false)
@@ -33,6 +34,18 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
   const booking = view.booking
   if (!booking) return <><h1 tabIndex={-1}>One last <em>step</em></h1><p role="status">Loading your payment reservation…</p>{view.error && <p role="alert" className="error">{view.error}</p>}<button onClick={() => setAttempt(attempt + 1)}>Refresh reservation</button></>
   const cash = draft.paymentMethod === 'cash'
+  // A postcode outside the areas, or none: the booking is made and waits for Vad, who confirms it (and sends the payment details) or gets in touch.
+  // Nothing is to be paid until then, so the bank details are not shown.
+  const areaNote = booking.area_check && `${booking.area_check === 'outside' ? `${postcodeOf(booking.address_snapshot) || 'Your postcode'} is outside my usual areas` : "I couldn't see a postcode in your address"}, so I'll check I can come to you first.`
+  if (areaNote && !cash) return <>
+    <h1 tabIndex={-1}>I've <em>received</em> your request</h1>
+    <p role="status" className="reserved"><span className="reserved-dot" aria-hidden="true" />Your appointment time is reserved for you.</p>
+    <p className="lede">{areaNote} Please don't make a transfer yet. Once your appointment is confirmed, I'll email you the amount and the bank details.</p>
+    <BookingSummary booking={booking} quote={quote} />
+    {!draft.paymentPending && <button className="btn--quiet switch-method" onClick={switchMethod}>I'd like to pay cash</button>}
+    <a className="btn btn--quiet btn--block" href={`/account?booking=${booking.id}`}>Change the time or cancel this booking</a>
+    <p className="fine"><a href="https://vadmassage.com">Contact Vad</a></p>
+  </>
   // Switching between bank transfer and cash starts the acknowledgement again, since the terms read differently, and tells a screen reader the page changed.
   function switchMethod() {
     store.setPaymentMethod(cash ? 'bank_transfer' : 'cash')
@@ -66,6 +79,7 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
     {cash && <section className="panel">
       <h2>Cash on arrival</h2>
       <p>You can pay the full amount in cash at your appointment.</p>
+      {areaNote && <p>{areaNote}</p>}
     </section>}
     <p className="terms-note" id="terms-note">{cancellationNote(rules)}</p>
     <label className="check terms"><input ref={termsBox} type="checkbox" aria-describedby={termsHint && !acknowledged ? 'terms-note terms-help' : 'terms-note'} checked={acknowledged} onChange={(event) => { setAcknowledged(event.target.checked); if (event.target.checked) setTermsHint(false) }} />I understand the payment and cancellation terms.</label>

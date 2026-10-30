@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parsePrice, priceText, slugify, validateArea, validateExtra, validateService } from './catalogueApi.js'
+import { parsePostcodes, parsePrice, priceText, slugify, validateArea, validateExtra, validateService } from './catalogueApi.js'
 
 describe('prices as typed', () => {
   it('accepts pounds with up to two decimals', () => {
@@ -46,5 +46,19 @@ describe('checking before saving', () => {
     expect(validateExtra({ name: 'Extra strong', price_gbp: '15', duration_minutes: '0' })).toBe('')
     expect(validateExtra({ name: 'Extra strong', price_gbp: '15', duration_minutes: '-5' })).toBe('Extra time must be a whole number of minutes from 0 to 120.')
     expect(validateExtra({ name: 'Extra strong', price_gbp: '15', duration_minutes: '2.5' })).toBe('Extra time must be a whole number of minutes from 0 to 120.')
+  })
+})
+
+describe('an area\'s postcodes', () => {
+  it('reads them as typed: capitals, single spaces, no repeats', () => {
+    expect(parsePostcodes('sw3, SW10 ,w2  1, sw3')).toEqual(['SW3', 'SW10', 'W2 1'])
+    expect(parsePostcodes('')).toEqual([])
+    expect(parsePostcodes(['SW3', 'W1'])).toEqual(['SW3', 'W1'])
+  })
+  it('refuses something that is not the start of a postcode', () => {
+    const area = { name: 'Chelsea', travel_surcharge_gbp: '0', congestion_fee_gbp: '0' }
+    expect(validateArea({ ...area, postcodes: 'SW3, W1K, W2 1' })).toBe('')
+    expect(validateArea({ ...area, postcodes: 'SW3 4LP' })).toMatch(/"SW3 4LP" is not the start of a postcode/)
+    expect(validateArea({ ...area, postcodes: 'Chelsea' })).toMatch(/"CHELSEA" is not/)
   })
 })

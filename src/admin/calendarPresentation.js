@@ -100,10 +100,13 @@ const PAYMENT_PILL = {
   refunded: { text: 'Refunded', chip: 'done' },
   rejected: { text: 'No payment', chip: 'cancel' },
 }
+const AREA_PILL = { outside: 'Outside your areas', no_postcode: 'No postcode' }
 function pillsOf(booking) {
   const status = booking.booking_status
   if (!('booking_payments' in booking) || ['cancelled', 'no_show'].includes(status)) return null
-  const appointment = status === 'completed' ? { text: 'Completed', chip: 'done' } : status === 'confirmed' ? { text: 'Confirmed', chip: 'ok' } : { text: 'Not confirmed yet', chip: 'needs' }
+  // A client's request whose postcode is in none of the areas, or that has no postcode, says so until it is confirmed: that is what to look at first.
+  const waiting = AREA_PILL[booking.area_check] || 'Not confirmed yet'
+  const appointment = status === 'completed' ? { text: 'Completed', chip: 'done' } : status === 'confirmed' ? { text: 'Confirmed', chip: 'ok' } : { text: waiting, chip: 'needs' }
   return [appointment, PAYMENT_PILL[booking.booking_payments?.status] || { text: 'Payment not recorded', chip: 'wait' }]
 }
 function stateOf(booking) {
