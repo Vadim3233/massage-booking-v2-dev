@@ -95,8 +95,10 @@ export function createBookingApi(client) {
       p_email: details.email?.trim() || null,
       p_phone: details.phone?.trim() || null,
     })),
-    addresses: () => unwrap(client.from('client_addresses')
+    // Only this client's own addresses: row security alone would also show every client's to the Admin when she is signed in here.
+    addresses: (clientId) => unwrap(client.from('client_addresses')
       .select('id,label,address,entry_instructions,is_default')
+      .eq('client_id', clientId)
       .order('is_default', { ascending: false })),
     finalize: (params) => one(client.rpc('finalize_client_booking', params)),
     booking: (id) => unwrap(client.rpc('get_my_booking', { p_booking_id: id })),

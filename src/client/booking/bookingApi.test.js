@@ -34,3 +34,13 @@ describe('the session a time is held with', () => {
     expect(signedIn.auth.signInAnonymously).not.toHaveBeenCalled()
   })
 })
+
+describe('saved addresses', () => {
+  it('asks only for the signed-in client\'s own, even when row security would allow more (the Admin signed in on the booking page)', async () => {
+    const calls = []
+    const chain = { select: (...args) => { calls.push(['select', ...args]); return chain }, eq: (...args) => { calls.push(['eq', ...args]); return chain },
+      order: () => Promise.resolve({ data: [], error: null }) }
+    await createBookingApi({ from: (table) => { calls.push(['from', table]); return chain } }).addresses('client-1')
+    expect(calls).toContainEqual(['eq', 'client_id', 'client-1'])
+  })
+})

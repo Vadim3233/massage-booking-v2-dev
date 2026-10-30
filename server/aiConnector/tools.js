@@ -129,7 +129,7 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
     return { ...all, areas: all.areas || [] }
   }
 
-  async function addresses() { return api.addresses() }
+  async function addresses() { return api.addresses((await profile()).client_id) }
 
   function areaFor(areas, address, areaId) {
     const chosen = areaId ? areas.find(area => area.id === areaId) : null
