@@ -4,6 +4,16 @@ import { createClient } from '@supabase/supabase-js'
 import { createBookingApi, unwrap } from '../src/client/booking/bookingApi.js'
 import { londonDate } from '../src/client/booking/bookingDraft.js'
 
+// A receipt is made by itself once a booking is paid, and a booking that has one cannot be deleted. Test cleanups remove a booking's
+// receipts first: by booking ids, or every booking of a client.
+export async function removeReceipts(admin, { bookingIds, clientId }) {
+  const ids = bookingIds ?? ((await admin.from('bookings').select('id').eq('client_id', clientId)).data ?? []).map(row => row.id)
+  if (!ids.length) return
+  const receipts = (await admin.from('booking_receipts').select('id').in('booking_id', ids)).data ?? []
+  if (receipts.length) await admin.from('booking_receipt_revisions').delete().in('receipt_id', receipts.map(row => row.id))
+  await admin.from('booking_receipts').delete().in('booking_id', ids)
+}
+
 export function localConfig() {
   // Never accept a remote URL or remote credentials from .env.local.
   const output = execFileSync(process.execPath, ['node_modules/supabase/dist/supabase.js', 'status', '-o', 'json'], { encoding: 'utf8', windowsHide: true })
@@ -58,6 +68,7 @@ export async function localFixture(offset = 20) {
         const bookings = await unwrap(admin.from('bookings').select('id').eq('client_id', clientId))
         for (const booking of bookings) await unwrap(admin.from('event_outbox').delete().eq('aggregate_id', booking.id))
         await unwrap(admin.from('command_requests').delete().eq('scope', `client-finalize:${clientId}`))
+        await removeReceipts(admin, { clientId })
         await unwrap(admin.from('bookings').delete().eq('client_id', clientId))
         await unwrap(admin.from('clients').delete().eq('id', clientId))
       }

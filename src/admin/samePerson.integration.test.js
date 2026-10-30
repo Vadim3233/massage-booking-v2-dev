@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createClient } from '@supabase/supabase-js'
 import { adminFixture } from '../../tests/adminFixture.js'
+import { removeReceipts } from '../../tests/localSupabase.js'
 import { unwrap } from '../client/booking/bookingApi.js'
 import { createAlertsApi } from './alertsApi.js'
 import { shiftDate } from './calendarPresentation.js'
@@ -62,6 +63,7 @@ describe('combining two profiles through the Admin API, against local Supabase',
       const ids = ((await f.admin.from('bookings').select('id').eq('client_id', id)).data ?? []).map(row => row.id)
       if (ids.length) await f.admin.from('event_outbox').delete().in('aggregate_id', ids)
       await f.admin.from('booking_series').delete().eq('client_id', id)
+      await removeReceipts(f.admin, { clientId: id })
       await f.admin.from('bookings').delete().eq('client_id', id)
       await f.admin.from('clients').delete().eq('id', id)
     }

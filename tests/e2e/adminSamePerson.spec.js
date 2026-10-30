@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test'
 import { createClient } from '@supabase/supabase-js'
 import { adminFixture } from '../adminFixture.js'
+import { removeReceipts } from '../localSupabase.js'
 import { shiftDate } from '../../src/admin/calendarPresentation.js'
 import { unwrap } from '../../src/client/booking/bookingApi.js'
 
@@ -13,6 +14,7 @@ test.afterEach(async () => {
   await f.admin.from('client_merges').delete().in('kept_client_id', made.clients)
   await f.admin.from('command_requests').delete().eq('scope', `admin-client-merge:${f.user.id}`)
   for (const id of made.clients) {
+    await removeReceipts(f.admin, { clientId: id })
     await f.admin.from('bookings').delete().eq('client_id', id)
     await f.admin.from('clients').delete().eq('id', id)
   }

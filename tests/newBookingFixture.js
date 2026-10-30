@@ -1,4 +1,4 @@
-import { localFixture } from './localSupabase.js'
+import { localFixture, removeReceipts } from './localSupabase.js'
 import { unwrap } from '../src/client/booking/bookingApi.js'
 
 // Every write is scoped to a fixture-owned identity on local Supabase.
@@ -22,6 +22,7 @@ export async function newBookingFixture(offset = 55) {
       for (const id of recipientIds) {
         const bookings = await unwrap(f.admin.from('bookings').select('id').eq('client_id', id))
         for (const booking of bookings) await unwrap(f.admin.from('event_outbox').delete().eq('aggregate_id', booking.id))
+        await removeReceipts(f.admin, { clientId: id })
         await unwrap(f.admin.from('bookings').delete().eq('client_id', id))
         await unwrap(f.admin.from('clients').delete().eq('id', id))
       }

@@ -1,4 +1,4 @@
-import { localFixture } from './localSupabase.js'
+import { localFixture, removeReceipts } from './localSupabase.js'
 import { unwrap } from '../src/client/booking/bookingApi.js'
 import { shiftDate } from '../src/admin/calendarPresentation.js'
 export async function adminFixture(offset = 35) {
@@ -23,7 +23,7 @@ export async function adminFixture(offset = 35) {
   return { ...f, bookings, user,
     async authorize() { await unwrap(f.admin.from('admin_users').insert({ user_id: user.id })) },
     async cleanup() {
-      await unwrap(f.admin.from('bookings').delete().eq('client_id', other.id)); await unwrap(f.admin.from('clients').delete().eq('id', other.id))
+      await removeReceipts(f.admin, { clientId: other.id }); await unwrap(f.admin.from('bookings').delete().eq('client_id', other.id)); await unwrap(f.admin.from('clients').delete().eq('id', other.id))
       if (nextDayBefore.length) await unwrap(f.admin.from('working_hours_overrides').upsert(nextDayBefore))
       else await unwrap(f.admin.from('working_hours_overrides').delete().eq('date', nextDay))
       await f.cleanup()

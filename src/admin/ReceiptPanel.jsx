@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { dateLabel, money, time } from './calendarPresentation.js'
-import { NEEDS_DETAILS, receiptsApi, validateReceiptEdit, whatsappReceiptLink } from './receiptsApi.js'
+import { detailsPayload, EMPTY_DETAILS, NEEDS_DETAILS, receiptsApi, validateReceiptEdit, whatsappReceiptLink } from './receiptsApi.js'
 import { receiptEditedAfterEmail, receiptEmailState } from './receiptState.js'
+import { downloadReceiptPdf } from '../lib/receiptPdf.js'
 
 const METHODS = { bank_transfer: 'bank transfer', cash: 'cash' }
 const LONG_DAY = { day: 'numeric', month: 'long', year: 'numeric' }
@@ -9,10 +10,25 @@ const london = options => value => new Intl.DateTimeFormat('en-GB', { timeZone: 
 const paidOn = london(LONG_DAY)
 const shortDay = london({ day: 'numeric', month: 'short', year: 'numeric' })
 
+// The receipt as an A4 PDF, for the client to keep or send to their insurer. A receipt that no longer shows money received says so on the PDF.
+function PdfButton({ receipt, primary = false }) {
+  const [state, setState] = useState('')
+  async function download() {
+    setState('busy')
+    try { await downloadReceiptPdf(receipt); setState('') } catch { setState('failed') }
+  }
+  return <>
+    <button className={primary ? 'btn--tonal' : 'btn--quiet'} disabled={state === 'busy'} onClick={download}>{state === 'busy' ? 'Making the PDF…' : 'Download PDF'}</button>
+    {state === 'failed' && <p role="alert" className="admin-field-error">Could not make the PDF. Check your connection and try again.</p>}
+  </>
+}
+
 // The receipt as the client will read it. The amounts and the payment come from the booking and are not editable.
 function ReceiptCard({ receipt, edit, busy, cardRef }) {
   const s = receipt.snapshot
-  const contact = [s.business.phone, s.business.email].filter(Boolean).join(' · ')
+  const contact = [s.business.phone, s.business.email, s.business.website].filter(Boolean).join(' · ')
+  const credentials = s.business.practitioner_name && [s.business.practitioner_name, s.business.practitioner_title, s.business.association,
+    s.business.membership_number && `membership number ${s.business.membership_number}`].filter(Boolean).join(', ')
   return <article className="admin-receipt" aria-label={`Receipt ${receipt.number}`} ref={cardRef} tabIndex={-1}>
     <header><h4>Receipt</h4><p className="admin-receipt-number">{receipt.number}</p></header>
     <p className="admin-receipt-small">Issued {dateLabel(s.issued_on, LONG_DAY)}</p>
@@ -26,6 +42,7 @@ function ReceiptCard({ receipt, edit, busy, cardRef }) {
       <div className="is-total"><dt>Total paid</dt><dd>{money(s.total)}</dd></div>
     </dl>
     <p className="admin-receipt-small">Paid by {METHODS[s.payment.method] || String(s.payment.method || 'payment').replace(/_/g, ' ')} on {paidOn(s.payment.paid_at)}.</p>
+    {credentials && <p className="admin-receipt-small">{credentials}</p>}
     {s.note && <p className="admin-receipt-note">{s.note}</p>}
     {s.business.closing && <p className="admin-receipt-note">{s.business.closing}</p>}
     <button className="btn--quiet btn--small admin-receipt-edit" disabled={busy} aria-label={`Edit receipt ${receipt.number}`} onClick={edit}>Edit</button>
@@ -38,7 +55,7 @@ function ReceiptEdit({ receipt, save, cancel, busy, error }) {
   const [billedTo, setBilledTo] = useState(s.billed_to)
   const [note, setNote] = useState(s.note || '')
   const [lines, setLines] = useState(s.lines.map(line => line.label))
-  const [business, setBusiness] = useState({ name: s.business.name || '', phone: s.business.phone || '', email: s.business.email || '', address: s.business.address || '', closing: s.business.closing || '' })
+  const [business, setBusiness] = useState({ ...EMPTY_DETAILS, ...s.business })
   const problem = validateReceiptEdit({ billed_to: billedTo, lines, business })
   const setLine = (index, value) => setLines(list => list.map((item, position) => (position === index ? value : item)))
   const setBusinessField = patch => setBusiness(current => ({ ...current, ...patch }))
@@ -46,7 +63,7 @@ function ReceiptEdit({ receipt, save, cancel, busy, error }) {
     event.preventDefault()
     if (busy || problem) return
     save({ billed_to: billedTo.trim(), note: note.trim() || null, lines: lines.map(line => line.trim()),
-      business: { name: business.name.trim(), phone: business.phone.trim(), email: business.email.trim(), address: business.address.trim(), closing: business.closing.trim() } })
+      business: Object.fromEntries(Object.entries(detailsPayload(business)).filter(([, value]) => value !== null)) })
   }
   return <form className="admin-client-form admin-receipt-form" onSubmit={submit} aria-label={`Edit receipt ${receipt.number}`}>
     <p className="admin-detail-hint">The amounts, the receipt number, and how and when it was paid come from the booking, so they cannot be changed here. The payment date is the day you marked the payment as received.</p>
@@ -62,7 +79,14 @@ function ReceiptEdit({ receipt, save, cancel, busy, error }) {
         <label className="admin-field">Email<input type="email" value={business.email} maxLength={254} disabled={busy} onChange={event => setBusinessField({ email: event.target.value })} /></label>
       </div>
       <label className="admin-field">Address (optional)<textarea rows={3} maxLength={300} value={business.address} disabled={busy} onChange={event => setBusinessField({ address: event.target.value })} /></label>
+      <label className="admin-field">Website<input value={business.website} maxLength={120} disabled={busy} onChange={event => setBusinessField({ website: event.target.value })} /></label>
       <label className="admin-field">Closing line (optional)<input value={business.closing} maxLength={200} disabled={busy} onChange={event => setBusinessField({ closing: event.target.value })} /></label>
+    </fieldset>
+    <fieldset className="admin-address-fieldset"><legend>Practitioner credentials on this receipt</legend>
+      <label className="admin-field">Your full name<input value={business.practitioner_name} maxLength={120} disabled={busy} onChange={event => setBusinessField({ practitioner_name: event.target.value })} /></label>
+      <label className="admin-field">Professional title (optional)<input value={business.practitioner_title} maxLength={120} disabled={busy} onChange={event => setBusinessField({ practitioner_title: event.target.value })} /></label>
+      <label className="admin-field">Professional association<input value={business.association} maxLength={160} disabled={busy} onChange={event => setBusinessField({ association: event.target.value })} /></label>
+      <label className="admin-field">Membership number<input value={business.membership_number} maxLength={40} disabled={busy} onChange={event => setBusinessField({ membership_number: event.target.value })} /></label>
     </fieldset>
     {problem && <p role="alert" className="admin-field-error">{problem}</p>}
     {error && <p role="alert" className="admin-field-error">{error}</p>}
@@ -203,6 +227,7 @@ export default function ReceiptPanel({ booking, openPage, api = receiptsApi }) {
       <button className="btn--primary" disabled={busy || !email} onClick={send}>Email to {shortFirst}</button>
       {whatsapp && <a className="btn" href={whatsapp} target="_blank" rel="noopener noreferrer">WhatsApp {shortFirst}</a>}
       <button className="btn--quiet" disabled={busy} onClick={share}>Share or copy</button>
+      <PdfButton receipt={receipt} />
     </div>
     {!email && <p className="admin-detail-hint">There is no email address on this booking, so it cannot be emailed.</p>}
     <EmailStatus state={mail} busy={busy} check={check} statusRef={statusRef} />
@@ -226,5 +251,8 @@ export function ReceiptNote({ booking, api = receiptsApi }) {
     : booking.booking_status === 'no_show' ? 'the appointment was marked as missed' : 'the payment was refunded'
   const mail = receiptEmailState(receipt)
   const sent = mail?.status === 'sent' ? `, and emailed to ${mail.to} on ${shortDay(mail.at)}` : ''
-  return <p className="admin-detail-hint">Receipt {receipt.number} was made for this booking{sent}. Because {reason}, it can no longer be sent or changed.</p>
+  return <div className="admin-receipt-panel">
+    <p className="admin-detail-hint">Receipt {receipt.number} was made for this booking{sent}. Because {reason}, it can no longer be sent or changed. Its PDF says so.</p>
+    <div className="admin-payment-buttons"><PdfButton receipt={receipt} /></div>
+  </div>
 }

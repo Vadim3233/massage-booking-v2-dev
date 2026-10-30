@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { localFixture } from '../../../tests/localSupabase.js'
+import { localFixture, removeReceipts } from '../../../tests/localSupabase.js'
 import { londonSlot } from '../../../tests/londonSlot.js'
 import { unwrap } from '../booking/bookingApi.js'
 import { createAccountApi } from './accountApi.js'
@@ -68,6 +68,7 @@ describe('a client managing their own booking against local Supabase', () => {
     } finally {
       const rows = await unwrap(f.admin.from('bookings').select('id').eq('client_id', other.id))
       for (const row of rows) await f.admin.from('event_outbox').delete().eq('aggregate_id', row.id)
+      await removeReceipts(f.admin, { clientId: other.id })
       await f.admin.from('bookings').delete().eq('client_id', other.id)
       await f.admin.from('clients').delete().eq('id', other.id)
     }

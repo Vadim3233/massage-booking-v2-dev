@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { adminFixture } from '../adminFixture.js'
+import { removeReceipts } from '../localSupabase.js'
 import { unwrap } from '../../src/client/booking/bookingApi.js'
 import { shiftDate } from '../../src/admin/calendarPresentation.js'
 
@@ -21,6 +22,7 @@ test.afterEach(async () => {
     if (events.length) await unwrap(f.admin.from('notification_deliveries').delete().in('event_id', events.map(event => event.id)))
     await unwrap(f.admin.from('event_outbox').delete().in('aggregate_id', ids))
   }
+  await removeReceipts(f.admin, { bookingIds: (await unwrap(f.admin.from('bookings').select('id').like('booking_reference', 'CANCELWHEN-%'))).map(row => row.id) })
   await unwrap(f.admin.from('bookings').delete().like('booking_reference', 'CANCELWHEN-%'))
   await unwrap(f.admin.from('clients').delete().like('email', '%.cancelwhen@example.test'))
   await f?.cleanup()

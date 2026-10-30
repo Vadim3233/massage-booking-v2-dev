@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { adminFixture } from '../adminFixture.js'
+import { removeReceipts } from '../localSupabase.js'
 import { unwrap } from '../../src/client/booking/bookingApi.js'
 import { shiftDate } from '../../src/admin/calendarPresentation.js'
 
@@ -17,6 +18,7 @@ test.afterEach(async () => {
   for (const id of created) {
     const ids = ((await f.admin.from('bookings').select('id').eq('client_id', id)).data ?? []).map(row => row.id)
     if (ids.length) await f.admin.from('event_outbox').delete().in('aggregate_id', ids)
+    await removeReceipts(f.admin, { clientId: id })
     await f.admin.from('bookings').delete().eq('client_id', id)
     await f.admin.from('clients').delete().eq('id', id)
   }

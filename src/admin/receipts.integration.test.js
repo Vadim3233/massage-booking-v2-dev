@@ -19,6 +19,13 @@ describe('receipts through the Admin API, against local Supabase', () => {
     await markPaid(row.id)
     return row
   }
+  const CREDENTIALS = { practitioner_name: 'Vad Test', association: 'Test Association', membership_number: '123' }
+  // A paid booking gets its receipt by itself while her details are saved. To make a receipt by hand, these bookings are paid while they are not.
+  const withoutDetails = async work => {
+    const saved = await unwrap(f.admin.from('business_settings').select('*').eq('key', 'receipt_details'))
+    await unwrap(f.admin.from('business_settings').delete().eq('key', 'receipt_details'))
+    try { return await work() } finally { if (saved.length) await unwrap(f.admin.from('business_settings').insert(saved)) }
+  }
   const deliveries = async bookingId => unwrap(f.admin.from('event_outbox').select('id,notification_deliveries(channel,audience,recipient,title,body,status)').eq('aggregate_id', bookingId).eq('event_type', 'booking.receipt_emailed'))
 
   beforeAll(async () => {
@@ -62,10 +69,11 @@ describe('receipts through the Admin API, against local Supabase', () => {
     await authorize()
     expect(await api.details()).toBeNull()
     await expect(api.saveDetails({ name: '', phone: '07700 900123' })).rejects.toThrow('Enter your business name')
-    await expect(api.saveDetails({ name: 'VadMassage' })).rejects.toThrow('Add a phone number or an email address for the receipt')
+    await expect(api.saveDetails({ name: 'VadMassage' })).rejects.toThrow('Add a phone number, an email address or a website for the receipt')
     await expect(api.saveDetails({ name: 'VadMassage', email: 'nonsense' })).rejects.toThrow('That email address does not look right')
-    await api.saveDetails({ name: ' VadMassage ', phone: '07700 900123', email: 'Hello@VadMassage.example', address: '1 Example Street', closing: 'Thank you.' })
-    expect(await api.details()).toEqual({ name: 'VadMassage', phone: '07700 900123', email: 'hello@vadmassage.example', address: '1 Example Street', closing: 'Thank you.' })
+    await expect(api.saveDetails({ name: 'VadMassage', email: 'hello@vadmassage.example' })).rejects.toThrow('Add your full name, professional association and membership number')
+    await api.saveDetails({ name: ' VadMassage ', phone: '07700 900123', email: 'Hello@VadMassage.example', address: '1 Example Street', closing: 'Thank you.', ...CREDENTIALS })
+    expect(await api.details()).toEqual({ name: 'VadMassage', phone: '07700 900123', email: 'hello@vadmassage.example', address: '1 Example Street', closing: 'Thank you.', ...CREDENTIALS })
   })
 
   it('makes a receipt only for a payment that has been received, and gives the same one every time', async () => {
@@ -73,28 +81,30 @@ describe('receipts through the Admin API, against local Supabase', () => {
     const [paid, cancelled] = f.bookings
     await f.admin.from('business_settings').delete().eq('key', 'receipt_details')
     await expect(api.issue(paid.id)).rejects.toThrow('A receipt can be made once the payment is marked as received')
-    await api.saveDetails({ name: 'VadMassage', phone: '07700 900123' })
+    await api.saveDetails({ name: 'VadMassage', phone: '07700 900123', ...CREDENTIALS })
     await expect(api.issue(paid.id)).rejects.toThrow('A receipt can be made once the payment is marked as received')
     await expect(api.issue(cancelled.id)).rejects.toThrow('A cancelled booking has no receipt')
-    await markPaid(paid.id)
+    await withoutDetails(() => markPaid(paid.id))
     const receipt = await api.issue(paid.id)
-    expect(receipt.number).toBe(`VM-${year}-0001`)
+    expect(receipt.number).toBe(`VAD-${year}-0001`)
     expect(receipt.snapshot).toMatchObject({ reference: paid.booking_reference, total: 85, business: { name: 'VadMassage', phone: '07700 900123' }, payment: { method: 'cash' } })
     expect(receipt.snapshot.lines.map(line => [line.label, Number(line.amount)])).toEqual([['Session ' + paid.booking_reference + ', 60 minutes', 85]])
-    expect(receipt.message).toContain(`Receipt VM-${year}-0001`)
+    expect(receipt.message).toContain(`Receipt VAD-${year}-0001`)
     expect(receipt.message).toContain('Total paid: £85.00')
     expect(JSON.stringify(receipt)).not.toContain('VeryLongStreet')
     expect((await api.issue(paid.id)).id).toBe(receipt.id)
+    // Once her details are saved, marking a payment as received makes the receipt there and then.
     const next = f.bookings[2]
     await markPaid(next.id)
-    expect((await api.issue(next.id)).number).toBe(`VM-${year}-0002`)
+    expect((await api.get(next.id)).number).toBe(`VAD-${year}-0002`)
+    expect((await api.issue(next.id)).number).toBe(`VAD-${year}-0002`)
   })
 
   it('lets the words be corrected, never the amounts, and keeps what it said before', async () => {
     await authorize()
     const booking = f.bookings[0]
     const receipt = await api.issue(booking.id)
-    const edited = await api.edit(booking.id, { billed_to: 'Jensen Holdings Ltd', note: 'Order 4471', lines: ['Sports massage, 60 minutes'], business: { name: 'VadMassage Ltd', phone: '07700 900123', email: '', address: '', closing: '' } })
+    const edited = await api.edit(booking.id, { billed_to: 'Jensen Holdings Ltd', note: 'Order 4471', lines: ['Sports massage, 60 minutes'], business: { name: 'VadMassage Ltd', phone: '07700 900123', email: '', address: '', closing: '', ...CREDENTIALS } })
     expect(edited).toMatchObject({ number: receipt.number, edit_count: 1 })
     expect(edited.snapshot).toMatchObject({ billed_to: 'Jensen Holdings Ltd', note: 'Order 4471', total: 85, business: { name: 'VadMassage Ltd' } })
     expect(edited.snapshot.lines).toEqual([{ label: 'Sports massage, 60 minutes', amount: 85 }])
@@ -120,7 +130,7 @@ describe('receipts through the Admin API, against local Supabase', () => {
     let queued = (await deliveries(booking.id)).flatMap(row => row.notification_deliveries)
     expect(queued).toHaveLength(1)
     expect(queued[0]).toMatchObject({ channel: 'email', audience: 'client', recipient: 'booking@example.test', status: 'pending' })
-    expect(queued[0].title).toBe(`Your receipt from VadMassage Ltd (VM-${year}-0001)`)
+    expect(queued[0].title).toBe(`Your receipt from VadMassage Ltd (VAD-${year}-0001)`)
     expect(queued[0].body).toContain('Total paid: £85.00')
     await api.email(booking.id, crypto.randomUUID())
     queued = (await deliveries(booking.id)).flatMap(row => row.notification_deliveries)
@@ -131,7 +141,7 @@ describe('receipts through the Admin API, against local Supabase', () => {
   it('looks at a receipt without making one, and says what became of its email', async () => {
     await authorize()
     const [booking, , other] = f.bookings
-    expect((await api.get(other.id)).number).toBe(`VM-${year}-0002`)
+    expect((await api.get(other.id)).number).toBe(`VAD-${year}-0002`)
     expect(await api.get(f.bookings[1].id)).toBeNull()
     expect((await unwrap(f.admin.from('booking_receipts').select('id').eq('booking_id', f.bookings[1].id)))).toEqual([])
     // Queued, then delivered by the sender: the receipt reports the newest email, never more than is true.
@@ -171,14 +181,14 @@ describe('receipts through the Admin API, against local Supabase', () => {
 
   it('never makes two receipts for one booking, or skips a number, when pressed at the same moment', async () => {
     await authorize()
-    const [first, second, third] = [await extraBooking(900), await extraBooking(1020), await extraBooking(1140)]
+    const [first, second, third] = await withoutDetails(async () => [await extraBooking(900), await extraBooking(1020), await extraBooking(1140)])
     const same = await Promise.all([api.issue(first.id), api.issue(first.id), api.issue(first.id)])
     expect(new Set(same.map(receipt => receipt.id)).size).toBe(1)
     expect(await unwrap(f.admin.from('booking_receipts').select('id').eq('booking_id', first.id))).toHaveLength(1)
     // Two different bookings at once take the next two numbers, one each.
     const both = await Promise.all([api.issue(second.id), api.issue(third.id)])
-    expect(both.map(receipt => receipt.number).sort()).toEqual([`VM-${year}-0004`, `VM-${year}-0005`])
-    expect(same[0].number).toBe(`VM-${year}-0003`)
+    expect(both.map(receipt => receipt.number).sort()).toEqual([`VAD-${year}-0004`, `VAD-${year}-0005`])
+    expect(same[0].number).toBe(`VAD-${year}-0003`)
   })
 
   it('will not send or change the receipt of a booking that was cancelled, stops an email still waiting, but still shows it', async () => {
@@ -191,7 +201,7 @@ describe('receipts through the Admin API, against local Supabase', () => {
     await expect(api.email(booking.id, crypto.randomUUID())).rejects.toThrow(message)
     await expect(api.edit(booking.id, { note: 'x' })).rejects.toThrow(message)
     const stopped = await api.get(booking.id)
-    expect(stopped.number).toBe(`VM-${year}-0002`)
+    expect(stopped.number).toBe(`VAD-${year}-0002`)
     expect(stopped.email).toMatchObject({ status: 'failed', attempts: 5 })
     // A missed appointment or a refunded payment is the same.
     const paid = f.bookings[0]

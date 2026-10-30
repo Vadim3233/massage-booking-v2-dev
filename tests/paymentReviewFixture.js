@@ -1,5 +1,6 @@
 import { adminFixture } from './adminFixture.js'
 import { unwrap } from '../src/client/booking/bookingApi.js'
+import { removeReceipts } from './localSupabase.js'
 export async function paymentReviewFixture() {
   const f = await adminFixture(37)
   // Status changes are guarded by database triggers, so a fixture cannot rewind a booking in place.
@@ -8,6 +9,7 @@ export async function paymentReviewFixture() {
     const id = f.bookings[index].id
     const booking = await unwrap(f.admin.from('bookings').select().eq('id', id).single())
     const sessions = await unwrap(f.admin.from('booking_sessions').select().eq('booking_id', id))
+    await removeReceipts(f.admin, { bookingIds: [id] })
     await unwrap(f.admin.from('bookings').delete().eq('id', id))
     await unwrap(f.admin.from('bookings').insert({ ...booking, booking_status: bookingStatus, cancelled_at: bookingStatus === 'cancelled' ? new Date().toISOString() : null, cancelled_by_actor_type: null, cancelled_by_actor_id: null }))
     await unwrap(f.admin.from('booking_sessions').insert(sessions))

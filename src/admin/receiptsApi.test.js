@@ -1,26 +1,34 @@
 import { describe, expect, it } from 'vitest'
 import { createReceiptsApi, validateReceiptDetails, validateReceiptEdit, whatsappReceiptLink } from './receiptsApi.js'
 
+const CREDENTIALS = { practitioner_name: 'Vadim Susarin', association: 'Institute for Soft Tissue Therapists (ISRM)', membership_number: '9555' }
+
 describe('checking her details before they are saved', () => {
   it('needs a business name and some way to reach her', () => {
-    expect(validateReceiptDetails({ name: 'VadMassage', phone: '07700 900123' })).toBe('')
-    expect(validateReceiptDetails({ name: 'VadMassage', email: 'hello@example.test' })).toBe('')
-    expect(validateReceiptDetails({ name: ' ', phone: '07700 900123' })).toBe('Enter your business name.')
-    expect(validateReceiptDetails({ name: 'VadMassage' })).toBe('Add a phone number or an email address.')
+    expect(validateReceiptDetails({ name: 'VadMassage', phone: '07700 900123', ...CREDENTIALS })).toBe('')
+    expect(validateReceiptDetails({ name: 'VadMassage', email: 'hello@example.test', ...CREDENTIALS })).toBe('')
+    expect(validateReceiptDetails({ name: 'VadMassage', website: 'vadmassage.com', ...CREDENTIALS })).toBe('')
+    expect(validateReceiptDetails({ name: ' ', phone: '07700 900123', ...CREDENTIALS })).toBe('Enter your business name.')
+    expect(validateReceiptDetails({ name: 'VadMassage', ...CREDENTIALS })).toBe('Add a phone number, an email address or a website.')
   })
   it('catches an email that cannot be right', () => {
-    expect(validateReceiptDetails({ name: 'VadMassage', email: 'hello-at-example' })).toBe('That email address does not look right.')
-    expect(validateReceiptDetails({ name: 'VadMassage', phone: '07700 900123', email: '' })).toBe('')
+    expect(validateReceiptDetails({ name: 'VadMassage', email: 'hello-at-example', ...CREDENTIALS })).toBe('That email address does not look right.')
+    expect(validateReceiptDetails({ name: 'VadMassage', phone: '07700 900123', email: '', ...CREDENTIALS })).toBe('')
+  })
+  it('needs the practitioner, their association and membership number, which insurers ask for', () => {
+    for (const missing of Object.keys(CREDENTIALS)) {
+      expect(validateReceiptDetails({ name: 'VadMassage', phone: '07700 900123', ...CREDENTIALS, [missing]: ' ' })).toBe('Add your full name, professional association and membership number.')
+    }
   })
 })
 
 describe('checking an edit to a receipt', () => {
-  const business = { name: 'VadMassage', phone: '07700 900123' }
+  const business = { name: 'VadMassage', phone: '07700 900123', ...CREDENTIALS }
   it('needs a name on it, words on every line, and her details still complete', () => {
     expect(validateReceiptEdit({ billed_to: 'Clara', lines: ['Massage', 'Travel'], business })).toBe('')
     expect(validateReceiptEdit({ billed_to: ' ', lines: ['Massage'], business })).toBe('Enter who the receipt is for.')
     expect(validateReceiptEdit({ billed_to: 'Clara', lines: ['Massage', '  '], business })).toBe('Every line of the receipt needs its words.')
-    expect(validateReceiptEdit({ billed_to: 'Clara', lines: ['Massage'], business: { name: '', phone: '07700 900123' } })).toBe('Enter your business name.')
+    expect(validateReceiptEdit({ billed_to: 'Clara', lines: ['Massage'], business: { ...business, name: '' } })).toBe('Enter your business name.')
   })
 })
 
@@ -59,7 +67,8 @@ describe('what is shown when something fails', () => {
   it('sends only the fields of her details, with empty ones as nothing', async () => {
     const calls = []
     const api = createReceiptsApi({ rpc: async (name, args) => { calls.push([name, args]); return { data: null, error: null } } })
-    await api.saveDetails({ name: 'VadMassage', phone: '', email: 'hello@example.test', address: '', closing: 'Thank you.', extra: 'ignored' })
-    expect(calls).toEqual([['admin_save_receipt_details', { p_details: { name: 'VadMassage', phone: null, email: 'hello@example.test', address: null, closing: 'Thank you.' } }]])
+    await api.saveDetails({ name: 'VadMassage', phone: '', email: 'hello@example.test', address: '', closing: 'Thank you.', membership_number: ' 9555 ', extra: 'ignored' })
+    expect(calls).toEqual([['admin_save_receipt_details', { p_details: { name: 'VadMassage', tagline: null, phone: null, email: 'hello@example.test', website: null, address: null,
+      closing: 'Thank you.', practitioner_name: null, practitioner_title: null, association: null, membership_number: '9555' } }]])
   })
 })

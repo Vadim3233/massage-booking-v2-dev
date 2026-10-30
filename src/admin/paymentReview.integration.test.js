@@ -76,7 +76,7 @@ describe('server-authoritative Admin payment commands', () => {
     expect(current.booking_payments.paid_at).toBeTruthy(); expect(current.booking_payments.verified_by).toBe(f.user.id)
     expect(paymentActions(current)).toEqual([])
     expect((await f.admin.from('command_requests').select('*').eq('scope', `admin-payment:${f.user.id}`)).data).toHaveLength(1)
-    const events = (await f.admin.from('event_outbox').select('*').eq('aggregate_id', booking.id)).data
+    const events = (await f.admin.from('event_outbox').select('*').eq('aggregate_id', booking.id).neq('event_type', 'booking.receipt_issued')).data
     expect(events).toHaveLength(1); expect(events[0].payload.payment_status).toBe('paid'); expect(events[0].source_command_id).toBeTruthy()
     await expect(api.act('verify', booking, crypto.randomUUID())).rejects.toMatchObject({ conflict: true })
     expect((await f.client.rpc('admin_approve_cash_request', args(booking, key))).error?.code).toBe('22023')
@@ -120,7 +120,7 @@ describe('server-authoritative Admin payment commands', () => {
     await f.authorize(); const b = await api.booking(f.bookings[1].id)
     const results = await Promise.all([f.client.rpc('admin_approve_cash_request', args(b)), f.client.rpc('admin_reject_cash_request', args(b))])
     expect(results.filter(r => !r.error)).toHaveLength(1); expect(results.filter(r => r.error?.code === 'PT409')).toHaveLength(1)
-    expect((await f.admin.from('event_outbox').select('id').eq('aggregate_id', b.id)).data).toHaveLength(1)
+    expect((await f.admin.from('event_outbox').select('id').eq('aggregate_id', b.id).neq('event_type', 'booking.receipt_issued')).data).toHaveLength(1)
   })
   it('rejects every command for wrong method/state, paid, cancelled and provisional bookings', async () => {
     await f.authorize()
@@ -138,7 +138,7 @@ describe('server-authoritative Admin payment commands', () => {
       expect((await api.booking(b.id)).booking_payments.status).toBe(payment)
     }
     expect((await f.admin.from('command_requests').select('id').eq('scope', `admin-payment:${f.user.id}`)).data).toEqual([])
-    expect((await f.admin.from('event_outbox').select('id').eq('aggregate_id', f.bookings[0].id)).data).toEqual([])
+    expect((await f.admin.from('event_outbox').select('id').eq('aggregate_id', f.bookings[0].id).neq('event_type', 'booking.receipt_issued')).data).toEqual([])
   })
   it('records completed cash receipt once even with simultaneous identical requests', async () => {
     await f.authorize(); await f.prepare(0, 'cash', 'completed', 'approved')
@@ -149,7 +149,7 @@ describe('server-authoritative Admin payment commands', () => {
     expect(current.booking_status).toBe('completed'); expect(current.booking_payments.status).toBe('paid')
     expect(current.booking_payments.paid_at).toBeTruthy()
     expect((await f.admin.from('command_requests').select('id').eq('scope', `admin-payment:${f.user.id}`)).data).toHaveLength(1)
-    expect((await f.admin.from('event_outbox').select('id').eq('aggregate_id', b.id)).data).toHaveLength(1)
+    expect((await f.admin.from('event_outbox').select('id').eq('aggregate_id', b.id).neq('event_type', 'booking.receipt_issued')).data).toHaveLength(1)
   })
   it('rejects a changed payment version and revoked authorization, including replay of success', async () => {
     await f.authorize(); const b = await api.booking(f.bookings[0].id)

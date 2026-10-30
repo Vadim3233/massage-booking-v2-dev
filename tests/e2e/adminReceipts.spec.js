@@ -5,7 +5,8 @@ import { unwrap } from '../../src/client/booking/bookingApi.js'
 test.use({ permissions: ['clipboard-read', 'clipboard-write'] })
 
 let f
-const DETAILS = { name: 'VadMassage', phone: '07700 900123', email: 'hello@vadmassage.example', address: '1 Example Street\nLondon', closing: 'Thank you.' }
+const CREDENTIALS = { practitioner_name: 'Vadim Susarin', practitioner_title: 'Level 5 Soft Tissue Therapist', association: 'Institute for Soft Tissue Therapists (ISRM)', membership_number: '9555' }
+const DETAILS = { name: 'VadMassage', phone: '07700 900123', email: 'hello@vadmassage.example', address: '1 Example Street\nLondon', closing: 'Thank you.', ...CREDENTIALS }
 // The receipts, their history, the numbers and her details are cleared around every test: the booking cannot be deleted while it has a receipt.
 async function clear() {
   const ids = f.bookings.map(row => row.id)
@@ -28,7 +29,7 @@ async function signIn(page, path) {
   await page.getByLabel('Password', { exact: true }).fill(f.password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
 }
-const card = page => page.getByRole('article', { name: /^Receipt VM-/ })
+const card = page => page.getByRole('article', { name: /^Receipt VAD-/ })
 const receiptButton = page => page.getByRole('button', { name: 'Receipt', exact: true })
 const queued = async id => (await unwrap(f.admin.from('event_outbox').select('notification_deliveries(recipient,title,body)').eq('aggregate_id', id).eq('event_type', 'booking.receipt_emailed'))).flatMap(row => row.notification_deliveries)
 
@@ -39,17 +40,23 @@ test('her receipt details are asked for, checked and kept', async ({ page }) => 
   await expect(page.getByRole('heading', { name: 'Receipt details', level: 1 })).toBeVisible()
   await expect(page.getByText('Nothing is saved here yet.')).toBeVisible()
   await page.getByLabel('Business name').fill('VadMassage')
-  await expect(page.getByText('Add a phone number or an email address.')).toBeVisible()
+  await expect(page.getByText('Add a phone number, an email address or a website.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Save receipt details' })).toBeDisabled()
   await page.getByLabel('Email').fill('hello-at-example')
   await expect(page.getByText('That email address does not look right.')).toBeVisible()
   await page.getByLabel('Email').fill('Hello@VadMassage.example')
   await page.getByLabel('Address (optional)').fill('1 Example Street\nLondon')
   await page.getByLabel(/A closing line/).fill('Thank you.')
+  await expect(page.getByText('Add your full name, professional association and membership number.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Save receipt details' })).toBeDisabled()
+  await page.getByLabel('Your full name').fill(CREDENTIALS.practitioner_name)
+  await page.getByLabel('Professional title (optional)').fill(CREDENTIALS.practitioner_title)
+  await page.getByLabel('Professional association').fill(CREDENTIALS.association)
+  await page.getByLabel('Membership number').fill(CREDENTIALS.membership_number)
   await page.getByRole('button', { name: 'Save receipt details' }).click()
   await expect(page.getByText('Saved. New receipts will use these details.')).toBeVisible()
   const stored = (await unwrap(f.admin.from('business_settings').select('value').eq('key', 'receipt_details').single())).value
-  expect(stored).toEqual({ name: 'VadMassage', email: 'hello@vadmassage.example', address: '1 Example Street\nLondon', closing: 'Thank you.' })
+  expect(stored).toEqual({ name: 'VadMassage', email: 'hello@vadmassage.example', address: '1 Example Street\nLondon', closing: 'Thank you.', ...CREDENTIALS })
   await page.reload()
   await expect(page.getByLabel('Business name')).toHaveValue('VadMassage')
   await expect(page.getByLabel('Email')).toHaveValue('hello@vadmassage.example')
@@ -85,7 +92,7 @@ test('opening a receipt shows what was paid, with the same number every time and
   await signIn(page, `/admin/bookings/${paid.id}`)
   await receiptButton(page).click()
   await expect(card(page)).toBeVisible()
-  await expect(card(page)).toHaveAccessibleName(`Receipt VM-${year}-0001`)
+  await expect(card(page)).toHaveAccessibleName(`Receipt VAD-${year}-0001`)
   // Focus moves to the receipt, so a keyboard or screen reader is not left where the button used to be.
   await expect(card(page)).toBeFocused()
   await expect(card(page)).toContainText('VadMassage')
@@ -96,14 +103,21 @@ test('opening a receipt shows what was paid, with the same number every time and
   await expect(card(page)).toContainText('£85.00')
   await expect(card(page)).toContainText('Paid by cash on')
   await expect(card(page)).toContainText('Thank you.')
+  await expect(card(page)).toContainText('Vadim Susarin, Level 5 Soft Tissue Therapist, Institute for Soft Tissue Therapists (ISRM), membership number 9555')
   await expect(card(page)).not.toContainText('SW1A')
   await expect(card(page)).not.toContainText('VeryLongStreet')
   // A very long first name does not push the buttons off the screen.
   await expect(page.getByRole('button', { name: /^Email to Alexandra/ })).toBeVisible()
+  // The PDF for the client or their insurer.
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download PDF' }).click()
+  const pdf = await download
+  expect(pdf.suggestedFilename()).toBe(`Receipt VAD-${year}-0001.pdf`)
+  expect((await import('node:fs')).readFileSync(await pdf.path()).subarray(0, 5).toString()).toBe('%PDF-')
   await page.getByRole('button', { name: 'Close details' }).click()
   await page.goto(`/admin/bookings/${paid.id}`)
   await receiptButton(page).click()
-  await expect(card(page)).toHaveAccessibleName(`Receipt VM-${year}-0001`)
+  await expect(card(page)).toHaveAccessibleName(`Receipt VAD-${year}-0001`)
   expect((await f.admin.from('booking_receipts').select('id').eq('booking_id', paid.id)).data).toHaveLength(1)
 })
 
@@ -144,7 +158,7 @@ test('Edit changes the words on the receipt but never the amounts, and keeps wha
   await expect(card(page)).toContainText('£85.00')
   await expect(card(page)).toContainText('Order 4471')
   await expect(card(page)).toContainText('VadMassage Ltd')
-  await expect(card(page)).toHaveAccessibleName(`Receipt VM-${year}-0001`)
+  await expect(card(page)).toHaveAccessibleName(`Receipt VAD-${year}-0001`)
   const receipt = await unwrap(f.admin.from('booking_receipts').select('id,edit_count,snapshot').eq('booking_id', paid.id).single())
   expect(receipt.edit_count).toBe(1)
   expect(receipt.snapshot.total).toBe(85)
@@ -169,7 +183,7 @@ test('emailing queues one email for the booking\'s address, says only what is tr
   await expect(page.getByText('Email queued for booking@example.test. It usually goes within a few minutes.')).toBeVisible()
   await expect(page.getByText(/^Emailed to /)).toHaveCount(0)
   expect(await queued(paid.id)).toHaveLength(1)
-  expect((await queued(paid.id))[0]).toMatchObject({ recipient: 'booking@example.test', title: `Your receipt from VadMassage (VM-${year}-0001)` })
+  expect((await queued(paid.id))[0]).toMatchObject({ recipient: 'booking@example.test', title: `Your receipt from VadMassage (VAD-${year}-0001)` })
   expect((await queued(paid.id))[0].body).toContain('Total paid: £85.00')
   await setDelivery(paid.id, { status: 'sent', sent_at: new Date().toISOString() })
   await page.getByRole('button', { name: 'Check if it was sent' }).click()
@@ -269,7 +283,7 @@ test('a receipt made before the booking was cancelled is shown as a note and can
   await unwrap(f.admin.from('bookings').update({ booking_status: 'cancelled', cancelled_at: new Date().toISOString(), cancelled_by_actor_type: 'admin' }).eq('id', paid.id))
   await page.goto(`/admin/bookings/${paid.id}`)
   await expect(page.locator('dialog.admin-details')).toBeVisible()
-  await expect(page.getByText(`Receipt VM-${year}-0001 was made for this booking, and emailed to booking@example.test on`)).toBeVisible()
+  await expect(page.getByText(`Receipt VAD-${year}-0001 was made for this booking, and emailed to booking@example.test on`)).toBeVisible()
   await expect(page.getByText('Because the booking was cancelled, it can no longer be sent or changed.')).toBeVisible()
   await expect(receiptButton(page)).toHaveCount(0)
   await expect(page.getByRole('button', { name: /^Email to / })).toHaveCount(0)
@@ -380,7 +394,7 @@ for (const [name, change, reason] of [
     await change(paid.id)
     await page.goto(`/admin/bookings/${paid.id}`)
     await expect(page.locator('dialog.admin-details')).toBeVisible()
-    await expect(page.getByText(`Receipt VM-${year}-0001 was made for this booking.`)).toBeVisible()
+    await expect(page.getByText(`Receipt VAD-${year}-0001 was made for this booking.`)).toBeVisible()
     await expect(page.getByText(reason)).toBeVisible()
     await expect(receiptButton(page)).toHaveCount(0)
     await expect(page.getByRole('button', { name: /^Email to / })).toHaveCount(0)
@@ -399,11 +413,11 @@ test('the receipt can be sent on WhatsApp with the words already typed, or share
   const link = await page.getByRole('link', { name: /^WhatsApp / }).getAttribute('href')
   expect(link.startsWith('https://wa.me/447700900002?text=')).toBe(true)
   const text = decodeURIComponent(link.split('?text=')[1])
-  expect(text).toContain(`Receipt VM-${year}-0001`)
+  expect(text).toContain(`Receipt VAD-${year}-0001`)
   expect(text).toContain('Total paid: £85.00')
   await page.getByRole('button', { name: 'Share or copy' }).click()
   const shared = await page.evaluate(() => window.__shared)
-  expect(shared.title).toBe(`Receipt VM-${year}-0001`)
+  expect(shared.title).toBe(`Receipt VAD-${year}-0001`)
   expect(shared.text).toBe(text)
   await page.evaluate(() => { Object.defineProperty(navigator, 'share', { configurable: true, value: undefined }) })
   await page.getByRole('button', { name: 'Share or copy' }).click()

@@ -12,6 +12,7 @@ import TelegramBox from '../booking/components/TelegramBox.jsx'
 import { accountApi, createAccountApi, LINK_INVALID } from './accountApi.js'
 import { cancelledOn } from './cancelledOn.js'
 import { paymentLine } from './paymentLine.js'
+import { downloadReceiptPdf } from '../../lib/receiptPdf.js'
 import { useBookingRules } from '../bookingRules.js'
 import '../booking/booking.css'
 import './account.css'
@@ -117,6 +118,31 @@ function ReschedulePanel({ booking, terms, rules, done, back, refresh, api }) {
   </form>
 }
 
+// The receipt for this booking, once the payment has been received: a PDF to keep, or to send to a health insurer.
+// Nothing is shown when there is no receipt, or when it cannot be fetched (the booking itself still shows).
+function ReceiptDownload({ id, api }) {
+  const [receipt, setReceipt] = useState(null)
+  const [state, setState] = useState('')
+  useEffect(() => {
+    let live = true
+    api.receipt(id).then(found => { if (live) setReceipt(found) }, () => {})
+    return () => { live = false }
+  }, [api, id])
+  if (!receipt) return null
+  async function download() {
+    setState('busy')
+    try { await downloadReceiptPdf(receipt); setState('') } catch { setState('failed') }
+  }
+  const valid = receipt.standing?.status === 'paid'
+  return <section className="panel account-receipt" aria-label="Receipt">
+    <p><strong>Receipt {receipt.number}</strong><br />{valid
+      ? 'A PDF with the treatment, what you paid and the practitioner\'s professional details, for your records or a health insurance claim.'
+      : 'This receipt is kept for your records. Its PDF says why it no longer shows a payment.'}</p>
+    <button className="btn--quiet" disabled={state === 'busy'} onClick={download}>{state === 'busy' ? 'Making the PDF…' : 'Download receipt (PDF)'}</button>
+    {state === 'failed' && <p role="alert" className="error">Could not make the PDF. Please check your connection and try again.</p>}
+  </section>
+}
+
 // One booking, with what can be done to it. `linked` means it was opened from the private link in an email, with no sign-in: there is
 // no list of other bookings to go back to then.
 function Manage({ id, rules, close, changed, api, linked = false }) {
@@ -166,6 +192,7 @@ function Manage({ id, rules, close, changed, api, linked = false }) {
       {/* Linking Telegram is done as the signed-in client, so it is not offered on a page opened from the email link, where nobody has signed in. */}
       {open && !linked && <TelegramBox />}
       <BookingSummary booking={booking} emailHint />
+      <ReceiptDownload id={id} api={api} />
       {owes && <p className="account-note account-note--fee">A late fee of {money(booking.late_fee_due_gbp)} is due for this appointment. I will be in touch about it.</p>}
       {booking.booking_status === 'cancelled' && Number(booking.refund_due_gbp) > 0 && <p className="account-note">A refund of {money(booking.refund_due_gbp)} is due to you. I'll send it soon.</p>}
       {open && terms?.can_change && <>
