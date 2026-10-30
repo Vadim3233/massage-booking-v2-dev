@@ -902,3 +902,12 @@ The page stays where the Admin needs it:
 - **Migration `20261123100000_notification_queue_tidy.sql`:** `claim_notification_deliveries` (now plpgsql, otherwise as before).
 - **Server:** `server/notifications.js`.
 - **Tests:** `notification_queue_tidy.test.sql` (5 checks), a new case in `server/notifications.test.js`.
+
+## ADR-089 — A fee for moving a booking late shows in Money owed and Income when the booking goes ahead (2026-10-31)
+
+**Decision:** When a client moves a booking inside 24 hours (the full price recorded as a late fee) and the booking then goes ahead, the fee is money owed on top of the price: it is listed in Money owed once the appointment has passed, and counts in Income once marked received, even when the booking itself was paid. A fee kept out of the payment of a cancelled or missed booking is counted once, as before.
+
+**Reason:** A security review (30 Oct 2026) found that Money owed only listed late fees for cancelled or missed bookings, and Income ignored any received fee on a paid booking (assuming it came out of the payment), so a late-move fee on a booking that went ahead never appeared anywhere.
+
+- **Migration `20261124100000_late_move_fees_in_money.sql`:** `income_lines` and `money_owed_lines`. A booking can now have two Money owed lines (its payment and its fee); the screen already keys rows by booking and reason.
+- **Tests:** `late_move_fees_in_money.test.sql` (5 checks).
