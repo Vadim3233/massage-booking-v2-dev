@@ -911,3 +911,12 @@ The page stays where the Admin needs it:
 
 - **Migration `20261124100000_late_move_fees_in_money.sql`:** `income_lines` and `money_owed_lines`. A booking can now have two Money owed lines (its payment and its fee); the screen already keys rows by booking and reason.
 - **Tests:** `late_move_fees_in_money.test.sql` (5 checks).
+
+## ADR-090 — A client's valid hold on a Chain day can be reserved even when others have booked around it (2026-10-31)
+
+**Decision:** When a client presses Reserve, the held time is accepted if it is still offered (as before) or if it still fits where it is: inside the day's hours, clear of blocked time, and with travel time on both sides of every other live booking and hold.
+
+**Reason:** A security and technical review (30 Oct 2026) found that on a Chain day only the two ends of the day's run are offered, and Reserve checked the held time against that with the client's own hold set aside. Once another client had booked or held next to it (A holds 17:00 after a 15:00 booking, B then holds 19:00 after A), the run with A set aside ran 15:00 to 20:00, so A was told "Time slot is no longer available" although the hold was valid. The same happened if the booking the hold sat next to was cancelled or moved.
+
+- **Migration `20261125100000_held_time_still_fits.sql`:** `held_time_still_fits` (internal) and `finalize_client_booking` (as before, with the extra check).
+- **Tests:** `held_time_still_fits.test.sql` (5 checks; with the new check switched off, A's reservation fails as before).
