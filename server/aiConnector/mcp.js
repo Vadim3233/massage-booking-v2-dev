@@ -10,6 +10,7 @@ import { createTools, INSTRUCTIONS } from './tools.js'
 
 export const PROTOCOL_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05']
 const SERVER_INFO = { name: 'vad-massage-booking', title: 'Vad Massage booking', version: '1.0.0' }
+export const MAX_BATCH = 5
 
 export function originOf(request, env = {}) {
   if (env.PUBLIC_SITE_URL) return env.PUBLIC_SITE_URL.replace(/\/$/, '')
@@ -102,7 +103,14 @@ export async function handleMcp(request, response, { env = process.env, makeClie
   if (body === undefined) { send(response, 400, failure(null, -32700, 'Parse error')); return }
   const tools = makeTools({ client, userId: data.user.id, origin, env })
   if (Array.isArray(body)) {
-    const answers = (await Promise.all(body.map(message => answer(message, tools)))).filter(Boolean)
+    // A batch is answered one message at a time, and only a few at once: a huge batch run in parallel could tie up the database for
+    // everyone (newer MCP versions have dropped batches altogether).
+    if (!body.length || body.length > MAX_BATCH) { send(response, 400, failure(null, -32600, `Send between 1 and ${MAX_BATCH} messages at once`)); return }
+    const answers = []
+    for (const message of body) {
+      const one = await answer(message, tools)
+      if (one) answers.push(one)
+    }
     if (answers.length) send(response, 200, answers)
     else send(response, 202)
     return
