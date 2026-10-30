@@ -892,3 +892,13 @@ The page stays where the Admin needs it:
 - **Screens:** `assistantDestination` in `src/client/ai/aiConnector.js` (the list), used by `ConsentPage.jsx`. To support another assistant, add its sign-in return address there.
 - **Migration `20261121100000_ai_assistant_limits.sql`:** `request_is_ai_assistant()`, the `bookings_refuse_ai_assistant_change` trigger, and the three client address policies. Also there: a client the Admin has stopped from booking online can no longer change or delete saved addresses (adding was already refused).
 - **Tests:** `ai_assistant_limits.test.sql` (12 checks), `aiConnector.test.js`, and a third case in `aiConsent.spec.js`.
+
+## ADR-088 — The notification queue gives up cleanly and never sends very late messages (2026-10-31)
+
+**Decision:** A message whose fifth try never reported back is marked failed instead of staying "sending" for ever. A message more than two days old is not sent (marked failed: "Not sent: more than two days late."). The Admin's Telegram alert and every email now have the same 8-second limit the client Telegram message already had, and each email carries the queue row's id as Resend's idempotency key.
+
+**Reason:** A security review (30 Oct 2026) found that a send that hung, or went through without its result being recorded, was picked up again 10 minutes later and could go out twice (a client email would also carry a second private link); on the fifth try such a row was stuck for good; and switching a channel back on sent every waiting message at once, including reminders for appointments already past.
+
+- **Migration `20261123100000_notification_queue_tidy.sql`:** `claim_notification_deliveries` (now plpgsql, otherwise as before).
+- **Server:** `server/notifications.js`.
+- **Tests:** `notification_queue_tidy.test.sql` (5 checks), a new case in `server/notifications.test.js`.

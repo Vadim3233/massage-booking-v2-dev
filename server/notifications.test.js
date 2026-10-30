@@ -145,6 +145,14 @@ describe('sending', () => {
     expect(calls[0][1]).toMatchObject({ chat_id: '555', text: expect.stringContaining('New booking request'), reply_markup: { inline_keyboard: [[{ text: 'Open booking', url: 'https://booking.example.com/admin/bookings/b1' }]] } })
     expect(client.completed).toEqual([{ p_id: 'd1', p_ok: true, p_error: null }])
   })
+  it('gives every Admin alert and email a time limit, and each email a key so a repeated send is not sent twice', async () => {
+    const calls = []
+    const client = fakeClient([row(), row({ id: 'e1', channel: 'email' })])
+    await createDispatcher({ client, config: readConfig(env), fetchImpl: async (url, init) => { calls.push([url, init]); return okResponse({ ok: true, id: 'x' }) } }).dispatch()
+    expect(calls).toHaveLength(2)
+    for (const [, init] of calls) expect(init.signal).toBeInstanceOf(AbortSignal)
+    expect(calls[1][1].headers['idempotency-key']).toBe('delivery-e1')
+  })
   it('leaves the button off when the link is not https, because Telegram would refuse it', async () => {
     const calls = []
     await createDispatcher({ client: fakeClient([row()]), config: readConfig({ ...env, APP_BASE_URL: 'http://localhost:5174' }), fetchImpl: async (url, init) => { calls.push(JSON.parse(init.body)); return okResponse({ ok: true }) } }).dispatch()
