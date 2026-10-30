@@ -84,7 +84,7 @@ const STATUS_WORDS = {
 // Every payment status the database has (booking_payments_status_valid).
 const PAYMENT_WORDS = {
   awaiting_transfer: 'Not paid yet', awaiting_verification: 'Transfer sent, Vadim is checking it', awaiting_approval: 'Cash, waiting for Vadim',
-  approved: 'Cash, paid on the day', paid: 'Paid', rejected: 'No payment taken', refunded: 'Refunded',
+  approved: 'Cash, to pay on the day', paid: 'Paid', rejected: 'No payment taken', refunded: 'Refunded',
 }
 
 // A Google Calendar link for an appointment, alongside the calendar file the app already makes.

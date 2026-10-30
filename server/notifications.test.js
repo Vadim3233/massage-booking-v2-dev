@@ -153,6 +153,15 @@ describe('sending', () => {
     for (const [, init] of calls) expect(init.signal).toBeInstanceOf(AbortSignal)
     expect(calls[1][1].headers['idempotency-key']).toBe('delivery-e1')
   })
+  it('counts an email as sent when Resend says the key was already used for an earlier try, but tries again while one is in progress', async () => {
+    const reply = body => ({ ok: false, status: 409, json: async () => body })
+    const used = fakeClient([row({ id: 'e2', channel: 'email' })])
+    await createDispatcher({ client: used, config: readConfig(env), fetchImpl: async () => reply({ name: 'invalid_idempotent_request', message: 'Same idempotency key used with a different request payload.' }) }).dispatch()
+    expect(used.completed).toEqual([{ p_id: 'e2', p_ok: true, p_error: null }])
+    const busy = fakeClient([row({ id: 'e3', channel: 'email' })])
+    await createDispatcher({ client: busy, config: readConfig(env), fetchImpl: async () => reply({ name: 'concurrent_idempotent_requests', message: 'Same idempotency key used while original request is still in progress.' }) }).dispatch()
+    expect(busy.completed[0]).toMatchObject({ p_id: 'e3', p_ok: false })
+  })
   it('leaves the button off when the link is not https, because Telegram would refuse it', async () => {
     const calls = []
     await createDispatcher({ client: fakeClient([row()]), config: readConfig({ ...env, APP_BASE_URL: 'http://localhost:5174' }), fetchImpl: async (url, init) => { calls.push(JSON.parse(init.body)); return okResponse({ ok: true }) } }).dispatch()

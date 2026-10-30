@@ -12,6 +12,8 @@ const REWRITES = [
   [/online booking is disabled/i, "Online booking isn't available on this account just now. Please get in touch and I'll arrange your appointment."],
   [/already in progress|command in progress/i, 'That is still being saved. Please wait a moment and try again.'],
   [/failed to fetch|network|load failed|timeout/i, 'The connection dropped. Please check it and try again.'],
+  // Supabase Auth limits how many guest sessions one connection can start (ADR-086).
+  [/rate limit|too many requests/i, 'There have been a lot of tries from this connection just now. Please wait a minute and try again.'],
 ]
 
 // Messages the database writes for the app's own checks, not for clients: about keys, IDs, fields and data shapes. They are never shown,

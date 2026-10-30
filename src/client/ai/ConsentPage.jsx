@@ -24,8 +24,13 @@ export default function ConsentPage({ client = supabase }) {
     client.auth.oauth.getAuthorizationDetails(authorizationId).then(({ data, error: failure }) => {
       if (!live) return
       if (failure || !data) { setError('This sign-in link has expired. Please go back to your assistant and connect again.'); return }
-      // Already allowed before: straight back to the assistant.
-      if (data.redirect_url && !data.authorization_id) { window.location.assign(data.redirect_url); return }
+      // Already allowed before: straight back to the assistant, if it is one VadMassage works with (an assistant allowed before ADR-085
+      // could send the sign-in anywhere).
+      if (data.redirect_url && !data.authorization_id) {
+        if (assistantDestination(data.redirect_url).known) window.location.assign(data.redirect_url)
+        else setDetails({ redirect_uri: data.redirect_url })
+        return
+      }
       setDetails(data)
     })
     return () => { live = false }

@@ -959,3 +959,21 @@ The page stays where the Admin needs it:
 
 - **Migration `20261127100000_keep_added_client_on_combine.sql`:** `admin_merge_clients` (as before, plus the rule). **Screen:** `CombineClients.jsx`.
 - **Tests:** `keep_added_client_on_combine.test.sql` (3 checks).
+
+## ADR-093 — Follow-ups from an independent review of the security fixes (2026-10-31)
+
+**Decision:** A second, independent review of ADR-084 to ADR-092 found these, now fixed:
+
+- **Your bookings with a quiet guest session:** picking a time starts a guest session (ADR-086), and `/account` treated any session as signed in, so a returning client saw "no upcoming appointments" and no sign-in. A guest session now sees the sign-in, with any bookings made as a guest on that phone listed under it.
+- **Leaving guest mode** now asks the guest-or-account question again.
+- **A late-move fee taken on its own** (marked received while the booking was still on) is recorded (`bookings.late_fee_paid_separately`). If the client then cancels, it is not taken a second time out of the payment, and Income keeps counting it.
+- **Wording:** when the cancel fee comes from an earlier late move, Your bookings says so instead of "this is inside 24 hours" (`get_my_change_terms.fee_from_late_move`).
+- **Income's "appointments owed money"** counts appointments, not lines.
+- **A held time accepted because it still fits** (ADR-090) also needs blocked time clear of its travel on both sides: never looser than the times offered.
+- **New tables** do not regain TRUNCATE and the rest for anonymous or signed-in users (default privileges, ADR-091).
+- **Consent page:** an assistant allowed before ADR-085 is checked against the list too before the client is sent back to it.
+- **Emails:** Resend refusing a reused key with a different email (the retry carries a fresh private link) counts as sent, so a delivered email is not marked failed.
+- **Connector:** an Auth outage answers 503 instead of telling the assistant its sign-in is invalid; approved cash reads "Cash, to pay on the day".
+- **Too many guest sessions** from one connection gives a "wait a minute" message instead of the general one.
+
+- **Migration `20261128100000_review_follow_ups.sql`**; **tests:** `review_follow_ups.test.sql` (9 checks), a new case in `guestChoice.spec.js`, and cases in `notifications.test.js`, `mcp.test.js` and `friendlyError.test.js`. Two Admin cancel tests in `adminLifecycle.spec.js` now fake the cancel preview (ADR-084) instead of the move preview.

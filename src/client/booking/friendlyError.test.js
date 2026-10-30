@@ -31,6 +31,9 @@ describe('what a client is allowed to read', () => {
     }
     expect(friendlyError(Object.assign(new Error('This payment request can no longer be changed'), { code: '22023' }))).toBe('This payment request can no longer be changed')
   })
+  it('asks the visitor to wait when too many guest sessions were started from one connection', () => {
+    expect(friendlyError(new Error('Request rate limit reached'))).toMatch(/wait a minute/)
+  })
   it('uses the fallback when there is no message, and accepts plain text', () => {
     expect(friendlyError(undefined)).toBe(GENERIC)
     expect(friendlyError({}, 'Try again')).toBe('Try again')

@@ -97,6 +97,11 @@ export async function handleMcp(request, response, { env = process.env, makeClie
   let data, error
   try { ({ data, error } = await client.auth.getUser(token)) }
   catch { send(response, 503, failure(null, -32603, 'The sign-in check is not available just now. Please try again in a moment.')); return }
+  // The library reports a network failure or a server error as an error rather than throwing: that is an outage, not a bad token, so the
+  // assistant keeps its sign-in and tries again.
+  if (error && (error.name === 'AuthRetryableFetchError' || error.status === 0 || error.status >= 500)) {
+    send(response, 503, failure(null, -32603, 'The sign-in check is not available just now. Please try again in a moment.')); return
+  }
   if (error || !data?.user) { send(response, 401, failure(null, -32001, 'Sign-in expired'), { 'www-authenticate': challenge('invalid_token') }); return }
   // A guest's session is not an account: the assistant has to sign in with a real one.
   if (data.user.is_anonymous) { send(response, 401, failure(null, -32001, 'Sign in with a Vad Massage account'), { 'www-authenticate': challenge('invalid_token') }); return }

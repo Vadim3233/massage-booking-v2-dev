@@ -166,3 +166,18 @@ test('someone who already has an account is told to sign in, with their email ke
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Your details', exact: true })).toBeVisible()
 })
+
+test('holding a time does not count as being signed in: Your bookings still offers the sign-in, and the choice is asked again after leaving guest mode', async ({ page }) => {
+  await toChoice(page)
+  // Picking a time started a quiet guest session (ADR-086), yet the details screen still asks.
+  await expect(page.getByRole('button', { name: 'Continue as guest' })).toBeVisible()
+  await page.goto('/account')
+  await expect(page.getByRole('heading', { name: 'Sign in to see your bookings' })).toBeVisible()
+  await expect(page.getByText('You have no upcoming appointments')).toHaveCount(0)
+  await page.goBack()
+  await page.getByRole('button', { name: 'Continue as guest' }).click()
+  await expect(page.getByText("You're booking as a guest.")).toBeVisible()
+  await page.getByRole('button', { name: 'Sign in or create an account instead' }).click()
+  await expect(page.getByRole('button', { name: 'Continue as guest' })).toBeVisible()
+  expect((await readDraft(page)).guestChosen).toBe(false)
+})

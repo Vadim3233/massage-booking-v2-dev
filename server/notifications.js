@@ -98,6 +98,9 @@ async function sendEmail(row, message, config, fetchImpl) {
   })
   if (!response.ok) {
     const result = await response.json().catch(() => ({}))
+    // The key was used before with a different email: the first try went out (a client email gets a fresh private link on each try, so
+    // the retry's text differs), so this one counts as sent. A send still in progress elsewhere is tried again later.
+    if (response.status === 409 && /idempotent/i.test(`${result.name || ''} ${result.message || ''}`) && !/concurrent/i.test(`${result.name || ''} ${result.message || ''}`)) return
     throw new Error(`Email: ${result.message || `HTTP ${response.status}`}`)
   }
 }

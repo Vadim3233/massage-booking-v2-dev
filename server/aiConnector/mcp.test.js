@@ -57,6 +57,9 @@ describe('the connector at /mcp', () => {
     const down = await exchange({ headers: { host: 'book.example.com', authorization: 'Bearer t' }, body: {} }, { env, makeClient: () => ({ auth: { getUser: async () => { throw new Error('fetch failed') } } }) })
     expect(down.statusCode).toBe(503)
     expect(down.json.error.message).toMatch(/not available just now/)
+    const outage = Object.assign(new Error('fetch failed'), { name: 'AuthRetryableFetchError', status: 0 })
+    const reported = await exchange({ headers: { host: 'book.example.com', authorization: 'Bearer t' }, body: {} }, { env, makeClient: () => ({ auth: { getUser: async () => ({ data: null, error: outage }) } }) })
+    expect(reported.statusCode).toBe(503)
   })
   it('only takes POST once signed in', async () => {
     const result = await exchange({ method: 'GET', headers: { host: 'book.example.com', authorization: 'Bearer t' } }, { env, makeClient: signedIn(), makeTools: () => fakeTools })

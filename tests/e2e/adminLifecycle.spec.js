@@ -99,7 +99,8 @@ test('a fee she has chosen is never replaced by a standard fee that arrives late
   const id = f.bookings[2].id
   await moveTo(id, 5 * 3600000)
   await open(page, id)
-  await page.route('**/rpc/admin_late_fee_preview', async route => { await new Promise(resolve => setTimeout(resolve, 1500)); await route.continue() })
+  // Cancelling asks the cancel preview, which keeps a fee already owed (ADR-084).
+  await page.route('**/rpc/admin_cancel_fee_preview', async route => { await new Promise(resolve => setTimeout(resolve, 1500)); await route.continue() })
   await details(page).getByRole('button', { name: 'Cancel booking', exact: true }).click()
   // Until the standard fee arrives no fee is chosen, so the button waits; she taps No fee first.
   await expect(action(page).getByRole('button', { name: /^Cancel booking/ })).toBeDisabled()
@@ -120,7 +121,7 @@ test('if the standard fee cannot be looked up, she chooses a fee before cancelli
   const id = f.bookings[2].id
   await moveTo(id, 5 * 3600000)
   await open(page, id)
-  await page.route('**/rpc/admin_late_fee_preview', route => route.abort('failed'))
+  await page.route('**/rpc/admin_cancel_fee_preview', route => route.abort('failed'))
   await details(page).getByRole('button', { name: 'Cancel booking', exact: true }).click()
   await expect(action(page).getByLabel('Full price £85.00')).toBeVisible()
   await expect(action(page).locator('input[name=fee-choice]:checked')).toHaveCount(0)

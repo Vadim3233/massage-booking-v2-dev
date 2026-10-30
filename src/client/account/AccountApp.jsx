@@ -51,6 +51,9 @@ function Terms({ terms, action }) {
   if (!terms) return <p role="status">Checking your options…</p>
   if (!terms.can_change) return <p>This appointment can no longer be changed online. Please contact Vad.</p>
   const fee = Number(action === 'cancel' ? terms.cancel_fee_gbp : terms.reschedule_fee_gbp)
+  if (fee > 0 && action === 'cancel' && terms.fee_from_late_move) {
+    return <p className="account-note account-note--fee" role="status">This appointment was moved within {terms.free_cancellation_hours ?? 24} hours of it, so the late fee of <strong>{money(fee)}</strong> still applies if you cancel. I can still cancel it for you now.</p>
+  }
   return fee > 0
     ? <p className="account-note account-note--fee" role="status">This is inside {terms.free_cancellation_hours ?? 24} hours of your appointment, so a late fee of <strong>{money(fee)}</strong> applies. I can still make this change for you now.</p>
     : <p className="account-note" role="status">No charge. Changes are free until {londonStamp(terms.free_until)}.</p>
@@ -209,7 +212,9 @@ function Manage({ id, rules, close, changed, api, linked = false }) {
   </section>
 }
 
-function BookingList({ open }) {
+// `guest`: shown under the sign-in for a guest session, which may have booked on this phone or only have held a time (ADR-086); then
+// nothing is shown unless there are bookings.
+function BookingList({ open, guest = false }) {
   const [rows, setRows] = useState(null)
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
@@ -218,6 +223,7 @@ function BookingList({ open }) {
     accountApi.list().then(list => { if (live) { setRows(list); setError('') } }, failure => { if (live) setError(failure.message) })
     return () => { live = false }
   }, [attempt])
+  if (guest && (error || !rows?.length)) return null
   if (error) return <><p role="alert" className="error">{error}</p><button onClick={() => setAttempt(value => value + 1)}>Try again</button></>
   if (!rows) return <p role="status">Loading your bookings…</p>
   const today = londonDate()
@@ -236,6 +242,7 @@ function BookingList({ open }) {
     </li>
   }
   return <>
+    {guest && <h2 className="section-title">Booked as a guest on this phone</h2>}
     <h2 className="section-title">Coming up</h2>
     {upcoming.length ? <ul role="list" className="account-list">{upcoming.map(row => item(row, true))}</ul> : <p>You have no upcoming appointments. <a href="/">Book a treatment</a></p>}
     {earlier.length > 0 && <><h2 className="section-title">Earlier</h2><ul role="list" className="account-list">{earlier.map(row => item(row, false))}</ul></>}
@@ -245,6 +252,8 @@ function BookingList({ open }) {
 
 export default function AccountApp() {
   const auth = useClientAuth(supabase)
+  // A guest session is not an account: picking a time on the booking page starts one quietly (ADR-086), so it still sees the sign-in.
+  const guestSession = Boolean(auth.session?.user?.is_anonymous)
   // An email link that was used already, or has run out, brings the person back here with the reason in the address.
   const linkProblem = useLinkProblem()
   const [start, setStart] = useState(readLink)
@@ -289,13 +298,14 @@ export default function AccountApp() {
       ? <Manage key={`${start.booking}:${start.key}`} id={start.booking} api={linkApi} linked rules={rules} close={() => {}} changed={() => setRevision(value => value + 1)} />
       : <>
         {!auth.ready && <p role="status">Checking your account…</p>}
-        {auth.ready && !auth.session && <>
+        {auth.ready && (!auth.session || (guestSession && !selected)) && <>
           {selected && <p className="notice">Booked as a guest? There is no password to enter. Use the link in your latest confirmation email, or the phone you booked on. If you have an account, sign in below.</p>}
           <AuthPanel client={supabase} heading="Sign in to see your bookings" redirectTo={`${window.location.origin}/account`} />
+          {guestSession && <BookingList key={revision} open={select} guest />}
         </>}
         {auth.ready && auth.session && (selected
           ? <Manage key={selected} id={selected} api={accountApi} rules={rules} close={() => select(null)} changed={() => setRevision(value => value + 1)} />
-          : <><h1 tabIndex={-1}>Your <em>bookings</em></h1><BookingList key={revision} open={select} /></>)}
+          : !guestSession && <><h1 tabIndex={-1}>Your <em>bookings</em></h1><BookingList key={revision} open={select} /></>)}
       </>}
     </main>
     <footer>Personal treatments, thoughtfully arranged. <a href="https://vadmassage.com">Contact Vad</a></footer>

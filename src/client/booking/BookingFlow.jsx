@@ -142,6 +142,7 @@ export default function BookingFlow() {
     if (!isGuest || draft.bookingId) return
     const { error: signOutError } = await supabase.auth.signOut()
     if (signOutError) { store.setError(friendlyError(signOutError)); return }
+    store.edit({ guestChosen: false })
     setWantsAccount(true)
   }
   // Signing in from the top of any page, before anything is chosen: the details are then filled in later and the guest question never comes up.
