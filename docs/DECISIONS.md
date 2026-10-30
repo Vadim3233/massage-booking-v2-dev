@@ -950,3 +950,12 @@ The page stays where the Admin needs it:
 
 - **Migration `20261126100000_tighten_table_grants.sql`.**
 - **Tests:** `tighten_table_grants.test.sql` (5 checks); the full database and app suites pass after it.
+
+## ADR-092 — Combining a guest with a client the Admin added keeps the added profile (2026-10-31)
+
+**Decision:** When one profile was added by the Admin (no login) and the other booked as a guest, the added profile always stays and the guest's bookings move into it. The "Which profile stays" choice is offered only when both are added by the Admin or both are guests.
+
+**Reason:** A security review (30 Oct 2026) found that keeping the guest moved the added client's bookings, addresses and repeats to a profile owned by a guest session. Anyone can book as a guest with someone else's email or phone, so whoever made that guest booking could then see and cancel the other client's bookings. The preview already suggested keeping the added profile; now it is the rule.
+
+- **Migration `20261127100000_keep_added_client_on_combine.sql`:** `admin_merge_clients` (as before, plus the rule). **Screen:** `CombineClients.jsx`.
+- **Tests:** `keep_added_client_on_combine.test.sql` (3 checks).
