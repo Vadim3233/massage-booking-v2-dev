@@ -36,7 +36,8 @@ export default function ResetPassword({ linkError }) {
     const values = new FormData(form)
     const password = values.get('password')
     if (password !== values.get('confirm')) { setError('Passwords do not match.'); return }
-    if (password.length < 6) { setError('Use at least 6 characters.'); return }
+    // The Admin's login opens every client's details, so it asks for a longer password than clients need.
+    if (password.length < 12) { setError('Use at least 12 characters.'); return }
     pending.current = true; setBusy(true); setError('')
     let changed = false
     try {
@@ -59,9 +60,9 @@ export default function ResetPassword({ linkError }) {
     {state === 'checking' && <p role="status">Checking recovery link…</p>}
     {state === 'invalid' && <p role="alert">This reset link is invalid or expired. Please request a new one.</p>}
     {state === 'ready' && <form onSubmit={submit}>
-      <label>New password<input name="password" type="password" autoComplete="new-password" minLength={6} required disabled={busy} /></label>
-      <label>Confirm new password<input name="confirm" type="password" autoComplete="new-password" minLength={6} required disabled={busy} /></label>
-      <p>Use at least 6 characters.</p><button disabled={busy}>{busy ? 'Changing password…' : 'Change password'}</button>
+      <label>New password<input name="password" type="password" autoComplete="new-password" minLength={12} required disabled={busy} /></label>
+      <label>Confirm new password<input name="confirm" type="password" autoComplete="new-password" minLength={12} required disabled={busy} /></label>
+      <p>Use at least 12 characters.</p><button disabled={busy}>{busy ? 'Changing password…' : 'Change password'}</button>
     </form>}
     {state === 'changed' && <><p role="status">Password changed. Sign out to continue to sign in.</p><button disabled={busy} onClick={retrySignOut}>Retry sign out</button></>}
     {error && <p role="alert">{error}</p>}
