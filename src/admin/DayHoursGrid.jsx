@@ -6,6 +6,8 @@ import { dateLabel, today } from './calendarPresentation.js'
 import { toast } from '../ui/toast.js'
 import './dayHoursGrid.css'
 
+const HOLD_MS = 350
+
 const LOCKED_WHY = {
   booking: 'This half hour has a booking. Move or cancel the booking first.',
   travel: 'This is travel time for a booking, so it stays as it is.',
@@ -13,7 +15,7 @@ const LOCKED_WHY = {
 }
 
 // One day as half-hour blocks (ADR-080), opened with Edit hours from the Day view. Green is working, empty is not; a tap changes one half hour and a
-// slide down several changes them together. Saving writes the day's hours and blocked time; the database works out both and refuses what a booking
+// slide down several changes them together. On a phone a swipe scrolls the day, so a slide starts with a short hold on the first block. Saving writes the day's hours and blocked time; the database works out both and refuses what a booking
 // needs. `done` goes back to the Day view.
 export default function DayHoursGrid({ date, done, changed, api = scheduleApi }) {
   const valid = isDate(date)
@@ -28,6 +30,8 @@ export default function DayHoursGrid({ date, done, changed, api = scheduleApi })
   const [held, setHeld] = useState(null)
   const [discarding, setDiscarding] = useState(false)
   const drag = useRef(null)
+  const press = useRef(null)
+  const list = useRef(null)
   const heading = useRef(null)
   useEffect(() => { heading.current?.focus({ preventScroll: true }) }, [])
 
@@ -38,6 +42,17 @@ export default function DayHoursGrid({ date, done, changed, api = scheduleApi })
       () => { if (live) setLoadError('Could not load this day. Please check your connection and try again.') })
     return () => { live = false }
   }, [api, date, valid, attempt])
+
+  // Once a hold has started a slide, the finger moves blocks rather than the page. React's touch listeners cannot stop a scroll, so this one is added by hand.
+  const loaded = Boolean(rows)
+  useEffect(() => {
+    const element = list.current
+    if (!element) return undefined
+    const hold = event => { if (drag.current && event.cancelable) event.preventDefault() }
+    element.addEventListener('touchmove', hold, { passive: false })
+    return () => element.removeEventListener('touchmove', hold)
+  }, [loaded])
+  useEffect(() => () => clearTimeout(press.current?.timer), [])
 
   const paint = useCallback((minutes, value) => {
     setError(''); setWhy(''); setHeld(null); setDiscarding(false)
@@ -63,17 +78,39 @@ export default function DayHoursGrid({ date, done, changed, api = scheduleApi })
     if (row.locked) { setWhy(LOCKED_WHY[row.locked]); return }
     // A finger keeps its first block to itself unless it is let go, and then the blocks it slides over can be found.
     try { event.currentTarget.releasePointerCapture?.(event.pointerId) } catch { /* Nothing was captured. */ }
-    drag.current = { value: !row.open }
-    paint(row.start_minutes, !row.open)
+    if (event.pointerType !== 'touch') {
+      drag.current = { value: !row.open }
+      paint(row.start_minutes, !row.open)
+      return
+    }
+    // A finger may be starting a scroll: it changes the block when it lifts (a tap) or after a short hold (the start of a slide), not when it lands.
+    clearTimeout(press.current?.timer)
+    const value = !row.open
+    press.current = { minutes: row.start_minutes, value, x: event.clientX, y: event.clientY, timer: setTimeout(() => {
+      press.current = null
+      drag.current = { value }
+      paint(row.start_minutes, value)
+      navigator.vibrate?.(10)
+    }, HOLD_MS) }
   }
   function move(event) {
+    const pending = press.current
+    if (pending && Math.hypot(event.clientX - pending.x, event.clientY - pending.y) > 10) forget()
     if (!drag.current) return
     const cell = document.elementFromPoint(event.clientX, event.clientY)?.closest?.('[data-minutes]')
     if (!cell) return
     const row = shown.find(item => item.start_minutes === Number(cell.dataset.minutes))
     if (row && !row.locked && row.open !== drag.current.value) paint(row.start_minutes, drag.current.value)
   }
-  const up = () => { drag.current = null }
+  function forget() { clearTimeout(press.current?.timer); press.current = null }
+  function up() {
+    const pending = press.current
+    forget()
+    if (pending) paint(pending.minutes, pending.value)
+    drag.current = null
+  }
+  // The browser took the finger to scroll, so nothing changes.
+  function stop() { forget(); drag.current = null }
   // A tap is handled when the finger goes down; a click without a pointer (Enter or Space) toggles from the keyboard.
   function click(event, row) {
     if (event.detail !== 0 || past || busy) return
@@ -133,20 +170,22 @@ export default function DayHoursGrid({ date, done, changed, api = scheduleApi })
         </div>}
 
       {moreEarlier && <button type="button" className="btn--quiet admin-day-grid-more" onClick={() => setRange(value => ({ ...value, earlier: true }))}>Show earlier</button>}
-      <ol role="list" className="admin-day-grid-list" aria-label={`Half hours on ${full}`} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onPointerLeave={up}>
+      <ol role="list" className="admin-day-grid-list" aria-label={`Half hours on ${full}`} ref={list}
+        onPointerMove={move} onPointerUp={up} onPointerCancel={stop} onPointerLeave={stop}>
         {visible.map(row => <li key={row.start_minutes}>
           <span className="admin-day-grid-time" aria-hidden="true">{clock(row.start_minutes)}</span>
           <button type="button" data-minutes={row.start_minutes} aria-pressed={row.open}
             aria-label={`${clock(row.start_minutes)} to ${clock(row.start_minutes + 30)}, ${row.locked === 'booking' ? `booking${row.label ? `, ${row.label}` : ''}`
               : row.locked === 'travel' ? 'travel time' : row.locked === 'block' ? (row.label || 'blocked time') : row.open ? 'working' : 'not working'}${row.held ? ', a client is booking this time' : ''}`}
             className={['admin-day-grid-cell', row.open ? 'is-open' : 'is-closed', row.locked && `is-${row.locked}`, row.changed && 'is-changed', row.held && 'is-held'].filter(Boolean).join(' ')}
-            disabled={past} onPointerDown={event => down(event, row)} onClick={event => click(event, row)}>
+            disabled={past} onPointerDown={event => down(event, row)} onClick={event => click(event, row)}
+            onContextMenu={event => event.preventDefault()}>
             <span>{row.locked === 'travel' ? (row.showLabel || 'Travel') : row.showLabel || (row.held && !row.locked ? 'A client is booking' : '')}</span>
           </button>
         </li>)}
       </ol>
       {moreLater && <button type="button" className="btn--quiet admin-day-grid-more" onClick={() => setRange(value => ({ ...value, later: true }))}>Show later</button>}
-      {!past && <p className="admin-detail-hint admin-day-grid-hint">Tap a block, or slide down several to change them together. Scroll with the times on the left.</p>}
+      {!past && <p className="admin-detail-hint admin-day-grid-hint">Tap a block to change it. To change several, hold one for a moment, then slide down.</p>}
 
       {why && <p role="status" className="admin-detail-hint admin-day-grid-why">{why}</p>}
       {held && <div role="alert" className="admin-conflicts">
