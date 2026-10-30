@@ -882,3 +882,13 @@ The page stays where the Admin needs it:
 
 - **Migration `20261120100000_keep_late_fee_on_cancel.sql`:** `late_fee_on_cancel_gbp` (internal), used by `apply_booking_cancellation`, `client_cancel_booking` (the fee the client acknowledges) and `get_my_change_terms` (the fee the client is shown, also through a private link). A fee already marked received stays received. New `admin_cancel_fee_preview` for the Admin cancel screen; `admin_late_fee_preview` stays for moving, where a fee already owed means no second fee.
 - **Tests:** `keep_late_fee_on_cancel.test.sql` (14 checks).
+
+## ADR-085 — Only known AI assistants can connect, and the database enforces what they may do (2026-10-31)
+
+**Decision:** The consent page (`/oauth/consent`) offers Allow only when the assistant sends the client back to Claude (`claude.ai`, `claude.com`), ChatGPT (`chatgpt.com`, `chat.openai.com`), Google Gemini (`oauth-redirect*.googleusercontent.com`), or an assistant on the client's own computer (`localhost`, `127.0.0.1`). It always says where the client goes back to. Anything else is told "This assistant can't connect", with no Allow and no redirect. The database refuses an assistant's sign-in (its token carries `client_id`) when it tries to cancel, move or change the length of a booking, or to add, change or delete saved addresses.
+
+**Reason:** A security review (30 Oct 2026) found that anyone can register an assistant (dynamic registration is on), call it "Claude", and send a client the sign-in link: the page showed only that chosen name. Pressing Allow would hand a full sign-in for the client's account to the attacker, and that token works on the whole database API, not only the connector's tools, so the consent text ("can't change or cancel bookings") was only true for honest assistants.
+
+- **Screens:** `assistantDestination` in `src/client/ai/aiConnector.js` (the list), used by `ConsentPage.jsx`. To support another assistant, add its sign-in return address there.
+- **Migration `20261121100000_ai_assistant_limits.sql`:** `request_is_ai_assistant()`, the `bookings_refuse_ai_assistant_change` trigger, and the three client address policies. Also there: a client the Admin has stopped from booking online can no longer change or delete saved addresses (adding was already refused).
+- **Tests:** `ai_assistant_limits.test.sql` (12 checks), `aiConnector.test.js`, and a third case in `aiConsent.spec.js`.

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { useClientAuth } from '../auth/useClientAuth.js'
 import AuthPanel from '../auth/AuthPanel.jsx'
-import { WHAT_IT_CAN_DO } from './aiConnector.js'
+import { WHAT_IT_CAN_DO, assistantDestination } from './aiConnector.js'
 import '../booking/booking.css'
 
 // Where a client's own AI assistant (Claude, ChatGPT…) sends them to sign in and allow it to book for them. Supabase's OAuth server opens this
@@ -43,6 +43,8 @@ export default function ConsentPage({ client = supabase }) {
   }
 
   const name = details?.client?.name || 'Your AI assistant'
+  // The name is whatever the assistant registered with; where it sends the client back to is what tells a real one from a fake.
+  const destination = assistantDestination(details?.redirect_uri)
   return <div className="booking-shell">
     <header className="brand"><a className="brand-link" href="/"><b className="brand-mark" aria-hidden="true">VM</b>VadMassage</a><a className="brand-aside" href="/book-with-ai">How this works</a></header>
     <main className="booking-main">
@@ -56,10 +58,15 @@ export default function ConsentPage({ client = supabase }) {
       </> : error ? <>
         <h1 tabIndex={-1} ref={heading}>Something went <em>wrong</em></h1>
         <p role="alert" className="lede">{error}</p>
-      </> : !details ? <p role="status">Loading…</p> : <>
+      </> : !details ? <p role="status">Loading…</p> : !destination.known ? <>
+        <h1 tabIndex={-1} ref={heading}>This assistant <em>can't connect</em></h1>
+        <p role="alert" className="lede">It would send your sign-in to {destination.host || 'an unknown address'}, which isn't an assistant VadMassage works with. To keep your account safe, nothing has been shared.</p>
+        <p className="fine">VadMassage works with Claude, ChatGPT and Google Gemini. If you expected this to work, please message Vadim. <a href="/book-with-ai">See how to connect</a>.</p>
+      </> : <>
         <h1 tabIndex={-1} ref={heading}>Allow <em>{name}</em>?</h1>
         <p className="lede">{name} wants to book appointments for you, as {auth.session.user.email}. It will be able to:</p>
         <ul className="consent-list">{WHAT_IT_CAN_DO.map(line => <li key={line}>{line}</li>)}</ul>
+        <p className="fine">After you choose, you go back to {destination.label}.</p>
         <p className="fine">It always asks you before it books. It can't see other clients, take payments, or change or cancel bookings. You can disconnect it any time on the <a href="/book-with-ai">Book with AI</a> page.</p>
         <div className="action-bar">
           <button className="btn--primary btn--lg btn--block" disabled={busy} onClick={() => decide(true)}>{busy ? 'Please wait…' : 'Allow'}</button>
