@@ -64,6 +64,16 @@ export function createBookingApi(client) {
       p_date: date, p_treatment_duration_minutes: duration,
       ...(hold ? { p_hold_id: hold.hold_id, p_hold_token: hold.hold_token, p_client_key: key } : {}),
     })),
+    // Holding a time needs a session (ADR-086): a visitor who is not signed in gets a quiet guest session first. Guest sessions are
+    // rate-limited by Supabase Auth, so one computer cannot hold every free time. Only the booking page calls this; the AI connector
+    // always acts with the client's own sign-in.
+    async ensureSession() {
+      const { data, error } = await client.auth.getSession()
+      if (error) throw error
+      if (data.session) return
+      const { error: guestError } = await client.auth.signInAnonymously()
+      if (guestError) throw guestError
+    },
     hold: (date, start, duration, key) => one(client.rpc('create_booking_hold', {
       p_date: date, p_start_minutes: start, p_treatment_duration_minutes: duration, p_client_key: key,
     })),

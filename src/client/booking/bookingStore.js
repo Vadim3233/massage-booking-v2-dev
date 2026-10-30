@@ -126,6 +126,7 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
     // The day being looked at is only saved with a chosen time, so browsing other days never lets go of a time already held.
     selectSlot(start, date = state.draft.date) { return run(async () => {
       if (state.draft.pending || state.draft.bookingId) return
+      await api.ensureSession?.()
       const hold = await api.hold(date, start, durationOf(state.draft), clientKey)
       // create_booking_hold atomically replaces any previous hold for this key.
       save({ ...state.draft, date, start, hold: { ...hold, extension_used: hold.hold_id === state.draft.hold?.hold_id && state.draft.hold.extension_used } })

@@ -893,6 +893,17 @@ The page stays where the Admin needs it:
 - **Migration `20261121100000_ai_assistant_limits.sql`:** `request_is_ai_assistant()`, the `bookings_refuse_ai_assistant_change` trigger, and the three client address policies. Also there: a client the Admin has stopped from booking online can no longer change or delete saved addresses (adding was already refused).
 - **Tests:** `ai_assistant_limits.test.sql` (12 checks), `aiConnector.test.js`, and a third case in `aiConsent.spec.js`.
 
+## ADR-086 — Holding a time needs a session, one hold per session (2026-10-31)
+
+**Decision:** A visitor who is not signed in gets a quiet guest session (Supabase anonymous sign-in) just before their first time is held, and each session holds one time at most. The "Sign in, create an account, or continue as a guest" choice on Your details is unchanged: a quiet guest session does not count as choosing to book as a guest until the person presses Continue as guest.
+
+**Reason:** A security review (30 Oct 2026) found that anyone with the public key could hold a time with a made-up browser key and no limit, so one script could hold every free time for the next 40 days, keep renewing, and real clients would see nothing free. Guest sessions are rate-limited by Supabase Auth (by default 30 an hour per address), so one computer can now keep only a handful of times held. Turning on Supabase CAPTCHA for guest sign-ins would tighten it further (that needs a CAPTCHA widget on the page first).
+
+- **Migration `20261122100000_holds_need_a_session.sql`:** `booking_holds.holder_user_id`, and `create_booking_hold` needs a session (no longer callable by `anon`) and lets go of the session's other hold. Extending, releasing and reading times are unchanged.
+- **Screens:** `ensureSession` in `bookingApi.js`, called by `selectSlot` in `bookingStore.js` (not by the AI connector, which always has the client's sign-in); `BookingFlow.jsx` keeps `guestChosen` in the draft.
+- **Tests:** `holds_need_a_session.test.sql` (6 checks); the database tests that held times as an anonymous caller now hold as a guest session; `bookingStore.test.js`, `bookingApi.test.js`; the shared fixture in `tests/localSupabase.js` gives each browser key its own guest session; `guestChoice.spec.js` fakes only email sign-ups.
+- **Note:** every visitor who holds a time now leaves a guest user in Supabase Auth, as guests who book already do.
+
 ## ADR-088 — The notification queue gives up cleanly and never sends very late messages (2026-10-31)
 
 **Decision:** A message whose fifth try never reported back is marked failed instead of staying "sending" for ever. A message more than two days old is not sent (marked failed: "Not sent: more than two days late."). The Admin's Telegram alert and every email now have the same 8-second limit the client Telegram message already had, and each email carries the queue row's id as Resend's idempotency key.

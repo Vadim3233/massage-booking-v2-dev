@@ -65,6 +65,18 @@ describe('booking state transitions', () => {
     expect(api.hold).toHaveBeenCalledTimes(1); expect(api.release).not.toHaveBeenCalled()
     expect(store.getSnapshot().draft.start).toBe(660)
   })
+  it('starts a quiet guest session before holding a time, and holds nothing if that fails', async () => {
+    const { store, api } = fixture()
+    const order = []
+    api.ensureSession = vi.fn(async () => { order.push('session') })
+    api.hold.mockImplementation(async () => { order.push('hold'); return { hold_id: 'hold-2', hold_token: 'token-2', expires_at: '2026-10-01T10:20:00Z' } })
+    await store.selectSlot(660)
+    expect(order).toEqual(['session', 'hold'])
+    api.ensureSession.mockRejectedValueOnce(new Error('Request rate limit reached'))
+    await store.selectSlot(720)
+    expect(api.hold).toHaveBeenCalledTimes(1)
+    expect(store.getSnapshot().draft.start).toBe(660)
+  })
   it('saves the day with the time, and leaves a held time alone while other days are only looked at', async () => {
     const { store, api } = fixture()
     expect(store.getSnapshot().draft.hold).toMatchObject({ hold_id: 'hold' })
