@@ -81,9 +81,10 @@ const STATUS_WORDS = {
   awaiting_transfer: 'Reserved, waiting for the bank transfer', awaiting_payment_verification: 'Reserved, Vadim is checking the transfer',
   awaiting_cash_approval: 'Requested with cash, Vadim will confirm shortly', confirmed: 'Confirmed', completed: 'Completed', cancelled: 'Cancelled', no_show: 'Missed',
 }
+// Every payment status the database has (booking_payments_status_valid).
 const PAYMENT_WORDS = {
-  awaiting_transfer: 'Not paid yet', awaiting_verification: 'Transfer sent, Vadim is checking it', paid: 'Paid', cash_due: 'Cash, paid on the day',
-  awaiting_cash_approval: 'Cash, waiting for Vadim', refunded: 'Refunded', waived: 'No payment needed',
+  awaiting_transfer: 'Not paid yet', awaiting_verification: 'Transfer sent, Vadim is checking it', awaiting_approval: 'Cash, waiting for Vadim',
+  approved: 'Cash, paid on the day', paid: 'Paid', rejected: 'No payment taken', refunded: 'Refunded',
 }
 
 // A Google Calendar link for an appointment, alongside the calendar file the app already makes.
@@ -340,13 +341,23 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
         const chosen = await selection(input)
         // Asked twice (an assistant can retry), the same booking is found and not made again.
         const existing = ((await rpc('list_my_bookings')) || []).find(row => row.date === input.date && row.start_minutes === start && row.booking_status !== 'cancelled')
-        if (existing) return { already_booked: true, booking: bookingSummary(existing) }
+        if (existing) {
+          // A cash booking is made as a bank transfer first and then switched; if the switch failed last time, it is done now.
+          if (input.payment_method === 'cash' && existing.booking_status === 'awaiting_transfer') {
+            const after = await api.confirmCash(existing.id)
+            return { already_booked: true, booking: bookingSummary({ ...existing, booking_status: after.booking_status ?? existing.booking_status, payment_status: after.booking_payments?.status ?? existing.payment_status }),
+              payment: { method: 'cash', note: 'Vadim confirms cash bookings himself. Tell the client "Vadim will confirm shortly", not that it is confirmed.' } }
+          }
+          return { already_booked: true, booking: bookingSummary(existing) }
+        }
         const quote = await api.quote(chosen.draft)
         if (Math.abs(Number(quote.total_gbp) - Number(input.expected_total_gbp)) > 0.004) {
           throw new ToolProblem(`The total is now ${gbp(quote.total_gbp)}, not ${gbp(input.expected_total_gbp)}. Tell the client the new total and ask again.`)
         }
         const hold = await api.hold(input.date, start, chosen.duration, holdKey)
-        const key = createHash('sha256').update(JSON.stringify([userId, input.date, start, chosen.service.id, input.lengths, chosen.address.id, chosen.area.id])).digest('hex').slice(0, 48)
+        // The hold is part of the key: a retry finds the same hold (same key, day and time), while booking the same time again after a
+        // cancellation gets a new hold and so a new request, instead of being refused as a reused key.
+        const key = createHash('sha256').update(JSON.stringify([userId, input.date, start, chosen.service.id, input.lengths, chosen.address.id, chosen.area.id, hold.hold_id])).digest('hex').slice(0, 48)
         const result = await api.finalize({
           p_hold_id: hold.hold_id, p_hold_token: hold.hold_token, p_hold_client_key: holdKey,
           ...quoteParams(chosen.draft),
