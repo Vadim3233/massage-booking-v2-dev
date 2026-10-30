@@ -873,3 +873,12 @@ The page stays where the Admin needs it:
 - **Pages:** `/oauth/consent` (sign in, then Allow or No thanks) and `/book-with-ai` (the address to copy, steps for Claude and ChatGPT, and the client's connected assistants with Disconnect), linked from the account page.
 - **Set-up on the hosted project:** Authentication > OAuth Server: enable, authorization path `/oauth/consent`, allow dynamic client registration; Authentication > URL Configuration: Site URL = the live site. Locally this is in `supabase/config.toml`.
 - **Tests:** `server/aiConnector/mcp.test.js`, `server/aiConnector/tools.test.js`, `server/aiConnector.integration.test.js` (the whole OAuth sign-in and a couple's booking against local Supabase), and the browser test `aiConsent.spec.js`.
+
+## ADR-084 — A late fee already owed is kept when the client cancels later (2026-10-31)
+
+**Decision:** When a client (or the Admin, at the client's request) cancels, the fee is the larger of the usual fee for that date and a late fee the booking already owes. The Admin can still lower or waive it, and a cancellation the Admin asks for herself is unchanged (no fee).
+
+**Reason:** A security review (30 Oct 2026) found that moving a booking inside 24 hours (fee due), then cancelling the new date more than 24 hours ahead, recalculated the fee from the new date and wiped the fee owed; on a paid booking the whole payment was then marked as refund due. That went against the 24-hour rule.
+
+- **Migration `20261120100000_keep_late_fee_on_cancel.sql`:** `late_fee_on_cancel_gbp` (internal), used by `apply_booking_cancellation`, `client_cancel_booking` (the fee the client acknowledges) and `get_my_change_terms` (the fee the client is shown, also through a private link). A fee already marked received stays received. New `admin_cancel_fee_preview` for the Admin cancel screen; `admin_late_fee_preview` stays for moving, where a fee already owed means no second fee.
+- **Tests:** `keep_late_fee_on_cancel.test.sql` (14 checks).

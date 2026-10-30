@@ -73,8 +73,10 @@ export function createLifecycleApi(client) {
       const { error } = await client.rpc(name, args)
       if (error) throw failure(error)
     },
-    async preview(bookingId, initiatedBy) {
-      const { data, error } = await client.rpc('admin_late_fee_preview', { p_booking_id: bookingId, p_initiated_by: initiatedBy })
+    // Cancelling keeps a late fee the client already owes; moving never adds a second one, so the two ask different questions.
+    async preview(bookingId, initiatedBy, kind = 'reschedule') {
+      const name = kind === 'cancel' ? 'admin_cancel_fee_preview' : 'admin_late_fee_preview'
+      const { data, error } = await client.rpc(name, { p_booking_id: bookingId, p_initiated_by: initiatedBy })
       if (error) throw failure(error)
       return Number(data)
     },

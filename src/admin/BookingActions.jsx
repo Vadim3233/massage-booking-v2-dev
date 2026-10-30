@@ -58,7 +58,7 @@ export function ActionDialog({ kind, booking, api, close, done }) {
   useEffect(() => {
     if (kind !== 'cancel' && kind !== 'reschedule') return undefined
     let live = true
-    api.preview(booking.id, initiatedBy).then(value => {
+    api.preview(booking.id, initiatedBy, kind).then(value => {
       if (!live) return
       setStandardFee(value)
       setLookup('ok')
