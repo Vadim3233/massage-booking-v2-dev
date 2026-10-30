@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { catalogueApi, DURATIONS, priceText, validateArea, validateExtra, validateService } from './catalogueApi.js'
+import { catalogueApi, DURATIONS, postcodesText, priceText, validateArea, validateExtra, validateService } from './catalogueApi.js'
 import { money } from './calendarPresentation.js'
 
 // Shared by the three lists: load, add, edit in place, hide or show, and move up or down.
@@ -106,7 +106,7 @@ export function ServicesSettings({ api = catalogueApi }) {
 
 // ---------------------------------------------------------------------------------------------
 function AreaForm({ initial, busy, onSave, onCancel, label }) {
-  const [area, setArea] = useState({ name: '', active: true, travel_surcharge_gbp: '0', congestion_fee_gbp: '0', ...initial, ...(initial ? { travel_surcharge_gbp: priceText(initial.travel_surcharge_gbp), congestion_fee_gbp: priceText(initial.congestion_fee_gbp) } : {}) })
+  const [area, setArea] = useState({ name: '', active: true, travel_surcharge_gbp: '0', congestion_fee_gbp: '0', ...initial, ...(initial ? { travel_surcharge_gbp: priceText(initial.travel_surcharge_gbp), congestion_fee_gbp: priceText(initial.congestion_fee_gbp), postcodes: postcodesText(initial.postcodes) } : { postcodes: '' }) })
   const problem = validateArea(area)
   const set = patch => setArea({ ...area, ...patch })
   return <form className="admin-client-form" onSubmit={event => { event.preventDefault(); if (!problem && !busy) onSave(area) }}>
@@ -115,6 +115,8 @@ function AreaForm({ initial, busy, onSave, onCancel, label }) {
       <label className="admin-field">Travel surcharge (£)<input inputMode="decimal" value={area.travel_surcharge_gbp} disabled={busy} onChange={event => set({ travel_surcharge_gbp: event.target.value })} /></label>
       <label className="admin-field">Congestion charge (£)<input inputMode="decimal" value={area.congestion_fee_gbp} disabled={busy} onChange={event => set({ congestion_fee_gbp: event.target.value })} /></label>
     </div>
+    <label className="admin-field">Postcodes<input value={area.postcodes} maxLength={300} autoCapitalize="characters" spellCheck={false} aria-describedby="area-postcodes-hint" disabled={busy} onChange={event => set({ postcodes: event.target.value })} /></label>
+    <p className="admin-detail-hint" id="area-postcodes-hint">The start of the postcodes in this area, with commas between them, such as SW3, SW10. W1 covers W1K, W1J and the rest. Once any area has postcodes, a client whose postcode is in another area is asked to choose that one, and one in no area is booked as a request for you to confirm.</p>
     <label className="admin-who-row"><input type="checkbox" checked={area.active} disabled={busy} onChange={event => set({ active: event.target.checked })} /> Clients can book here</label>
     <FormButtons busy={busy} problem={problem} onCancel={onCancel} label={label} />
   </form>
@@ -125,7 +127,7 @@ export function AreasSettings({ api = catalogueApi }) {
   const saver = useSaver(list)
   const [editing, setEditing] = useState(null)
   const done = () => setEditing(null)
-  const summary = item => `Travel ${Number(item.travel_surcharge_gbp) > 0 ? money(item.travel_surcharge_gbp) : 'none'} · Congestion ${Number(item.congestion_fee_gbp) > 0 ? money(item.congestion_fee_gbp) : 'none'}`
+  const summary = item => `Travel ${Number(item.travel_surcharge_gbp) > 0 ? money(item.travel_surcharge_gbp) : 'none'} · Congestion ${Number(item.congestion_fee_gbp) > 0 ? money(item.congestion_fee_gbp) : 'none'} · ${item.postcodes?.length ? postcodesText(item.postcodes) : 'No postcodes'}`
   return <Frame title="Areas and travel fees" intro="Where you travel to, and any extra charge for each area." list={list} adding={editing === 'new'} onAdd={() => setEditing('new')} addLabel="+ Add an area">
     {saver.message && <p role="status">{saver.message}</p>}
     {editing === 'new' && <section aria-label="Add an area"><h2>Add an area</h2>

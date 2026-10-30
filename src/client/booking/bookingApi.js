@@ -49,7 +49,7 @@ export function createBookingApi(client) {
   return {
     async catalogue() {
       const definitions = [
-        ['areas', 'service_areas', 'id,name,travel_surcharge_gbp,congestion_fee_gbp', 'display_order'],
+        ['areas', 'service_areas', 'id,name,travel_surcharge_gbp,congestion_fee_gbp,postcodes', 'display_order'],
         ['services', 'services', 'id,name,short_description,long_description', 'display_order'],
         ['prices', 'service_duration_prices', 'service_id,duration_minutes,price_gbp', 'duration_minutes'],
         ['enhancements', 'enhancements', 'id,name,description,price_gbp', 'display_order'],

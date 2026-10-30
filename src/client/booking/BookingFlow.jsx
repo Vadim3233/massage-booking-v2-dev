@@ -206,7 +206,7 @@ export default function BookingFlow() {
           {step === 4 && <ReviewStep draft={draft} catalogue={catalogue} quote={quote} quoteError={quoteError} edit={store.edit} navigate={navigate} refreshQuote={store.refreshQuote} retryQuote={store.retryQuote} next={() => goWithQuote(5)} />}
           {!auth.ready && step >= 5 && <p role="status">Checking your account…</p>}
           {auth.ready && needsAuth && <AuthPanel client={supabase} onGuest={startGuest} startOpen={wantsAccount} />}
-          {step === 5 && auth.session && <DetailsStep key={auth.session.user.id} draft={draft} user={auth.session.user} api={api} edit={store.edit} report={store.setError} guest={isGuest} onSwitchToAccount={isGuest && !draft.bookingId ? leaveGuest : undefined} newTestGuest={startNewTestGuest} next={() => goWithQuote(6)} />}
+          {step === 5 && auth.session && <DetailsStep key={auth.session.user.id} draft={draft} areas={catalogue?.areas || []} chooseArea={(areaId) => store.edit({ areaId })} user={auth.session.user} api={api} edit={store.edit} report={store.setError} guest={isGuest} onSwitchToAccount={isGuest && !draft.bookingId ? leaveGuest : undefined} newTestGuest={startNewTestGuest} next={() => goWithQuote(6)} />}
           {step === 6 && auth.session && <PaymentStep rules={rules} draft={draft} quote={quote} quoteError={quoteError} bank={bank} api={api} store={store} finalize={() => store.finalize(auth.session.user.id)} held={held} error={error} chooseTimeAgain={() => navigate(3)} />}
           {step === 7 && auth.session && <ConfirmationStep id={draft.bookingId} result={result} api={api} bank={bank} quote={quote} again={startAgain} />}
         </fieldset>

@@ -5,7 +5,7 @@ import { contactLinks } from './contactLinks.js'
 import Icon from '../ui/icons.jsx'
 import ClientNotesSection from './ClientNotesSection.jsx'
 import ShareBooking from './ShareBooking.jsx'
-export default function BookingDetails({ booking: b, close, payment, lifecycle, returnFocus }) {
+export default function BookingDetails({ booking: b, close, payment, lifecycle, address, returnFocus }) {
   const ref = useRef(null)
   useEffect(() => {
     const dialog = ref.current
@@ -35,7 +35,7 @@ export default function BookingDetails({ booking: b, close, payment, lifecycle, 
       {lifecycle && <section className="admin-next"><h3>Appointment</h3>{lifecycle}</section>}
       <section><h3>Contact</h3><p>{email ? <a href={`mailto:${email}`}>{email}</a> : 'Email not recorded'}</p><p>{b.clients?.phone ? <a href={`tel:${b.clients.phone}`}>{b.clients.phone}</a> : 'Phone not recorded'}</p></section>
       <ClientNotesSection clientId={b.client_id} />
-      <section><h3>Address</h3><address>{b.address_snapshot}</address>{b.entry_instructions_snapshot && <p>{b.entry_instructions_snapshot}</p>}</section>
+      <section><h3>Address</h3>{address || <><address>{b.address_snapshot}</address>{b.entry_instructions_snapshot && <p>{b.entry_instructions_snapshot}</p>}</>}</section>
       <section><h3>Sessions</h3><ol role="list" className="admin-session-list">{[...b.booking_sessions].sort((a, b) => a.position - b.position).map((s, index) => <li key={s.id}>
         <h4>{b.booking_sessions.length > 1 ? `Session ${index + 1}` : s.service_name_snapshot}{s.recipient_name && ` · ${s.recipient_name}`}</h4><p>{b.booking_sessions.length > 1 && `${s.service_name_snapshot} · `}{s.duration_minutes} minutes · {money(s.unit_price_gbp)}</p>
         {s.booking_session_preferences.length > 0 && <><h5>Preferences</h5><ul>{s.booking_session_preferences.map(p => <li key={p.preference_id}>{p.preference_category_snapshot}: {p.preference_label_snapshot}</li>)}</ul></>}

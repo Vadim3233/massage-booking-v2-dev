@@ -29,3 +29,33 @@ export const NO_POSTCODE_NOTE = "I can't see a postcode in that address. It help
 // The same, for the Admin typing a client's address: the postcode is what the day's cards show.
 export const NO_POSTCODE_NOTE_ADMIN = "There is no postcode in that address. Add it if you have it: it is what the day's cards show."
 export const needsPostcodeNote = address => Boolean(String(address ?? '').trim()) && !postcodeOf(address)
+
+// The area a postcode is in, from the areas' lists of postcodes ("SW3", "W1", or a sector such as "W2 1"): the sector first, then the district, then
+// the district without its last letter, so "W1K 1PN" is found by "W1". The same rule as public.postcode_area in the database, which is what decides.
+// `areas` are the areas clients can choose; null when the postcode is in none of them.
+export function areaForPostcode(areas, postcode) {
+  const code = postcodeOf(postcode)
+  if (!code) return null
+  const [outward, inward] = code.split(' ')
+  const wanted = [`${outward} ${inward[0]}`, outward, ...(/\d[A-Z]$/.test(outward) ? [outward.slice(0, -1)] : [])]
+  for (const piece of wanted) {
+    const area = areas.find(item => (item.postcodes || []).includes(piece))
+    if (area) return area
+  }
+  return null
+}
+
+// Whether the areas have postcodes at all: until they do, nothing is checked.
+export const areasHavePostcodes = areas => areas.some(area => (area.postcodes || []).length > 0)
+
+// What a client is told about their postcode, or nothing when it is fine (or nothing is checked yet). `area` is the area they chose.
+// 'other' stops them (the database would refuse the booking); 'outside' and 'none' let them carry on, and the booking waits for Vad.
+export function postcodeCheck(areas, area, address) {
+  if (!areasHavePostcodes(areas) || !String(address ?? '').trim()) return null
+  const code = postcodeOf(address)
+  if (!code) return { kind: 'none' }
+  const found = areaForPostcode(areas, code)
+  if (!found) return { kind: 'outside', postcode: code }
+  if (area && found.id !== area.id) return { kind: 'other', postcode: code, area: found }
+  return null
+}

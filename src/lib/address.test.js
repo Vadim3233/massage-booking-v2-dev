@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_ADDRESS, needsPostcodeNote, postcodeOf, shortWhere, tidyAddress } from './address.js'
+import { MAX_ADDRESS, areaForPostcode, needsPostcodeNote, postcodeCheck, postcodeOf, shortWhere, tidyAddress } from './address.js'
 
 describe('tidying an address as the database does', () => {
   it('turns line breaks into commas', () => {
@@ -55,5 +55,35 @@ describe('the note for an address with no postcode', () => {
     expect(needsPostcodeNote('10 High Street, London SW1A 1AA')).toBe(false)
     expect(needsPostcodeNote('')).toBe(false)
     expect(needsPostcodeNote('   ')).toBe(false)
+  })
+})
+
+describe('which area a postcode is in', () => {
+  const chelsea = { id: 'c', name: 'Chelsea', postcodes: ['SW10', 'SW3'] }
+  const mayfair = { id: 'm', name: 'Mayfair', postcodes: ['W1'] }
+  const paddington = { id: 'p', name: 'Paddington', postcodes: ['W2 1'] }
+  const nottingHill = { id: 'n', name: 'Notting Hill', postcodes: ['W2', 'W11'] }
+  const areas = [chelsea, mayfair, nottingHill, paddington]
+  it('finds the district, and a district without its last letter', () => {
+    expect(areaForPostcode(areas, 'sw3 4lp')).toBe(chelsea)
+    expect(areaForPostcode(areas, '1 Park Lane, W1K 1PN')).toBe(mayfair)
+  })
+  it('lets a sector win over its district', () => {
+    expect(areaForPostcode(areas, 'W2 1AB')).toBe(paddington)
+    expect(areaForPostcode(areas, 'W2 5XX')).toBe(nottingHill)
+  })
+  it('finds nothing for a postcode in no area, or no postcode', () => {
+    expect(areaForPostcode(areas, 'E1 4NS')).toBeNull()
+    expect(areaForPostcode(areas, '1 High Street')).toBeNull()
+  })
+  it('tells the client what is wrong, if anything', () => {
+    expect(postcodeCheck(areas, chelsea, '5 Cheyne Walk, SW3 5LR')).toBeNull()
+    expect(postcodeCheck(areas, chelsea, '1 Park Lane, W1K 1PN')).toEqual({ kind: 'other', postcode: 'W1K 1PN', area: mayfair })
+    expect(postcodeCheck(areas, chelsea, '1 Mile End Road, E1 4NS')).toEqual({ kind: 'outside', postcode: 'E1 4NS' })
+    expect(postcodeCheck(areas, chelsea, '5 Cheyne Walk')).toEqual({ kind: 'none' })
+    expect(postcodeCheck(areas, chelsea, '')).toBeNull()
+  })
+  it('checks nothing until the areas have postcodes', () => {
+    expect(postcodeCheck([{ id: 'c', postcodes: [] }], { id: 'c' }, '1 Mile End Road, E1 4NS')).toBeNull()
   })
 })

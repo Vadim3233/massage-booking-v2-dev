@@ -21,8 +21,17 @@ export function validateService(service, prices) {
   if (service.active && !offered.length) return 'A shown treatment needs at least one length with a price. Hide it instead, or offer a length.'
   return ''
 }
+// An area's postcodes as typed ("sw3, SW10 w2 1"), or as saved: the districts and sectors in capitals, with no repeats. The database tidies and checks them too.
+export function parsePostcodes(value) {
+  const pieces = Array.isArray(value) ? value : String(value ?? '').toUpperCase().split(/[,;\n]+/)
+  return [...new Set(pieces.map(piece => piece.trim().replace(/\s+/g, ' ')).filter(Boolean))]
+}
+export const postcodesText = list => (list || []).join(', ')
+const POSTCODE_START = /^[A-Z]{1,2}\d[A-Z\d]?( \d)?$/
 export function validateArea(area) {
   if (!area.name.trim()) return 'Give the area a name.'
+  const wrong = parsePostcodes(area.postcodes).find(code => !POSTCODE_START.test(code))
+  if (wrong) return `"${wrong}" is not the start of a postcode. Write districts such as SW3 or W1, or a sector such as W2 1, with commas between them.`
   for (const [label, value] of [['travel surcharge', area.travel_surcharge_gbp], ['congestion charge', area.congestion_fee_gbp]]) if (parsePrice(value) === null) return `Enter the ${label}, or 0 for none.`
   return ''
 }
@@ -37,7 +46,8 @@ export function validateExtra(extra) {
 export function createCatalogueApi(client) {
   async function run(request) {
     const { data, error } = await request
-    if (error) throw new Error(GENERIC)
+    // The database's own sentences for the Admin (a postcode already in another area, say) are shown as they are.
+    if (error) throw new Error(error.code === '22023' ? error.message : GENERIC)
     return data
   }
   async function uniqueSlug(table, name) {
@@ -65,10 +75,10 @@ export function createCatalogueApi(client) {
       catch (failure) { await client.from('services').delete().eq('id', row.id); throw failure }
     },
     swapServices: (a, b) => swap('services', a, b),
-    areas: () => run(client.from('service_areas').select('id,slug,name,active,travel_surcharge_gbp,congestion_fee_gbp,display_order').order('display_order').order('name')),
-    saveArea: area => run(client.from('service_areas').update({ name: area.name.trim(), active: Boolean(area.active), travel_surcharge_gbp: parsePrice(area.travel_surcharge_gbp), congestion_fee_gbp: parsePrice(area.congestion_fee_gbp) }).eq('id', area.id)),
+    areas: () => run(client.from('service_areas').select('id,slug,name,active,travel_surcharge_gbp,congestion_fee_gbp,postcodes,display_order').order('display_order').order('name')),
+    saveArea: area => run(client.from('service_areas').update({ name: area.name.trim(), active: Boolean(area.active), travel_surcharge_gbp: parsePrice(area.travel_surcharge_gbp), congestion_fee_gbp: parsePrice(area.congestion_fee_gbp), postcodes: parsePostcodes(area.postcodes) }).eq('id', area.id)),
     async createArea(area, nextOrder) {
-      return run(client.from('service_areas').insert({ slug: await uniqueSlug('service_areas', area.name), name: area.name.trim(), active: Boolean(area.active), travel_surcharge_gbp: parsePrice(area.travel_surcharge_gbp), congestion_fee_gbp: parsePrice(area.congestion_fee_gbp), display_order: nextOrder }))
+      return run(client.from('service_areas').insert({ slug: await uniqueSlug('service_areas', area.name), name: area.name.trim(), active: Boolean(area.active), travel_surcharge_gbp: parsePrice(area.travel_surcharge_gbp), congestion_fee_gbp: parsePrice(area.congestion_fee_gbp), postcodes: parsePostcodes(area.postcodes), display_order: nextOrder }))
     },
     swapAreas: (a, b) => swap('service_areas', a, b),
     extras: () => run(client.from('enhancements').select('id,slug,name,description,price_gbp,duration_minutes,active,display_order').order('display_order').order('name')),

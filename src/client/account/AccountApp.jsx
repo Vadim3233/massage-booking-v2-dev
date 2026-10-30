@@ -185,7 +185,8 @@ function Manage({ id, rules, close, changed, api, linked = false }) {
   const cancelledAt = cancelledOn(booking.cancelled_at)
   return <section>
     {!linked && <button className="btn--quiet btn--small account-back" onClick={close}><Icon name="left" size={20} />Your bookings</button>}
-    <h1 tabIndex={-1}>{HEADING[booking.booking_status]}</h1>
+    {/* A booking outside the areas (or with no postcode) waits for Vad to look before anything is paid. */}
+    <h1 tabIndex={-1}>{booking.area_check && booking.booking_status === 'awaiting_transfer' ? "I'm checking your address" : HEADING[booking.booking_status]}</h1>
     {booking.booking_status === 'cancelled' && cancelledAt && <p className="account-cancelled-on">{cancelledAt}</p>}
     {message && <p role="alert" className="account-note">{message}</p>}
     {mode === 'view' && <>
