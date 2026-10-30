@@ -904,6 +904,16 @@ The page stays where the Admin needs it:
 - **Tests:** `holds_need_a_session.test.sql` (6 checks); the database tests that held times as an anonymous caller now hold as a guest session; `bookingStore.test.js`, `bookingApi.test.js`; the shared fixture in `tests/localSupabase.js` gives each browser key its own guest session; `guestChoice.spec.js` fakes only email sign-ups.
 - **Note:** every visitor who holds a time now leaves a guest user in Supabase Auth, as guests who book already do.
 
+## ADR-087 — Security headers on every page (2026-10-31)
+
+**Decision:** Every response is sent with a Content-Security-Policy (only the site's own scripts and nothing inline; styles and fonts from the site and Google Fonts; connections only to the site and the Supabase project; no framing), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` and a `Permissions-Policy` that turns off camera, microphone, location, payment and USB. The one inline script in `index.html` (sending an old password-reset link to the reset page) moved to `public/recovery-redirect.js`.
+
+**Reason:** A security review (30 Oct 2026) found the live site sent only HTTPS enforcement. Any site could show the Admin, the account page or the AI assistant's Allow page in a hidden frame and trick a click, and with no policy a single injected script could read the Admin's stored sign-in.
+
+- **Where:** `vercel.json` (`headers`). If the Supabase project changes, its address in `connect-src` must change too.
+- **Checked:** the built site served locally with these headers (a small script that applies `vercel.json`): the booking pages up to holding a time, Your details, the Admin sign-in, the account page, Book with AI, the consent page and the password-reset redirect all work with no console errors, and all fonts load. Vercel's preview toolbar is blocked on preview deployments by this policy, which is harmless.
+- **Tests:** `server/securityHeaders.test.js`.
+
 ## ADR-088 — The notification queue gives up cleanly and never sends very late messages (2026-10-31)
 
 **Decision:** A message whose fifth try never reported back is marked failed instead of staying "sending" for ever. A message more than two days old is not sent (marked failed: "Not sent: more than two days late."). The Admin's Telegram alert and every email now have the same 8-second limit the client Telegram message already had, and each email carries the queue row's id as Resend's idempotency key.
