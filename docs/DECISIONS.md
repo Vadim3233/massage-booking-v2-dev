@@ -941,3 +941,12 @@ The page stays where the Admin needs it:
 
 - **Migration `20261125100000_held_time_still_fits.sql`:** `held_time_still_fits` (internal) and `finalize_client_booking` (as before, with the extra check).
 - **Tests:** `held_time_still_fits.test.sql` (5 checks; with the new check switched off, A's reservation fails as before).
+
+## ADR-091 — Signed-in users keep only the table permissions the app uses (2026-10-31)
+
+**Decision:** TRUNCATE, TRIGGER, REFERENCES and MAINTAIN are revoked from `anon` and `authenticated` on every table, and INSERT, UPDATE and DELETE from `authenticated` on the tables only database functions or the server write (`admin_users`, `booking_holds`, `booking_sessions`, `booking_session_enhancements`, `booking_session_preferences`, `booking_enhancements`). The Admin's direct edits (catalogue, clients, addresses, notes, hours, blocked time) keep their permissions, still limited by row security. `is_booking_admin()` is no longer callable by `anon`.
+
+**Reason:** ADR-075 wrote down every grant Supabase had made automatically and left tightening "for later". A security review (30 Oct 2026) confirmed on the live database that signed-in users (including anonymous guest sessions) held TRUNCATE on 18 tables. Row security blocked every other write, but TRUNCATE ignores row security, so any future path to run SQL as a signed-in user could have emptied the clients or bookings tables.
+
+- **Migration `20261126100000_tighten_table_grants.sql`.**
+- **Tests:** `tighten_table_grants.test.sql` (5 checks); the full database and app suites pass after it.
