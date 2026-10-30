@@ -239,6 +239,7 @@ function BookingList({ open }) {
     <h2 className="section-title">Coming up</h2>
     {upcoming.length ? <ul role="list" className="account-list">{upcoming.map(row => item(row, true))}</ul> : <p>You have no upcoming appointments. <a href="/">Book a treatment</a></p>}
     {earlier.length > 0 && <><h2 className="section-title">Earlier</h2><ul role="list" className="account-list">{earlier.map(row => item(row, false))}</ul></>}
+    <p className="fine">Use Claude, ChatGPT or another AI assistant? <a href="/book-with-ai">Book with your AI assistant</a>.</p>
   </>
 }
 
