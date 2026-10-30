@@ -57,8 +57,16 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
     subscribe: (listener) => { listeners.add(listener); return () => listeners.delete(listener) },
     getSnapshot: () => state,
     setError: (error) => publish({ error }),
-    availability(date, duration) {
-      return api.availability(date, duration, activeHold(state.draft, now()) ? state.draft.hold : null, clientKey)
+    async availability(date, duration) {
+      const hold = activeHold(state.draft, now()) ? state.draft.hold : null
+      try { return await api.availability(date, duration, hold, clientKey) }
+      catch (error) {
+        // The server has already let the hold go although this phone's clock says it is still running (a slow clock, or the hold was
+        // released elsewhere): the hold is dropped here too and the times are loaded without it, instead of failing on every day.
+        if (!hold || error?.code !== '42501' || state.draft.pending || state.draft.bookingId) throw error
+        clearHold(holdReleasedMessage)
+        return api.availability(date, duration, null, clientKey)
+      }
     },
     expireHold,
     releaseHold() { return run(async () => {
@@ -159,7 +167,12 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
         // PostgreSQL errors roll back the transaction. Transport errors are ambiguous.
         if (/^[0-9A-Z]{5}$/.test(error.code || '') && !error.code.startsWith('PGRST')) {
           save({ ...state.draft, pending: null })
-          if (error.code === '23P01') clearHold('Your time is no longer available. Choose another time; your details are saved.')
+          if (error.code === '23P01') {
+            // The refused time is let go at once, so it does not stay blocked for others until the hold runs out.
+            const refused = state.draft.hold
+            if (refused) await api.release(refused, clientKey).catch(() => {})
+            clearHold('Your time is no longer available. Choose another time; your details are saved.')
+          }
         }
         throw error
       }

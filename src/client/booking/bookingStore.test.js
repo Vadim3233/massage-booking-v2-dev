@@ -65,6 +65,15 @@ describe('booking state transitions', () => {
     expect(api.hold).toHaveBeenCalledTimes(1); expect(api.release).not.toHaveBeenCalled()
     expect(store.getSnapshot().draft.start).toBe(660)
   })
+  it('drops a hold the server has already let go, and loads the times without it', async () => {
+    const { store, api } = fixture()
+    api.availability = vi.fn()
+      .mockRejectedValueOnce({ code: '42501', message: 'Booking hold token is invalid' })
+      .mockResolvedValueOnce([{ start_minutes: 600 }])
+    expect(await store.availability('2026-10-01', 120)).toEqual([{ start_minutes: 600 }])
+    expect(api.availability).toHaveBeenLastCalledWith('2026-10-01', 120, null, 'opaque-key')
+    expect(store.getSnapshot().draft.hold).toBeNull()
+  })
   it('starts a quiet guest session before holding a time, and holds nothing if that fails', async () => {
     const { store, api } = fixture()
     const order = []
@@ -145,6 +154,7 @@ describe('booking state transitions', () => {
     await store.finalize()
     expect(store.getSnapshot()).toMatchObject({ result: null, error: 'Sorry, that time has just been taken. Please choose another; your details are saved.' })
     expect(store.getSnapshot().draft).toMatchObject({ bookingId: null, pending: null })
+    expect(api.release).toHaveBeenCalledWith({ hold_id: 'hold', hold_token: 'token', expires_at: '2026-10-01T10:10:00Z' }, 'opaque-key')
   })
   it('persists ambiguous attempts and retries exactly the same payload after reload', async () => {
     const { store, api, storage, clientKey, uuid, now } = fixture(); await store.loadQuote()
