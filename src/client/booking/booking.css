@@ -262,6 +262,7 @@
 .field-problem { margin: -6px 0 10px; color: var(--danger); font-size: 14px; font-weight: 500; }
 .field-problem.area-check { margin: 4px 0 12px; display: grid; gap: 8px; justify-items: start; }
 .field-problem.area-check p { margin: 0; }
+.postcode-input { max-width: 12em; text-transform: uppercase; }
 
 /* The box offering Telegram updates, near the top of a confirmed booking (shown only when the clients-only bot is set up). */
 .telegram-box { margin: 4px 0 18px; padding: 14px 16px 12px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); }

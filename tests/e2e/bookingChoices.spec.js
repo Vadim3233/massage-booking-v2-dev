@@ -284,7 +284,7 @@ test('a phone number that cannot be right is named beside the field, before anyt
   await fixture.trackUser((await readDraft(page)).ownerUserId)
 })
 
-test('a whole address can be pasted in one go, and one with no postcode gets a gentle note but never a stop', async ({ page }) => {
+test('the postcode has a box of its own and is needed to continue; a whole address can still be pasted in one go', async ({ page }) => {
   await toDuration(page)
   await chooseLength(page, 60)
   await page.getByLabel('Appointment date').fill(fixture.date)
@@ -298,28 +298,34 @@ test('a whole address can be pasted in one go, and one with no postcode gets a g
   await page.getByLabel('Email address', { exact: true }).fill(email)
   await page.getByLabel('Contact number', { exact: true }).fill('+44 7700 900655')
   const address = page.getByRole('textbox', { name: 'Address', exact: true })
-  const note = page.getByText("I can't see a postcode in that address.")
-  // One box, with a line under it saying what goes in it.
+  const postcode = page.getByRole('textbox', { name: 'Postcode', exact: true })
+  const missing = page.getByText('Please enter your postcode, for example SW3 4LP.')
   await expect(address).toHaveAttribute('autocomplete', 'street-address')
   await expect(address).toHaveAttribute('maxlength', '400')
-  await expect(page.getByText('Paste or type the whole address')).toBeVisible()
-  await expect(note).toHaveCount(0)
-  // No postcode: a note, and only a note. Adding one takes it away.
+  await expect(postcode).toHaveAttribute('autocomplete', 'postal-code')
+  await expect(page.getByText('The postcode goes in its own box below.')).toBeVisible()
+  // No postcode anywhere: the booking stops, and says so beside the box.
   await address.fill('Flat 2\n14 Pasted Road\nLondon')
-  await expect(note).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Continue to payment' })).toBeEnabled()
-  await address.fill('Flat 2\n14 Pasted Road\nLondon\nsw3 1aa')
-  await expect(note).toHaveCount(0)
+  await page.getByRole('button', { name: 'Continue to payment' }).click()
+  await expect(missing).toBeVisible()
+  await expect(postcode).toBeFocused()
+  await expect(page.getByRole('heading', { name: 'One last step' })).toHaveCount(0)
+  // A postcode in the address and a different one in the box: asked to make them the same.
+  await address.fill('Flat 2\n14 Pasted Road\nLondon\nSW3 1AA')
+  await postcode.fill('SW1A 1AA')
+  await page.getByRole('button', { name: 'Continue to payment' }).click()
+  await expect(page.getByText('Your address says SW3 1AA, but the postcode box says SW1A 1AA.')).toBeVisible()
   expect(await noSideways(page)).toBe(true)
-  // It goes on with no postcode, as typed.
+  // In its own box, it is added to the end of the address.
   await address.fill('Flat 2\n14 Pasted Road\nLondon')
+  await postcode.fill('sw3 1aa')
   await page.getByRole('button', { name: 'Continue to payment' }).click()
   await expect(page.getByRole('heading', { name: 'One last step' })).toBeVisible()
   const client = (await unwrap(fixture.admin.from('clients').select('id,auth_user_id').eq('normalized_email', email)))[0]
   await fixture.trackUser(client.auth_user_id)
   // The line breaks became commas, in the booking and in the address kept for next time.
-  await expect.poll(async () => (await unwrap(fixture.admin.from('bookings').select('address_snapshot').eq('client_id', client.id)))[0]?.address_snapshot).toBe('Flat 2, 14 Pasted Road, London')
-  expect(await unwrap(fixture.admin.from('client_addresses').select('address').eq('client_id', client.id))).toEqual([{ address: 'Flat 2, 14 Pasted Road, London' }])
+  await expect.poll(async () => (await unwrap(fixture.admin.from('bookings').select('address_snapshot').eq('client_id', client.id)))[0]?.address_snapshot).toBe('Flat 2, 14 Pasted Road, London, SW3 1AA')
+  expect(await unwrap(fixture.admin.from('client_addresses').select('address').eq('client_id', client.id))).toEqual([{ address: 'Flat 2, 14 Pasted Road, London, SW3 1AA' }])
 })
 
 test('the bar at the bottom of the review is one row on phones from 360 to 430 px wide', async ({ page }) => {

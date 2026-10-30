@@ -1,8 +1,9 @@
+import { postcodeOf, tidyAddress } from '../../lib/address.js'
 export const STEPS = ['Area', 'Treatment', 'People & length', 'Date & Time', 'Review', 'Your Details', 'Payment', 'Confirmation']
 export const draftKey = 'vad-v2-booking-draft-v1'
 export const holdKey = 'vad-v2-hold-client-v1'
 // The address is one text (ADR-059): whatever the client writes or pastes.
-export const emptyDetails = { first_name: '', last_name: '', email: '', phone: '', savedAddressId: '', address: '', entry_instructions: '' }
+export const emptyDetails = { first_name: '', last_name: '', email: '', phone: '', savedAddressId: '', address: '', postcode: '', entry_instructions: '' }
 export const newDraft = () => ({ areaId: '', serviceId: '', sessions: [], enhancementIds: [], date: '', start: null, hold: null, details: { ...emptyDetails }, note: '', paymentMethod: 'bank_transfer', pending: null, bookingId: null })
 export const durationOf = (draft) => draft.sessions.reduce((sum, session) => sum + session.duration_minutes, 0)
 export const activeHold = (draft, now = Date.now()) => Boolean(draft.hold && Date.parse(draft.hold.expires_at) > now)
@@ -51,14 +52,28 @@ export function validDetails(details) {
 }
 
 // A saved address fills these boxes on the details screen; "Enter an address" leaves them empty, as they start.
-const ADDRESS_BOXES = ['address', 'entry_instructions']
-export const addressFields = (address) => Object.fromEntries(ADDRESS_BOXES.map((key) => [key, address[key] || '']))
+// The Postcode box is filled from the postcode inside a saved address (empty when it has none, so the client is asked for it).
+const ADDRESS_BOXES = ['address', 'postcode', 'entry_instructions']
+export const addressFields = (address) => ({ ...Object.fromEntries(ADDRESS_BOXES.map((key) => [key, address[key] || ''])), postcode: postcodeOf(address.address) })
 export const blankAddressFields = () => Object.fromEntries(ADDRESS_BOXES.map((key) => [key, emptyDetails[key]]))
 // The address a client is offered straight away: the one marked as theirs by default (the first they booked, kept as "Home"), or their only
 // address when none is marked. With several and none marked, nothing is chosen for them.
 export const usualAddress = (addresses) => addresses.find((address) => address.is_default) || (addresses.length === 1 ? addresses[0] : null)
 // Whether the client has already put an address into the boxes themselves.
 export const addressTyped = (details) => ADDRESS_BOXES.some((key) => details[key]?.trim())
+
+// The address with its postcode, which is needed to continue. The Postcode box must hold a postcode and nothing else; it is added to the end of the
+// address unless the address already has it. With the box left empty, a postcode written in the address will do. An address with a different
+// postcode in it is a mistake to put right.
+export function withPostcode(address, postcode) {
+  const typed = tidyAddress(address)
+  const inside = postcodeOf(typed)
+  const box = String(postcode ?? '').trim()
+  const code = box ? postcodeOf(box) : inside
+  if (!code || (box && box.replace(/\s+/g, '').toUpperCase() !== code.replace(' ', ''))) return { problem: 'Please enter your postcode, for example SW3 4LP.' }
+  if (inside && inside !== code) return { problem: `Your address says ${inside}, but the postcode box says ${code}. Please make them the same.` }
+  return { address: inside ? typed : [typed, code].filter(Boolean).join(', '), postcode: code }
+}
 
 // Whether the name and phone are all there. A returning client's details are then shown locked, so nothing is changed by accident.
 export const contactComplete = (details) => ['first_name', 'last_name', 'phone'].every((key) => details[key]?.trim())

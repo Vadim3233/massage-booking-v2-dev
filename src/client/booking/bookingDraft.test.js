@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addressFields, addressTyped, blankAddressFields, contactComplete, detailProblems, emptyDetails, migrateDetails, restoreDraft, usualAddress, validDetails } from './bookingDraft.js'
+import { addressFields, addressTyped, blankAddressFields, contactComplete, detailProblems, emptyDetails, migrateDetails, restoreDraft, usualAddress, validDetails, withPostcode } from './bookingDraft.js'
 
 const details = (changes = {}) => ({ first_name: 'Ada', last_name: 'Lovelace', email: 'ada@example.test', phone: '07700 900123', address: '1 Test Road, London SW3 1AA', savedAddressId: '', ...changes })
 
@@ -39,12 +39,12 @@ describe('the address a returning client is offered straight away', () => {
 
 describe('the address boxes on the details screen', () => {
   it('a saved address fills them, and what it does not have is left empty', () => {
-    expect(addressFields(saved())).toEqual({ address: '12 Edith Road, West Drayton, London, UB7 7LG', entry_instructions: 'Ring twice' })
+    expect(addressFields(saved())).toEqual({ address: '12 Edith Road, West Drayton, London, UB7 7LG', postcode: 'UB7 7LG', entry_instructions: 'Ring twice' })
     expect(addressFields(saved({ entry_instructions: null }))).toMatchObject({ entry_instructions: '' })
   })
   it('start empty, and can be put back to that', () => {
-    expect(blankAddressFields()).toEqual({ address: '', entry_instructions: '' })
-    expect(emptyDetails).toEqual({ first_name: '', last_name: '', email: '', phone: '', savedAddressId: '', address: '', entry_instructions: '' })
+    expect(blankAddressFields()).toEqual({ address: '', postcode: '', entry_instructions: '' })
+    expect(emptyDetails).toEqual({ first_name: '', last_name: '', email: '', phone: '', savedAddressId: '', address: '', postcode: '', entry_instructions: '' })
   })
   it('count as typed once anything is in them', () => {
     expect(addressTyped(blankAddressFields())).toBe(false)
@@ -90,5 +90,25 @@ describe("when a returning client's details can be shown locked", () => {
   })
   it('does not depend on the address or the email', () => {
     expect(contactComplete(details({ address_line_1: '', postcode: '', email: '' }))).toBe(true)
+  })
+})
+
+describe('the postcode box', () => {
+  it('adds the postcode to the end of the address', () => {
+    expect(withPostcode('12 Cheyne Walk\nLondon', 'sw3 5lr')).toEqual({ address: '12 Cheyne Walk, London, SW3 5LR', postcode: 'SW3 5LR' })
+  })
+  it('does not add it twice', () => {
+    expect(withPostcode('12 Cheyne Walk, London SW3 5LR', 'SW35LR')).toEqual({ address: '12 Cheyne Walk, London SW3 5LR', postcode: 'SW3 5LR' })
+  })
+  it('takes a postcode written in the address when the box is left empty', () => {
+    expect(withPostcode('12 Cheyne Walk, SW3 5LR', '')).toEqual({ address: '12 Cheyne Walk, SW3 5LR', postcode: 'SW3 5LR' })
+  })
+  it('asks for a postcode when there is none, or the box holds something else', () => {
+    expect(withPostcode('12 Cheyne Walk', '').problem).toBe('Please enter your postcode, for example SW3 4LP.')
+    expect(withPostcode('12 Cheyne Walk', 'Chelsea').problem).toBe('Please enter your postcode, for example SW3 4LP.')
+    expect(withPostcode('12 Cheyne Walk', 'London SW3 5LR').problem).toBe('Please enter your postcode, for example SW3 4LP.')
+  })
+  it('points out an address with a different postcode in it', () => {
+    expect(withPostcode('1 Park Lane, W1K 1PN', 'SW3 5LR').problem).toBe('Your address says W1K 1PN, but the postcode box says SW3 5LR. Please make them the same.')
   })
 })

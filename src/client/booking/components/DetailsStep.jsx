@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { addressFields, addressTyped, blankAddressFields, contactComplete, detailProblems, usualAddress, validDetails } from '../bookingDraft.js'
+import { addressFields, addressTyped, blankAddressFields, contactComplete, detailProblems, usualAddress, validDetails, withPostcode } from '../bookingDraft.js'
 import { friendlyError } from '../friendlyError.js'
-import { MAX_ADDRESS, needsPostcodeNote, NO_POSTCODE_NOTE, postcodeCheck } from '../../../lib/address.js'
+import { MAX_ADDRESS, postcodeCheck } from '../../../lib/address.js'
 
 function buildTestClient() {
   const id = crypto.randomUUID().replaceAll('-', '').slice(0, 12)
@@ -63,7 +63,10 @@ export default function DetailsStep({ draft, areas = [], user, api, edit, next, 
   const locked = !guest && !loading && !unlocked && contactComplete(details)
   // Is the postcode in the area chosen at the start? In another area, the booking cannot go ahead (its price would be wrong); in none of them, or with no
   // postcode, it can, and waits for Vad to look before anything is paid.
-  const check = postcodeCheck(areas, areas.find(item => item.id === draft.areaId), details.address)
+  // The postcode has a box of its own and is needed to continue. A saved address that already has one keeps it, locked like the rest; one without asks for it.
+  const savedHasPostcode = !guest && Boolean(details.savedAddressId) && Boolean(addressFields({ address: addresses.find(item => item.id === details.savedAddressId)?.address }).postcode)
+  const full = withPostcode(details.address, details.postcode || '')
+  const check = full.address ? postcodeCheck(areas, areas.find(item => item.id === draft.areaId), full.address) : null
   function unlock() {
     setUnlocked(true)
     requestAnimationFrame(() => document.getElementById('details-first-name')?.focus())
@@ -94,6 +97,12 @@ export default function DetailsStep({ draft, areas = [], user, api, edit, next, 
     if (saving) return
     // The button is never greyed out; what is missing is said in words instead.
     if (!validDetails(details)) { report('Please fill in everything that is not marked optional.'); return }
+    if (full.problem) {
+      setProblems((known) => ({ ...known, postcode: full.problem }))
+      report('')
+      requestAnimationFrame(() => document.getElementById('details-postcode')?.focus())
+      return
+    }
     if (check?.kind === 'other') { report(''); document.getElementById('details-area-check')?.scrollIntoView({ block: 'center' }); return }
     // What is plainly wrong is said beside the field, and she is taken to it.
     const found = detailProblems(details)
@@ -105,6 +114,8 @@ export default function DetailsStep({ draft, areas = [], user, api, edit, next, 
       requestAnimationFrame(() => document.getElementById('details-phone')?.focus())
       return
     }
+    // The address goes with its postcode. A saved address that had none is sent as a new address, so it is saved with one.
+    edit({ details: { ...details, address: full.address, postcode: full.postcode, savedAddressId: savedHasPostcode ? details.savedAddressId : '' } })
     setSaving(true)
     try {
       const profile = guest ? await api.activateGuest(details) : await api.activate(details)
@@ -141,15 +152,18 @@ export default function DetailsStep({ draft, areas = [], user, api, edit, next, 
       }}><option value="">Enter an address</option>{addresses.map((address) => <option key={address.id} value={address.id}>{address.label ? `${address.label} · ` : ''}{address.address}</option>)}</select></label>}
       <fieldset disabled={!guest && Boolean(details.savedAddressId)}>
         <label>Address<textarea id="details-address" autoComplete="street-address" rows={3} maxLength={MAX_ADDRESS} required aria-describedby="details-address-hint" value={details.address} onChange={(event) => field('address', event.target.value)} /></label>
-        <p className="fine" id="details-address-hint">Paste or type the whole address: house or flat number, street, town and postcode.</p>
-        {!details.savedAddressId && !check && needsPostcodeNote(details.address) && <p className="fine address-note" role="status">{NO_POSTCODE_NOTE}</p>}
+        <p className="fine" id="details-address-hint">House or flat number, street and town. The postcode goes in its own box below.</p>
+      </fieldset>
+      <fieldset disabled={savedHasPostcode}>
+        <label>Postcode<input id="details-postcode" className="postcode-input" autoComplete="postal-code" autoCapitalize="characters" spellCheck={false} maxLength={10} aria-required="true"
+          aria-invalid={Boolean(problems.postcode)} aria-describedby={problems.postcode ? 'details-postcode-problem' : undefined} value={details.postcode || ''} onChange={(event) => field('postcode', event.target.value)} /></label>
+        {problems.postcode && <p className="field-problem" id="details-postcode-problem" role="alert">{problems.postcode}</p>}
       </fieldset>
       {check?.kind === 'other' && <div className="field-problem area-check" id="details-area-check" role="alert">
         <p>{check.postcode} is in {check.area.name}. Please choose {check.area.name} as your area, so the price includes the right travel fees.</p>
         {chooseArea && <button type="button" className="btn--tonal btn--small" onClick={() => chooseArea(check.area.id)}>Choose {check.area.name}</button>}
       </div>}
       {check?.kind === 'outside' && <p className="fine address-note" id="details-area-check" role="status">{check.postcode} is outside my usual areas. You can still send your booking: I'll check I can come to you, and let you know before you pay anything.</p>}
-      {check?.kind === 'none' && <p className="fine address-note" id="details-area-check" role="status">I can't see a postcode in that address. Please add it. Without one, I'll check the address and let you know before you pay anything.</p>}
       <details className="more more--flat">
         <summary><span className="more-title">How to get in</span><span className="more-hint">Optional</span></summary>
         <div className="more-body">
