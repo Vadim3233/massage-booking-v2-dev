@@ -23,6 +23,14 @@ describe('what a client is allowed to read', () => {
     }
     expect(friendlyError(new Error('Missing command arguments'))).toBe(GENERIC)
   })
+  it("never shows the database's own technical checks, even with the code clients' messages use", () => {
+    for (const message of ['Booking session service or duration is invalid', 'Hold ID, token and browser client key must be provided together',
+      'Idempotency key was already used for a different request', 'cannot extract elements from a scalar', 'Booking sessions must be an array',
+      'Payment method must be bank_transfer or cash']) {
+      expect(friendlyError(Object.assign(new Error(message), { code: '22023' }))).toBe(GENERIC)
+    }
+    expect(friendlyError(Object.assign(new Error('This payment request can no longer be changed'), { code: '22023' }))).toBe('This payment request can no longer be changed')
+  })
   it('uses the fallback when there is no message, and accepts plain text', () => {
     expect(friendlyError(undefined)).toBe(GENERIC)
     expect(friendlyError({}, 'Try again')).toBe('Try again')

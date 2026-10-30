@@ -14,12 +14,17 @@ const REWRITES = [
   [/failed to fetch|network|load failed|timeout/i, 'The connection dropped. Please check it and try again.'],
 ]
 
+// Messages the database writes for the app's own checks, not for clients: about keys, IDs, fields and data shapes. They are never shown,
+// even when they carry the code clients' own messages use.
+const TECHNICAL = /\b(ID|key|keys|token|idempotency|jsonb?|array|object|scalar|null|argument|arguments|parameter|payload|identity|constraint|relation|column)\b|is invalid\.?$|must be provided|unsupported|duplicates|travel buffer|[a-z]+_[a-z_]+/i
+
 export function friendlyError(error, fallback = GENERIC) {
   const message = typeof error === 'string' ? error : error?.message || ''
   if (!message) return fallback
   const rewrite = REWRITES.find(([pattern]) => pattern.test(message))
   if (rewrite) return rewrite[1]
   // The server's own advice to a client always asks them to do something ("Please ...").
+  if (TECHNICAL.test(message)) return fallback
   if (error?.code === '22023' || /\bPlease\b/.test(message)) return message
   return fallback
 }
