@@ -37,7 +37,8 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
   const current = useRef({ draft, meaningful })
   useEffect(() => { current.current = { draft, meaningful } }, [draft, meaningful])
   const duration = draft.sessions.reduce((sum, session) => sum + session.duration_minutes, 0)
-  const quoteKey = JSON.stringify([draft.areaId, draft.serviceId, draft.sessions, draft.enhancementIds])
+  // The client is part of it: one with "No travel fee" is priced without it.
+  const quoteKey = JSON.stringify([draft.areaId, draft.serviceId, draft.sessions, draft.enhancementIds, draft.client?.id || null])
   const availabilityKey = `${draft.date}:${duration}:${availabilityAttempt}`
   const quote = quoteState?.key === quoteKey ? quoteState.data : null
   const quoteError = quoteState?.key === quoteKey ? quoteState.error : ''
@@ -146,6 +147,11 @@ export default function AdminNewBooking({ initialDate, initialClientId, ownerId,
       const saved = addresses.find(address => address.is_default) || addresses[0]
       if (saved) patch({ details: { ...emptyAddress, ...saved, savedAddressId: saved.id } })
     }).catch(() => { /* Address effect supplies the visible error. */ })
+    // The search gives only the name and contacts; the full record says whether the client pays the travel fee.
+    if (client.no_travel_fee === undefined) api.client(client.id).then(found => {
+      const now = current.current.draft.client
+      if (found && now?.id === client.id) patch({ client: { ...now, no_travel_fee: found.no_travel_fee } })
+    }, () => { /* The quote still comes from the database. */ })
   }
   async function createClient(details) {
     if (clientBusy) return false

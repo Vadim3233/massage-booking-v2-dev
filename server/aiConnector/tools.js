@@ -219,6 +219,12 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
       annotations: { readOnlyHint: true },
       async run() {
         const [me, all, saved, row, history] = await Promise.all([profile(), catalogue(), addresses(), rules(), rpc('list_my_bookings')])
+        // Vadim can let a client off the travel fee; the prices quoted then leave it out, so the list of areas does too.
+        let freeTravel = false
+        try {
+          const { data } = await client.from('clients').select('no_travel_fee').eq('id', me.client_id)
+          freeTravel = Boolean((Array.isArray(data) ? data[0] : data)?.no_travel_fee)
+        } catch { /* The quote is still right. */ }
         const treatments = all.services.map(service => ({
           treatment_id: service.id, name: service.name, description: service.short_description || undefined,
           lengths: all.prices.filter(price => price.service_id === service.id).map(price => ({ minutes: price.duration_minutes, price: gbp(price.price_gbp) })),
@@ -243,7 +249,7 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
           client: { first_name: me.first_name, last_name: me.last_name },
           treatments,
           saved_addresses: places,
-          areas: all.areas.map(area => ({ area_id: area.id, name: area.name, travel_fee: gbp(area.travel_surcharge_gbp || 0), congestion_charge: gbp(area.congestion_fee_gbp || 0) })),
+          areas: all.areas.map(area => ({ area_id: area.id, name: area.name, travel_fee: gbp(freeTravel ? 0 : area.travel_surcharge_gbp || 0), congestion_charge: gbp(area.congestion_fee_gbp || 0) })),
           usual_booking: usual,
           max_people: MAX_PEOPLE,
           rules: {

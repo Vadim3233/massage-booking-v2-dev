@@ -149,6 +149,10 @@ export default function ClientProfile({ id, back, backLabel = 'Clients', openBoo
     setBusy(true); setError('')
     try { await api.setOnlineBooking(id, !client.online_booking_enabled); changed() } catch (failure) { setError(failure.message) } finally { setBusy(false) }
   }
+  async function toggleTravelFee() {
+    setBusy(true); setError('')
+    try { await api.setNoTravelFee(id, !client.no_travel_fee); changed() } catch (failure) { setError(failure.message) } finally { setBusy(false) }
+  }
   if (error && !client) return <section className="admin-review"><p role="alert">{error}</p><button onClick={changed}>Try again</button><button onClick={back}>Back to Clients</button></section>
   if (client === false) return <section className="admin-review"><p>That client could not be found.</p><button onClick={back}>Back to Clients</button></section>
   if (!client) return <section className="admin-review"><p role="status">Loading client…</p></section>
@@ -172,6 +176,11 @@ export default function ClientProfile({ id, back, backLabel = 'Clients', openBoo
       <p>{client.online_booking_enabled ? 'This client can book online.' : 'Online booking is switched off for this client. They cannot book on the website.'}</p>
       <button className="btn--small" disabled={busy} onClick={toggleOnline}>{client.online_booking_enabled ? 'Switch off online booking' : 'Switch on online booking'}</button>
       <p className="admin-detail-hint">{client.auth_user_id ? 'Has an online account.' : 'No online account yet.'} Client since {stamp(client.created_at)}.</p>
+    </section>
+    <section aria-labelledby="prices-title"><h2 id="prices-title">Prices</h2>
+      <p>{client.no_travel_fee ? 'No travel fee: this client\'s new bookings have no travel fee, whoever makes them. The congestion charge still applies.' : 'This client pays the travel fee for their area.'}</p>
+      <button className="btn--small" disabled={busy} aria-pressed={Boolean(client.no_travel_fee)} onClick={toggleTravelFee}>{client.no_travel_fee ? 'Charge the travel fee again' : 'No travel fee for this client'}</button>
+      <p className="admin-detail-hint">Bookings already made keep their price.</p>
     </section>
     {openCombine && <section aria-labelledby="same-title"><h2 id="same-title">Same person twice?</h2>
       <p className="admin-detail-hint">If this client also appears as another entry, for example one made when they booked as a guest, you can look at the two side by side and combine them.</p>

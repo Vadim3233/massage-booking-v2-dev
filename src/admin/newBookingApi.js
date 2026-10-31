@@ -34,7 +34,7 @@ export function createAdminNewBookingApi(client) {
   return {
     catalogue: createBookingApi(client).catalogue,
     search: query => unwrap(client.rpc('admin_search_clients', { p_query: query })),
-    client: id => unwrap(client.from('clients').select('id,first_name,last_name,email,phone').eq('id', id).maybeSingle()),
+    client: id => unwrap(client.from('clients').select('id,first_name,last_name,email,phone,no_travel_fee').eq('id', id).maybeSingle()),
     addresses: clientId => unwrap(client.rpc('admin_client_addresses', { p_client_id: clientId })),
     // The client's most recent booking that was not cancelled, used only to suggest defaults. A client whose bookings were all cancelled is still
     // suggested the area of the last of them (only the area: what was cancelled says nothing sure about the treatment or the payment).
@@ -46,7 +46,8 @@ export function createAdminNewBookingApi(client) {
       return await newest('service_area_id,booking_sessions(service_id,duration_minutes,position),booking_payments(method)', false) || newest('service_area_id', true)
     },
     createClient: (details, requestId) => one(client.rpc('admin_create_client', { p_details: details, p_request_id: requestId })),
-    quote: draft => one(client.rpc('admin_quote_booking', quoteParams(draft))),
+    // The quote is for the client chosen, so one with "No travel fee" is quoted without it.
+    quote: draft => one(client.rpc('admin_quote_booking', { ...quoteParams(draft), p_client_id: draft.client?.id || null })),
     availability: (date, duration) => unwrap(client.rpc('admin_booking_availability', { p_date: date, p_treatment_duration_minutes: duration })),
     // Every half hour of the day, what is booked, her working hours, and which times are usual or overlap another appointment.
     times: (date, duration) => unwrap(client.rpc('admin_booking_times', { p_date: date, p_treatment_duration_minutes: duration })),

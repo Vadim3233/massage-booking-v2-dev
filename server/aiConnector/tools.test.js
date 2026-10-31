@@ -12,6 +12,7 @@ function fakeClient(overrides = {}) {
   const tables = {
     service_areas: [area, other], services: [service], service_duration_prices: [{ service_id: 'svc-1', duration_minutes: 60, price_gbp: 85 }, { service_id: 'svc-1', duration_minutes: 90, price_gbp: 115 }],
     enhancements: [], session_preferences: [], session_preference_conflicts: [], client_addresses: [address],
+    clients: [{ no_travel_fee: false }], ...overrides.tables,
   }
   const query = rows => { const chain = { select: () => chain, eq: () => chain, order: () => chain, then: (resolve, reject) => Promise.resolve({ data: rows, error: null }).then(resolve, reject) }; return chain }
   const calls = []
@@ -47,6 +48,12 @@ const tools = (client, extra = {}) => createTools({ client, userId: 'user-1', or
 const booking = { treatment_id: 'svc-1', lengths: [90, 90], address_id: 'addr-1', date: '2026-11-04', time: '18:00', payment_method: 'bank_transfer', expected_total_gbp: 180, client_confirmed: true }
 
 describe('the booking tools', () => {
+  it('shows no travel fee in the areas for a client Vadim has let off it', async () => {
+    const plain = (await tools(fakeClient()).call('get_my_booking_options')).data
+    expect(plain.areas.find(item => item.area_id === 'area-1').travel_fee).toBe('£10')
+    const free = (await tools(fakeClient({ tables: { clients: [{ no_travel_fee: true }] } })).call('get_my_booking_options')).data
+    expect(free.areas.find(item => item.area_id === 'area-1').travel_fee).toBe('£0')
+  })
   it('lists eight tools, none of which cancels or moves anything', () => {
     const names = tools(fakeClient()).list().map(tool => tool.name)
     expect(names).toEqual(['get_my_booking_options', 'find_free_times', 'get_price', 'book_appointment', 'i_have_paid', 'list_my_bookings', 'add_to_calendar', 'connect_telegram'])

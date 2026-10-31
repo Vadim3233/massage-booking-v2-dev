@@ -15,6 +15,11 @@ describe('changing a booking\'s address', () => {
     expect(preview.priceChanges).toBe(true)
     expect(preview.problem).toBe('')
   })
+  it('brings no travel fee for a client with No travel fee', () => {
+    const kensington = { id: 'k', name: 'Kensington', active: true, travel_surcharge_gbp: 12, congestion_fee_gbp: 0, postcodes: ['W8'] }
+    expect(addressPreview(booking(), [chelsea, kensington], { address: '1 High Street, W8 4PT', areaId: 'k' }).total).toBe(102)
+    expect(addressPreview({ ...booking(), clients: { no_travel_fee: true } }, [chelsea, kensington], { address: '1 High Street, W8 4PT', areaId: 'k' }).total).toBe(90)
+  })
   it('keeps the price in the same area', () => {
     expect(addressPreview(booking('paid'), [chelsea, mayfair], { address: '7 Cheyne Walk, SW3 5LR', areaId: 'c' })).toMatchObject({ total: 90, priceChanges: false, problem: '' })
   })
