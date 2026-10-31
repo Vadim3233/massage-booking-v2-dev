@@ -116,3 +116,57 @@ test('closing time a client is in the middle of booking is asked about first', a
     await f.admin.from('booking_holds').delete().eq('date', f.date).eq('start_minutes', 960)
   }
 })
+
+test.describe('on a phone', () => {
+  test.use({ hasTouch: true, isMobile: true, viewport: { width: 412, height: 780 } })
+  // Fingers are sent through the DevTools protocol, which is what Android Chrome sees: touches with a scroll the browser may take.
+  async function finger(page) {
+    const cdp = await page.context().newCDPSession(page)
+    const send = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] })
+    return {
+      async swipe(x, fromY, toY) {
+        await send('touchStart', x, fromY)
+        for (let step = 1; step <= 10; step += 1) await send('touchMove', x, fromY + (toY - fromY) * step / 10)
+        await send('touchEnd')
+      },
+      async tap(x, y) { await send('touchStart', x, y); await send('touchEnd') },
+      async holdAndSlide(x, fromY, toY) {
+        await send('touchStart', x, fromY)
+        await page.waitForTimeout(500)
+        for (let step = 1; step <= 10; step += 1) await send('touchMove', x, fromY + (toY - fromY) * step / 10)
+        await send('touchEnd')
+      },
+    }
+  }
+  const middle = async locator => { const box = await locator.boundingBox(); return { x: box.x + box.width / 2, y: box.y + box.height / 2 } }
+
+  test('a swipe on the blocks scrolls the whole day and changes nothing', async ({ page }) => {
+    await openGrid(page)
+    const touch = await finger(page)
+    const start = await middle(cell(page, '12:00'))
+    for (let swipe = 0; swipe < 6; swipe += 1) await touch.swipe(start.x, 600, 150)
+    await expect.poll(() => page.evaluate(() => scrollY)).toBeGreaterThan(400)
+    // The last half hour of the day can be reached above the Save bar.
+    await expect(cell(page, '22:00')).toBeInViewport()
+    const save = await page.getByRole('button', { name: 'Save', exact: true }).boundingBox()
+    expect((await cell(page, '22:00').boundingBox()).y + 44).toBeLessThanOrEqual(save.y)
+    await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeDisabled()
+  })
+
+  test('a tap changes one block, and a hold then a slide changes several', async ({ page }) => {
+    await openGrid(page)
+    const touch = await finger(page)
+    await cell(page, '14:00').evaluate(element => element.scrollIntoView({ block: 'center' }))
+    const one = await middle(cell(page, '14:00'))
+    await touch.tap(one.x, one.y)
+    await expect(cell(page, '14:00')).toHaveAttribute('aria-pressed', 'false')
+    const first = await middle(cell(page, '15:00'))
+    const last = await middle(cell(page, '16:00'))
+    await touch.holdAndSlide(first.x, first.y, last.y)
+    for (const time of ['15:00', '15:30', '16:00']) await expect(cell(page, time)).toHaveAttribute('aria-pressed', 'false')
+    await expect(cell(page, '16:30')).toHaveAttribute('aria-pressed', 'true')
+    // The page stayed put under the finger (the hours line above may wrap, so the page itself is not compared).
+    expect(Math.abs((await middle(cell(page, '15:00'))).y - first.y)).toBeLessThan(2)
+    await expect(page.getByRole('button', { name: 'Save 4 changes', exact: true })).toBeEnabled()
+  })
+})
