@@ -31,7 +31,8 @@ export default function BookingFlow() {
   const { draft, step, busy, error, quote, quoteError, result } = useSyncExternalStore(store.subscribe, store.getSnapshot)
   const navigate = useBookingHistory(store, step)
   const auth = useClientAuth(supabase)
-  const [catalogue, setCatalogue] = useState(null)
+  const [loadedCatalogue, setCatalogue] = useState(null)
+  const [travelFee, setTravelFee] = useState({ user: null, free: false })
   const [catalogueAttempt, setCatalogueAttempt] = useState(0)
   const [catalogueFailed, setCatalogueFailed] = useState(false)
   // A second tap that lands just after a screen has changed is the first tap arriving twice: for a moment the new screen takes no taps.
@@ -68,6 +69,18 @@ export default function BookingFlow() {
     }
   }, [store])
   const signedInUser = auth.session?.user?.id
+  // Vadim can let a client off the travel fee. Once they are signed in, the areas and prices then show none (the quote leaves it out either way).
+  useEffect(() => {
+    if (!signedInUser) return undefined
+    let live = true
+    supabase.from('clients').select('no_travel_fee').eq('auth_user_id', signedInUser).maybeSingle()
+      .then(({ data }) => { if (live) setTravelFee({ user: signedInUser, free: Boolean(data?.no_travel_fee) }) }, () => { /* The usual fees are shown. */ })
+    return () => { live = false }
+  }, [signedInUser])
+  const freeTravel = Boolean(signedInUser) && travelFee.user === signedInUser && travelFee.free
+  const catalogue = useMemo(() => (loadedCatalogue && freeTravel
+    ? { ...loadedCatalogue, areas: loadedCatalogue.areas.map(area => ({ ...area, travel_surcharge_gbp: 0 })) }
+    : loadedCatalogue), [loadedCatalogue, freeTravel])
   useEffect(() => {
     if (!signedInUser || step < 6) return undefined
     let live = true

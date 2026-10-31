@@ -60,7 +60,7 @@ export default function ClientStep({ draft, patch, catalogue, query, setQuery, c
       <label className="anb-radio"><input type="radio" name="booking-address" checked={!draft.details.savedAddressId} onChange={() => patch({ details: { ...emptyAddress } })} /><span>One-off booking address</span></label></fieldset>
       {!draft.details.savedAddressId ? <AddressFields details={draft.details} change={details => patch({ details })} /> : <address>{draft.details.address}{draft.details.entry_instructions && <p>{draft.details.entry_instructions}</p>}</address>}
       <label>Service area<select required value={draft.areaId} onChange={event => patch({ areaId: event.target.value })}><option value="">Select service area</option>{catalogue.areas.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-      {area && <p className="anb-hint">Travel {money(area.travel_surcharge_gbp)} · Congestion {money(area.congestion_fee_gbp)}</p>}
+      {area && <p className="anb-hint">Travel {draft.client.no_travel_fee ? 'none for this client' : money(area.travel_surcharge_gbp)} · Congestion {money(area.congestion_fee_gbp)}</p>}
     </section>}
   </>
 }
