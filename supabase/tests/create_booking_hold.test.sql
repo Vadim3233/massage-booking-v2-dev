@@ -3,6 +3,16 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions, pg_temp;
 
+-- Holding a time needs a session (ADR-086): each browser key below holds as its own guest session.
+create function pg_temp.as_guest(p_key text) returns void language plpgsql as $guest$
+declare v_id uuid := md5('guest:' || p_key)::uuid;
+begin
+  insert into auth.users(id, aud, role, is_anonymous, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  values (v_id, 'authenticated', 'authenticated', true, '{}', '{}', now(), now()) on conflict (id) do nothing;
+  perform set_config('request.jwt.claims', json_build_object('sub', v_id, 'role', 'authenticated', 'is_anonymous', true)::text, true);
+end;
+$guest$;
+
 select plan(10);
 
 -- Inside the 40-day client booking horizon, so the test does not rot as the calendar moves.
@@ -38,7 +48,8 @@ values (
 );
 
 -- 1. The V1-compatible booking flow can create a hold before authentication.
-set local role anon;
+select pg_temp.as_guest('hold-client-key-000000000001');
+set local role authenticated;
 select lives_ok(
   $$select * from public.create_booking_hold(
     current_setting('test.horizon_date')::date,
@@ -107,7 +118,8 @@ select is(
 );
 
 -- 5. A retry by the same browser key refreshes rather than duplicates.
-set local role anon;
+select pg_temp.as_guest('hold-client-key-000000000001');
+set local role authenticated;
 select lives_ok(
   $$select * from public.create_booking_hold(
     current_setting('test.horizon_date')::date,
@@ -130,7 +142,8 @@ select is(
 );
 
 -- 6. Another browser cannot reserve the already-held slot.
-set local role anon;
+select pg_temp.as_guest('hold-client-key-000000000002');
+set local role authenticated;
 select throws_ok(
   $$select * from public.create_booking_hold(
     current_setting('test.horizon_date')::date,

@@ -873,3 +873,107 @@ The page stays where the Admin needs it:
 - **Pages:** `/oauth/consent` (sign in, then Allow or No thanks) and `/book-with-ai` (the address to copy, steps for Claude and ChatGPT, and the client's connected assistants with Disconnect), linked from the account page.
 - **Set-up on the hosted project:** Authentication > OAuth Server: enable, authorization path `/oauth/consent`, allow dynamic client registration; Authentication > URL Configuration: Site URL = the live site. Locally this is in `supabase/config.toml`.
 - **Tests:** `server/aiConnector/mcp.test.js`, `server/aiConnector/tools.test.js`, `server/aiConnector.integration.test.js` (the whole OAuth sign-in and a couple's booking against local Supabase), and the browser test `aiConsent.spec.js`.
+
+## ADR-084 — A late fee already owed is kept when the client cancels later (2026-10-31)
+
+**Decision:** When a client (or the Admin, at the client's request) cancels, the fee is the larger of the usual fee for that date and a late fee the booking already owes. The Admin can still lower or waive it, and a cancellation the Admin asks for herself is unchanged (no fee).
+
+**Reason:** A security review (30 Oct 2026) found that moving a booking inside 24 hours (fee due), then cancelling the new date more than 24 hours ahead, recalculated the fee from the new date and wiped the fee owed; on a paid booking the whole payment was then marked as refund due. That went against the 24-hour rule.
+
+- **Migration `20261120100000_keep_late_fee_on_cancel.sql`:** `late_fee_on_cancel_gbp` (internal), used by `apply_booking_cancellation`, `client_cancel_booking` (the fee the client acknowledges) and `get_my_change_terms` (the fee the client is shown, also through a private link). A fee already marked received stays received. New `admin_cancel_fee_preview` for the Admin cancel screen; `admin_late_fee_preview` stays for moving, where a fee already owed means no second fee.
+- **Tests:** `keep_late_fee_on_cancel.test.sql` (14 checks).
+
+## ADR-085 — Only known AI assistants can connect, and the database enforces what they may do (2026-10-31)
+
+**Decision:** The consent page (`/oauth/consent`) offers Allow only when the assistant sends the client back to Claude (`claude.ai`, `claude.com`), ChatGPT (`chatgpt.com`, `chat.openai.com`), Google Gemini (`oauth-redirect*.googleusercontent.com`), or an assistant on the client's own computer (`localhost`, `127.0.0.1`). It always says where the client goes back to. Anything else is told "This assistant can't connect", with no Allow and no redirect. The database refuses an assistant's sign-in (its token carries `client_id`) when it tries to cancel, move or change the length of a booking, or to add, change or delete saved addresses.
+
+**Reason:** A security review (30 Oct 2026) found that anyone can register an assistant (dynamic registration is on), call it "Claude", and send a client the sign-in link: the page showed only that chosen name. Pressing Allow would hand a full sign-in for the client's account to the attacker, and that token works on the whole database API, not only the connector's tools, so the consent text ("can't change or cancel bookings") was only true for honest assistants.
+
+- **Screens:** `assistantDestination` in `src/client/ai/aiConnector.js` (the list), used by `ConsentPage.jsx`. To support another assistant, add its sign-in return address there.
+- **Migration `20261121100000_ai_assistant_limits.sql`:** `request_is_ai_assistant()`, the `bookings_refuse_ai_assistant_change` trigger, and the three client address policies. Also there: a client the Admin has stopped from booking online can no longer change or delete saved addresses (adding was already refused).
+- **Tests:** `ai_assistant_limits.test.sql` (12 checks), `aiConnector.test.js`, and a third case in `aiConsent.spec.js`.
+
+## ADR-086 — Holding a time needs a session, one hold per session (2026-10-31)
+
+**Decision:** A visitor who is not signed in gets a quiet guest session (Supabase anonymous sign-in) just before their first time is held, and each session holds one time at most. The "Sign in, create an account, or continue as a guest" choice on Your details is unchanged: a quiet guest session does not count as choosing to book as a guest until the person presses Continue as guest.
+
+**Reason:** A security review (30 Oct 2026) found that anyone with the public key could hold a time with a made-up browser key and no limit, so one script could hold every free time for the next 40 days, keep renewing, and real clients would see nothing free. Guest sessions are rate-limited by Supabase Auth (by default 30 an hour per address), so one computer can now keep only a handful of times held. Turning on Supabase CAPTCHA for guest sign-ins would tighten it further (that needs a CAPTCHA widget on the page first).
+
+- **Migration `20261122100000_holds_need_a_session.sql`:** `booking_holds.holder_user_id`, and `create_booking_hold` needs a session (no longer callable by `anon`) and lets go of the session's other hold. Extending, releasing and reading times are unchanged.
+- **Screens:** `ensureSession` in `bookingApi.js`, called by `selectSlot` in `bookingStore.js` (not by the AI connector, which always has the client's sign-in); `BookingFlow.jsx` keeps `guestChosen` in the draft.
+- **Tests:** `holds_need_a_session.test.sql` (6 checks); the database tests that held times as an anonymous caller now hold as a guest session; `bookingStore.test.js`, `bookingApi.test.js`; the shared fixture in `tests/localSupabase.js` gives each browser key its own guest session; `guestChoice.spec.js` fakes only email sign-ups.
+- **Note:** every visitor who holds a time now leaves a guest user in Supabase Auth, as guests who book already do.
+
+## ADR-087 — Security headers on every page (2026-10-31)
+
+**Decision:** Every response is sent with a Content-Security-Policy (only the site's own scripts and nothing inline; styles and fonts from the site and Google Fonts; connections only to the site and the Supabase project; no framing), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` and a `Permissions-Policy` that turns off camera, microphone, location, payment and USB. The one inline script in `index.html` (sending an old password-reset link to the reset page) moved to `public/recovery-redirect.js`.
+
+**Reason:** A security review (30 Oct 2026) found the live site sent only HTTPS enforcement. Any site could show the Admin, the account page or the AI assistant's Allow page in a hidden frame and trick a click, and with no policy a single injected script could read the Admin's stored sign-in.
+
+- **Where:** `vercel.json` (`headers`). If the Supabase project changes, its address in `connect-src` must change too.
+- **Checked:** the built site served locally with these headers (a small script that applies `vercel.json`): the booking pages up to holding a time, Your details, the Admin sign-in, the account page, Book with AI, the consent page and the password-reset redirect all work with no console errors, and all fonts load. Vercel's preview toolbar is blocked on preview deployments by this policy, which is harmless.
+- **Tests:** `server/securityHeaders.test.js`.
+
+## ADR-088 — The notification queue gives up cleanly and never sends very late messages (2026-10-31)
+
+**Decision:** A message whose fifth try never reported back is marked failed instead of staying "sending" for ever. A message more than two days old is not sent (marked failed: "Not sent: more than two days late."). The Admin's Telegram alert and every email now have the same 8-second limit the client Telegram message already had, and each email carries the queue row's id as Resend's idempotency key.
+
+**Reason:** A security review (30 Oct 2026) found that a send that hung, or went through without its result being recorded, was picked up again 10 minutes later and could go out twice (a client email would also carry a second private link); on the fifth try such a row was stuck for good; and switching a channel back on sent every waiting message at once, including reminders for appointments already past.
+
+- **Migration `20261123100000_notification_queue_tidy.sql`:** `claim_notification_deliveries` (now plpgsql, otherwise as before).
+- **Server:** `server/notifications.js`.
+- **Tests:** `notification_queue_tidy.test.sql` (5 checks), a new case in `server/notifications.test.js`.
+
+## ADR-089 — A fee for moving a booking late shows in Money owed and Income when the booking goes ahead (2026-10-31)
+
+**Decision:** When a client moves a booking inside 24 hours (the full price recorded as a late fee) and the booking then goes ahead, the fee is money owed on top of the price: it is listed in Money owed once the appointment has passed, and counts in Income once marked received, even when the booking itself was paid. A fee kept out of the payment of a cancelled or missed booking is counted once, as before.
+
+**Reason:** A security review (30 Oct 2026) found that Money owed only listed late fees for cancelled or missed bookings, and Income ignored any received fee on a paid booking (assuming it came out of the payment), so a late-move fee on a booking that went ahead never appeared anywhere.
+
+- **Migration `20261124100000_late_move_fees_in_money.sql`:** `income_lines` and `money_owed_lines`. A booking can now have two Money owed lines (its payment and its fee); the screen already keys rows by booking and reason.
+- **Tests:** `late_move_fees_in_money.test.sql` (5 checks).
+
+## ADR-090 — A client's valid hold on a Chain day can be reserved even when others have booked around it (2026-10-31)
+
+**Decision:** When a client presses Reserve, the held time is accepted if it is still offered (as before) or if it still fits where it is: inside the day's hours, clear of blocked time, and with travel time on both sides of every other live booking and hold.
+
+**Reason:** A security and technical review (30 Oct 2026) found that on a Chain day only the two ends of the day's run are offered, and Reserve checked the held time against that with the client's own hold set aside. Once another client had booked or held next to it (A holds 17:00 after a 15:00 booking, B then holds 19:00 after A), the run with A set aside ran 15:00 to 20:00, so A was told "Time slot is no longer available" although the hold was valid. The same happened if the booking the hold sat next to was cancelled or moved.
+
+- **Migration `20261125100000_held_time_still_fits.sql`:** `held_time_still_fits` (internal) and `finalize_client_booking` (as before, with the extra check).
+- **Tests:** `held_time_still_fits.test.sql` (5 checks; with the new check switched off, A's reservation fails as before).
+
+## ADR-091 — Signed-in users keep only the table permissions the app uses (2026-10-31)
+
+**Decision:** TRUNCATE, TRIGGER, REFERENCES and MAINTAIN are revoked from `anon` and `authenticated` on every table, and INSERT, UPDATE and DELETE from `authenticated` on the tables only database functions or the server write (`admin_users`, `booking_holds`, `booking_sessions`, `booking_session_enhancements`, `booking_session_preferences`, `booking_enhancements`). The Admin's direct edits (catalogue, clients, addresses, notes, hours, blocked time) keep their permissions, still limited by row security. `is_booking_admin()` is no longer callable by `anon`.
+
+**Reason:** ADR-075 wrote down every grant Supabase had made automatically and left tightening "for later". A security review (30 Oct 2026) confirmed on the live database that signed-in users (including anonymous guest sessions) held TRUNCATE on 18 tables. Row security blocked every other write, but TRUNCATE ignores row security, so any future path to run SQL as a signed-in user could have emptied the clients or bookings tables.
+
+- **Migration `20261126100000_tighten_table_grants.sql`.**
+- **Tests:** `tighten_table_grants.test.sql` (5 checks); the full database and app suites pass after it.
+
+## ADR-092 — Combining a guest with a client the Admin added keeps the added profile (2026-10-31)
+
+**Decision:** When one profile was added by the Admin (no login) and the other booked as a guest, the added profile always stays and the guest's bookings move into it. The "Which profile stays" choice is offered only when both are added by the Admin or both are guests.
+
+**Reason:** A security review (30 Oct 2026) found that keeping the guest moved the added client's bookings, addresses and repeats to a profile owned by a guest session. Anyone can book as a guest with someone else's email or phone, so whoever made that guest booking could then see and cancel the other client's bookings. The preview already suggested keeping the added profile; now it is the rule.
+
+- **Migration `20261127100000_keep_added_client_on_combine.sql`:** `admin_merge_clients` (as before, plus the rule). **Screen:** `CombineClients.jsx`.
+- **Tests:** `keep_added_client_on_combine.test.sql` (3 checks).
+
+## ADR-093 — Follow-ups from an independent review of the security fixes (2026-10-31)
+
+**Decision:** A second, independent review of ADR-084 to ADR-092 found these, now fixed:
+
+- **Your bookings with a quiet guest session:** picking a time starts a guest session (ADR-086), and `/account` treated any session as signed in, so a returning client saw "no upcoming appointments" and no sign-in. A guest session now sees the sign-in, with any bookings made as a guest on that phone listed under it.
+- **Leaving guest mode** now asks the guest-or-account question again.
+- **A late-move fee taken on its own** (marked received while the booking was still on) is recorded (`bookings.late_fee_paid_separately`). If the client then cancels, it is not taken a second time out of the payment, and Income keeps counting it.
+- **Wording:** when the cancel fee comes from an earlier late move, Your bookings says so instead of "this is inside 24 hours" (`get_my_change_terms.fee_from_late_move`).
+- **Income's "appointments owed money"** counts appointments, not lines.
+- **A held time accepted because it still fits** (ADR-090) also needs blocked time clear of its travel on both sides: never looser than the times offered.
+- **New tables** do not regain TRUNCATE and the rest for anonymous or signed-in users (default privileges, ADR-091).
+- **Consent page:** an assistant allowed before ADR-085 is checked against the list too before the client is sent back to it.
+- **Emails:** Resend refusing a reused key with a different email (the retry carries a fresh private link) counts as sent, so a delivered email is not marked failed.
+- **Connector:** an Auth outage answers 503 instead of telling the assistant its sign-in is invalid; approved cash reads "Cash, to pay on the day".
+- **Too many guest sessions** from one connection gives a "wait a minute" message instead of the general one.
+
+- **Migration `20261128100000_review_follow_ups.sql`**; **tests:** `review_follow_ups.test.sql` (9 checks), a new case in `guestChoice.spec.js`, and cases in `notifications.test.js`, `mcp.test.js` and `friendlyError.test.js`. Two Admin cancel tests in `adminLifecycle.spec.js` now fake the cancel preview (ADR-084) instead of the move preview.

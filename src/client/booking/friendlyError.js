@@ -12,7 +12,13 @@ const REWRITES = [
   [/online booking is disabled/i, "Online booking isn't available on this account just now. Please get in touch and I'll arrange your appointment."],
   [/already in progress|command in progress/i, 'That is still being saved. Please wait a moment and try again.'],
   [/failed to fetch|network|load failed|timeout/i, 'The connection dropped. Please check it and try again.'],
+  // Supabase Auth limits how many guest sessions one connection can start (ADR-086).
+  [/rate limit|too many requests/i, 'There have been a lot of tries from this connection just now. Please wait a minute and try again.'],
 ]
+
+// Messages the database writes for the app's own checks, not for clients: about keys, IDs, fields and data shapes. They are never shown,
+// even when they carry the code clients' own messages use.
+const TECHNICAL = /\b(ID|key|keys|token|idempotency|jsonb?|array|object|scalar|null|argument|arguments|parameter|payload|identity|constraint|relation|column)\b|is invalid\.?$|must be provided|unsupported|duplicates|travel buffer|[a-z]+_[a-z_]+/i
 
 export function friendlyError(error, fallback = GENERIC) {
   const message = typeof error === 'string' ? error : error?.message || ''
@@ -20,6 +26,7 @@ export function friendlyError(error, fallback = GENERIC) {
   const rewrite = REWRITES.find(([pattern]) => pattern.test(message))
   if (rewrite) return rewrite[1]
   // The server's own advice to a client always asks them to do something ("Please ...").
+  if (TECHNICAL.test(message)) return fallback
   if (error?.code === '22023' || /\bPlease\b/.test(message)) return message
   return fallback
 }

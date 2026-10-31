@@ -82,7 +82,10 @@ export default function BookingFlow() {
   useEffect(() => { store.expireHold() }, [store, clock, busy])
   // A new screen starts at its heading: named in the tab, read out first by a screen reader, and the page back at the top.
   // Signing in or carrying on as a guest swaps the content inside a step, so that counts as a new screen too.
-  const needsAuth = step >= 5 && !auth.session
+  // Holding a time starts a quiet guest session (ADR-086), so a guest session alone does not mean the person chose to book as a guest:
+  // until they do, the details screen still asks whether to sign in or carry on as a guest.
+  const isGuest = Boolean(auth.session?.user?.is_anonymous)
+  const needsAuth = step >= 5 && (!auth.session || (step === 5 && isGuest && !draft.guestChosen && !draft.bookingId))
   const screen = `${step}:${needsAuth ? 'sign-in' : 'main'}`
   const lastScreen = useRef(null)
   useEffect(() => {
@@ -123,10 +126,12 @@ export default function BookingFlow() {
       if (target === 6) await store.finalize(auth.session?.user.id)
     }
   }
-  const isGuest = Boolean(auth.session?.user?.is_anonymous)
   async function startGuest() {
-    const { error: guestError } = await supabase.auth.signInAnonymously()
-    if (guestError) throw guestError
+    if (!auth.session) {
+      const { error: guestError } = await supabase.auth.signInAnonymously()
+      if (guestError) throw guestError
+    }
+    store.edit({ guestChosen: true })
   }
   // A guest who changes their mind: the guest login is ended on this device and the choices come back with sign-in open. The booking so far
   // (the choices, the held time, anything typed) stays in the draft, and a signed-in account takes it over when the details screen opens.
@@ -137,6 +142,7 @@ export default function BookingFlow() {
     if (!isGuest || draft.bookingId) return
     const { error: signOutError } = await supabase.auth.signOut()
     if (signOutError) { store.setError(friendlyError(signOutError)); return }
+    store.edit({ guestChosen: false })
     setWantsAccount(true)
   }
   // Signing in from the top of any page, before anything is chosen: the details are then filled in later and the guest question never comes up.
@@ -206,7 +212,7 @@ export default function BookingFlow() {
           {step === 4 && <ReviewStep draft={draft} catalogue={catalogue} quote={quote} quoteError={quoteError} edit={store.edit} navigate={navigate} refreshQuote={store.refreshQuote} retryQuote={store.retryQuote} next={() => goWithQuote(5)} />}
           {!auth.ready && step >= 5 && <p role="status">Checking your account…</p>}
           {auth.ready && needsAuth && <AuthPanel client={supabase} onGuest={startGuest} startOpen={wantsAccount} />}
-          {step === 5 && auth.session && <DetailsStep key={auth.session.user.id} draft={draft} areas={catalogue?.areas || []} chooseArea={(areaId) => store.edit({ areaId })} user={auth.session.user} api={api} edit={store.edit} report={store.setError} guest={isGuest} onSwitchToAccount={isGuest && !draft.bookingId ? leaveGuest : undefined} newTestGuest={startNewTestGuest} next={() => goWithQuote(6)} />}
+          {step === 5 && auth.session && !needsAuth && <DetailsStep key={auth.session.user.id} draft={draft} areas={catalogue?.areas || []} chooseArea={(areaId) => store.edit({ areaId })} user={auth.session.user} api={api} edit={store.edit} report={store.setError} guest={isGuest} onSwitchToAccount={isGuest && !draft.bookingId ? leaveGuest : undefined} newTestGuest={startNewTestGuest} next={() => goWithQuote(6)} />}
           {step === 6 && auth.session && <PaymentStep rules={rules} draft={draft} quote={quote} quoteError={quoteError} bank={bank} api={api} store={store} finalize={() => store.finalize(auth.session.user.id)} held={held} error={error} chooseTimeAgain={() => navigate(3)} />}
           {step === 7 && auth.session && <ConfirmationStep id={draft.bookingId} result={result} api={api} bank={bank} quote={quote} again={startAgain} />}
         </fieldset>

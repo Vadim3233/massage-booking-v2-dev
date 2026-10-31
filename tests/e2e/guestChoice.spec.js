@@ -112,9 +112,14 @@ test('a booking that is already made has no way back to the choices', async ({ p
   await expect(page.getByRole('button', { name: 'Continue as guest' })).toHaveCount(0)
 })
 
+// Only an account sign-up (with an email) is answered with a made-up user; the quiet guest session made when a time is held (ADR-086)
+// signs up without one and goes to the real local server.
+const fakeAccountSignUp = (body) => (route) => (route.request().postDataJSON()?.email
+  ? route.fulfill({ status: 200, contentType: 'application/json', body }) : route.continue())
+
 test('registering when the email has to be confirmed first keeps the booking waiting, and carries on from this page once it is', async ({ page }) => {
   let confirmed = false
-  await page.route('**/auth/v1/signup*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: madeUpUser([{ provider: 'email' }]) }))
+  await page.route('**/auth/v1/signup*', fakeAccountSignUp(madeUpUser([{ provider: 'email' }])))
   await page.route('**/auth/v1/resend*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }))
   // Until the link has been opened the sign-in is refused; afterwards the real local server answers.
   await page.route('**/auth/v1/token*', (route) => confirmed ? route.continue()
@@ -145,7 +150,7 @@ test('registering when the email has to be confirmed first keeps the booking wai
 })
 
 test('someone who already has an account is told to sign in, with their email kept', async ({ page }) => {
-  await page.route('**/auth/v1/signup*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: madeUpUser([]) }))
+  await page.route('**/auth/v1/signup*', fakeAccountSignUp(madeUpUser([])))
   await toChoice(page)
   await page.getByRole('button', { name: 'Create an account', exact: true }).click()
   await page.getByLabel('First name', { exact: true }).fill('Back')
@@ -160,4 +165,19 @@ test('someone who already has an account is told to sign in, with their email ke
   await page.getByLabel('Password', { exact: true }).fill(fixture.password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Your details', exact: true })).toBeVisible()
+})
+
+test('holding a time does not count as being signed in: Your bookings still offers the sign-in, and the choice is asked again after leaving guest mode', async ({ page }) => {
+  await toChoice(page)
+  // Picking a time started a quiet guest session (ADR-086), yet the details screen still asks.
+  await expect(page.getByRole('button', { name: 'Continue as guest' })).toBeVisible()
+  await page.goto('/account')
+  await expect(page.getByRole('heading', { name: 'Sign in to see your bookings' })).toBeVisible()
+  await expect(page.getByText('You have no upcoming appointments')).toHaveCount(0)
+  await page.goBack()
+  await page.getByRole('button', { name: 'Continue as guest' }).click()
+  await expect(page.getByText("You're booking as a guest.")).toBeVisible()
+  await page.getByRole('button', { name: 'Sign in or create an account instead' }).click()
+  await expect(page.getByRole('button', { name: 'Continue as guest' })).toBeVisible()
+  expect((await readDraft(page)).guestChosen).toBe(false)
 })

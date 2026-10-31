@@ -95,3 +95,14 @@ describe('commands sent to the server', () => {
     await expect(stale.act('complete', booking(), 'r')).rejects.toMatchObject({ conflict: true })
   })
 })
+
+describe('the late fee preview', () => {
+  it('asks the cancel question for a cancellation and the move question otherwise', async () => {
+    const rpc = vi.fn(async () => ({ data: '85.00', error: null }))
+    const api = createLifecycleApi({ rpc })
+    expect(await api.preview('b1', 'client', 'cancel')).toBe(85)
+    expect(rpc).toHaveBeenLastCalledWith('admin_cancel_fee_preview', { p_booking_id: 'b1', p_initiated_by: 'client' })
+    await api.preview('b1', 'client', 'reschedule')
+    expect(rpc).toHaveBeenLastCalledWith('admin_late_fee_preview', { p_booking_id: 'b1', p_initiated_by: 'client' })
+  })
+})

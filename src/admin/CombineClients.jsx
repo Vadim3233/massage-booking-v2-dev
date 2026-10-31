@@ -50,8 +50,9 @@ export default function CombineClients({ a, b, back, openClient, resolved, api =
 
   const keep = preview.profiles.find(profile => profile.id === keepId) || preview.profiles[0]
   const leave = preview.profiles.find(profile => profile.id !== keep.id)
-  // With a login on one side that one stays; with none on either the Admin picks.
-  const choosable = preview.can_combine && preview.profiles.every(profile => profile.kind !== 'registered')
+  // With a login on one side that one stays; a client you added stays over a guest (ADR-092); otherwise the Admin picks.
+  const kinds = preview.profiles.map(profile => profile.kind)
+  const choosable = preview.can_combine && !kinds.includes('registered') && !(kinds.includes('added') && kinds.includes('guest'))
   const shared = preview.matched_on?.length ? `They share the same ${matchedText(preview.matched_on)}.` : 'They do not share an email or a phone number.'
   const keepLabel = profileLabel(fullName(keep), keep.kind)
   const leaveLabel = profileLabel(fullName(leave), leave.kind)

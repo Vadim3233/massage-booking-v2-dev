@@ -68,7 +68,7 @@ describe('real local Supabase client adapter', () => {
     invalid.sessions[0].preference_ids.push(fixture.ids.conflicting)
     await expect(fixture.api.finalize(finalizeParams(invalid, key, crypto.randomUUID()))).rejects.toMatchObject({ code: '22023' })
     expect(await unwrap(fixture.admin.from('bookings').select('id').eq('client_id', fixture.profile.client_id))).toEqual([])
-    expect(await fixture.api.addresses()).toEqual([])
+    expect(await fixture.api.addresses(fixture.profile.client_id)).toEqual([])
     const holds = await unwrap(fixture.admin.from('booking_holds').select('status').eq('id', draft.hold.hold_id))
     expect(holds[0].status).toBe('active')
   })
@@ -83,7 +83,7 @@ describe('real local Supabase client adapter', () => {
     expect(booking).not.toHaveProperty('payment_reservation_expires_at')
     expect(booking).not.toHaveProperty('reservation_expired')
     // The address is saved as one text: the line break became a comma and the doubled space one.
-    expect((await fixture.api.addresses())[0].address).toBe('10 Test Street, London SW1A 1AA')
+    expect((await fixture.api.addresses(fixture.profile.client_id))[0].address).toBe('10 Test Street, London SW1A 1AA')
     expect(booking.address_snapshot).toBe('10 Test Street, London SW1A 1AA')
   })
   it('retries idempotently without duplicate bookings, enhancements or events', async () => {
