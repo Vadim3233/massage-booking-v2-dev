@@ -62,7 +62,9 @@ export function createBookingApi(client) {
     },
     availability: (date, duration, hold = null, key = null) => unwrap(client.rpc('get_booking_availability', {
       p_date: date, p_treatment_duration_minutes: duration,
-      ...(hold ? { p_hold_id: hold.hold_id, p_hold_token: hold.hold_token, p_client_key: key } : {}),
+      // The browser key goes even without a hold, so a hold this browser made (in another tab, or before signing up) never blocks it.
+      ...(hold ? { p_hold_id: hold.hold_id, p_hold_token: hold.hold_token } : {}),
+      ...(key ? { p_client_key: key } : {}),
     })),
     hold: (date, start, duration, key) => one(client.rpc('create_booking_hold', {
       p_date: date, p_start_minutes: start, p_treatment_duration_minutes: duration, p_client_key: key,
