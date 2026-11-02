@@ -14,8 +14,9 @@ export default function PeopleLengthStep({ draft, catalogue, edit, choose }) {
   const noun = treatmentNoun(catalogue.services.find(service => service.id === draft.serviceId)?.name)
   const fees = Number(area?.travel_surcharge_gbp || 0) + Number(area?.congestion_fee_gbp || 0)
   const chosen = draft.sessions.map(session => session.duration_minutes)
-  // A client sent back to "Change number of people" starts with that question; otherwise the people already chosen are kept.
-  const [people, setPeople] = useState(draft.askPeople || !chosen.length ? null : chosen.length)
+  // Every visit to this step starts with the question, so a client who tapped the wrong number (or came Back to change it) can always
+  // pick again. The number chosen before stays highlighted, so keeping it is one tap.
+  const [people, setPeople] = useState(null)
   const mixedNow = chosen.length > 1 && chosen.some(minutes => minutes !== chosen[0])
   const [each, setEach] = useState(mixedNow ? chosen : null)
   const lengths = prices.map(price => price.duration_minutes)
@@ -29,7 +30,7 @@ export default function PeopleLengthStep({ draft, catalogue, edit, choose }) {
   if (!people) return <>
     <h1 tabIndex={-1}>How many <em>people?</em></h1>
     <p className="lede">Each person has their own massage, one after the other, at the same address.</p>
-    <div className="tiles tiles--people">{peopleChoices(prices).map(count => <button key={count} className="tile tile--wide tile--people" aria-pressed={chosen.length === count && !draft.askPeople} onClick={() => pickPeople(count)}>
+    <div className="tiles tiles--people">{peopleChoices(prices).map(count => <button key={count} className="tile tile--wide tile--people" aria-pressed={chosen.length === count} onClick={() => pickPeople(count)}>
       <span className="tile-body"><strong className="tile-title">{count === 1 ? 'Just me' : `${count} people`}</strong>
         <span className="tile-note">{count === 1 ? `One ${noun}` : `${COUNT[count]} ${noun}s, one after the other`}</span></span>
     </button>)}</div>

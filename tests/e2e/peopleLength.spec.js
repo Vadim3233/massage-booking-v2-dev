@@ -60,6 +60,21 @@ test('three people can only have 60 minutes each, and four people too', async ({
   expect((await readDraft(page)).sessions.map(session => session.duration_minutes)).toEqual([60, 60, 60, 60])
 })
 
+test('Coming Back to the step asks the number of people again, with the earlier choice highlighted', async ({ page }) => {
+  await page.goto('/')
+  await page.getByRole('button', { name: /Integration area/ }).click()
+  await page.getByRole('button', { name: /Integration massage/ }).click()
+  await page.getByRole('button', { name: /^Just me/ }).click()
+  await page.getByRole('button', { name: /^60 minutes/ }).click()
+  await expect(page.getByRole('heading', { name: 'Choose date and time' })).toBeVisible()
+  await page.getByRole('button', { name: 'Back' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'How many people?' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Just me/ })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: /^2 people/ }).click()
+  await page.getByRole('button', { name: /^60 minutes · 2 people/ }).click()
+  expect((await readDraft(page)).sessions.map(session => session.duration_minutes)).toEqual([60, 60])
+})
+
 test('Change number of people on the review goes back to the question, keeping the place and treatment', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: /Integration area/ }).click()
