@@ -99,7 +99,7 @@ test('choosing a client fills in their usual treatment, length, area and payment
 test('Create booking says what is still missing, in a plain sentence, and creates nothing', async ({ page }) => {
   await start(page)
   await page.getByRole('button', { name: 'Create booking', exact: true }).click()
-  await expect(page.getByRole('alert')).toHaveText('Choose a client, appointment address and service area.')
+  await expect(page.getByRole('alert')).toHaveText('Choose a client.')
   await selectClient(page)
   // A client with no history still gets the usual first choice, so what is missing now is the time.
   await page.getByRole('button', { name: 'Create booking', exact: true }).click()
@@ -166,7 +166,7 @@ test('a client can be added with only a name while booking, and the appointment 
   // The address is needed, and the booking says so before anything else is asked.
   await page.getByRole('combobox', { name: 'Service area', exact: true }).selectOption(f.ids.area)
   await page.getByRole('button', { name: 'Create booking', exact: true }).click()
-  await expect(page.getByRole('alert')).toHaveText('Choose a client, appointment address and service area.')
+  await expect(page.getByRole('alert')).toHaveText('Add the appointment address.')
   await page.getByRole('textbox', { name: 'Address', exact: true }).fill('5 Typed Road, London, SW1A 1AA')
   await treatment(page)
   await pickTime(page)
