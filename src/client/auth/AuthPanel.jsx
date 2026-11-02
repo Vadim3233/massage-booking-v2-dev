@@ -45,14 +45,24 @@ export default function AuthPanel({ client, onGuest, startOpen = false, level = 
       } else await unwrap(client.auth.signInWithPassword({ email: fields.email, password: fields.password }))
     })
   }
-  // The link in the email may open somewhere else, so this signs in with what was just typed once it has been confirmed.
+  // The email carries a 6-digit code: typed here, it confirms the account on this same page, so the client never leaves the tab their
+  // choices and held time are in. (An email link can open in another app or browser that knows nothing about the booking.)
+  function checkCode(event) {
+    event.preventDefault()
+    const code = String(new FormData(event.currentTarget).get('code') || '').replace(/\D/g, '')
+    act(async () => {
+      if (code.length !== 6) throw new Error('code format')
+      await unwrap(client.auth.verifyOtp({ email: waiting.email, token: code, type: 'signup' }))
+    })
+  }
+  // The email still has a link too. Someone who opened it anyway can come back here and carry on, signing in with what was just typed.
   function confirmed() {
     act(async () => { await unwrap(client.auth.signInWithPassword({ email: waiting.email, password: waiting.password })) })
   }
   function sendAgain() {
     act(async () => {
       await unwrap(client.auth.resend({ type: 'signup', email: waiting.email, options: { emailRedirectTo: redirectTo } }))
-      setMessage("I've sent it again. Please look in your junk folder too.")
+      setMessage("I've sent a new code. Use the newest email, and please look in your junk folder too.")
     })
   }
   const panelTitle = mode === 'register' ? 'Create your account' : mode === 'reset' ? 'Reset your password' : 'Sign in'
@@ -86,10 +96,16 @@ export default function AuthPanel({ client, onGuest, startOpen = false, level = 
   </>
   const confirmation = waiting && <>
     <h2>Check your email</h2>
-    <p role="alert" className="notice">I've sent a link to <b>{waiting.email}</b>. Open it, then come back to this page and press the button below.{guestable ? ' Your choices are saved here, but I can only hold your time for a short while.' : ''}</p>
-    <button className="btn--primary btn--block" type="button" disabled={busy} onClick={confirmed}>{busy ? 'Please wait…' : "I've confirmed my email, continue"}</button>
+    <p role="alert" className="notice">I've sent a 6-digit code to <b>{waiting.email}</b>. Type it here to confirm your email. Please stay on this page{guestable ? ': your choices are saved here, and I can only hold your time for a short while.' : '.'}</p>
+    <form onSubmit={checkCode}>
+      <fieldset disabled={busy}>
+        <label>Code from the email<input name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9 ]*" maxLength={7} required autoFocus /></label>
+        <button className="btn--primary btn--block" type="submit">{busy ? 'Please wait…' : 'Confirm and continue'}</button>
+      </fieldset>
+    </form>
     <div className="actions">
-      <button className="btn--quiet" type="button" disabled={busy} onClick={sendAgain}>Send the email again</button>
+      <button className="btn--quiet" type="button" disabled={busy} onClick={sendAgain}>Send a new code</button>
+      <button className="btn--quiet" type="button" disabled={busy} onClick={confirmed}>I used the link in the email instead</button>
       <button className="btn--quiet" type="button" disabled={busy} onClick={() => setWaiting(null)}>Use a different email</button>
     </div>
   </>

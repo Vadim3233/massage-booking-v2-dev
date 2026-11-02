@@ -151,12 +151,12 @@ test('an account created from the top, when the email has to be confirmed first,
   await expect(panel.getByRole('alert').filter({ hasText: fixture.email })).toBeVisible()
 
   // Pressing continue before the link has been opened says so, and the step stays.
-  await panel.getByRole('button', { name: "I've confirmed my email, continue" }).click()
+  await panel.getByRole('button', { name: 'I used the link in the email instead' }).click()
   await expect(panel.getByRole('alert').filter({ hasText: 'Please confirm your email first' })).toBeVisible()
   await expect(panel.getByRole('heading', { name: 'Check your email' })).toBeVisible()
 
   confirmed = true
-  await panel.getByRole('button', { name: "I've confirmed my email, continue" }).click()
+  await panel.getByRole('button', { name: 'I used the link in the email instead' }).click()
   await expect(top(page).getByRole('button', { name: 'Sign out' })).toBeVisible()
   await expect(panel).toHaveCount(0)
 })

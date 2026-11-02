@@ -242,6 +242,12 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# Sign-up confirmation: a 6-digit code typed on the booking page, with the link as a fallback. Local only; the live project's
+# template is set in the dashboard (see docs/EMAIL_CODE_SIGNUP.md).
+[auth.email.template.confirmation]
+subject = "Your VadMassage code: {{ .Token }}"
+content_path = "./supabase/templates/confirmation.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"
