@@ -1,6 +1,16 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions, pg_temp;
+
+-- Holding a time needs a session (ADR-086): each browser key below holds as its own guest session.
+create function pg_temp.as_guest(p_key text) returns void language plpgsql as $guest$
+declare v_id uuid := md5('guest:' || p_key)::uuid;
+begin
+  insert into auth.users(id, aud, role, is_anonymous, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  values (v_id, 'authenticated', 'authenticated', true, '{}', '{}', now(), now()) on conflict (id) do nothing;
+  perform set_config('request.jwt.claims', json_build_object('sub', v_id, 'role', 'authenticated', 'is_anonymous', true)::text, true);
+end;
+$guest$;
 select plan(33);
 
 -- Fixtures: an Admin, a client user, a client and one flexible working day per scenario.
@@ -53,6 +63,7 @@ select ok(not exists (select 1 from public.get_booking_availability(pg_temp.lond
 -- Horizon: 40 days for clients, none for the Admin availability computation.
 select ok(exists (select 1 from public.get_booking_availability(pg_temp.london_day(40), 60)), 'Clients can see availability 40 days ahead');
 select is((select count(*)::integer from public.get_booking_availability(pg_temp.london_day(41), 60)), 0, 'Clients see no availability 41 days ahead');
+select pg_temp.as_guest('pending-horizon-client-0001');
 select lives_ok($$select * from public.create_booking_hold(pg_temp.london_day(40), 600, 60, 'pending-horizon-client-0001')$$, 'A client can hold a time 40 days ahead');
 select throws_ok($$select * from public.create_booking_hold(pg_temp.london_day(41), 600, 60, 'pending-horizon-client-0002')$$,
   '22023', 'Online appointments can currently be arranged up to 40 days ahead. Please choose an earlier date.', 'A client cannot hold a time 41 days ahead');

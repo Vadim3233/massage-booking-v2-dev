@@ -242,8 +242,8 @@ Implemented core columns:
 
 Rules:
 
-- V1-compatible public flow may create the hold before sign-in
-- the pre-auth hold lasts 10 minutes
+- a hold needs a session: a visitor gets a quiet guest session before the first hold, and a session holds one time at most (ADR-086)
+- a hold lasts 20 minutes and can be extended once by 10 minutes, so 30 minutes at most
 - only active, unexpired holds block availability
 - hold creation and release use an opaque browser client key plus hold token; private hold rows are not exposed to anon
 - finalization authenticates the client, resolves the canonical client and validates the hold key/token/expiry again

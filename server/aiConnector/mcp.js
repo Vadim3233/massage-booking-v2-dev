@@ -10,6 +10,7 @@ import { createTools, INSTRUCTIONS } from './tools.js'
 
 export const PROTOCOL_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05']
 const SERVER_INFO = { name: 'vad-massage-booking', title: 'Vad Massage booking', version: '1.0.0' }
+export const MAX_BATCH = 5
 
 export function originOf(request, env = {}) {
   if (env.PUBLIC_SITE_URL) return env.PUBLIC_SITE_URL.replace(/\/$/, '')
@@ -92,7 +93,15 @@ export async function handleMcp(request, response, { env = process.env, makeClie
   const token = /^Bearer\s+(.+)$/i.exec(request.headers.authorization || '')?.[1]?.trim()
   if (!token) { send(response, 401, failure(null, -32001, 'Sign-in needed'), { 'www-authenticate': challenge() }); return }
   const client = makeClient(url, key, { auth: { persistSession: false, autoRefreshToken: false }, global: { headers: { Authorization: `Bearer ${token}` } } })
-  const { data, error } = await client.auth.getUser(token)
+  // If the sign-in service cannot be reached, the assistant gets a plain JSON-RPC error rather than the platform's own error page.
+  let data, error
+  try { ({ data, error } = await client.auth.getUser(token)) }
+  catch { send(response, 503, failure(null, -32603, 'The sign-in check is not available just now. Please try again in a moment.')); return }
+  // The library reports a network failure or a server error as an error rather than throwing: that is an outage, not a bad token, so the
+  // assistant keeps its sign-in and tries again.
+  if (error && (error.name === 'AuthRetryableFetchError' || error.status === 0 || error.status >= 500)) {
+    send(response, 503, failure(null, -32603, 'The sign-in check is not available just now. Please try again in a moment.')); return
+  }
   if (error || !data?.user) { send(response, 401, failure(null, -32001, 'Sign-in expired'), { 'www-authenticate': challenge('invalid_token') }); return }
   // A guest's session is not an account: the assistant has to sign in with a real one.
   if (data.user.is_anonymous) { send(response, 401, failure(null, -32001, 'Sign in with a Vad Massage account'), { 'www-authenticate': challenge('invalid_token') }); return }
@@ -102,7 +111,14 @@ export async function handleMcp(request, response, { env = process.env, makeClie
   if (body === undefined) { send(response, 400, failure(null, -32700, 'Parse error')); return }
   const tools = makeTools({ client, userId: data.user.id, origin, env })
   if (Array.isArray(body)) {
-    const answers = (await Promise.all(body.map(message => answer(message, tools)))).filter(Boolean)
+    // A batch is answered one message at a time, and only a few at once: a huge batch run in parallel could tie up the database for
+    // everyone (newer MCP versions have dropped batches altogether).
+    if (!body.length || body.length > MAX_BATCH) { send(response, 400, failure(null, -32600, `Send between 1 and ${MAX_BATCH} messages at once`)); return }
+    const answers = []
+    for (const message of body) {
+      const one = await answer(message, tools)
+      if (one) answers.push(one)
+    }
     if (answers.length) send(response, 200, answers)
     else send(response, 202)
     return

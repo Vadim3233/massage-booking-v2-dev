@@ -54,6 +54,7 @@ async function sendTelegram(row, message, config, fetchImpl) {
   if (message.url.startsWith('https://')) payload.reply_markup = { inline_keyboard: [[{ text: 'Open booking', url: message.url }]] }
   const response = await fetchImpl(`https://api.telegram.org/bot${config.telegram.token}/sendMessage`, {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(CALL_LIMIT_MS),
   })
   const result = await response.json().catch(() => ({}))
   if (!response.ok || !result.ok) throw new Error(`Telegram: ${result.description || `HTTP ${response.status}`}`)
@@ -91,10 +92,15 @@ async function sendEmail(row, message, config, fetchImpl) {
     if (config.email.replyTo) payload.reply_to = config.email.replyTo
   }
   const response = await fetchImpl('https://api.resend.com/emails', {
-    method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${config.email.apiKey}` }, body: JSON.stringify(payload),
+    // The row id as the idempotency key: if this send went through but its result was not recorded, the retry is not sent twice.
+    method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${config.email.apiKey}`, 'idempotency-key': `delivery-${row.id}` },
+    body: JSON.stringify(payload), signal: AbortSignal.timeout(CALL_LIMIT_MS),
   })
   if (!response.ok) {
     const result = await response.json().catch(() => ({}))
+    // The key was used before with a different email: the first try went out (a client email gets a fresh private link on each try, so
+    // the retry's text differs), so this one counts as sent. A send still in progress elsewhere is tried again later.
+    if (response.status === 409 && /idempotent/i.test(`${result.name || ''} ${result.message || ''}`) && !/concurrent/i.test(`${result.name || ''} ${result.message || ''}`)) return
     throw new Error(`Email: ${result.message || `HTTP ${response.status}`}`)
   }
 }

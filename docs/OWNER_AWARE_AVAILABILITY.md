@@ -49,5 +49,4 @@ override was introduced.
 - Playwright: 10/10 passed, including guest/signed-in/extension and owner Back/reload coverage.
 - Build, lint and `git diff --check` passed.
 
-This migration is local only. No remote migration, merge to main or Vercel
-deployment is part of this change.
+When written, this migration was local only; it has since been merged to main and applied to the hosted project.

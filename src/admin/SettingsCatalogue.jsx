@@ -150,7 +150,6 @@ function ExtraForm({ initial, busy, onSave, onCancel, label }) {
     <label className="admin-field">Description (optional)<input value={extra.description || ''} maxLength={200} disabled={busy} onChange={event => set({ description: event.target.value })} /></label>
     <div className="admin-hours-fields">
       <label className="admin-field">Price (£)<input inputMode="decimal" value={extra.price_gbp} disabled={busy} onChange={event => set({ price_gbp: event.target.value })} /></label>
-      <label className="admin-field">Extra minutes<input inputMode="numeric" value={extra.duration_minutes} disabled={busy} onChange={event => set({ duration_minutes: event.target.value })} /></label>
     </div>
     <label className="admin-who-row"><input type="checkbox" checked={extra.active} disabled={busy} onChange={event => set({ active: event.target.checked })} /> Show to clients</label>
     <FormButtons busy={busy} problem={problem} onCancel={onCancel} label={label} />
@@ -162,8 +161,9 @@ export function ExtrasSettings({ api = catalogueApi }) {
   const saver = useSaver(list)
   const [editing, setEditing] = useState(null)
   const done = () => setEditing(null)
-  const summary = item => `${Number(item.price_gbp) > 0 ? money(item.price_gbp) : 'No charge'}${item.duration_minutes > 0 ? ` · adds ${item.duration_minutes} min` : ''}`
-  return <Frame title="Extras" intro="Optional additions a client can tick, such as extra strong pressure." list={list} adding={editing === 'new'} onAdd={() => setEditing('new')} addLabel="+ Add an extra">
+  // Extras change the price, not the time booked (the booking engine treats them as taking no time), so no minutes are asked for or shown.
+  const summary = item => Number(item.price_gbp) > 0 ? money(item.price_gbp) : 'No charge'
+  return <Frame title="Extras" intro="Optional additions a client can tick, such as extra strong pressure. They add to the price, not to the time booked." list={list} adding={editing === 'new'} onAdd={() => setEditing('new')} addLabel="+ Add an extra">
     {saver.message && <p role="status">{saver.message}</p>}
     {editing === 'new' && <section aria-label="Add an extra"><h2>Add an extra</h2>
       <ExtraForm busy={saver.busy} label="Add extra" onCancel={done} onSave={async extra => { if (await saver.run(() => api.createExtra(extra, nextOrder(list.items)), 'Added.')) done() }} /></section>}

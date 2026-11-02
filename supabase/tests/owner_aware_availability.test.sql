@@ -1,18 +1,30 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions, pg_temp;
+
+-- Holding a time needs a session (ADR-086): each browser key below holds as its own guest session.
+create function pg_temp.as_guest(p_key text) returns void language plpgsql as $guest$
+declare v_id uuid := md5('guest:' || p_key)::uuid;
+begin
+  insert into auth.users(id, aud, role, is_anonymous, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  values (v_id, 'authenticated', 'authenticated', true, '{}', '{}', now(), now()) on conflict (id) do nothing;
+  perform set_config('request.jwt.claims', json_build_object('sub', v_id, 'role', 'authenticated', 'is_anonymous', true)::text, true);
+end;
+$guest$;
 select plan(16);
 
 -- Inside the 40-day client booking horizon, so the test does not rot as the calendar moves.
 select set_config('test.horizon_date',((now() at time zone 'Europe/London')::date + 33)::text,true);
 insert into public.working_hours_overrides (date, available, start_minutes, end_minutes, start_mode)
 values (current_setting('test.horizon_date')::date, true, 600, 1200, 'flexible');
+select pg_temp.as_guest('owner-aware-client-000001');
 create temp table owner_hold as select * from public.create_booking_hold(current_setting('test.horizon_date')::date,600,60,'owner-aware-client-000001') with no data;
 grant select on owner_hold to anon, authenticated;
 set local role anon;
 select results_eq($q$select * from public.get_booking_availability(current_setting('test.horizon_date')::date,60)$q$,
   $q$select generate_series(600,1140,30)$q$, 'empty flexible day shows full list');
 reset role;
+select pg_temp.as_guest('owner-aware-client-000001');
 insert into owner_hold select * from public.create_booking_hold(current_setting('test.horizon_date')::date,600,60,'owner-aware-client-000001');
 set local role anon;
 select results_eq($q$select * from public.get_booking_availability(current_setting('test.horizon_date')::date,60,(select hold_id from owner_hold),(select hold_token from owner_hold),'owner-aware-client-000001')$q$,
@@ -28,12 +40,14 @@ select throws_ok($q$select * from public.get_booking_availability(current_settin
 select throws_ok($q$select * from public.compute_booking_availability(current_setting('test.horizon_date')::date,60,now(),60,(select hold_id from owner_hold))$q$,
  '42501','permission denied for function compute_booking_availability','raw exclusion function is private');
 reset role;
+select pg_temp.as_guest('owner-aware-client-000002');
 create temp table other_hold as select * from public.create_booking_hold(current_setting('test.horizon_date')::date,720,60,'owner-aware-client-000002');
 set local role anon;
 select results_eq($q$select * from public.get_booking_availability(current_setting('test.horizon_date')::date,60,(select hold_id from owner_hold),(select hold_token from owner_hold),'owner-aware-client-000001')$q$,
  $q$values (600),(840)$q$, 'owner exclusion keeps other holds in chain');
 reset role;
 select * from public.release_booking_hold((select hold_id from other_hold),(select hold_token from other_hold),'owner-aware-client-000002');
+select pg_temp.as_guest('owner-aware-client-000001');
 create temp table replacement as select * from public.create_booking_hold(current_setting('test.horizon_date')::date,630,60,'owner-aware-client-000001');
 select is((select status from public.booking_holds where id=(select hold_id from owner_hold)), 'released', 'switch releases original hold');
 select is((select count(*)::integer from public.booking_holds where client_key='owner-aware-client-000001' and status='active'),1,'switch retains exactly one active hold');

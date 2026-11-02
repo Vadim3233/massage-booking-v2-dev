@@ -39,6 +39,28 @@ describe('the connector at /mcp', () => {
       { jsonrpc: '2.0', id: 3, result: { content: [{ type: 'text', text: 'No.' }], isError: true } },
     ])
   })
+  it('refuses a batch that is empty or larger than five, and answers a batch one message at a time', async () => {
+    let running = 0, most = 0
+    const slowTools = { ...fakeTools, call: async () => { running++; most = Math.max(most, running); await new Promise(done => setTimeout(done, 5)); running--; return { isError: true, text: 'No.' } } }
+    const options = { env, makeClient: signedIn(), makeTools: () => slowTools }
+    const headers = { host: 'book.example.com', authorization: 'Bearer token' }
+    const call = id => ({ jsonrpc: '2.0', id, method: 'tools/call', params: { name: 'bad' } })
+    const big = await exchange({ headers, body: Array.from({ length: 6 }, (_, i) => call(i + 1)) }, options)
+    expect(big.statusCode).toBe(400)
+    expect(big.json.error.code).toBe(-32600)
+    expect((await exchange({ headers, body: [] }, options)).statusCode).toBe(400)
+    const five = await exchange({ headers, body: Array.from({ length: 5 }, (_, i) => call(i + 1)) }, options)
+    expect(five.json).toHaveLength(5)
+    expect(most).toBe(1)
+  })
+  it('answers a plain error when the sign-in check itself fails', async () => {
+    const down = await exchange({ headers: { host: 'book.example.com', authorization: 'Bearer t' }, body: {} }, { env, makeClient: () => ({ auth: { getUser: async () => { throw new Error('fetch failed') } } }) })
+    expect(down.statusCode).toBe(503)
+    expect(down.json.error.message).toMatch(/not available just now/)
+    const outage = Object.assign(new Error('fetch failed'), { name: 'AuthRetryableFetchError', status: 0 })
+    const reported = await exchange({ headers: { host: 'book.example.com', authorization: 'Bearer t' }, body: {} }, { env, makeClient: () => ({ auth: { getUser: async () => ({ data: null, error: outage }) } }) })
+    expect(reported.statusCode).toBe(503)
+  })
   it('only takes POST once signed in', async () => {
     const result = await exchange({ method: 'GET', headers: { host: 'book.example.com', authorization: 'Bearer t' } }, { env, makeClient: signedIn(), makeTools: () => fakeTools })
     expect(result.statusCode).toBe(405)

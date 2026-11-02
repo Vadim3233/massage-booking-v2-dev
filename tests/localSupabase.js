@@ -31,6 +31,18 @@ export async function localFixture(offset = 20) {
   const client = createClient(config.API_URL, config.ANON_KEY, options)
   const api = createBookingApi(client)
   const publicApi = createBookingApi(publicClient)
+  // Holding a time needs a session (ADR-086). A visitor's browser has one key and one quiet guest session, so each key here holds
+  // through its own guest session, made the first time that key holds.
+  const guests = new Map()
+  publicApi.hold = async (date, start, duration, key) => {
+    if (!guests.has(key)) {
+      const guest = createClient(config.API_URL, config.ANON_KEY, options)
+      const { user } = await unwrap(guest.auth.signInAnonymously())
+      users.push(user.id)
+      guests.set(key, createBookingApi(guest))
+    }
+    return guests.get(key).hold(date, start, duration, key)
+  }
   const ids = Object.fromEntries(['area', 'service', 'enhancement', 'preference', 'conflicting'].map((key) => [key, crypto.randomUUID()]))
   const date = londonDate(offset)
   const email = `v2-${crypto.randomUUID()}@example.test`

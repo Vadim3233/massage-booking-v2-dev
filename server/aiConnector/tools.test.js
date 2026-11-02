@@ -26,7 +26,7 @@ function fakeClient(overrides = {}) {
     finalize_client_booking: [{ booking_id: 'b1', booking_reference: 'VAD-1234', booking_status: 'awaiting_transfer', payment_status: 'awaiting_transfer', total_gbp: 180, payment_reference: 'VAD-1234' }],
     get_bank_details: { account_name: 'Vad Massage', sort_code: '00-00-00', account_number: '12345678' },
     get_my_booking: { id: 'b1', booking_reference: 'VAD-1234', date: '2026-11-04', start_minutes: 1080, treatment_duration_minutes: 120, address_snapshot: address.address, booking_sessions: [] },
-    confirm_my_cash_booking: { booking_status: 'awaiting_cash_approval', booking_payments: { status: 'awaiting_cash_approval' } },
+    confirm_my_cash_booking: { booking_status: 'awaiting_cash_approval', booking_payments: { status: 'awaiting_approval' } },
     declare_my_bank_transfer: { booking_status: 'awaiting_payment_verification', booking_payments: { status: 'awaiting_verification' } },
     my_telegram_status: { linked: false },
     create_my_telegram_link: 'abcdefghijklmnopqrstuvwxyz123456',
@@ -111,6 +111,29 @@ describe('the booking tools', () => {
     expect(client.calls.some(([name]) => name === 'confirm_my_cash_booking')).toBe(true)
     expect(data.booking.status).toBe('Requested with cash, Vadim will confirm shortly')
     expect(data.payment.note).toMatch(/Vadim will confirm shortly/)
+  })
+  it('says a cash booking is waiting for Vadim in words, not a status name', async () => {
+    const { data } = await tools(fakeClient()).call('book_appointment', { ...booking, payment_method: 'cash' })
+    expect(data.booking.payment).toBe('Cash, waiting for Vadim')
+  })
+  it('finishes switching a cash booking that is still waiting for a transfer when the assistant asks again', async () => {
+    const client = fakeClient({ list_my_bookings: [{ id: 'b1', booking_reference: 'VAD-1234', booking_status: 'awaiting_transfer', payment_status: 'awaiting_transfer', date: '2026-11-04', start_minutes: 1080, treatment_duration_minutes: 180, total_gbp: 180 }] })
+    const { data } = await tools(client).call('book_appointment', { ...booking, payment_method: 'cash' })
+    expect(data.already_booked).toBe(true)
+    expect(client.calls.find(([name]) => name === 'confirm_my_cash_booking')[1]).toEqual({ p_booking_id: 'b1' })
+    expect(data.booking).toMatchObject({ status: 'Requested with cash, Vadim will confirm shortly', payment: 'Cash, waiting for Vadim' })
+    expect(client.calls.some(([name]) => name === 'finalize_client_booking')).toBe(false)
+  })
+  it('makes a new booking request for the same time after a cancellation, so it is not refused as a repeat', async () => {
+    const first = fakeClient({ create_booking_hold: [{ hold_id: 'h1', hold_token: 't1', expires_at: '2026-11-04T10:20:00Z' }] })
+    const second = fakeClient({ create_booking_hold: [{ hold_id: 'h2', hold_token: 't2', expires_at: '2026-11-05T10:20:00Z' }] })
+    await tools(first).call('book_appointment', booking)
+    await tools(second).call('book_appointment', booking)
+    const key = client => client.calls.find(([name]) => name === 'finalize_client_booking')[1].p_idempotency_key
+    expect(key(first)).not.toBe(key(second))
+    const retry = fakeClient({ create_booking_hold: [{ hold_id: 'h1', hold_token: 't1', expires_at: '2026-11-04T10:20:00Z' }] })
+    await tools(retry).call('book_appointment', booking)
+    expect(key(retry)).toBe(key(first))
   })
   it('does not book twice when the assistant asks again', async () => {
     const client = fakeClient({ list_my_bookings: [{ id: 'b1', booking_reference: 'VAD-1234', booking_status: 'awaiting_transfer', payment_status: 'awaiting_transfer', date: '2026-11-04', start_minutes: 1080, treatment_duration_minutes: 180, total_gbp: 180 }] })

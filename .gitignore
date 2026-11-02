@@ -13,6 +13,10 @@ dist-ssr
 test-results/
 playwright-report/
 *.local
+# Environment files hold keys; only the example is committed (the repository is public).
+.env
+.env.*
+!.env.example
 
 # Editor directories and files
 .vscode/*

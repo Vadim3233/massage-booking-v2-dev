@@ -41,7 +41,7 @@ export default function DetailsStep({ draft, areas = [], user, api, edit, next, 
       return api.activate({ first_name: metadata.first_name || metadata.full_name?.split(' ')[0], last_name: metadata.last_name })
     })
       .then(async (profile) => {
-        const rows = await api.addresses()
+        const rows = await api.addresses(profile.client_id)
         if (!live) return
         setAddresses(rows)
         if (!profile.online_booking_enabled) { report(UNAVAILABLE); return }

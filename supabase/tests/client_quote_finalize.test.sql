@@ -3,6 +3,16 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions, pg_temp;
 
+-- Holding a time needs a session (ADR-086): each browser key below holds as its own guest session.
+create function pg_temp.as_guest(p_key text) returns void language plpgsql as $guest$
+declare v_id uuid := md5('guest:' || p_key)::uuid;
+begin
+  insert into auth.users(id, aud, role, is_anonymous, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+  values (v_id, 'authenticated', 'authenticated', true, '{}', '{}', now(), now()) on conflict (id) do nothing;
+  perform set_config('request.jwt.claims', json_build_object('sub', v_id, 'role', 'authenticated', 'is_anonymous', true)::text, true);
+end;
+$guest$;
+
 select plan(19);
 
 select set_config(
@@ -176,7 +186,8 @@ select is(
 reset role;
 
 -- Create a pre-auth 60-minute hold.
-set local role anon;
+select pg_temp.as_guest('finalize-hold-client-key-0000001');
+set local role authenticated;
 select lives_ok(
   $$select * from public.create_booking_hold(
     current_setting('test.finalize_date1')::date,
@@ -438,7 +449,8 @@ select is(
 );
 
 -- 18. First-time client cannot create a second active future reservation.
-set local role anon;
+select pg_temp.as_guest('finalize-hold-client-key-0000002');
+set local role authenticated;
 select lives_ok(
   $$select * from public.create_booking_hold(
     current_setting('test.finalize_date2')::date,

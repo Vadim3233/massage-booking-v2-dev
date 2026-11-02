@@ -20,12 +20,12 @@ test.beforeEach(async () => {
 test.afterEach(async () => { if (user) await admin.auth.admin.deleteUser(user.id) })
 
 // Where the assistant would send the client: the consent page with a fresh authorization.
-async function consentPath(name) {
+async function consentPath(name, redirect = REDIRECT) {
   const auth = `${config.API_URL}/auth/v1`
   const registered = await (await fetch(`${auth}/oauth/clients/register`, { method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ client_name: name, redirect_uris: [REDIRECT], token_endpoint_auth_method: 'none', grant_types: ['authorization_code'], response_types: ['code'] }) })).json()
+    body: JSON.stringify({ client_name: name, redirect_uris: [redirect], token_endpoint_auth_method: 'none', grant_types: ['authorization_code'], response_types: ['code'] }) })).json()
   const challenge = base64url(createHash('sha256').update(base64url(randomBytes(32))).digest())
-  const query = new URLSearchParams({ response_type: 'code', client_id: registered.client_id, redirect_uri: REDIRECT, code_challenge: challenge, code_challenge_method: 'S256', state: 'e2e' })
+  const query = new URLSearchParams({ response_type: 'code', client_id: registered.client_id, redirect_uri: redirect, code_challenge: challenge, code_challenge_method: 'S256', state: 'e2e' })
   const location = new URL((await fetch(`${auth}/oauth/authorize?${query}`, { redirect: 'manual' })).headers.get('location'))
   return `${location.pathname}${location.search}`
 }
@@ -40,6 +40,7 @@ test('a client signs in, allows their assistant, and is sent back to it; then se
   await expect(page.getByRole('heading', { name: `Allow ${name}?` })).toBeVisible()
   await expect(page.getByText(`as ${email}`)).toBeVisible()
   await expect(page.getByText('It always asks you before it books.')).toBeVisible()
+  await expect(page.getByText('After you choose, you go back to the assistant on this computer.')).toBeVisible()
   // The assistant's own address is not running here: catch the redirect to it.
   let sentBack = ''
   await page.route('http://127.0.0.1:9/**', route => { sentBack = route.request().url(); return route.fulfill({ status: 200, body: 'back at the assistant' }) })
@@ -65,4 +66,15 @@ test('No thanks sends the client back to the assistant without allowing it', asy
   await page.route('http://127.0.0.1:9/**', route => { sentBack = route.request().url(); return route.fulfill({ status: 200, body: 'back' }) })
   await page.getByRole('button', { name: 'No thanks' }).click()
   await expect.poll(() => sentBack).toMatch(/error=access_denied/)
+})
+
+test('an assistant that would send the sign-in anywhere else is refused, whatever it calls itself', async ({ page }) => {
+  await page.goto(await consentPath('Claude', 'https://evil.example/callback'))
+  await page.getByLabel('Email address').fill(email)
+  await page.getByLabel('Password').fill(password)
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('heading', { name: "This assistant can't connect" })).toBeVisible()
+  await expect(page.getByRole('alert')).toContainText('evil.example')
+  await expect(page.getByRole('button', { name: 'Allow' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'No thanks' })).toHaveCount(0)
 })
