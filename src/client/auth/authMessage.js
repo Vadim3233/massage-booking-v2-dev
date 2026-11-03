@@ -4,7 +4,8 @@ import { GENERIC } from '../booking/friendlyError.js'
 const AUTH_MESSAGES = [
   [/invalid login credentials/i, "That email and password don't match. Please check them and try again."],
   [/already registered|already been registered/i, "There is already an account with that email. Please try signing in instead."],
-  [/email not confirmed/i, 'Please confirm your email first. The link is in the message I sent you.'],
+  [/token has expired or is invalid|otp.*(expired|invalid)|code format/i, "That code isn't right, or it has run out. Check the newest email, or press Send a new code."],
+  [/email not confirmed/i, 'Please confirm your email first, with the code in the message I sent you.'],
   [/different from the old password|same as the old password/i, 'Please choose a password that is different from your old one.'],
   [/password should be at least|password.*(short|weak)|least 8/i, 'Please choose a password of at least 8 characters.'],
   [/rate limit|too many/i, 'That has been tried a few times. Please wait a minute and try again.'],

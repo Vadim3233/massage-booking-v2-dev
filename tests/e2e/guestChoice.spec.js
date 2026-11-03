@@ -112,7 +112,7 @@ test('a booking that is already made has no way back to the choices', async ({ p
   await expect(page.getByRole('button', { name: 'Continue as guest' })).toHaveCount(0)
 })
 
-test('registering when the email has to be confirmed first keeps the booking waiting, and carries on from this page once it is', async ({ page }) => {
+test('registering when the email has to be confirmed first keeps the booking waiting, and someone who used the link in the email carries on from this page', async ({ page }) => {
   let confirmed = false
   await page.route('**/auth/v1/signup*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: madeUpUser([{ provider: 'email' }]) }))
   await page.route('**/auth/v1/resend*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }))
@@ -129,19 +129,58 @@ test('registering when the email has to be confirmed first keeps the booking wai
   await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible()
   await expect(page.getByRole('alert').filter({ hasText: fixture.email })).toContainText('Your choices are saved here')
 
-  await page.getByRole('button', { name: 'Send the email again' }).click()
-  await expect(page.getByRole('alert').filter({ hasText: "I've sent it again" })).toBeVisible()
+  await page.getByRole('button', { name: 'Send a new code' }).click()
+  await expect(page.getByRole('alert').filter({ hasText: "I've sent a new code" })).toBeVisible()
   // Pressing continue before the link has been opened says so, and nothing is lost.
-  await page.getByRole('button', { name: "I've confirmed my email, continue" }).click()
+  await page.getByRole('button', { name: 'I used the link in the email instead' }).click()
   await expect(page.getByRole('alert').filter({ hasText: 'Please confirm your email first' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible()
 
   confirmed = true
-  await page.getByRole('button', { name: "I've confirmed my email, continue" }).click()
+  await page.getByRole('button', { name: 'I used the link in the email instead' }).click()
   await expect(page.getByRole('heading', { name: 'Your details', exact: true })).toBeVisible()
   const draft = await readDraft(page)
   expect(draft.sessions.map((session) => session.duration_minutes)).toEqual([60])
   expect(draft.hold.hold_id).toBeTruthy()
+})
+
+test('registering with the code from the email confirms on this same page, and the held time is kept', async ({ page }) => {
+  // The local test server has "Confirm email" switched off, so the sign-up and the code check are answered as the online project answers them.
+  await page.route('**/auth/v1/signup*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: madeUpUser([{ provider: 'email' }]) }))
+  const session = await (await fetch(`${fixture.config.API_URL}/auth/v1/token?grant_type=password`, {
+    method: 'POST', headers: { apikey: fixture.config.ANON_KEY, 'content-type': 'application/json' },
+    body: JSON.stringify({ email: fixture.email, password: fixture.password }),
+  })).json()
+  const tried = []
+  await page.route('**/auth/v1/verify*', async (route) => {
+    const body = route.request().postDataJSON()
+    tried.push(body)
+    if (body.token === '482913' && body.type === 'signup') await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(session) })
+    else await route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ code: 403, error_code: 'otp_expired', msg: 'Token has expired or is invalid' }) })
+  })
+  await toChoice(page)
+  const heldBefore = (await readDraft(page)).hold.hold_id
+  await page.getByRole('button', { name: 'Create an account', exact: true }).click()
+  await page.getByLabel('First name', { exact: true }).fill('Code')
+  await page.getByLabel('Last name', { exact: true }).fill('Typed')
+  await page.getByLabel('Email address', { exact: true }).fill(fixture.email)
+  await page.getByLabel('Password', { exact: true }).fill(fixture.password)
+  await page.getByRole('button', { name: 'Register', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible()
+  await expect(page.getByRole('alert').filter({ hasText: fixture.email })).toContainText('6-digit code')
+
+  // A wrong code says so in plain words, and nothing is lost.
+  await page.getByLabel('Code from the email').fill('111111')
+  await page.getByRole('button', { name: 'Confirm and continue' }).click()
+  await expect(page.getByRole('alert').filter({ hasText: "That code isn't right" })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Check your email' })).toBeVisible()
+
+  // The right code, typed with a space as it might be copied, confirms the account here and the booking carries on with its held time.
+  await page.getByLabel('Code from the email').fill('482 913')
+  await page.getByRole('button', { name: 'Confirm and continue' }).click()
+  await expect(page.getByRole('heading', { name: 'Your details', exact: true })).toBeVisible()
+  expect(tried.at(-1)).toMatchObject({ email: fixture.email, token: '482913', type: 'signup' })
+  expect((await readDraft(page)).hold.hold_id).toBe(heldBefore)
 })
 
 test('someone who already has an account is told to sign in, with their email kept', async ({ page }) => {

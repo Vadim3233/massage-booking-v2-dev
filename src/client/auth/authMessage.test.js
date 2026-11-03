@@ -10,6 +10,10 @@ describe('what a client reads when signing in or choosing a password goes wrong'
     expect(authMessage({ message: 'Password should be at least 6 characters.' })).toMatch(/at least 8 characters/)
     expect(authMessage({ message: 'email rate limit exceeded' })).toMatch(/wait a minute/)
   })
+  it('tells someone whose email code is wrong or old what to do', () => {
+    expect(authMessage({ message: 'Token has expired or is invalid' })).toMatch(/code isn't right.*Send a new code/)
+    expect(authMessage({ message: 'code format' })).toMatch(/code isn't right/)
+  })
   it('tells someone who reuses their old password to choose another', () => {
     expect(authMessage({ message: 'New password should be different from the old password.' })).toBe('Please choose a password that is different from your old one.')
   })
