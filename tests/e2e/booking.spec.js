@@ -85,7 +85,7 @@ test('mobile bank-transfer journey, browser Back, reload and real persisted resu
 
 test('cash is an explicit request awaiting approval', async ({ page }) => {
   await toPayment(page)
-  await page.getByRole('button', { name: "I'd like to pay cash", exact: true }).click()
+  await page.getByRole('button', { name: /^Cash/ }).click()
   await expect(page.getByText('Payment: Cash on arrival', { exact: true })).toBeVisible()
   await expect(page.getByText('Payment: Awaiting your bank transfer', { exact: true })).toHaveCount(0)
   // The cash terms are a fresh question: pressing the button before they are ticked asks for the tick, and goes no further.
@@ -94,9 +94,9 @@ test('cash is an explicit request awaiting approval', async ({ page }) => {
   await expect(page.getByLabel('I understand the payment and cancellation terms.')).toBeFocused()
   await expect(page.getByRole('heading', { name: /Paying by/ })).toBeVisible()
   // The reminder belongs to the press that caused it: switching method clears it, and it does not come back by itself.
-  await page.getByRole('button', { name: 'Back to bank transfer', exact: true }).click()
+  await page.getByRole('button', { name: /^Bank transfer/ }).click()
   await expect(page.getByRole('alert')).toHaveCount(0)
-  await page.getByRole('button', { name: "I'd like to pay cash", exact: true }).click()
+  await page.getByRole('button', { name: /^Cash/ }).click()
   await expect(page.getByRole('alert')).toHaveCount(0)
   await page.getByLabel('I understand the payment and cancellation terms.').check()
   await expect(page.getByRole('alert')).toHaveCount(0)
@@ -186,7 +186,7 @@ for (const method of ['cash', 'bank_transfer']) test(`guest ${method} checkout c
   expect(clients[0].auth_user_id).toBeTruthy()
   await fixture.trackUser(clients[0].auth_user_id)
 
-  if (method === 'cash') await page.getByRole('button', { name: "I'd like to pay cash", exact: true }).click()
+  if (method === 'cash') await page.getByRole('button', { name: /^Cash/ }).click()
   await page.getByLabel('I understand the payment and cancellation terms.').check()
   await page.getByRole('button', { name: method === 'cash' ? 'Confirm cash booking' : "I've made the bank transfer", exact: true }).click()
   await expect(page.getByRole('heading', { name: "I've received your booking" })).toBeVisible()
@@ -481,7 +481,7 @@ test('lost reservation response retries the same booking before any transfer', a
 
 for (const decision of ['approve', 'reject', 'receive']) test(`saved client confirmation reflects Admin cash ${decision}`, async ({ page }) => {
   await toPayment(page)
-  await page.getByRole('button', { name: "I'd like to pay cash" }).click()
+  await page.getByRole('button', { name: /^Cash/ }).click()
   await page.getByLabel('I understand the payment and cancellation terms.').check()
   await page.getByRole('button', { name: 'Confirm cash booking', exact: true }).click()
   await expect(page.getByRole('heading', { name: "I've received your booking" })).toBeVisible()

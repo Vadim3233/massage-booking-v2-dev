@@ -7,6 +7,17 @@ import BankDetails from './BankDetails.jsx'
 import BookingSummary from './BookingSummary.jsx'
 import { postcodeOf } from '../../../lib/address.js'
 
+// The two ways to pay sit side by side near the top of the page, so cash is as easy to find as a bank transfer.
+function MethodChoice({ cash, locked, choose }) {
+  return <section aria-labelledby="method-title">
+    <h2 className="section-title" id="method-title">How would you like to pay?</h2>
+    <div className="tiles tiles--methods">
+      <button type="button" className="tile" aria-pressed={!cash} disabled={locked} onClick={() => cash && choose()}><span className="tile-title">Bank transfer</span><span className="tile-note">Pay now with your reference</span></button>
+      <button type="button" className="tile" aria-pressed={cash} disabled={locked} onClick={() => !cash && choose()}><span className="tile-title">Cash</span><span className="tile-note">Pay at your appointment</span></button>
+    </div>
+  </section>
+}
+
 export default function PaymentStep({ rules, draft, quote, quoteError, bank, api, store, finalize, held, error, chooseTimeAgain }) {
   const [acknowledged, setAcknowledged] = useState(false)
   const [termsHint, setTermsHint] = useState(false)
@@ -41,8 +52,8 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
     <h1 tabIndex={-1}>I've <em>received</em> your request</h1>
     <p role="status" className="reserved"><span className="reserved-dot" aria-hidden="true" />Your appointment time is reserved for you.</p>
     <p className="lede">{areaNote} Please don't make a transfer yet. Once your appointment is confirmed, I'll email you the amount and the bank details.</p>
+    <MethodChoice cash={cash} locked={Boolean(draft.paymentPending)} choose={switchMethod} />
     <BookingSummary booking={booking} quote={quote} />
-    {!draft.paymentPending && <button className="btn--quiet switch-method" onClick={switchMethod}>I'd like to pay cash</button>}
     <a className="btn btn--quiet btn--block" href={`/account?booking=${booking.id}`}>Change the time or cancel this booking</a>
     <p className="fine"><a href="https://vadmassage.com">Contact Vad</a></p>
   </>
@@ -67,6 +78,7 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
   return <>
     <h1 tabIndex={-1}>{cash ? <>Paying by <em>cash</em></> : <>One last <em>step</em></>}</h1>
     <p role="status" className="reserved"><span className="reserved-dot" aria-hidden="true" />Your appointment time is reserved for you.</p>
+    <MethodChoice cash={cash} locked={Boolean(draft.paymentPending)} choose={switchMethod} />
     <p className="lede">{cash ? "Pay the full amount in cash at your appointment. Press the button below to send me your request, and I'll look at it and confirm your appointment." : 'Please make your bank transfer using the reference below, then let me know.'}</p>
     <section className="amount-card" aria-label={cash ? 'Amount to pay in cash' : 'Amount to transfer'}>
       <p className="eyebrow">{cash ? 'To pay in cash at your appointment' : 'Amount to transfer'}</p>
@@ -96,7 +108,6 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
         <li>I'll check the payment and confirm your appointment.</li>
       </>}
     </ol>
-    {!draft.paymentPending && <button className="btn--quiet switch-method" onClick={switchMethod}>{cash ? 'Back to bank transfer' : "I'd like to pay cash"}</button>}
     {summary}
     <a className="btn btn--quiet btn--block" href={`/account?booking=${booking.id}`}>Change the time or cancel this booking</a>
     <p className="fine"><a href="https://vadmassage.com">Contact Vad</a></p>
