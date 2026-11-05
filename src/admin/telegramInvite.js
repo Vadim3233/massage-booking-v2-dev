@@ -4,7 +4,7 @@ import { whatsappNumber } from './contactLinks.js'
 // link that opens the client's own chat with those words ready to send. The link itself is made by the database (admin_create_client_telegram_link).
 export function inviteMessage(firstName, link) {
   const name = String(firstName || '').trim()
-  return `${name ? `Hi ${name}!` : 'Hi!'} If you would like your appointment updates on Telegram as well as by email, tap this link and press Start:\n${link}\n\nIt is optional and free (you need the Telegram app). The link works once, for the next 24 hours.\n\nWarm wishes,\nVad`
+  return `${name ? `Hi ${name}!` : 'Hi!'} If you would like your appointment updates on Telegram as well as by email, tap this link and press Start:\n${link}\n\nIt is optional and free (you need the Telegram app). The link works once, for the next 24 hours.\n\nWarm wishes,\nVadim`
 }
 
 // Nothing when the client has no phone number that WhatsApp can use.

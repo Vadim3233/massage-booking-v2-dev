@@ -265,7 +265,7 @@ grant select on emailed to authenticated;
 reset role;
 select results_eq($$select d.channel, d.audience, d.recipient, d.title, d.status from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id where e.event_type = 'booking.receipt_emailed' and e.aggregate_id = '00000000-0000-4000-8000-00000000c301'$$,
   $$values ('email'::text, 'client'::text, 'clara.booking@example.test'::text, 'Your receipt from VadMassage Ltd (VAD-' || pg_temp.year_now() || '-0001)', 'pending'::text)$$, 'One email is queued for the address on the booking, for the sender to deliver');
-select ok((select d.body like E'Hello Clara,\n\nHere is your receipt for your appointment on ' || to_char(pg_temp.today_plus(5), 'FMDay FMDD FMMonth YYYY') || E' at 14:30.\n\nReceipt VAD-%' || E'\n\nWarm wishes,\nVad' from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id where e.event_type = 'booking.receipt_emailed' and e.aggregate_id = '00000000-0000-4000-8000-00000000c301'),
+select ok((select d.body like E'Hello Clara,\n\nHere is your receipt for your appointment on ' || to_char(pg_temp.today_plus(5), 'FMDay FMDD FMMonth YYYY') || E' at 14:30.\n\nReceipt VAD-%' || E'\n\nWarm wishes,\nVadim' from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id where e.event_type = 'booking.receipt_emailed' and e.aggregate_id = '00000000-0000-4000-8000-00000000c301'),
   'It greets the client by first name and carries the receipt, edited as it is now');
 select results_eq($$select r->>'emailed_to', r->>'emailed_at' is not null from emailed$$, $$values ('clara.booking@example.test'::text, true)$$, 'The receipt records who it was sent to and when');
 select pg_temp.as_user('00000000-0000-0000-0000-00000000c101');
