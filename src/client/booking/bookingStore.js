@@ -8,7 +8,7 @@ const holdReleasedMessage = 'Your selected time was released. Please choose an a
 const priceInputs = (draft) => JSON.stringify([draft.areaId, draft.serviceId, draft.sessions.map((session) => session.duration_minutes), [...draft.enhancementIds].sort()])
 
 // One owner for draft mutations and writes; synchronous busy guard prevents double clicks.
-export function createBookingStore({ api, storage, clientKey, uuid = () => crypto.randomUUID(), now = () => Date.now() }) {
+export function createBookingStore({ api, storage, clientKey, ensureSession = async () => {}, uuid = () => crypto.randomUUID(), now = () => Date.now() }) {
   let state = { draft: restoreDraft(storage), step: 0, busy: false, error: '', quote: null, quoteError: '', result: null }
   let quoting = null
   state.step = allowedStep(state.draft, Number(new URLSearchParams(globalThis.location?.search).get('step')) || 0, now())
@@ -126,6 +126,8 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
     // The day being looked at is only saved with a chosen time, so browsing other days never lets go of a time already held.
     selectSlot(start, date = state.draft.date) { return run(async () => {
       if (state.draft.pending || state.draft.bookingId) return
+      // The database only lets a session hold a time; a visitor with none gets a quiet guest session first.
+      await ensureSession()
       const hold = await api.hold(date, start, durationOf(state.draft), clientKey)
       // create_booking_hold atomically replaces any previous hold for this key.
       save({ ...state.draft, date, start, hold: { ...hold, extension_used: hold.hold_id === state.draft.hold?.hold_id && state.draft.hold.extension_used } })

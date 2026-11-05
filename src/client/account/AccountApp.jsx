@@ -3,6 +3,7 @@ import { dayParts } from '../booking/dateStrip.js'
 import Icon from '../../ui/icons.jsx'
 import { supabase } from '../../lib/supabase.js'
 import { useClientAuth } from '../auth/useClientAuth.js'
+import { browserStorage, isQuietGuest } from '../auth/quietGuest.js'
 import { useLinkProblem } from '../auth/linkProblem.js'
 import AuthPanel from '../auth/AuthPanel.jsx'
 import { dateLabel, londonDate, money, timeLabel } from '../booking/bookingDraft.js'
@@ -245,6 +246,8 @@ function BookingList({ open }) {
 
 export default function AccountApp() {
   const auth = useClientAuth(supabase)
+  // A guest session the booking page started only to hold a time is not an account: the page still asks them to sign in.
+  const session = isQuietGuest(browserStorage(), auth.session) ? null : auth.session
   // An email link that was used already, or has run out, brings the person back here with the reason in the address.
   const linkProblem = useLinkProblem()
   const [start, setStart] = useState(readLink)
@@ -289,11 +292,11 @@ export default function AccountApp() {
       ? <Manage key={`${start.booking}:${start.key}`} id={start.booking} api={linkApi} linked rules={rules} close={() => {}} changed={() => setRevision(value => value + 1)} />
       : <>
         {!auth.ready && <p role="status">Checking your account…</p>}
-        {auth.ready && !auth.session && <>
+        {auth.ready && !session && <>
           {selected && <p className="notice">Booked as a guest? There is no password to enter. Use the link in your latest confirmation email, or the phone you booked on. If you have an account, sign in below.</p>}
           <AuthPanel client={supabase} heading="Sign in to see your bookings" redirectTo={`${window.location.origin}/account`} />
         </>}
-        {auth.ready && auth.session && (selected
+        {auth.ready && session && (selected
           ? <Manage key={selected} id={selected} api={accountApi} rules={rules} close={() => select(null)} changed={() => setRevision(value => value + 1)} />
           : <><h1 tabIndex={-1}>Your <em>bookings</em></h1><BookingList key={revision} open={select} /></>)}
       </>}

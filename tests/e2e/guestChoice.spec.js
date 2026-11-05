@@ -28,6 +28,11 @@ const madeUpUser = (identities) => JSON.stringify({
   id: crypto.randomUUID(), aud: 'authenticated', role: '', email: 'someone@example.test', identities,
   user_metadata: {}, app_metadata: { provider: 'email' }, created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
 })
+// Only an email sign-up is answered this way. The quiet guest session the page starts before holding a time uses the same address
+// with no email, and goes to the real local server.
+const fakeEmailSignUp = (route, identities = [{ provider: 'email' }]) => route.request().postDataJSON()?.email
+  ? route.fulfill({ status: 200, contentType: 'application/json', body: madeUpUser(identities) })
+  : route.continue()
 
 test('a guest can change their mind and sign in, keeping the choices, the held time and what was typed', async ({ page }) => {
   await toChoice(page)
@@ -114,7 +119,7 @@ test('a booking that is already made has no way back to the choices', async ({ p
 
 test('registering when the email has to be confirmed first keeps the booking waiting, and someone who used the link in the email carries on from this page', async ({ page }) => {
   let confirmed = false
-  await page.route('**/auth/v1/signup*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: madeUpUser([{ provider: 'email' }]) }))
+  await page.route('**/auth/v1/signup*', (route) => fakeEmailSignUp(route))
   await page.route('**/auth/v1/resend*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }))
   // Until the link has been opened the sign-in is refused; afterwards the real local server answers.
   await page.route('**/auth/v1/token*', (route) => confirmed ? route.continue()
@@ -146,7 +151,7 @@ test('registering when the email has to be confirmed first keeps the booking wai
 
 test('registering with the code from the email confirms on this same page, and the held time is kept', async ({ page }) => {
   // The local test server has "Confirm email" switched off, so the sign-up and the code check are answered as the online project answers them.
-  await page.route('**/auth/v1/signup*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: madeUpUser([{ provider: 'email' }]) }))
+  await page.route('**/auth/v1/signup*', (route) => fakeEmailSignUp(route))
   const session = await (await fetch(`${fixture.config.API_URL}/auth/v1/token?grant_type=password`, {
     method: 'POST', headers: { apikey: fixture.config.ANON_KEY, 'content-type': 'application/json' },
     body: JSON.stringify({ email: fixture.email, password: fixture.password }),
@@ -184,7 +189,7 @@ test('registering with the code from the email confirms on this same page, and t
 })
 
 test('someone who already has an account is told to sign in, with their email kept', async ({ page }) => {
-  await page.route('**/auth/v1/signup*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: madeUpUser([]) }))
+  await page.route('**/auth/v1/signup*', (route) => fakeEmailSignUp(route, []))
   await toChoice(page)
   await page.getByRole('button', { name: 'Create an account', exact: true }).click()
   await page.getByLabel('First name', { exact: true }).fill('Back')

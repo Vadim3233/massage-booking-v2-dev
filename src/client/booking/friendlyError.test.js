@@ -28,4 +28,10 @@ describe('what a client is allowed to read', () => {
     expect(friendlyError({}, 'Try again')).toBe('Try again')
     expect(friendlyError('Please choose a date.')).toBe('Please choose a date.')
   })
+  it('explains the hold rules from the database in its own words', () => {
+    expect(friendlyError({ code: '42501', message: 'Please refresh the page and choose your time again.' })).toBe('Please refresh the page and choose your time again.')
+    const cap = 'You are already holding times in other windows. Please finish one of those bookings, or wait 20 minutes and try again.'
+    expect(friendlyError({ code: '23P01', message: cap })).toBe(cap)
+    expect(friendlyError({ status: 429, message: 'Request rate limit reached' })).toBe('Too many attempts from this connection. Please wait a few minutes and try again.')
+  })
 })

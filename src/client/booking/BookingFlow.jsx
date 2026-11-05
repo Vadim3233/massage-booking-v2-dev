@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { createBookingApi } from './bookingApi.js'
 import { createBookingStore } from './bookingStore.js'
@@ -9,6 +9,7 @@ import { readUsual, rememberUsual } from './usualBooking.js'
 import { friendlyError } from './friendlyError.js'
 import { useBookingHistory } from './useBookingHistory.js'
 import { useClientAuth } from '../auth/useClientAuth.js'
+import { ensureHoldSession, forgetQuietGuest, isQuietGuest } from '../auth/quietGuest.js'
 import { useLinkProblem } from '../auth/linkProblem.js'
 import AuthPanel from '../auth/AuthPanel.jsx'
 import { AreaStep, TimeStep, TreatmentStep } from './components/SelectionSteps.jsx'
@@ -27,10 +28,14 @@ const api = createBookingApi(supabase)
 const fallbackBank = paymentConfig(import.meta.env)
 
 export default function BookingFlow() {
-  const [store] = useState(() => createBookingStore({ api, storage: sessionStorage, clientKey: browserClientKey(localStorage) }))
+  const [store] = useState(() => createBookingStore({ api, storage: sessionStorage, clientKey: browserClientKey(localStorage),
+    ensureSession: () => ensureHoldSession(supabase, localStorage) }))
   const { draft, step, busy, error, quote, quoteError, result } = useSyncExternalStore(store.subscribe, store.getSnapshot)
   const navigate = useBookingHistory(store, step)
   const auth = useClientAuth(supabase)
+  // A guest session the page started by itself (to hold a time) still counts as "not signed in": the guest-or-account choice stays.
+  const [, recheckQuiet] = useReducer((n) => n + 1, 0)
+  const quietGuest = isQuietGuest(localStorage, auth.session)
   const [catalogue, setCatalogue] = useState(null)
   const [catalogueAttempt, setCatalogueAttempt] = useState(0)
   const [catalogueFailed, setCatalogueFailed] = useState(false)
@@ -82,7 +87,7 @@ export default function BookingFlow() {
   useEffect(() => { store.expireHold() }, [store, clock, busy])
   // A new screen starts at its heading: named in the tab, read out first by a screen reader, and the page back at the top.
   // Signing in or carrying on as a guest swaps the content inside a step, so that counts as a new screen too.
-  const needsAuth = step >= 5 && !auth.session
+  const needsAuth = step >= 5 && (!auth.session || quietGuest)
   const screen = `${step}:${needsAuth ? 'sign-in' : 'main'}`
   const lastScreen = useRef(null)
   useEffect(() => {
@@ -123,8 +128,10 @@ export default function BookingFlow() {
       if (target === 6) await store.finalize(auth.session?.user.id)
     }
   }
-  const isGuest = Boolean(auth.session?.user?.is_anonymous)
+  const isGuest = Boolean(auth.session?.user?.is_anonymous) && !quietGuest
   async function startGuest() {
+    // The quiet session that holds the time simply becomes the chosen guest session, so the held time stays with it.
+    if (quietGuest) { forgetQuietGuest(localStorage); recheckQuiet(); return }
     const { error: guestError } = await supabase.auth.signInAnonymously()
     if (guestError) throw guestError
   }
@@ -132,7 +139,7 @@ export default function BookingFlow() {
   // (the choices, the held time, anything typed) stays in the draft, and a signed-in account takes it over when the details screen opens.
   // This is only offered on the details screen, before any booking exists.
   const [wantsAccount, setWantsAccount] = useState(false)
-  if (auth.session && wantsAccount) setWantsAccount(false)
+  if (auth.session && !quietGuest && wantsAccount) setWantsAccount(false)
   async function leaveGuest() {
     if (!isGuest || draft.bookingId) return
     const { error: signOutError } = await supabase.auth.signOut()
@@ -142,8 +149,8 @@ export default function BookingFlow() {
   // Signing in from the top of any page, before anything is chosen: the details are then filled in later and the guest question never comes up.
   // A guest can do the same until a booking is made; once there is a booking the page has no way back, as before.
   const [signInOpen, setSignInOpen] = useState(false)
-  if (signInOpen && auth.session && !isGuest) setSignInOpen(false)
-  const signedInAccount = Boolean(auth.session) && !isGuest
+  const signedInAccount = Boolean(auth.session) && !auth.session.user?.is_anonymous
+  if (signInOpen && signedInAccount) setSignInOpen(false)
   async function signOut() {
     const { error: signOutError } = await supabase.auth.signOut()
     if (signOutError) store.setError(friendlyError(signOutError))
@@ -206,9 +213,9 @@ export default function BookingFlow() {
           {step === 4 && <ReviewStep draft={draft} catalogue={catalogue} quote={quote} quoteError={quoteError} edit={store.edit} navigate={navigate} refreshQuote={store.refreshQuote} retryQuote={store.retryQuote} next={() => goWithQuote(5)} />}
           {!auth.ready && step >= 5 && <p role="status">Checking your account…</p>}
           {auth.ready && needsAuth && <AuthPanel client={supabase} onGuest={startGuest} startOpen={wantsAccount} />}
-          {step === 5 && auth.session && <DetailsStep key={auth.session.user.id} draft={draft} areas={catalogue?.areas || []} chooseArea={(areaId) => store.edit({ areaId })} user={auth.session.user} api={api} edit={store.edit} report={store.setError} guest={isGuest} onSwitchToAccount={isGuest && !draft.bookingId ? leaveGuest : undefined} newTestGuest={startNewTestGuest} next={() => goWithQuote(6)} />}
-          {step === 6 && auth.session && <PaymentStep rules={rules} draft={draft} quote={quote} quoteError={quoteError} bank={bank} api={api} store={store} finalize={() => store.finalize(auth.session.user.id)} held={held} error={error} chooseTimeAgain={() => navigate(3)} />}
-          {step === 7 && auth.session && <ConfirmationStep id={draft.bookingId} result={result} api={api} bank={bank} quote={quote} again={startAgain} />}
+          {step === 5 && auth.session && !needsAuth && <DetailsStep key={auth.session.user.id} draft={draft} areas={catalogue?.areas || []} chooseArea={(areaId) => store.edit({ areaId })} user={auth.session.user} api={api} edit={store.edit} report={store.setError} guest={isGuest} onSwitchToAccount={isGuest && !draft.bookingId ? leaveGuest : undefined} newTestGuest={startNewTestGuest} next={() => goWithQuote(6)} />}
+          {step === 6 && auth.session && !needsAuth && <PaymentStep rules={rules} draft={draft} quote={quote} quoteError={quoteError} bank={bank} api={api} store={store} finalize={() => store.finalize(auth.session.user.id)} held={held} error={error} chooseTimeAgain={() => navigate(3)} />}
+          {step === 7 && auth.session && !needsAuth && <ConfirmationStep id={draft.bookingId} result={result} api={api} bank={bank} quote={quote} again={startAgain} />}
         </fieldset>
       </>}
     </main>
