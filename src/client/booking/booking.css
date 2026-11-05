@@ -220,7 +220,8 @@
 .bank-card h3 { margin-top: 18px; }
 .steps-list { margin: 8px 0 0; padding-left: 22px; }
 .steps-list li { margin: 6px 0; }
-.switch-method { margin: 4px 0 0 -10px; }
+.tiles--methods { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 8px 0 12px; }
+.tiles--methods .tile { flex-direction: column; align-items: flex-start; justify-content: center; }
 .terms-note { margin: 12px 0 4px; color: var(--ink-soft); font-size: 14px; }
 .terms { scroll-margin-bottom: 170px; padding: 12px 14px; border: 1.5px solid var(--tile-border); border-radius: var(--radius); background: var(--surface); }
 .terms:has(input:checked) { border-color: var(--primary); background: var(--primary-soft); }
