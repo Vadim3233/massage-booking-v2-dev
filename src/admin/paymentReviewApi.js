@@ -7,9 +7,25 @@ booking_payments(*),booking_enhancements(*)`
 const queueFields = `id,booking_reference,date,start_minutes,treatment_duration_minutes,total_gbp,booking_status,created_at,updated_at,
 clients!bookings_client_id_fkey(first_name,last_name),booking_sessions(service_name_snapshot,duration_minutes),
 booking_payments(method,status,updated_at)`
-// What needs the Admin right now: transfers the client says they made, and cash requests to decide.
+// What needs the Admin right now: transfers the client says they made, cash requests to decide, and an appointment that has happened
+// without the payment being received yet.
 export const NEEDS_YOU = ['awaiting_verification', 'awaiting_approval']
-export const needsYou = booking => NEEDS_YOU.includes(booking.booking_payments?.status)
+const londonClock = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+function londonNow(now) {
+  const parts = Object.fromEntries(londonClock.formatToParts(now).map(part => [part.type, part.value]))
+  return { date: `${parts.year}-${parts.month}-${parts.day}`, minutes: Number(parts.hour) * 60 + Number(parts.minute) }
+}
+// A confirmed booking whose appointment has finished, with the bank transfer not received or the cash not marked received.
+export function paymentOverdue(booking, now = Date.now()) {
+  const payment = booking.booking_payments
+  if (!['confirmed', 'completed'].includes(booking.booking_status) || !payment) return false
+  const unpaid = (payment.method === 'bank_transfer' && ['awaiting_transfer', 'awaiting_verification'].includes(payment.status)) || (payment.method === 'cash' && payment.status === 'approved')
+  if (!unpaid || !booking.date) return false
+  const clock = londonNow(now)
+  const ends = Number(booking.start_minutes) + Number(booking.treatment_duration_minutes || 0)
+  return booking.date < clock.date || (booking.date === clock.date && ends <= clock.minutes)
+}
+export const needsYou = booking => NEEDS_YOU.includes(booking.booking_payments?.status) || paymentOverdue(booking)
 export const paymentActions = booking => {
   const payment = booking.booking_payments
   // A booking waiting for payment is never cancelled automatically: the Admin confirms the payment, confirms the booking with the payment

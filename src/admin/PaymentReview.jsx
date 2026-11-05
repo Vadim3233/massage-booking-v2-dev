@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { clientName, money, sessionSummary, time } from './calendarPresentation.js'
 import { groupByAppointmentDay } from './reviewDays.js'
-import { loadReviewResource, needsYou, paymentReviewApi } from './paymentReviewApi.js'
+import { loadReviewResource, needsYou, paymentOverdue, paymentReviewApi } from './paymentReviewApi.js'
 import { activeReminder, reminderWhen, useReminders } from './paymentReminders.js'
 import PaymentActions from './PaymentActions.jsx'
 import { useQuietRetry, useReturnRefresh } from './useReturnRefresh.js'
@@ -11,8 +11,9 @@ import Icon from '../ui/icons.jsx'
 function Item({ booking, openBooking, refresh, reminder }) {
   const needs = needsYou(booking) && !reminder
   const cash = booking.booking_payments.method === 'cash'
+  const overdue = paymentOverdue(booking)
   return <li className={`admin-review-item ${needs ? '' : 'wait'}`} data-variant="sand">
-    <p className={`chip ${needs ? 'chip--needs' : 'chip--wait'} admin-status pending`}>{reminder ? `Reminder set · back ${reminderWhen(reminder.until)}` : cash ? 'Cash request to decide' : booking.booking_payments.status === 'awaiting_transfer' ? 'Transfer not yet declared by the client' : 'Bank transfer to verify'}</p>
+    <p className={`chip ${needs ? 'chip--needs' : 'chip--wait'} admin-status pending`}>{reminder ? `Reminder set · back ${reminderWhen(reminder.until)}` : overdue ? (cash ? 'Session done · cash not marked received' : booking.booking_payments.status === 'awaiting_verification' ? 'Session done · client says paid, check your bank' : 'Session done · not paid yet') : cash ? 'Cash request to decide' : booking.booking_payments.status === 'awaiting_transfer' ? 'Transfer not yet declared by the client' : 'Bank transfer to verify'}</p>
     <div className="admin-card-heading"><h3>{clientName(booking)}</h3><strong className="admin-card-price">{money(booking.total_gbp)}</strong></div>
     <p className="admin-review-when">{time(booking.start_minutes)} · {sessionSummary(booking)}</p>
     <p className="admin-review-reference">Booked {new Date(booking.created_at).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · {booking.booking_reference}</p>
@@ -67,7 +68,7 @@ export default function PaymentReview({ openBooking, revision, changed }) {
   // The appointment's day is the heading above its card, soonest first.
   const days = current ? groupByAppointmentDay(current.bookings, booking => needsYou(booking) && !putOff(booking)) : []
   return <section className="admin-review" aria-labelledby="review-title">
-    <header className="admin-review-heading"><div><h1 id="review-title">To check</h1><p>Confirm a payment when it arrives, or cancel a booking that will not be paid. Nothing is cancelled automatically.</p></div><button className="btn--quiet btn--icon" onClick={() => { quiet.asked(); reread() }} aria-label="Refresh reviews"><Icon name="refresh" size={22} /></button></header>
+    <header className="admin-review-heading"><div><h1 id="review-title">To check</h1><p>Confirm a payment when it arrives, or cancel a booking that will not be paid. Sessions that have happened but are not paid yet are listed here too. Nothing is cancelled automatically.</p></div><button className="btn--quiet btn--icon" onClick={() => { quiet.asked(); reread() }} aria-label="Refresh reviews"><Icon name="refresh" size={22} /></button></header>
     {error && <p role={result ? 'status' : 'alert'}>{error} <button onClick={() => { quiet.asked(); reread() }}>Retry reviews</button></p>}
     {!current && !error && <div className="skeleton-rows" role="status"><span className="admin-sr-only">Loading payment reviews…</span><span className="skeleton" /><span className="skeleton" /></div>}
     {current && <>
