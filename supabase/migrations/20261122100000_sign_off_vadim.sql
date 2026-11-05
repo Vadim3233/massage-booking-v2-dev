@@ -14,6 +14,7 @@ end;
 $$;
 revoke all on function public.notification_sign_off() from public, anon, authenticated;
 
+drop trigger if exists notification_deliveries_sign_off on public.notification_deliveries;
 create trigger notification_deliveries_sign_off before insert on public.notification_deliveries
   for each row execute function public.notification_sign_off();
 
@@ -53,5 +54,5 @@ revoke all on function public.mirror_client_email_to_telegram() from public, ano
 
 -- A WhatsApp message the Admin saved in Settings keeps his own wording; only an old "Warm wishes, Vad" at its end is changed.
 update public.business_settings
-set value = to_jsonb(regexp_replace(value #>> '{}', E'\n\nWarm wishes,\nVad$', E'\n\nWarm wishes,\nVadim'))
-where key = 'share_message' and jsonb_typeof(value) = 'string' and value #>> '{}' ~ E'\n\nWarm wishes,\nVad$';
+set value = to_jsonb(regexp_replace(value #>> '{}', E'\n\n(Warm wishes|Take care),\nVad(im)?$', E'\n\nWarm wishes,\nVadim'))
+where key = 'share_message' and jsonb_typeof(value) = 'string' and value #>> '{}' ~ E'\n\n(Warm wishes,\nVad|Take care,\nVadim)$';
