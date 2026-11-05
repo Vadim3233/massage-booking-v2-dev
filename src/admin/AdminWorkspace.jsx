@@ -50,6 +50,7 @@ const readRoute = () => ({ path: window.location.pathname.replace(/\/$/, '') || 
 export default function AdminWorkspace({ signOut, ownerId }) {
   const [route, setRoute] = useState(readRoute)
   const [revision, setRevision] = useState(0)
+  const [agendaHome, setAgendaHome] = useState(0)
   const [opener, setOpener] = useState(null)
   const [unreadAlerts, refreshAlerts] = useUnreadAlerts()
   const [toCheck, refreshToCheck] = useToCheck(revision)
@@ -82,6 +83,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
   function navigate(path, background) {
     if (route.path === '/admin/bookings/new' && !path.startsWith('/admin/bookings/new') && guard.current && !guard.current()) return
     window.history.pushState(background ? { adminBackground: background } : {}, '', path)
+    if (!background && (path === '/admin' || path === '/admin/agenda')) setAgendaHome(value => value + 1)
     setRoute(readRoute())
     if (!background) window.scrollTo(0, 0)
   }
@@ -192,7 +194,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {daySettingsSurface && <AdminLink className="admin-back-link" href={daySettingsBack} navigate={navigate}>← {daySettingsBack === '/admin/agenda' ? 'Agenda' : 'Day'}</AdminLink>}
       {daySettingsSurface && <DaySettings key={date} date={date} revision={revision} openBooking={openBooking} changed={() => setRevision(value => value + 1)} done={() => navigate(daySettingsBack)} />}
       {dayHoursSurface && <DayHoursGrid key={date} date={date} changed={() => setRevision(value => value + 1)} done={() => navigate(daySettingsBack)} />}
-      {surface === '/admin/agenda' && <Agenda openBooking={openBooking} openDay={day => openDaySettings(day, '/admin/agenda')} revision={revision} toCheck={toCheck} checked={() => { setRevision(value => value + 1); refreshToCheck() }} seeAll={() => navigate('/admin/review')} />}
+      {surface === '/admin/agenda' && <Agenda home={agendaHome} openBooking={openBooking} openDay={day => openDaySettings(day, '/admin/agenda')} revision={revision} toCheck={toCheck} checked={() => { setRevision(value => value + 1); refreshToCheck() }} seeAll={() => navigate('/admin/review')} />}
       {creating && <AdminNewBooking initialDate={date} initialClientId={clientParam} ownerId={ownerId} registerGuard={registerGuard} onCancel={() => navigate(route.returnTo || '/admin')} onCreated={created} openClient={openClientFromBooking} />}
       {surface === '/admin/review' && <PaymentReview openBooking={openBooking} revision={revision} changed={refreshToCheck} />}
       {surface === '/admin/clients' && <Clients openClient={id => navigate(`/admin/clients/${id}`)} openCombine={openCombine} />}

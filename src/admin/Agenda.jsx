@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { createCalendarApi } from './calendarApi.js'
 import PaymentActions from './PaymentActions.jsx'
@@ -83,7 +83,8 @@ function ToCheck({ toCheck, checked, seeAll }) {
   </section>
 }
 
-export default function Agenda({ openBooking, openDay, revision, toCheck, checked, seeAll }) {
+// `home` goes up each time Calendar (or the Agenda tab) is pressed: the list then starts from today again, however far back it was opened up.
+export default function Agenda({ openBooking, openDay, revision, toCheck, checked, seeAll, home = 0 }) {
   // What is on screen stays on screen while it is read again, so nothing flashes and the scroll position holds.
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
@@ -99,6 +100,8 @@ export default function Agenda({ openBooking, openDay, revision, toCheck, checke
   const shown = useRef(null)
   const anchor = useRef(null)
   const sentinel = useRef(null)
+  const days = useRef(null)
+  const keepPlace = useRef(null)
   const reread = useCallback(() => setAttempt(value => value + 1), [])
   const quiet = useQuietRetry(reread)
   useEffect(() => { shown.current = data ? { start: data.start, end: data.end } : null }, [data])
@@ -136,6 +139,32 @@ export default function Agenda({ openBooking, openDay, revision, toCheck, checke
   }, [attempt, revision, reread, quiet])
   useReturnRefresh(reread)
 
+  // Pressing Calendar comes back to today: earlier days that were opened up are put away again, and the page is at the top, where today is.
+  const homeSeen = useRef(home)
+  useEffect(() => {
+    if (homeSeen.current === home) return
+    homeSeen.current = home
+    const day = today()
+    setData(previous => {
+      if (!previous || previous.start >= day) return previous
+      const next = { ...previous, start: day, bookings: previous.bookings.filter(row => row.date >= day), blocks: previous.blocks.filter(row => row.date >= day), hours: previous.hours.filter(entry => entry.date >= day) }
+      shown.current = { start: next.start, end: next.end }
+      anchor.current = day
+      return next
+    })
+    setPagingError('')
+    window.scrollTo(0, 0)
+  }, [home])
+
+  // Earlier appointments are put above what is on screen without moving it: the day at the top of the list stays where it was, and the earlier
+  // days are there to scroll up to.
+  useLayoutEffect(() => {
+    const place = keepPlace.current
+    if (!place) return
+    keepPlace.current = null
+    if (place.node.isConnected) window.scrollBy(0, place.node.getBoundingClientRect().top - place.top)
+  }, [data])
+
   // Cancelled bookings are left out unless asked for (one with money still to sort out stays), so a day left with nothing drops out of the list.
   const entries = data ? agendaDays({ bookings: listedBookings(data.bookings, showCancelled), blocks: data.blocks, hours: data.hours, start: data.start, end: data.end, day: today(), showEvery }) : []
   const upNext = data ? nextUp(data.bookings, new Date(now)) : null
@@ -150,6 +179,8 @@ export default function Agenda({ openBooking, openDay, revision, toCheck, checke
       const version = `${attempt}:${revision}`
       const [bookings, extras] = await Promise.all([loadRange(start, end, version), loadExtrasRange(start, end, version)])
       if (direction === 'newer') setLastChunk(bookings.length + extras.blocks.length + specialCount(extras))
+      const first = direction === 'older' ? days.current?.querySelector(':scope > .admin-agenda-day') : null
+      if (first) keepPlace.current = { node: first, top: first.getBoundingClientRect().top }
       setData(previous => {
         if (!previous) return previous
         const more = mergeExtras([previous, extras])
@@ -206,7 +237,7 @@ export default function Agenda({ openBooking, openDay, revision, toCheck, checke
           <label className="admin-agenda-switch"><input type="checkbox" role="switch" checked={showCancelled} onChange={event => setShowCancelled(event.target.checked)} />Show cancelled</label>
         </div>
       </div>
-      <div className="admin-agenda-days">
+      <div className="admin-agenda-days" ref={days}>
         {entries.map(entry => {
           if (entry.type === 'away') return <AwayBanner key={`away-${entry.group.key}`} group={entry.group} open={openBlock} />
           if (entry.type === 'quiet') return <QuietDays key={entry.key} items={entry.items} open={openBlock} openDay={openDay} />
