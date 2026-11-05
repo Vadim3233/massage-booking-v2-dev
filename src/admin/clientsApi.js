@@ -57,11 +57,12 @@ export function createClientsApi(client) {
   const addressRow = address => ({ label: address.label?.trim() || null, address: address.address.trim(), entry_instructions: address.entry_instructions?.trim() || null })
   return {
     search: query => run(client.rpc('admin_search_clients', { p_query: query || '' })),
-    get: id => run(client.from('clients').select('id,first_name,last_name,email,phone,auth_user_id,online_booking_enabled,created_at').eq('id', id).maybeSingle()),
+    get: id => run(client.from('clients').select('id,first_name,last_name,email,phone,auth_user_id,online_booking_enabled,no_travel_fee,created_at').eq('id', id).maybeSingle()),
     summary: id => run(client.rpc('admin_client_summary', { p_client_id: id })),
     create: (details, requestId) => one(client.rpc('admin_create_client', { p_details: details, p_request_id: requestId })),
     update: (id, details) => one(client.rpc('admin_update_client', { p_client_id: id, p_details: details })),
     setOnlineBooking: (id, enabled) => run(client.from('clients').update({ online_booking_enabled: enabled }).eq('id', id)),
+    setNoTravelFee: (id, free) => run(client.from('clients').update({ no_travel_fee: free }).eq('id', id)),
     addresses: id => run(client.from('client_addresses').select('id,label,address,entry_instructions,is_default').eq('client_id', id).order('is_default', { ascending: false }).order('created_at')),
     addAddress: (id, address) => run(client.from('client_addresses').insert({ client_id: id, ...addressRow(address) })),
     updateAddress: (id, address) => run(client.from('client_addresses').update(addressRow(address)).eq('id', id)),
