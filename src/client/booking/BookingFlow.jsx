@@ -21,6 +21,7 @@ import HoldNotice from './components/HoldNotice.jsx'
 import { bankFromSettings, chooseBank, paymentConfig } from './paymentConfig.js'
 import { useBookingRules } from '../bookingRules.js'
 import { useWelcome } from '../welcome.js'
+import { minimumFor } from '../../booking/bookingWords.js'
 import './booking.css'
 
 const api = createBookingApi(supabase)
@@ -69,15 +70,22 @@ export default function BookingFlow() {
     }
   }, [store])
   const signedInUser = auth.session?.user?.id
-  // Vadim can let a client off the travel fee. Once they are signed in, the areas and prices then show none (the quote leaves it out either way).
+  // Vadim can let a client off the travel fee, and off an area's minimum booking. Once they are signed in, the areas and prices then show no
+  // travel fee and every length is offered (the database decides either way).
+  const [minimumOff, setMinimumOff] = useState({ user: null, off: false })
   useEffect(() => {
     if (!signedInUser) return undefined
     let live = true
-    supabase.from('clients').select('no_travel_fee').eq('auth_user_id', signedInUser).maybeSingle()
-      .then(({ data }) => { if (live) setTravelFee({ user: signedInUser, free: Boolean(data?.no_travel_fee) }) }, () => { /* The usual fees are shown. */ })
+    supabase.from('clients').select('no_travel_fee,no_minimum_booking').eq('auth_user_id', signedInUser).maybeSingle()
+      .then(({ data }) => {
+        if (!live) return
+        setTravelFee({ user: signedInUser, free: Boolean(data?.no_travel_fee) })
+        setMinimumOff({ user: signedInUser, off: Boolean(data?.no_minimum_booking) })
+      }, () => { /* The usual fees and minimums are shown. */ })
     return () => { live = false }
   }, [signedInUser])
   const freeTravel = Boolean(signedInUser) && travelFee.user === signedInUser && travelFee.free
+  const noMinimum = Boolean(signedInUser) && minimumOff.user === signedInUser && minimumOff.off
   const catalogue = useMemo(() => (loadedCatalogue && freeTravel
     ? { ...loadedCatalogue, areas: loadedCatalogue.areas.map(area => ({ ...area, travel_surcharge_gbp: 0 })) }
     : loadedCatalogue), [loadedCatalogue, freeTravel])
@@ -118,13 +126,16 @@ export default function BookingFlow() {
     const preset = presetFromSearch(window.location.search, catalogue)
     if (!preset?.areaId) return
     store.changeSelection({ areaId: preset.areaId, ...(preset.serviceId ? { serviceId: preset.serviceId, sessions: preset.minutes ? [newSession(preset.minutes)] : [], enhancementIds: [] } : {}) })
-      .then((saved) => { if (saved) navigate(stepForPreset(preset)) })
+      // A length under the area's minimum stops at the lengths, where the reason is shown.
+      .then((saved) => { if (saved) navigate(preset.minutes && preset.minutes < minimumFor(catalogue.areas.find(area => area.id === preset.areaId)) ? 2 : stepForPreset(preset)) })
   }, [catalogue, step, draft, store, navigate])
   // The last booking made on this phone is offered again, so a regular client is two taps from choosing a time.
   useEffect(() => { if (draft.bookingId) rememberUsual(localStorage, draft) }, [draft])
   const usual = useMemo(() => (catalogue && !draft.bookingId ? readUsual(localStorage, catalogue) : null), [catalogue, draft.bookingId])
   async function bookUsual() {
-    if (await store.changeSelection({ areaId: usual.areaId, serviceId: usual.serviceId, sessions: usual.durations.map(newSession), enhancementIds: [] })) navigate(3)
+    const total = usual.durations.reduce((sum, minutes) => sum + minutes, 0)
+    const short = total < minimumFor(catalogue.areas.find(area => area.id === usual.areaId), noMinimum)
+    if (await store.changeSelection({ areaId: usual.areaId, serviceId: usual.serviceId, sessions: usual.durations.map(newSession), enhancementIds: [] })) navigate(short ? 2 : 3)
   }
   function startAgain() {
     sessionStorage.removeItem(draftKey)
@@ -210,7 +221,7 @@ export default function BookingFlow() {
         <fieldset className={`screen enter ${busy ? 'is-busy' : ''}`} key={step}>
           {step === 0 && <AreaStep welcome={welcome} rules={rules} catalogue={catalogue} usual={usual} bookUsual={bookUsual} choose={async (areaId) => { if (areaId === draft.areaId || await store.changeSelection({ areaId })) navigate(1) }} />}
           {step === 1 && <TreatmentStep catalogue={catalogue} choose={async (serviceId) => { if (serviceId === draft.serviceId || await store.changeSelection({ serviceId, sessions: [], enhancementIds: [] })) navigate(2) }} />}
-          {step === 2 && <PeopleLengthStep draft={draft} catalogue={catalogue} edit={store.edit}
+          {step === 2 && <PeopleLengthStep draft={draft} catalogue={catalogue} edit={store.edit} noMinimum={noMinimum}
             choose={async (durations) => {
               const same = durations.length === draft.sessions.length && durations.every((minutes, index) => draft.sessions[index].duration_minutes === minutes)
               if (same || await store.changeSelection({ sessions: durations.map(newSession) })) navigate(3)

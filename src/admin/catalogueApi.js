@@ -27,6 +27,9 @@ export function parsePostcodes(value) {
   return [...new Set(pieces.map(piece => piece.trim().replace(/\s+/g, ' ')).filter(Boolean))]
 }
 export const postcodesText = list => (list || []).join(', ')
+// An area's minimum booking (Vadim, 5 Nov 2026): the whole time at the address, two people's times added up. Off, or one of these.
+export const MINIMUM_CHOICES = [90, 120, 180]
+export const parseMinimum = value => (value === null || value === undefined || value === '' || Number(value) === 0 ? null : Number(value))
 const POSTCODE_START = /^[A-Z]{1,2}\d[A-Z\d]?( \d)?$/
 export function validateArea(area) {
   if (!area.name.trim()) return 'Give the area a name.'
@@ -75,10 +78,10 @@ export function createCatalogueApi(client) {
       catch (failure) { await client.from('services').delete().eq('id', row.id); throw failure }
     },
     swapServices: (a, b) => swap('services', a, b),
-    areas: () => run(client.from('service_areas').select('id,slug,name,active,travel_surcharge_gbp,congestion_fee_gbp,postcodes,display_order').order('display_order').order('name')),
-    saveArea: area => run(client.from('service_areas').update({ name: area.name.trim(), active: Boolean(area.active), travel_surcharge_gbp: parsePrice(area.travel_surcharge_gbp), congestion_fee_gbp: parsePrice(area.congestion_fee_gbp), postcodes: parsePostcodes(area.postcodes) }).eq('id', area.id)),
+    areas: () => run(client.from('service_areas').select('id,slug,name,active,travel_surcharge_gbp,congestion_fee_gbp,postcodes,minimum_booking_minutes,display_order').order('display_order').order('name')),
+    saveArea: area => run(client.from('service_areas').update({ name: area.name.trim(), active: Boolean(area.active), travel_surcharge_gbp: parsePrice(area.travel_surcharge_gbp), congestion_fee_gbp: parsePrice(area.congestion_fee_gbp), postcodes: parsePostcodes(area.postcodes), minimum_booking_minutes: parseMinimum(area.minimum_booking_minutes) }).eq('id', area.id)),
     async createArea(area, nextOrder) {
-      return run(client.from('service_areas').insert({ slug: await uniqueSlug('service_areas', area.name), name: area.name.trim(), active: Boolean(area.active), travel_surcharge_gbp: parsePrice(area.travel_surcharge_gbp), congestion_fee_gbp: parsePrice(area.congestion_fee_gbp), postcodes: parsePostcodes(area.postcodes), display_order: nextOrder }))
+      return run(client.from('service_areas').insert({ slug: await uniqueSlug('service_areas', area.name), name: area.name.trim(), active: Boolean(area.active), travel_surcharge_gbp: parsePrice(area.travel_surcharge_gbp), congestion_fee_gbp: parsePrice(area.congestion_fee_gbp), postcodes: parsePostcodes(area.postcodes), minimum_booking_minutes: parseMinimum(area.minimum_booking_minutes), display_order: nextOrder }))
     },
     swapAreas: (a, b) => swap('service_areas', a, b),
     extras: () => run(client.from('enhancements').select('id,slug,name,description,price_gbp,duration_minutes,active,display_order').order('display_order').order('name')),

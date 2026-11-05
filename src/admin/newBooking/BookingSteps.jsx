@@ -1,4 +1,5 @@
 import DayTimePicker from '../../client/booking/components/DayTimePicker.jsx'
+import { hoursWords, minimumFor } from '../../booking/bookingWords.js'
 import { dateLabel, money, time, shiftDate, today } from '../calendarPresentation.js'
 import AllTimes from './AllTimes.jsx'
 import PastTimes from './PastTimes.jsx'
@@ -55,6 +56,7 @@ export function Summary({ draft, catalogue, quote }) {
     <p>{when}</p>
     {draft.anyTime && draft.start !== null && draft.anyTimeNotes?.length > 0 && <div className="anb-time-note"><p><strong>Outside your usual times</strong></p><ul>{draft.anyTimeNotes.map(note => <li key={note}>{note}</li>)}</ul></div>}
     <p>{duration} min {service?.name || 'treatment to choose'}{area ? ` · ${area.name}` : ''}</p>
+    {duration > 0 && duration < minimumFor(area) && <p className="anb-hint">Shorter than the {hoursWords(minimumFor(area))} minimum for {area.name}. Clients can't book this themselves, but you can.</p>}
     {draft.past
       ? <p className="anb-hint">{(PAST_PAYMENT_OPTIONS.find(([value]) => value === draft.payment) || PAST_PAYMENT_OPTIONS[2])[1]}. {pastOutcome(draft.payment)}</p>
       : <p className="anb-hint">{PAYMENT_OPTIONS.find(([value]) => value === draft.payment)?.[1]}. The appointment will be confirmed.</p>}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { catalogueApi, DURATIONS, postcodesText, priceText, validateArea, validateExtra, validateService } from './catalogueApi.js'
+import { catalogueApi, DURATIONS, MINIMUM_CHOICES, postcodesText, priceText, validateArea, validateExtra, validateService } from './catalogueApi.js'
 import { money } from './calendarPresentation.js'
+import { hoursWords } from '../booking/bookingWords.js'
 
 // Shared by the three lists: load, add, edit in place, hide or show, and move up or down.
 function useList(load, key) {
@@ -117,6 +118,9 @@ function AreaForm({ initial, busy, onSave, onCancel, label }) {
     </div>
     <label className="admin-field">Postcodes<input value={area.postcodes} maxLength={300} autoCapitalize="characters" spellCheck={false} aria-describedby="area-postcodes-hint" disabled={busy} onChange={event => set({ postcodes: event.target.value })} /></label>
     <p className="admin-detail-hint" id="area-postcodes-hint">The start of the postcodes in this area, with commas between them, such as SW3, SW10. W1 covers W1K, W1J and the rest. Once any area has postcodes, a client whose postcode is in another area is asked to choose that one, and one in no area is booked as a request for you to confirm.</p>
+    <label className="admin-field">Minimum booking<select value={area.minimum_booking_minutes ?? ''} aria-describedby="area-minimum-hint" disabled={busy} onChange={event => set({ minimum_booking_minutes: event.target.value })}>
+      <option value="">Off</option>{MINIMUM_CHOICES.map(minutes => <option key={minutes} value={minutes}>{hoursWords(minutes)}</option>)}</select></label>
+    <p className="admin-detail-hint" id="area-minimum-hint">The shortest visit clients can book here themselves, counting everyone's time (2 people × 60 min makes 2 hours). Bookings you make are never stopped, and you can let a client off it on their page.</p>
     <label className="admin-who-row"><input type="checkbox" checked={area.active} disabled={busy} onChange={event => set({ active: event.target.checked })} /> Clients can book here</label>
     <FormButtons busy={busy} problem={problem} onCancel={onCancel} label={label} />
   </form>
@@ -127,7 +131,7 @@ export function AreasSettings({ api = catalogueApi }) {
   const saver = useSaver(list)
   const [editing, setEditing] = useState(null)
   const done = () => setEditing(null)
-  const summary = item => `Travel ${Number(item.travel_surcharge_gbp) > 0 ? money(item.travel_surcharge_gbp) : 'none'} · Congestion ${Number(item.congestion_fee_gbp) > 0 ? money(item.congestion_fee_gbp) : 'none'} · ${item.postcodes?.length ? postcodesText(item.postcodes) : 'No postcodes'}`
+  const summary = item => `Travel ${Number(item.travel_surcharge_gbp) > 0 ? money(item.travel_surcharge_gbp) : 'none'} · Congestion ${Number(item.congestion_fee_gbp) > 0 ? money(item.congestion_fee_gbp) : 'none'} · ${item.postcodes?.length ? postcodesText(item.postcodes) : 'No postcodes'}${item.minimum_booking_minutes ? ` · Minimum ${hoursWords(item.minimum_booking_minutes)}` : ''}`
   return <Frame title="Areas and travel fees" intro="Where you travel to, and any extra charge for each area." list={list} adding={editing === 'new'} onAdd={() => setEditing('new')} addLabel="+ Add an area">
     {saver.message && <p role="status">{saver.message}</p>}
     {editing === 'new' && <section aria-label="Add an area"><h2>Add an area</h2>

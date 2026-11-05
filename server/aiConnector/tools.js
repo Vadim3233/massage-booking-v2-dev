@@ -3,6 +3,7 @@ import { createBookingApi, quoteParams } from '../../src/client/booking/bookingA
 import { buildCalendarFile } from '../../src/client/booking/calendarFile.js'
 import { telegramLink } from '../../src/client/booking/telegramLink.js'
 import { areaForPostcode, areasHavePostcodes, postcodeOf } from '../../src/lib/address.js'
+import { hoursWords, minimumFor, minimumSentence } from '../../src/booking/bookingWords.js'
 
 // The actions a client's own AI assistant can take, signed in as that client (see api/mcp.js). Each one goes through the same client functions
 // as the app, so the database's rules (free times, notice, how far ahead, prices, one hold per client, the client's own bookings only) decide.
@@ -15,6 +16,7 @@ const MAX_DAYS = 7
 export const INSTRUCTIONS = `This connector books mobile massage appointments with Vad Massage (Vadim, a massage therapist who visits clients at home in London) for the signed-in client.
 - Start with get_my_booking_options: it has the treatments, lengths, prices, saved addresses and the client's usual booking.
 - Only offer times that find_free_times returned. Never guess a time, a price or an address.
+- Some areas have a minimum booking (minimum_booking in the areas list): only offer lengths that reach it, counting both people's times together.
 - Before book_appointment, always show the client a summary (day, time, address, people and lengths, total price, payment method, cancellation terms) and wait for a clear yes.
 - Prices are in pounds (GBP). Payment is by bank transfer or cash; you never take a payment yourself.
 - Do not send health or medical details through this connector. Vadim asks about health separately.
@@ -130,6 +132,14 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
 
   async function addresses() { return api.addresses() }
 
+  // Whether Vadim let this client off the areas' minimum booking. If it cannot be read, the minimum applies (the database decides either way).
+  async function noMinimum() {
+    try {
+      const { data } = await client.from('clients').select('no_minimum_booking').eq('auth_user_id', userId)
+      return Boolean((Array.isArray(data) ? data[0] : data)?.no_minimum_booking)
+    } catch { return false }
+  }
+
   function areaFor(areas, address, areaId) {
     const chosen = areaId ? areas.find(area => area.id === areaId) : null
     if (areaId && !chosen) throw new ToolProblem('That area is not one Vadim covers. Use an area_id from get_my_booking_options.')
@@ -157,9 +167,12 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
     const address = saved.find(item => item.id === addressId)
     if (!address) throw new ToolProblem(`That address is not saved on this account. New addresses are added in the app: ${accountLink}.`)
     const { area, outside } = areaFor(all.areas, address, areaId)
+    const total = people.reduce((sum, minutes) => sum + minutes, 0)
+    const minimum = minimumFor(area, await noMinimum())
+    if (total < minimum) throw new ToolProblem(`${minimumSentence(area, minimum)} Two people's times add up. Offer the client a longer booking.`)
     const sessions = people.map((minutes, index) => ({ duration_minutes: minutes, recipient_name: index === 1 ? String(secondName ?? '').trim().slice(0, 60) : '', preference_ids: [] }))
     const draft = { areaId: area.id, serviceId: service.id, sessions, enhancementIds: [] }
-    return { draft, service, address, area, outside, duration: people.reduce((sum, minutes) => sum + minutes, 0) }
+    return { draft, service, address, area, outside, duration: total }
   }
 
   async function rules() {
@@ -218,7 +231,7 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
       annotations: { readOnlyHint: true },
       async run() {
-        const [me, all, saved, row, history] = await Promise.all([profile(), catalogue(), addresses(), rules(), rpc('list_my_bookings')])
+        const [me, all, saved, row, history, minimumOff] = await Promise.all([profile(), catalogue(), addresses(), rules(), rpc('list_my_bookings'), noMinimum()])
         // Vadim can let a client off the travel fee; the prices quoted then leave it out, so the list of areas does too.
         let freeTravel = false
         try {
@@ -249,7 +262,8 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
           client: { first_name: me.first_name, last_name: me.last_name },
           treatments,
           saved_addresses: places,
-          areas: all.areas.map(area => ({ area_id: area.id, name: area.name, travel_fee: gbp(freeTravel ? 0 : area.travel_surcharge_gbp || 0), congestion_charge: gbp(area.congestion_fee_gbp || 0) })),
+          areas: all.areas.map(area => ({ area_id: area.id, name: area.name, travel_fee: gbp(freeTravel ? 0 : area.travel_surcharge_gbp || 0), congestion_charge: gbp(area.congestion_fee_gbp || 0),
+            ...(minimumFor(area, minimumOff) ? { minimum_booking: `${hoursWords(minimumFor(area, minimumOff))} in total (two people's times add up)` } : {}) })),
           usual_booking: usual,
           max_people: MAX_PEOPLE,
           rules: {
