@@ -149,6 +149,10 @@ export default function ClientProfile({ id, back, backLabel = 'Clients', openBoo
     setBusy(true); setError('')
     try { await api.setOnlineBooking(id, !client.online_booking_enabled); changed() } catch (failure) { setError(failure.message) } finally { setBusy(false) }
   }
+  async function toggleTravelFee() {
+    setBusy(true); setError('')
+    try { await api.setNoTravelFee(id, !client.no_travel_fee); changed() } catch (failure) { setError(failure.message) } finally { setBusy(false) }
+  }
   async function toggleMinimum() {
     setBusy(true); setError('')
     try { await api.setNoMinimumBooking(id, !client.no_minimum_booking); changed() } catch (failure) { setError(failure.message) } finally { setBusy(false) }
@@ -177,7 +181,10 @@ export default function ClientProfile({ id, back, backLabel = 'Clients', openBoo
       <button className="btn--small" disabled={busy} onClick={toggleOnline}>{client.online_booking_enabled ? 'Switch off online booking' : 'Switch on online booking'}</button>
       <p className="admin-detail-hint">{client.auth_user_id ? 'Has an online account.' : 'No online account yet.'} Client since {stamp(client.created_at)}.</p>
     </section>
-    <section aria-labelledby="minimum-title"><h2 id="minimum-title">Minimum booking</h2>
+    <section aria-labelledby="prices-title"><h2 id="prices-title">Prices</h2>
+      <p>{client.no_travel_fee ? 'No travel fee: this client\'s new bookings have no travel fee, whoever makes them. The congestion charge still applies.' : 'This client pays the travel fee for their area.'}</p>
+      <button className="btn--small" disabled={busy} aria-pressed={Boolean(client.no_travel_fee)} onClick={toggleTravelFee}>{client.no_travel_fee ? 'Charge the travel fee again' : 'No travel fee for this client'}</button>
+      <p className="admin-detail-hint">Bookings already made keep their price.</p>
       <p>{client.no_minimum_booking ? 'No minimum booking: this client can book any length in any area.' : 'This client keeps to each area\'s minimum booking (More > Areas).'}</p>
       <button className="btn--small" disabled={busy} aria-pressed={Boolean(client.no_minimum_booking)} onClick={toggleMinimum}>{client.no_minimum_booking ? 'Use the area minimums again' : 'No minimum booking for this client'}</button>
     </section>

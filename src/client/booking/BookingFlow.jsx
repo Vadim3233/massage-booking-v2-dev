@@ -32,7 +32,8 @@ export default function BookingFlow() {
   const { draft, step, busy, error, quote, quoteError, result } = useSyncExternalStore(store.subscribe, store.getSnapshot)
   const navigate = useBookingHistory(store, step)
   const auth = useClientAuth(supabase)
-  const [catalogue, setCatalogue] = useState(null)
+  const [loadedCatalogue, setCatalogue] = useState(null)
+  const [travelFee, setTravelFee] = useState({ user: null, free: false })
   const [catalogueAttempt, setCatalogueAttempt] = useState(0)
   const [catalogueFailed, setCatalogueFailed] = useState(false)
   // A second tap that lands just after a screen has changed is the first tap arriving twice: for a moment the new screen takes no taps.
@@ -69,16 +70,25 @@ export default function BookingFlow() {
     }
   }, [store])
   const signedInUser = auth.session?.user?.id
-  // Vadim can let a client off an area's minimum booking. Once they are signed in, the shorter lengths are then offered too.
+  // Vadim can let a client off the travel fee, and off an area's minimum booking. Once they are signed in, the areas and prices then show no
+  // travel fee and every length is offered (the database decides either way).
   const [minimumOff, setMinimumOff] = useState({ user: null, off: false })
   useEffect(() => {
     if (!signedInUser) return undefined
     let live = true
-    supabase.from('clients').select('no_minimum_booking').eq('auth_user_id', signedInUser).maybeSingle()
-      .then(({ data }) => { if (live) setMinimumOff({ user: signedInUser, off: Boolean(data?.no_minimum_booking) }) }, () => { /* The minimum is shown; the database decides. */ })
+    supabase.from('clients').select('no_travel_fee,no_minimum_booking').eq('auth_user_id', signedInUser).maybeSingle()
+      .then(({ data }) => {
+        if (!live) return
+        setTravelFee({ user: signedInUser, free: Boolean(data?.no_travel_fee) })
+        setMinimumOff({ user: signedInUser, off: Boolean(data?.no_minimum_booking) })
+      }, () => { /* The usual fees and minimums are shown. */ })
     return () => { live = false }
   }, [signedInUser])
+  const freeTravel = Boolean(signedInUser) && travelFee.user === signedInUser && travelFee.free
   const noMinimum = Boolean(signedInUser) && minimumOff.user === signedInUser && minimumOff.off
+  const catalogue = useMemo(() => (loadedCatalogue && freeTravel
+    ? { ...loadedCatalogue, areas: loadedCatalogue.areas.map(area => ({ ...area, travel_surcharge_gbp: 0 })) }
+    : loadedCatalogue), [loadedCatalogue, freeTravel])
   useEffect(() => {
     if (!signedInUser || step < 6) return undefined
     let live = true
