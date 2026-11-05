@@ -4,9 +4,9 @@ import { createAdminGate } from './adminGate.js'
 const fields = `*,clients!bookings_client_id_fkey(id,first_name,last_name,email,phone),
 booking_sessions(*,booking_session_preferences(*),booking_session_enhancements(*)),
 booking_payments(*),booking_enhancements(*)`
-const queueFields = `id,booking_reference,date,start_minutes,treatment_duration_minutes,total_gbp,booking_status,created_at,updated_at,
-clients!bookings_client_id_fkey(first_name,last_name),booking_sessions(service_name_snapshot,duration_minutes),
-booking_payments(method,status,updated_at)`
+const queueFields = `id,client_id,booking_reference,date,start_minutes,treatment_duration_minutes,total_gbp,booking_status,created_at,updated_at,
+clients!bookings_client_id_fkey(id,first_name,last_name,phone),booking_sessions(service_name_snapshot,duration_minutes),
+booking_payments(method,status,updated_at,amount_gbp,payment_reference)`
 // What needs the Admin right now: transfers the client says they made, cash requests to decide, and an appointment that has happened
 // without the payment being received yet.
 export const NEEDS_YOU = ['awaiting_verification', 'awaiting_approval']

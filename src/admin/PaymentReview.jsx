@@ -4,11 +4,14 @@ import { groupByAppointmentDay } from './reviewDays.js'
 import { loadReviewResource, needsYou, paymentOverdue, paymentReviewApi } from './paymentReviewApi.js'
 import { activeReminder, reminderWhen, useReminders } from './paymentReminders.js'
 import PaymentActions from './PaymentActions.jsx'
+import PaymentReminder from './PaymentReminder.jsx'
+import { dueForClient, reminderDue } from './shareBooking.js'
 import { useQuietRetry, useReturnRefresh } from './useReturnRefresh.js'
 import Icon from '../ui/icons.jsx'
 
 // `reminder` is set when the Admin has put this payment off with "Not yet"; it then waits quietly, like one the client has not declared yet.
-function Item({ booking, openBooking, refresh, reminder }) {
+// `owing` is every booking on this list that the same client can be sent a payment reminder for, so one message can cover them all.
+function Item({ booking, openBooking, refresh, reminder, owing }) {
   const needs = needsYou(booking) && !reminder
   const cash = booking.booking_payments.method === 'cash'
   const overdue = paymentOverdue(booking)
@@ -18,6 +21,7 @@ function Item({ booking, openBooking, refresh, reminder }) {
     <p className="admin-review-when">{time(booking.start_minutes)} · {sessionSummary(booking)}</p>
     <p className="admin-review-reference">Booked {new Date(booking.created_at).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · {booking.booking_reference}</p>
     <PaymentActions booking={booking} refresh={refresh} short later />
+    {reminderDue(booking) && <PaymentReminder booking={booking} owing={owing} />}
     <a href={`/admin/bookings/${booking.id}`} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); openBooking(booking.id) } }}>View booking <Icon name="right" size={18} /></a>
   </li>
 }
@@ -79,7 +83,7 @@ export default function PaymentReview({ openBooking, revision, changed }) {
           <h2 id={`review-${day.date}`}><span className="day-name">{day.name}</span>{day.rest ? ` · ${day.rest}` : ''}</h2>
           <span>{day.needs > 0 ? `${day.needs} ${day.needs === 1 ? 'needs' : 'need'} you · ${money(day.owed)}` : day.items.some(putOff) ? 'reminder set' : 'waiting for the client'}</span>
         </header>
-        <ul role="list" className="admin-review-list">{day.items.map(booking => <Item key={booking.id} booking={booking} openBooking={openBooking} refresh={refresh} reminder={putOff(booking)} />)}</ul>
+        <ul role="list" className="admin-review-list">{day.items.map(booking => <Item key={booking.id} booking={booking} openBooking={openBooking} refresh={refresh} reminder={putOff(booking)} owing={dueForClient(current.bookings, booking.client_id)} />)}</ul>
       </section>)}
       {(offset > 0 || current.hasMore) && <nav className="admin-payment-buttons" aria-label="Review pages"><button disabled={!offset} onClick={() => setOffset(value => Math.max(0, value - 50))}>Previous page</button><button disabled={!current.hasMore || offset >= 10000} onClick={() => setOffset(value => value + 50)}>Next page</button></nav>}
     </>}

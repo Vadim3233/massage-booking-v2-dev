@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import Icon from '../ui/icons.jsx'
 import { bankFromSettings, chooseBank, paymentConfig } from '../client/booking/paymentConfig.js'
-import { reminderText, whatsappShareLink } from './shareBooking.js'
+import { combinedReminderText, owedTotal, reminderText, whatsappShareLink } from './shareBooking.js'
+import { money } from './calendarPresentation.js'
 
 const fallbackBank = paymentConfig(import.meta.env)
 
@@ -45,7 +46,17 @@ export function ReminderBox({ makeText, phone, label = 'Payment reminder', getBa
   </div>
 }
 
-// "Payment reminder", on a booking whose bank transfer is still to come (a client who pays later).
-export default function PaymentReminder({ booking, getBank }) {
-  return <section aria-label="Payment reminder"><ReminderBox makeText={bank => reminderText(booking, bank)} phone={booking.clients?.phone} getBank={getBank} /></section>
+// "Payment reminder", on a booking whose bank transfer is still to come (a client who pays later). `owing` is every booking this client can be
+// reminded about, this one included: when there is more than one, the reminder offered first is one message that lists them all with the total,
+// so the client is not sent a reminder for each. The reminder for this booking alone is still there underneath.
+export default function PaymentReminder({ booking, owing = [], getBank }) {
+  const phone = booking.clients?.phone
+  const single = bank => reminderText(booking, bank)
+  if (owing.length < 2) return <section aria-label="Payment reminder"><ReminderBox makeText={single} phone={phone} getBank={getBank} /></section>
+  const first = booking.clients?.first_name?.trim()
+  return <section aria-label="Payment reminder" className="admin-owed-reminder">
+    <p className="admin-detail-hint">{first || 'This client'} owes for {owing.length} bookings · {money(owedTotal(owing))}. One message lists them all and the total.</p>
+    <ReminderBox label={owing.length === 2 ? 'Remind about both' : `Remind about all ${owing.length}`} phone={phone} getBank={getBank} makeText={bank => combinedReminderText(owing, bank, first)} />
+    <ReminderBox label="Remind about this one only" phone={phone} getBank={getBank} makeText={single} />
+  </section>
 }
