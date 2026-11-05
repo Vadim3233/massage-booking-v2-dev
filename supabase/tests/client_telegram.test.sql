@@ -241,7 +241,7 @@ select is((select count(*)::integer from public.notification_deliveries d where 
 select is((select count(*)::integer from public.notification_deliveries d where d.channel = 'telegram_client' and d.event_id = (select addie from ev)), 0, 'and neither does one who never linked a chat');
 select is((select count(*)::integer from public.notification_deliveries d where d.channel = 'telegram_client' and d.event_id in (select gus from ev union select rita from ev union select addie from ev)), 1, 'Only that one message was made');
 select ok((select d.body like 'Your appointment is now on %' and d.body like '%Reference: TG-%' and d.body like E'%\n\nTo change or cancel, use the link in your email, or contact Vadim.'
-  and d.body not like '%See or change your booking%' and d.body not like '%{link}%' and d.body not like '%Warm wishes%' and d.body not like '%Take care%' and d.body not like '%Vad' || E'\n' || '%'
+  and d.body not like '%See or change your booking%' and d.body not like '%{link}%' and d.body not like '%Warm wishes%' and d.body not like '%Vad' || E'\n' || '%'
   from public.notification_deliveries d where d.channel = 'telegram_client' and d.event_id = (select gus from ev)),
   'It says what the email says, without the link line and the sign-off, and ends by saying where to change or cancel');
 select is((select d.link_path from public.notification_deliveries d where d.channel = 'telegram_client' and d.event_id = (select gus from ev)), null, 'It carries no link to the booking');

@@ -1,6 +1,6 @@
--- Client messages now end "Take care, Vadim" instead of "Warm wishes, Vad", and say "contact Vadim".
+-- Client messages now end "Warm wishes, Vadim" instead of "Warm wishes, Vad", and say "contact Vadim".
 -- Many functions write client messages, each with the old sign-off in it. Rather than rewrite every one of them, the sign-off is changed in one
--- place: as a message is saved, a sign-off of "Warm wishes, Vad" at its very end becomes "Take care, Vadim".
+-- place: as a message is saved, a sign-off of "Warm wishes, Vad" at its very end becomes "Warm wishes, Vadim".
 
 create or replace function public.notification_sign_off()
 returns trigger
@@ -8,7 +8,7 @@ language plpgsql
 set search_path = ''
 as $$
 begin
-  new.body := regexp_replace(new.body, E'\n\nWarm wishes,\nVad$', E'\n\nTake care,\nVadim');
+  new.body := regexp_replace(new.body, E'\n\nWarm wishes,\nVad$', E'\n\nWarm wishes,\nVadim');
   return new;
 end;
 $$;
@@ -38,7 +38,7 @@ begin
   end if;
   select b.client_id into v_client from public.bookings b where b.id = v_booking;
   if v_client is null then return null; end if;
-  v_body := replace(replace(replace(new.body, E'\n\nSee or change your booking: {link}', ''), E'\n\nTake care,\nVadim', ''), E'\n\nWarm wishes,\nVad', '')
+  v_body := replace(replace(replace(new.body, E'\n\nSee or change your booking: {link}', ''), E'\n\nWarm wishes,\nVadim', ''), E'\n\nWarm wishes,\nVad', '')
     || case when v_event in ('booking.created', 'booking.bank_transfer_verified', 'booking.cash_approved', 'booking.confirmed_payment_due', 'booking.rescheduled')
          then E'\n\nTo change or cancel, use the link in your email, or contact Vadim.' else '' end;
   insert into public.notification_deliveries(event_id, channel, audience, recipient, title, body)
@@ -53,5 +53,5 @@ revoke all on function public.mirror_client_email_to_telegram() from public, ano
 
 -- A WhatsApp message the Admin saved in Settings keeps his own wording; only an old "Warm wishes, Vad" at its end is changed.
 update public.business_settings
-set value = to_jsonb(regexp_replace(value #>> '{}', E'\n\nWarm wishes,\nVad$', E'\n\nTake care,\nVadim'))
+set value = to_jsonb(regexp_replace(value #>> '{}', E'\n\nWarm wishes,\nVad$', E'\n\nWarm wishes,\nVadim'))
 where key = 'share_message' and jsonb_typeof(value) = 'string' and value #>> '{}' ~ E'\n\nWarm wishes,\nVad$';

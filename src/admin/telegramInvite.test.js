@@ -9,7 +9,7 @@ describe('the Telegram link message', () => {
     expect(text).toContain(`press Start:\n${link}\n`)
     expect(text).toContain('optional')
     expect(text).toContain('works once')
-    expect(text.endsWith('Take care,\nVadim')).toBe(true)
+    expect(text.endsWith('Warm wishes,\nVadim')).toBe(true)
   })
   it('still greets a client with no first name', () => {
     expect(inviteMessage('  ', link).startsWith('Hi! ')).toBe(true)

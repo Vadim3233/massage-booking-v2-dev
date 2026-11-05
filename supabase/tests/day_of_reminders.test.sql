@@ -89,7 +89,7 @@ select results_eq($$select channel, audience, recipient, title, status, link_pat
   $$values ('email'::text, 'client'::text, 'rita@example.test'::text, 'Your appointment is today'::text, 'pending'::text, '/account?booking=00000000-0000-4000-8000-00000000d301'::text)$$,
   'It is one client email, queued for the sender, linking to the booking');
 select is((select body from pg_temp.reminder_rows('00000000-0000-4000-8000-00000000d301')),
-  E'Hi Rita, a quick reminder: your appointment is today at 14:30, at 10 Quiet Street, London, SW1A 1AA. I''m looking forward to seeing you!\n\nYou can see or change your booking here: {link}\n\nTake care,\nVadim',
+  E'Hi Rita, a quick reminder: your appointment is today at 14:30, at 10 Quiet Street, London, SW1A 1AA. I''m looking forward to seeing you!\n\nYou can see or change your booking here: {link}\n\nWarm wishes,\nVadim',
   'It says who, when and where, in the owner''s own words, and ends as the other emails do');
 select is((select deduplication_key from public.event_outbox where event_type = 'booking.reminder' and aggregate_id = '00000000-0000-4000-8000-00000000d301'),
   'booking.reminder:00000000-0000-4000-8000-00000000d301:2031-05-05', 'The reminder is recorded once per booking and date');
