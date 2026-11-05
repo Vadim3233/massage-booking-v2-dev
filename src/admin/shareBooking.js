@@ -6,6 +6,9 @@ import { bookingSentence, treatmentNoun } from '../booking/bookingWords.js'
 // place the message is made: "WhatsApp client" and "Share…" both use it. It never says the Admin's notes, the client's own phone or email, internal
 // ids or the booking's history. The bank details are the ones the client's own booking page shows (bankFromSettings/chooseBank), passed in.
 
+// How every message to a client ends.
+export const SIGN_OFF = 'Warm wishes,\nVadim'
+
 const paymentOf = booking => Array.isArray(booking.booking_payments) ? booking.booking_payments[0] : booking.booking_payments
 
 // How the money stands, in plain words.
@@ -42,7 +45,7 @@ function treatments(booking) {
 // The Admin can reword the message (Settings › Share message), with these blanks and no others: the database refuses any other,
 // so nothing but what is filled in here can ever be sent. Empty means the standard wording.
 export const SHARE_BLANKS = ['date', 'time', 'address', 'treatment', 'payment', 'cancellation', 'bank details']
-export const STANDARD_SHARE_MESSAGE = 'Hi! Thank you so much for booking with me, I am really looking forward to seeing you.\n\n*Massage booking – {date}, {time}*\n{address}\n{treatment}\n{payment}\n{cancellation}\n\nIf anything changes or you have any questions, just message me here. See you soon!\n\nWarm wishes,\nVad'
+export const STANDARD_SHARE_MESSAGE = 'Hi! Thank you so much for booking with me, I am really looking forward to seeing you.\n\n*Massage booking – {date}, {time}*\n{address}\n{treatment}\n{payment}\n{cancellation}\n\nIf anything changes or you have any questions, just message me here. See you soon!\n\nWarm wishes,\nVadim'
 export const SHARE_MESSAGE_LIMIT = 1000
 const BLANK = /\{(date|time|address|treatment|payment|bank details|cancellation)\}/g
 
@@ -140,7 +143,8 @@ export function reminderText(booking, bank) {
     details,
     '',
     "If you've already sent it, please ignore this. Thanks so much!",
-    'Vad',
+    '',
+    SIGN_OFF,
   ].join('\n')
 }
 
@@ -173,7 +177,8 @@ export function combinedReminderText(bookings, bank, firstName) {
     details,
     '',
     "If you've already sent it, please ignore this. Thanks so much!",
-    'Vad',
+    '',
+    SIGN_OFF,
   ].join('\n')
 }
 
