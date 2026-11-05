@@ -7,7 +7,7 @@ import { bookingSentence, treatmentNoun } from '../booking/bookingWords.js'
 // ids or the booking's history. The bank details are the ones the client's own booking page shows (bankFromSettings/chooseBank), passed in.
 
 // How every message to a client ends.
-export const SIGN_OFF = 'Take care,\nVadim'
+export const SIGN_OFF = 'Warm wishes,\nVadim'
 
 const paymentOf = booking => Array.isArray(booking.booking_payments) ? booking.booking_payments[0] : booking.booking_payments
 
@@ -45,7 +45,7 @@ function treatments(booking) {
 // The Admin can reword the message (Settings › Share message), with these blanks and no others: the database refuses any other,
 // so nothing but what is filled in here can ever be sent. Empty means the standard wording.
 export const SHARE_BLANKS = ['date', 'time', 'address', 'treatment', 'payment', 'cancellation', 'bank details']
-export const STANDARD_SHARE_MESSAGE = 'Hi! Thank you so much for booking with me, I am really looking forward to seeing you.\n\n*Massage booking – {date}, {time}*\n{address}\n{treatment}\n{payment}\n{cancellation}\n\nIf anything changes or you have any questions, just message me here. See you soon!\n\nTake care,\nVadim'
+export const STANDARD_SHARE_MESSAGE = 'Hi! Thank you so much for booking with me, I am really looking forward to seeing you.\n\n*Massage booking – {date}, {time}*\n{address}\n{treatment}\n{payment}\n{cancellation}\n\nIf anything changes or you have any questions, just message me here. See you soon!\n\nWarm wishes,\nVadim'
 export const SHARE_MESSAGE_LIMIT = 1000
 const BLANK = /\{(date|time|address|treatment|payment|bank details|cancellation)\}/g
 
