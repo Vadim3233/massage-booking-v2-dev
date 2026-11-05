@@ -34,6 +34,11 @@ export function peopleSentence(durations, noun = 'massage') {
     ? `${count(people)} ${lengthWord(durations[0])} ${plural} for ${people} people, one after the other – ${hoursWords(total)} in total`
     : `${count(people)} ${plural} for ${people} people, one after the other (${durations.map(minutes => `${minutes} min`).join(' + ')}) – ${hoursWords(total)} in total`
 }
+// An area's minimum booking (Vadim, 5 Nov 2026): the whole time at the address, so two people's times add up. 0 means none, and none either
+// for a client Vadim let off it ("No minimum booking" on their page). The database checks the same (check_booking_minimum).
+export const minimumFor = (area, exempt = false) => (exempt ? 0 : Number(area?.minimum_booking_minutes) || 0)
+// "In Hayes the minimum booking is 2 hours in total."
+export const minimumSentence = (area, minutes) => `In ${area?.name || 'this area'} the minimum booking is ${hoursWords(minutes)} in total.`
 // The sentence with the price: "One 2-hour massage for 1 person – £170.00".
 export const bookingSentence = (durations, totalGbp, noun) => `${peopleSentence(durations, noun)} – ${money(Number(totalGbp))}`
 

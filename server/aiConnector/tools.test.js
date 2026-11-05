@@ -43,6 +43,7 @@ function fakeClient(overrides = {}) {
     }),
   }
 }
+const fromRows = rows => { const chain = { select: () => chain, eq: () => chain, order: () => chain, then: (resolve, reject) => Promise.resolve({ data: rows, error: null }).then(resolve, reject) }; return chain }
 const tools = (client, extra = {}) => createTools({ client, userId: 'user-1', origin: 'https://book.example.com', env: { TELEGRAM_CLIENT_BOT_USERNAME: 'VadMassageBot' }, now: () => new Date('2026-11-01T09:00:00Z'), ...extra })
 const booking = { treatment_id: 'svc-1', lengths: [90, 90], address_id: 'addr-1', date: '2026-11-04', time: '18:00', payment_method: 'bank_transfer', expected_total_gbp: 180, client_confirmed: true }
 
@@ -79,6 +80,26 @@ describe('the booking tools', () => {
   it('refuses an area that does not match the postcode, and an address that is not saved', async () => {
     expect((await tools(fakeClient()).call('get_price', { treatment_id: 'svc-1', lengths: [60], address_id: 'addr-1', area_id: 'area-2' })).text).toMatch(/SW3 4LP is in Chelsea, not Hayes/)
     expect((await tools(fakeClient()).call('get_price', { treatment_id: 'svc-1', lengths: [60], address_id: 'elsewhere' })).text).toMatch(/not saved on this account/)
+  })
+  it('keeps to an area\'s minimum booking, counting both people, unless Vadim let the client off it', async () => {
+    const withMinimum = (clients = []) => {
+      const client = fakeClient()
+      const from = client.from
+      client.from = table => (table === 'service_areas' ? fromRows([{ ...area, minimum_booking_minutes: 120 }, other]) : table === 'clients' ? fromRows(clients) : from(table))
+      return client
+    }
+    const options = (await tools(withMinimum()).call('get_my_booking_options')).data
+    expect(options.areas[0].minimum_booking).toBe('2 hours in total (two people\'s times add up)')
+    expect(options.areas[1].minimum_booking).toBeUndefined()
+    expect((await tools(withMinimum()).call('get_price', { treatment_id: 'svc-1', lengths: [90], address_id: 'addr-1' })).text)
+      .toBe('In Chelsea the minimum booking is 2 hours in total. Two people\'s times add up. Offer the client a longer booking.')
+    const client = withMinimum()
+    expect((await tools(client).call('book_appointment', { ...booking, lengths: [60] })).text).toMatch(/minimum booking is 2 hours/)
+    expect(client.calls.some(([name]) => name === 'create_booking_hold')).toBe(false)
+    expect((await tools(withMinimum()).call('get_price', { treatment_id: 'svc-1', lengths: [60, 60], address_id: 'addr-1' })).isError).toBeFalsy()
+    const off = withMinimum([{ no_minimum_booking: true }])
+    expect((await tools(off).call('get_price', { treatment_id: 'svc-1', lengths: [60], address_id: 'addr-1' })).isError).toBeFalsy()
+    expect((await tools(withMinimum([{ no_minimum_booking: true }])).call('get_my_booking_options')).data.areas[0].minimum_booking).toBeUndefined()
   })
   it('will not book without the client\'s yes, or at a total they did not agree to', async () => {
     const client = fakeClient()

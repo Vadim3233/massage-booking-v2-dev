@@ -1,17 +1,20 @@
 import { useState } from 'react'
 import { money } from '../bookingDraft.js'
-import { hoursWords, lengthWord, MAX_VISIT_MINUTES, optionTotal, peopleChoices, peopleSentence, shortLength, treatmentNoun } from '../../../booking/bookingWords.js'
+import { hoursWords, lengthWord, MAX_VISIT_MINUTES, minimumFor, minimumSentence, optionTotal, peopleChoices, peopleSentence, shortLength, treatmentNoun } from '../../../booking/bookingWords.js'
 
 const COUNT = ['', 'One', 'Two', 'Three', 'Four']
 
 // Step 3, People & length (Vadim's change request 2): first how many people, a choice of its own that nothing answers in advance, then how
 // long, with every option saying how many people, how long each and the price, so "2 hours for 1 person" cannot be read as "2 people".
 // Prices are the treatment's, plus the area's travel and congestion fees (extras come later); lengths that would make the visit too long are
-// not offered. `choose(durations)` takes the client on to the time.
-export default function PeopleLengthStep({ draft, catalogue, edit, choose }) {
+// not offered. In an area with a minimum booking, shorter visits are shown greyed out with the reason (not for a client Vadim let off it:
+// `noMinimum`). `choose(durations)` takes the client on to the time.
+export default function PeopleLengthStep({ draft, catalogue, edit, choose, noMinimum = false }) {
   const prices = catalogue.prices.filter(price => price.service_id === draft.serviceId).sort((a, b) => a.duration_minutes - b.duration_minutes)
   const area = catalogue.areas.find(item => item.id === draft.areaId)
   const noun = treatmentNoun(catalogue.services.find(service => service.id === draft.serviceId)?.name)
+  const minimum = minimumFor(area, noMinimum)
+  const minimumNote = minimum ? <p className="fine">{minimumSentence(area, minimum)} Two people's times add up.</p> : null
   const fees = Number(area?.travel_surcharge_gbp || 0) + Number(area?.congestion_fee_gbp || 0)
   const chosen = draft.sessions.map(session => session.duration_minutes)
   // Every visit to this step starts with the question, so a client who tapped the wrong number (or came Back to change it) can always
@@ -35,6 +38,7 @@ export default function PeopleLengthStep({ draft, catalogue, edit, choose }) {
         <span className="tile-note">{count === 1 ? `One ${noun}` : `${COUNT[count]} ${noun}s, one after the other`}</span></span>
     </button>)}</div>
     <p className="fine">Up to {hoursWords(MAX_VISIT_MINUTES)} per visit.</p>
+    {minimumNote}
   </>
 
   const sameOptions = lengths.filter(minutes => minutes * people <= MAX_VISIT_MINUTES)
@@ -61,7 +65,8 @@ export default function PeopleLengthStep({ draft, catalogue, edit, choose }) {
       </fieldset>)}
       <p className="total-line"><b>{peopleSentence(each, noun)}</b>{price !== null && <> – <span className="figure">{money(price)}</span></>}</p>
       {feeNote}
-      <div className="action-bar"><button className="btn--primary btn--lg btn--block" onClick={() => choose(each)}>Choose date &amp; time</button></div>
+      {total < minimum && <p className="fine" role="status">{minimumSentence(area, minimum)} Please choose longer times.</p>}
+      <div className="action-bar"><button className="btn--primary btn--lg btn--block" disabled={total < minimum} onClick={() => choose(each)}>Choose date &amp; time</button></div>
       <button type="button" className="btn--quiet group-toggle" onClick={() => setEach(null)}>Same length for everyone</button>
       {backToPeople}
     </>
@@ -74,13 +79,15 @@ export default function PeopleLengthStep({ draft, catalogue, edit, choose }) {
       const durations = Array(people).fill(minutes)
       const price = optionTotal(prices, area, durations)
       const title = people === 1 ? `${shortLength(minutes)} · 1 person` : `${people} people × ${minutes} min`
-      const note = people === 1 ? `One ${lengthWord(minutes)} ${noun}` : `One after the other · ${hoursWords(minutes * people)} in total`
-      return <button key={minutes} className="tile tile--wide tile--length" aria-label={`${minutes} minutes · ${people === 1 ? '1 person' : `${people} people, ${hoursWords(minutes * people)} in total`} · ${money(price)}`}
+      const short = minutes * people < minimum
+      const note = short ? `Under the ${hoursWords(minimum)} minimum here` : people === 1 ? `One ${lengthWord(minutes)} ${noun}` : `One after the other · ${hoursWords(minutes * people)} in total`
+      return <button key={minutes} className="tile tile--wide tile--length" disabled={short} aria-label={`${minutes} minutes · ${people === 1 ? '1 person' : `${people} people, ${hoursWords(minutes * people)} in total`} · ${money(price)}${short ? ` · under the ${hoursWords(minimum)} minimum here` : ''}`}
         aria-pressed={chosen.length === people && chosen.every(value => value === minutes)} onClick={() => choose(durations)}>
         <span className="tile-body"><strong className="tile-title">{title}</strong><span className="tile-note">{note}</span></span>
         <span className="tile-side"><b className="figure tile-price">{money(price)}</b></span>
       </button>
     })}</div>
+    {minimumNote}
     {feeNote}
     {people > 1 && <button type="button" className="btn--quiet group-toggle" onClick={() => setEach(Array(people).fill(sameOptions[0] || lengths[0]))}>Different length for each person</button>}
     {backToPeople}
