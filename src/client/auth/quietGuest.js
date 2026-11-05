@@ -4,6 +4,11 @@
 // guest-or-account choice still to come on the details screen.
 const KEY = 'vm-quiet-guest'
 
+// The browser's storage, or null where site storage is blocked (just reading window.localStorage throws there).
+export function browserStorage() {
+  try { return globalThis.localStorage ?? null } catch { return null }
+}
+
 function read(storage) {
   try { return storage?.getItem(KEY) || null } catch { return null }
 }

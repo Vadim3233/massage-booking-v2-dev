@@ -3,7 +3,7 @@ import { dayParts } from '../booking/dateStrip.js'
 import Icon from '../../ui/icons.jsx'
 import { supabase } from '../../lib/supabase.js'
 import { useClientAuth } from '../auth/useClientAuth.js'
-import { isQuietGuest } from '../auth/quietGuest.js'
+import { browserStorage, isQuietGuest } from '../auth/quietGuest.js'
 import { useLinkProblem } from '../auth/linkProblem.js'
 import AuthPanel from '../auth/AuthPanel.jsx'
 import { dateLabel, londonDate, money, timeLabel } from '../booking/bookingDraft.js'
@@ -247,7 +247,7 @@ function BookingList({ open }) {
 export default function AccountApp() {
   const auth = useClientAuth(supabase)
   // A guest session the booking page started only to hold a time is not an account: the page still asks them to sign in.
-  const session = isQuietGuest(localStorage, auth.session) ? null : auth.session
+  const session = isQuietGuest(browserStorage(), auth.session) ? null : auth.session
   // An email link that was used already, or has run out, brings the person back here with the reason in the address.
   const linkProblem = useLinkProblem()
   const [start, setStart] = useState(readLink)

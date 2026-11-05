@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { ensureHoldSession, forgetQuietGuest, isQuietGuest, rememberQuietGuest } from './quietGuest.js'
+import { browserStorage, ensureHoldSession, forgetQuietGuest, isQuietGuest, rememberQuietGuest } from './quietGuest.js'
 
 const memory = () => { const data = new Map(); return { getItem: (key) => data.get(key) ?? null, setItem: (key, value) => data.set(key, value), removeItem: (key) => data.delete(key) } }
 const anonymous = (id) => ({ user: { id, is_anonymous: true } })
@@ -43,6 +43,16 @@ describe('quiet guest session for holding a time', () => {
     expect(isQuietGuest(storage, null)).toBe(false)
     forgetQuietGuest(storage)
     expect(isQuietGuest(storage, anonymous('quiet-1'))).toBe(false)
+  })
+  it('gives no storage, instead of crashing, where the browser blocks site storage', () => {
+    const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage')
+    Object.defineProperty(globalThis, 'localStorage', { configurable: true, get: () => { throw new Error('SecurityError') } })
+    try {
+      expect(browserStorage()).toBeNull()
+      expect(isQuietGuest(browserStorage(), anonymous('quiet-1'))).toBe(false)
+    } finally {
+      if (original) Object.defineProperty(globalThis, 'localStorage', original); else delete globalThis.localStorage
+    }
   })
   it('works without storage: the visitor is then treated as a guest who already chose', async () => {
     const broken = { getItem: () => { throw new Error('blocked') }, setItem: () => { throw new Error('blocked') }, removeItem: () => { throw new Error('blocked') } }
