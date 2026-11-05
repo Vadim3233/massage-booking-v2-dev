@@ -30,7 +30,17 @@ export async function localFixture(offset = 20) {
   const publicClient = createClient(config.API_URL, config.ANON_KEY, options)
   const client = createClient(config.API_URL, config.ANON_KEY, options)
   const api = createBookingApi(client)
-  const publicApi = createBookingApi(publicClient)
+  // Holding a time needs a session. "Another visitor" in these tests holds through its own guest session, started only when a test first
+  // holds (so fixtures that never hold start none); everything else on publicApi stays logged out.
+  const visitorClient = createClient(config.API_URL, config.ANON_KEY, options)
+  let visitor = null
+  const visitorApi = () => (visitor ??= (async () => {
+    const { data, error } = await visitorClient.auth.signInAnonymously()
+    if (error) throw error
+    users.push(data.user.id)
+    return createBookingApi(visitorClient)
+  })())
+  const publicApi = { ...createBookingApi(publicClient), hold: async (...args) => (await visitorApi()).hold(...args) }
   const ids = Object.fromEntries(['area', 'service', 'enhancement', 'preference', 'conflicting'].map((key) => [key, crypto.randomUUID()]))
   const date = londonDate(offset)
   const email = `v2-${crypto.randomUUID()}@example.test`
@@ -86,6 +96,7 @@ export async function localFixture(offset = 20) {
         await unwrap(admin.auth.admin.deleteUser(id))
       }
       await client.auth.signOut()
+      if (visitor) await visitorClient.auth.signOut()
     },
   }
 }

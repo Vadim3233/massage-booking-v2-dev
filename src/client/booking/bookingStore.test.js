@@ -65,6 +65,21 @@ describe('booking state transitions', () => {
     expect(api.hold).toHaveBeenCalledTimes(1); expect(api.release).not.toHaveBeenCalled()
     expect(store.getSnapshot().draft.start).toBe(660)
   })
+  it('makes sure there is a session before holding, and holds nothing if a session cannot be started', async () => {
+    const order = []
+    const { api, ...options } = fixture()
+    api.hold.mockImplementation(async () => { order.push('hold'); return { hold_id: 'hold-2', hold_token: 'token-2', expires_at: '2026-10-01T10:20:00Z' } })
+    const ensureSession = vi.fn(async () => { order.push('session') })
+    const store = createBookingStore({ ...options, api, ensureSession })
+    await store.selectSlot(660)
+    expect(order).toEqual(['session', 'hold'])
+    const refused = vi.fn().mockRejectedValue(Object.assign(new Error('Request rate limit reached'), { status: 429 }))
+    const blocked = createBookingStore({ ...options, api, ensureSession: refused })
+    api.hold.mockClear()
+    await blocked.selectSlot(720)
+    expect(api.hold).not.toHaveBeenCalled()
+    expect(blocked.getSnapshot().error).toBe('Too many attempts from this connection. Please wait a few minutes and try again.')
+  })
   it('saves the day with the time, and leaves a held time alone while other days are only looked at', async () => {
     const { store, api } = fixture()
     expect(store.getSnapshot().draft.hold).toMatchObject({ hold_id: 'hold' })

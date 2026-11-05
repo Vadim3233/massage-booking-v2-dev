@@ -12,6 +12,8 @@ const REWRITES = [
   [/online booking is disabled/i, "Online booking isn't available on this account just now. Please get in touch and I'll arrange your appointment."],
   [/already in progress|command in progress/i, 'That is still being saved. Please wait a moment and try again.'],
   [/failed to fetch|network|load failed|timeout/i, 'The connection dropped. Please check it and try again.'],
+  // Starting a guest session to hold a time is limited per connection; a person almost never meets this, a script does.
+  [/rate limit|too many requests/i, 'Too many attempts from this connection. Please wait a few minutes and try again.'],
 ]
 
 export function friendlyError(error, fallback = GENERIC) {
