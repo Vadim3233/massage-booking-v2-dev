@@ -113,15 +113,29 @@ export const reminderDue = (booking, now = new Date()) => {
   return payment?.method === 'bank_transfer' && ['awaiting_transfer', 'awaiting_verification'].includes(payment.status)
     && !['cancelled', 'no_show'].includes(booking.booking_status) && hasStarted(booking, now)
 }
+// How long a session was, the way a client would say it: "1 hour", "2 hours", "90 min".
+export function sessionLength(minutes) {
+  const value = Number(minutes)
+  if (!value) return ''
+  return value % 60 === 0 ? `${value / 60} ${value === 60 ? 'hour' : 'hours'}` : `${value} min`
+}
+// One line naming a session so the client can recognise it and check their bank: "Fri 30 Oct, 15:30 · 1 hour - £90.00".
+export function owedLine(booking) {
+  const length = sessionLength(booking.treatment_duration_minutes)
+  return `${dateLabel(booking.date).replace(',', '')}, ${time(booking.start_minutes)}${length ? ` · ${length}` : ''} - ${money(owed(booking))}`
+}
 export function reminderText(booking, bank) {
   const payment = paymentOf(booking)
   const first = booking.clients?.first_name?.trim()
-  const amount = money(paymentOf(booking)?.amount_gbp ?? booking.total_gbp)
   const details = bank?.configured
     ? [`Sort code: ${bank.sortCode}`, `Account number: ${bank.accountNumber}`, `Reference: ${payment?.payment_reference || booking.booking_reference}`].join('\n')
     : 'Let me know if you would like my bank details again.'
   return [
-    `${first ? `Hi ${first}, hope` : 'Hi, hope'} you're feeling good after your session! Just a quick reminder that payment of ${amount} is still outstanding. Here are my details in case they're handy:`,
+    `${first ? `Hi ${first}, hope` : 'Hi, hope'} you're feeling good after your session! Just a quick reminder that payment for this session is still outstanding:`,
+    '',
+    owedLine(booking),
+    '',
+    "Here are my details in case they're handy:",
     '',
     details,
     '',
@@ -130,13 +144,20 @@ export function reminderText(booking, bank) {
   ].join('\n')
 }
 
-// One reminder for a client who owes for more than one booking: each session with what it comes to, the total, and the details to pay it all in one
-// transfer, with the first booking's reference. The bookings are the ones reminderDue accepts; they are listed by date.
-const owed = booking => Number(paymentOf(booking)?.amount_gbp ?? booking.total_gbp) || 0
+// One reminder for a client who owes for more than one booking: each session's date, time and length with what it comes to, the total, and the details to
+// pay it all in one transfer, with the first booking's reference. The bookings are the ones reminderDue accepts; they are listed by date.
+export const owed = booking => Number(paymentOf(booking)?.amount_gbp ?? booking.total_gbp) || 0
+export const owedTotal = bookings => bookings.reduce((sum, booking) => sum + owed(booking), 0)
+// The client's bookings that a reminder can be sent for, earliest first, from any list of bookings (each needs its client_id).
+export function dueForClient(bookings, clientId, now = new Date()) {
+  if (!clientId) return []
+  return bookings.filter(booking => booking.client_id === clientId && reminderDue(booking, now))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.start_minutes - b.start_minutes)
+}
 export function combinedReminderText(bookings, bank, firstName) {
   const sorted = [...bookings].sort((a, b) => a.date.localeCompare(b.date) || a.start_minutes - b.start_minutes)
   const first = String(firstName || '').trim()
-  const lines = sorted.map(booking => `${dateLabel(booking.date).replace(',', '')} - ${money(owed(booking))}`)
+  const lines = sorted.map(owedLine)
   const reference = paymentOf(sorted[0])?.payment_reference || sorted[0]?.booking_reference
   const details = bank?.configured
     ? [`Sort code: ${bank.sortCode}`, `Account number: ${bank.accountNumber}`, `Reference: ${reference}`].join('\n')
@@ -145,7 +166,7 @@ export function combinedReminderText(bookings, bank, firstName) {
     `${first ? `Hi ${first}, hope` : 'Hi, hope'} you're feeling good after your sessions! Just a quick reminder that payment is still outstanding:`,
     '',
     ...lines,
-    `Total: ${money(sorted.reduce((sum, booking) => sum + owed(booking), 0))}`,
+    `Total: ${money(owedTotal(sorted))}`,
     '',
     "Here are my details in case they're handy:",
     '',
