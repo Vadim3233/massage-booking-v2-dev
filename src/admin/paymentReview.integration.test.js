@@ -58,6 +58,8 @@ describe('server-authoritative Admin payment commands', () => {
     await f.authorize()
     for (const [method, payment, action] of [['bank_transfer', 'awaiting_transfer', 'receiveBank'], ['bank_transfer', 'awaiting_verification', 'receiveBank'], ['cash', 'approved', 'receive']]) {
       await f.prepare(0, method, 'confirmed', payment)
+      // The fixture's own day is weeks ahead; the previous round moved this booking into the past, and prepare keeps the date it finds.
+      await unwrap(f.admin.from('bookings').update({ date: f.date }).eq('id', f.bookings[0].id))
       expect((await api.queue()).bookings.some(row => row.id === f.bookings[0].id)).toBe(false)
       await unwrap(f.admin.from('bookings').update({ date: '2026-01-05' }).eq('id', f.bookings[0].id))
       expect((await api.queue()).bookings.some(row => row.id === f.bookings[0].id)).toBe(true)
