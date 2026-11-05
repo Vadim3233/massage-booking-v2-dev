@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { paymentReviewFixture } from '../../tests/paymentReviewFixture.js'
 import { createPaymentReviewApi, paymentActions } from './paymentReviewApi.js'
+import { unwrap } from '../client/booking/bookingApi.js'
 let f, api
 beforeEach(async () => { f = await paymentReviewFixture(); api = createPaymentReviewApi(f.client) }, 30000)
 afterEach(async () => { await f?.cleanup() }, 30000)
@@ -52,6 +53,19 @@ describe('server-authoritative Admin payment commands', () => {
     const paid = await api.booking(b.id)
     expect(paid.booking_status).toBe('confirmed'); expect(paid.booking_payments.status).toBe('paid'); expect(paid.booking_payments.verified_by).toBe(f.user.id)
     expect(paymentActions(paid)).toEqual([])
+  })
+  it('lists a confirmed booking left unpaid once its appointment has happened, cash or transfer, and drops it when paid', async () => {
+    await f.authorize()
+    for (const [method, payment, action] of [['bank_transfer', 'awaiting_transfer', 'receiveBank'], ['bank_transfer', 'awaiting_verification', 'receiveBank'], ['cash', 'approved', 'receive']]) {
+      await f.prepare(0, method, 'confirmed', payment)
+      expect((await api.queue()).bookings.some(row => row.id === f.bookings[0].id)).toBe(false)
+      await unwrap(f.admin.from('bookings').update({ date: '2026-01-05' }).eq('id', f.bookings[0].id))
+      expect((await api.queue()).bookings.some(row => row.id === f.bookings[0].id)).toBe(true)
+      const b = await api.booking(f.bookings[0].id)
+      expect(paymentActions(b)).toEqual([action])
+      await api.act(action, b, crypto.randomUUID())
+      expect((await api.queue()).bookings.some(row => row.id === b.id)).toBe(false)
+    }
   })
   it('removes a pending booking of any kind, records who did it, and never deletes it', async () => {
     await f.authorize()
