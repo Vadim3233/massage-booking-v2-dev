@@ -15,50 +15,61 @@ test.afterEach(async () => {
 
 const londonDay = offsetDays => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(Date.now() + offsetDays * 86400000))
 
-test.describe('the client leaves their details when a day is full', () => {
-  test('a day with no times offers the waitlist, and the request reaches the database and the Admin', async ({ page }) => {
+test.describe('the client asks about a time that is not free (ADR-095)', () => {
+  // 10:00 to 12:00 with the first appointment at 11:00: only 11:00 is free, and 10:00, 10:30 and the evening hours after 12:00 are faded.
+  async function openDay(page, day) {
+    await page.goto('/')
+    await page.getByRole('button', { name: /Integration area/ }).click()
+    await page.getByRole('button', { name: /Integration massage/ }).click()
+    await chooseLength(page, 60)
+    await page.getByLabel('Appointment date').fill(day)
+    await expect(page.getByRole('button', { name: '11:00', exact: true })).toBeVisible()
+  }
+
+  test('a faded time asks for a phone or email, and the request and the visit reach the database', async ({ page }) => {
     f = await localFixture(25)
-    const closedDay = londonDay(27)
-    await f.admin.from('working_hours_overrides').upsert({ date: closedDay, available: false })
+    const day = londonDay(27)
+    const email = `e2e-wanted-${crypto.randomUUID()}@example.test`
+    await f.admin.from('working_hours_overrides').upsert({ date: day, available: true, start_minutes: 600, end_minutes: 720, start_mode: 'fixed', fixed_start_minutes: 660 })
     try {
-      await page.goto('/')
-      await page.getByRole('button', { name: /Integration area/ }).click()
-      await page.getByRole('button', { name: /Integration massage/ }).click()
-      await chooseLength(page, 60)
-      await page.getByLabel('Appointment date').fill(closedDay)
-      await expect(page.getByText('No suitable times on this day.')).toBeVisible()
-      const panel = page.locator('section.panel').filter({ hasText: 'Nothing free that day?' })
-      await expect(panel).toBeVisible()
-      await expect(panel.getByRole('button', { name: 'Add me to the waitlist' })).toBeDisabled()
-      await panel.getByLabel('Your name').fill('E2E Waiting Wendy')
-      await panel.getByLabel('Email').fill(`e2e-wait-${crypto.randomUUID()}@example.test`)
-      await panel.getByLabel('Which time of day suits you?').selectOption('afternoon')
-      await panel.getByRole('button', { name: 'Add me to the waitlist' }).click()
-      await expect(page.getByRole('heading', { name: 'You are on the waitlist' })).toBeVisible()
-      const row = (await f.admin.from('waitlist_requests').select('requested_date,preferred_from_minutes,preferred_to_minutes,duration_minutes,status').eq('contact_name', 'E2E Waiting Wendy').single()).data
-      expect(row).toMatchObject({ requested_date: closedDay, preferred_from_minutes: 720, preferred_to_minutes: 1020, duration_minutes: 60, status: 'active' })
+      await openDay(page, day)
+      await expect(page.getByText("Faded times aren't available right now.")).toBeVisible()
+      await expect(page.getByRole('button', { name: '09:30, not available right now' })).toHaveCount(0)
+      await expect(page.getByRole('button', { name: '13:00, not available right now' })).toBeVisible()
+      await page.getByRole('button', { name: '10:00, not available right now' }).click()
+      const panel = page.getByRole('form', { name: /Ask about 10:00/ })
+      await expect(panel).toContainText("isn't available, but in case anything changes, I can let you know.")
+      await expect(panel.getByRole('button', { name: 'Yes, let me know' })).toBeDisabled()
+      await panel.getByLabel('Your phone number (or email)').fill(email)
+      await panel.getByRole('button', { name: 'Yes, let me know' }).click()
+      await expect(page.getByRole('status').filter({ hasText: 'Thank you.' })).toContainText("If anything changes for")
+      await expect(page.getByRole('button', { name: '10:00, not available right now, you asked to hear if anything changes' })).toBeVisible()
+      const row = (await f.admin.from('waitlist_requests').select('contact_name,requested_date,preferred_from_minutes,preferred_to_minutes,duration_minutes').eq('contact_email', email).single()).data
+      expect(row).toMatchObject({ contact_name: 'Visitor', requested_date: day, preferred_from_minutes: 600, preferred_to_minutes: 630, duration_minutes: 60 })
+      await expect.poll(async () => {
+        const rows = (await f.admin.from('visit_events').select('kind,detail').eq('detail->>date', day)).data || []
+        return rows.map(item => item.kind).sort()
+      }).toEqual(expect.arrayContaining(['asked', 'day', 'wanted']))
     } finally {
-      await f.admin.from('working_hours_overrides').delete().eq('date', closedDay)
+      const requests = (await f.admin.from('waitlist_requests').select('id').eq('contact_email', email)).data || []
+      if (requests.length) await f.admin.from('event_outbox').delete().in('aggregate_id', requests.map(item => item.id))
+      await f.admin.from('waitlist_requests').delete().eq('contact_email', email)
+      await f.admin.from('working_hours_overrides').delete().eq('date', day)
     }
   })
 
-  test('a clash of times gives a kind message, not a technical one', async ({ page }) => {
+  test('"None of these suit me" takes one tap', async ({ page }) => {
     f = await localFixture(25)
-    const closedDay = londonDay(27)
-    await f.admin.from('working_hours_overrides').upsert({ date: closedDay, available: false })
+    const day = londonDay(27)
+    await f.admin.from('working_hours_overrides').upsert({ date: day, available: true, start_minutes: 600, end_minutes: 720, start_mode: 'fixed', fixed_start_minutes: 660 })
     try {
-      await page.goto('/')
-      await page.getByRole('button', { name: /Integration area/ }).click()
-      await page.getByRole('button', { name: /Integration massage/ }).click()
-      await chooseLength(page, 60)
-      await page.getByLabel('Appointment date').fill(closedDay)
-      const panel = page.locator('section.panel').filter({ hasText: 'Nothing free that day?' })
-      await panel.getByLabel('Your name').fill('E2E Waiting Wendy')
-      await panel.getByLabel('Phone').fill('123')
-      await panel.getByRole('button', { name: 'Add me to the waitlist' }).click()
-      await expect(panel.getByRole('alert')).toHaveText('That phone number does not look right.')
+      await openDay(page, day)
+      await page.getByRole('button', { name: 'None of these suit me' }).click()
+      const choices = page.getByRole('group', { name: /What would suit you/ })
+      await choices.getByRole('button').first().click()
+      await expect(page.getByText('Thanks, noted.')).toBeVisible()
     } finally {
-      await f.admin.from('working_hours_overrides').delete().eq('date', closedDay)
+      await f.admin.from('working_hours_overrides').delete().eq('date', day)
     }
   })
 })

@@ -4,7 +4,7 @@ import { clock } from './scheduleApi.js'
 const SAFE = new Set(['This request is already closed', 'Choose what to do with this request', 'Please keep the note under 500 characters'])
 const GENERIC = 'Could not complete that. Please check your connection and try again.'
 
-export const windowText = (from, to) => from === 0 && to === 1440 ? 'Any time of day' : `${clock(from)} to ${clock(to)}`
+export const windowText = (from, to) => from === 0 && to === 1440 ? 'Any time of day' : to - from === 30 ? `At ${clock(from)}` : `${clock(from)} to ${clock(to)}`
 
 export const waitlistActions = request => request.status === 'closed' ? []
   : request.status === 'offered' ? ['reopen', 'booked', 'not_needed'] : ['offered', 'booked', 'not_needed']

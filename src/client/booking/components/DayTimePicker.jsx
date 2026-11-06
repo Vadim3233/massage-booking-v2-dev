@@ -14,7 +14,11 @@ const monthWord = (date, options) => new Intl.DateTimeFormat('en-GB', { timeZone
 // Choosing a day and a time: five days at a time with a dot where there is room, the first free day already open,
 // the times of that day in short rows, and the calendar behind a field for anything further away.
 // Used for a new booking and for moving one, so both feel the same.
-export default function DayTimePicker({ horizonDays, dateLabel = 'Appointment date', loadDay, reloadKey = '', initialDate = '', selected, onPick, emptyMessage, renderEmpty, renderFooter }) {
+// Optional, for the client's booking only (ADR-095): loadWanted(date) gives every time the client could ask about that day. Those that are not free
+// are shown faded with a small bell; tapping one calls onWanted(date, start) and shows renderAsk(date, start) under the times. isAsked(date, start)
+// marks the ones already asked about. onDayShown(date, freeCount) is told each time a day's times are on screen.
+export default function DayTimePicker({ horizonDays, dateLabel = 'Appointment date', loadDay, reloadKey = '', initialDate = '', selected, onPick, emptyMessage, renderEmpty, renderFooter,
+  loadWanted, onWanted, renderAsk, isAsked, onDayShown }) {
   const today = londonDate()
   const last = londonDate(horizonDays)
   const usable = (date) => Boolean(date) && date >= today && date <= last
@@ -79,8 +83,25 @@ export default function DayTimePicker({ horizonDays, dateLabel = 'Appointment da
     if (changed || !asked.current.has(viewDate)) load(viewDate)
   }, [viewDate, reloadKey, load])
 
+  // The faded times of the day on show. A failure only means none are shown.
+  const [wanted, setWanted] = useState({})
+  const [asking, setAsking] = useState(null)
+  const loadWantedRef = useRef(loadWanted)
+  useEffect(() => { loadWantedRef.current = loadWanted })
+  useEffect(() => {
+    if (!viewDate || !loadWantedRef.current) return undefined
+    let live = true
+    loadWantedRef.current(viewDate).then((starts) => { if (live) setWanted((known) => ({ ...known, [viewDate]: starts || [] })) }, () => {})
+    return () => { live = false }
+  }, [viewDate, reloadKey])
   const view = viewDate ? days[viewDate] : null
-  const groups = groupSlots(view?.slots || [])
+  const free = view && !view.error ? view.slots : []
+  const faded = view && !view.error ? (wanted[viewDate] || []).filter((start) => !free.includes(start)) : []
+  const groups = groupSlots([...free, ...faded])
+  const shownKey = view && !view.error ? `${viewDate}:${free.length}` : ''
+  const onDayShownRef = useRef(onDayShown)
+  useEffect(() => { onDayShownRef.current = onDayShown })
+  useEffect(() => { if (shownKey) onDayShownRef.current?.(viewDate, free.length) }, [shownKey]) // eslint-disable-line react-hooks/exhaustive-deps
   const dates = stripFrom(stripStart).filter((date) => date <= last)
   const nextFree = view && !view.error && !view.slots.length ? Object.keys(days).sort().find((date) => date > viewDate && days[date].slots?.length) : null
   const months = [...new Set(dates.map((date) => monthWord(date, { month: 'long', year: 'numeric' })))].join(' – ')
@@ -131,18 +152,25 @@ export default function DayTimePicker({ horizonDays, dateLabel = 'Appointment da
     {!viewDate && <div className="skeleton-rows" role="status"><span className="sr-only">Finding the first free time…</span><span className="skeleton" /><span className="skeleton" /></div>}
     {viewDate && !view && <div className="skeleton-rows" role="status"><span className="sr-only">Loading available times…</span><span className="skeleton" /><span className="skeleton" /></div>}
     {view?.error && <div className="error" role="alert"><p>{view.error}</p><button type="button" className="btn--small" onClick={() => load(viewDate)}>Try again</button></div>}
-    {groups.length > 0 && <div role="group" aria-label="Available times">
-      <p className="day-name">{dayParts(viewDate).long}</p>
-      {groups.map((group) => <div key={group.key}>
-        {groups.length > 1 && <h2 className="slot-group">{group.label}</h2>}
-        <div className="slots">{group.slots.map((start) => <button type="button" key={start} aria-pressed={selected?.date === viewDate && selected?.start === start} onClick={() => choose(start)}>{timeLabel(start)}</button>)}</div>
-      </div>)}
-    </div>}
     {view && !view.error && !view.slots.length && <>
       <p className="empty-day">{emptyMessage}</p>
       {nextFree && <button type="button" className="btn--tonal btn--block" onClick={goToNextFree}>Next free day: {dayParts(nextFree).long}</button>}
       {renderEmpty?.(viewDate)}
     </>}
+    {groups.length > 0 && <div role="group" aria-label={free.length ? 'Available times' : 'Times you can ask about'}>
+      <p className="day-name">{dayParts(viewDate).long}</p>
+      {groups.map((group) => <div key={group.key}>
+        {groups.length > 1 && <h2 className="slot-group">{group.label}</h2>}
+        <div className="slots">{group.slots.map((start) => free.includes(start)
+          ? <button type="button" key={start} aria-pressed={selected?.date === viewDate && selected?.start === start} onClick={() => choose(start)}>{timeLabel(start)}</button>
+          : <button type="button" key={start} className={`slot-faded${isAsked?.(viewDate, start) ? ' is-asked' : ''}`} aria-pressed={asking?.date === viewDate && asking?.start === start}
+              aria-label={`${timeLabel(start)}, not available right now${isAsked?.(viewDate, start) ? ', you asked to hear if anything changes' : ''}`}
+              onClick={() => { setAsking({ date: viewDate, start }); onWanted?.(viewDate, start) }}>
+              <Icon name={isAsked?.(viewDate, start) ? 'tick' : 'bell'} size={14} />{timeLabel(start)}</button>)}</div>
+      </div>)}
+      {faded.length > 0 && <p className="faded-hint"><Icon name="bell" size={14} />Faded times aren't available right now. Tap one if you'd like to hear if anything changes.</p>}
+      {asking?.date === viewDate && renderAsk?.(viewDate, asking.start, () => setAsking(null))}
+    </div>}
     {viewDate && renderFooter?.(viewDate)}
   </div>
 }

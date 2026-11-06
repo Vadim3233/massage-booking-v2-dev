@@ -6,6 +6,7 @@ describe('waitlist wording', () => {
   it('describes a preferred time of day', () => {
     expect(windowText(0, 1440)).toBe('Any time of day')
     expect(windowText(0, 720)).toBe('00:00 to 12:00')
+    expect(windowText(540, 570)).toBe('At 09:00')
     expect(windowText(720, 1020)).toBe('12:00 to 17:00')
     expect(windowText(1020, 1440)).toBe('17:00 to 24:00')
   })

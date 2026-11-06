@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { RULE_FIELDS, settingsApi, validateRules } from './settingsApi.js'
 import { seriesApi, validReminderDays } from './seriesApi.js'
+import { visitorsApi } from './visitorsApi.js'
 
 // Repeating bookings: how long before each session it becomes a booking and the client is asked to pay.
 function RepeatSetting({ api }) {
@@ -34,7 +35,39 @@ function RepeatSetting({ api }) {
   </form>
 }
 
-export default function SettingsRules({ api = settingsApi, repeatApi = seriesApi }) {
+// The times a client can ask about when a day is full (ADR-095): the working hours, and this many hours after them in the evening.
+function EveningSetting({ api }) {
+  const [hours, setHours] = useState(null)
+  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+  const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    let live = true
+    api.eveningHours().then(value => { if (live) setHours(String(value)) }, failure => { if (live) setError(failure.message) })
+    return () => { live = false }
+  }, [api])
+  if (hours === null) return error ? <p role="alert">{error}</p> : null
+  async function save(event) {
+    event.preventDefault()
+    if (busy) return
+    setBusy(true); setError(''); setMessage('')
+    try { await api.saveEveningHours(Number(hours)); setMessage('Saved.') } catch (failure) { setError(failure.message) } finally { setBusy(false) }
+  }
+  return <form className="admin-client-form" onSubmit={save} aria-labelledby="evening-setting-title">
+    <h2 id="evening-setting-title">Times clients can ask about</h2>
+    <label className="admin-field">After your hours, also show this much of the evening
+      <select id="evening-hours" value={hours} disabled={busy} onChange={event => { setMessage(''); setHours(event.target.value) }}>
+        <option value="0">Nothing after my hours</option><option value="1">1 hour</option><option value="2">2 hours</option>
+      </select>
+      <span className="admin-detail-hint">On the booking page, times that are not free are shown faded so a client can ask to hear if one frees up. They are shown within your working hours, and this much after them. Never before you start, or on a day off.</span>
+    </label>
+    {error && <p role="alert" className="admin-field-error">{error}</p>}
+    {message && <p role="status">{message}</p>}
+    <button type="submit" className="btn--primary btn--block" disabled={busy}>{busy ? 'Saving…' : 'Save'}</button>
+  </form>
+}
+
+export default function SettingsRules({ api = settingsApi, repeatApi = seriesApi, eveningApi = visitorsApi }) {
   const [values, setValues] = useState(null)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
@@ -69,5 +102,6 @@ export default function SettingsRules({ api = settingsApi, repeatApi = seriesApi
       <button type="submit" className="btn--primary btn--block" disabled={busy || Boolean(problem)}>{busy ? 'Saving…' : 'Save rules'}</button>
     </form>
     <RepeatSetting api={repeatApi} />
+    <EveningSetting api={eveningApi} />
   </section>
 }

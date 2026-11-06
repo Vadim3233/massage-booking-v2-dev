@@ -284,3 +284,19 @@
 .consent-list { padding-left: 20px; line-height: 1.6; }
 .ai-grants { list-style: none; padding: 0; }
 .ai-grants li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+
+/* Asking about a time that is not free, and "None of these suit me" (ADR-095). */
+.ask-panel { display: grid; gap: 10px; margin: 6px 0 12px; padding: 14px 16px; border: 1px solid var(--primary-line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-1); }
+.ask-panel p { margin: 0; }
+.ask-panel.is-done { border-color: transparent; background: var(--ok-bg); color: var(--ok-ink); box-shadow: none; }
+.ask-contact { display: grid; gap: 6px; font-size: 14px; font-weight: 600; }
+.ask-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ask-panel .hint { color: var(--muted); font-size: 13px; }
+.none-suit { margin: 8px 0 14px; text-align: center; }
+.none-suit .btn--quiet { text-decoration: underline; text-underline-offset: 3px; }
+.none-suit.is-open { display: grid; gap: 10px; text-align: left; padding: 14px 16px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); }
+.none-suit.is-open p { margin: 0; }
+.none-suit.is-done { padding: 12px 14px; border-radius: var(--radius); background: var(--ok-bg); color: var(--ok-ink); text-align: left; }
+.none-suit-choices { display: flex; flex-wrap: wrap; gap: 8px; }
+.booking-shell .none-suit-choice { min-height: 44px; padding: 0 14px; border-radius: var(--radius-pill); border-color: var(--control-border); color: var(--ink); font-size: 15px; }
+.privacy-note { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); }

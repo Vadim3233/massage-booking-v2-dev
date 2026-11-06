@@ -95,6 +95,19 @@ export function createBookingApi(client) {
     declareTransfer: (id) => unwrap(client.rpc('declare_my_bank_transfer', { p_booking_id: id })),
     confirmCash: (id) => unwrap(client.rpc('confirm_my_cash_booking', { p_booking_id: id })),
     bankDetails: () => unwrap(client.rpc('get_bank_details')),
+    // The times a client could ask about on a day, free or not (ADR-095). Free ones are shown as usual, the rest faded.
+    wantedTimes: (date, duration) => unwrap(client.rpc('wanted_times', { p_date: date, p_duration_minutes: duration })).then(rows => (rows || []).map(row => row.start_minutes)),
+    // "Yes, let me know" on a faded time. Signed in, nothing else is needed; otherwise a phone number or an email address.
+    async askForTime({ date, start, duration, contact = null }) {
+      const { data, error } = await client.rpc('ask_for_time', { p_date: date, p_start_minutes: start, p_duration_minutes: duration, p_contact: contact?.trim() || null })
+      if (error) {
+        const problem = new Error(error.code === '22023' ? error.message : 'Sorry, that did not work. Please try again, or contact Vad.')
+        problem.needsContact = error.code === '22023' && /phone number or email/.test(error.message)
+        throw problem
+      }
+      return data
+    },
+    recordVisit: (visit, kind, detail) => unwrap(client.rpc('record_visit', { p_visit: visit, p_kind: kind, p_detail: detail })),
     async joinWaitlist(details) {
       const { data, error } = await client.rpc('join_waitlist', { p_date: details.date, p_from_minutes: details.from, p_to_minutes: details.to, p_duration_minutes: details.duration,
         p_name: details.name, p_phone: details.phone?.trim() || null, p_email: details.email?.trim() || null, p_note: details.note?.trim() || null })

@@ -94,7 +94,7 @@ reset role;
 select is((select count(*)::integer from public.notification_deliveries where recipient = 'admin-waitlist' and title = 'A time may have opened up'), 0, 'No alert yet');
 insert into public.event_outbox(event_type, aggregate_type, aggregate_id, payload) values ('booking.cancelled', 'booking', '00000000-0000-4000-8000-00000000d921', '{"initiated_by":"client","source":"client"}');
 select results_eq($$select d.channel, d.body from public.notification_deliveries d where d.recipient = 'admin-waitlist' and d.title = 'A time may have opened up' order by 1$$,
-  $$select c, format('1 person is waiting for %s. Open the waitlist to see who could be booked.', to_char(pg_temp.day(5), 'FMDy FMDD FMMon')) from unnest(array['email', 'in_app', 'telegram']) c$$, 'Cancelling a booking on a day someone is waiting for alerts the Admin');
+  $$select c, format('Wendy Waiting wanted any time. 1 person is waiting for %s. Open the waitlist to see who could be booked.', to_char(pg_temp.day(5), 'FMDy FMDD FMMon')) from unnest(array['email', 'in_app', 'telegram']) c$$, 'Cancelling a booking on a day someone is waiting for alerts the Admin, naming who wanted that time');
 select pg_temp.new_booking('00000000-0000-4000-8000-00000000d922', 3, 600);
 insert into public.event_outbox(event_type, aggregate_type, aggregate_id, payload) values ('booking.cancelled', 'booking', '00000000-0000-4000-8000-00000000d922', '{"initiated_by":"client","source":"client"}');
 select is((select count(*)::integer from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id where e.aggregate_id = '00000000-0000-4000-8000-00000000d922' and d.recipient = 'admin-waitlist'), 0, 'Nobody waiting for that day means no extra alert');

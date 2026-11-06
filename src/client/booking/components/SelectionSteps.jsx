@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import Icon from '../../../ui/icons.jsx'
-import WaitlistPanel from './WaitlistPanel.jsx'
+import { AskPanel, NoneSuit } from './WantedTime.jsx'
 import Welcome, { HowItWorks } from './Welcome.jsx'
 import { activeHold, durationOf, money, timeLabel } from '../bookingDraft.js'
 import DayTimePicker from './DayTimePicker.jsx'
@@ -42,8 +43,17 @@ export function TreatmentStep({ catalogue, choose }) {
 
 const shortDay = (date) => { const parts = dayParts(date); return `${parts.weekday} ${parts.day} ${parts.month}` }
 
-export function TimeStep({ rules, draft, loadAvailability, selectSlot, next, joinWaitlist }) {
+// wanted (optional): { load(date, duration), ask({ date, start, duration, contact }), record(kind, detail), signedIn } for the faded times a client
+// can ask about and the visit log (ADR-095).
+export function TimeStep({ rules, draft, loadAvailability, selectSlot, next, wanted }) {
   const duration = durationOf(draft)
+  const [asked, setAsked] = useState(() => new Set())
+  const askedKey = (date, start) => `${date}:${start}:${duration}`
+  async function ask(details) {
+    await wanted.ask(details)
+    setAsked((known) => new Set(known).add(askedKey(details.date, details.start)))
+    wanted.record('asked', { date: details.date, start: details.start, minutes: duration })
+  }
   const held = activeHold(draft)
   const holdKey = `${draft.hold?.hold_id}:${draft.hold?.hold_token}`
   const chosen = held && draft.date && draft.start != null
@@ -52,7 +62,15 @@ export function TimeStep({ rules, draft, loadAvailability, selectSlot, next, joi
       loadDay={(date) => loadAvailability(date, duration).then((rows) => rows.map((row) => row.start_minutes))}
       selected={chosen ? { date: draft.date, start: draft.start } : null} onPick={(date, start) => selectSlot(start, date)}
       emptyMessage={<>No suitable times on this day. Choose another date or <a href="https://vadmassage.com">contact Vad</a>.</>}
-      renderEmpty={(date) => joinWaitlist && <WaitlistPanel key={`${date}:${duration}`} date={date} duration={duration} join={joinWaitlist} />} />
+      {...(wanted ? {
+        loadWanted: (date) => wanted.load(date, duration),
+        onDayShown: (date, free) => wanted.record('day', { date, free, minutes: duration }),
+        onWanted: (date, start) => wanted.record('wanted', { date, start, minutes: duration }),
+        isAsked: (date, start) => asked.has(askedKey(date, start)),
+        renderAsk: (date, start, close) => <AskPanel key={`${date}:${start}`} date={date} start={start} duration={duration} signedIn={wanted.signedIn}
+          asked={asked.has(askedKey(date, start))} ask={ask} close={close} />,
+        renderFooter: (date) => <NoneSuit key={date} date={date} record={(day, pref) => wanted.record('wanted', { date: day, pref, minutes: duration })} />,
+      } : {})} />
     <div className="action-bar">
       <p className="action-summary" aria-live="polite">{chosen ? <><b>{shortDay(draft.date)}</b><span>{timeLabel(draft.start)}–{timeLabel(draft.start + duration)}</span></> : <span>Choose a time to continue</span>}</p>
       <button className="btn--primary btn--lg" disabled={!held} onClick={next}>Review booking</button>
