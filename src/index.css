@@ -64,6 +64,8 @@
   --grid-open-bg: #cdebdd; --grid-open-line: #a6d6bf; --grid-open-ink: #0e3d32; --grid-changed: #1f6f5c; --grid-switch-on: #2f8a64;
   --grid-booking-bg: #4a5c9e; --grid-booking-ink: #ffffff; --grid-travel-bg: #e6eaf7; --grid-travel-ink: #34437a;
   --alert-dot: #a8321f;
+  /* Visitors (ADR-095): times people wanted but could not get, from a pale to a deep terracotta. No words sit on these. */
+  --heat-0: #f3f0ec; --heat-1: #f6dccd; --heat-2: #ebb89b; --heat-3: #d08b66; --heat-4: #a6603f;
 
   /* Type. */
   --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;

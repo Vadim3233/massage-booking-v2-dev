@@ -25,3 +25,12 @@
 .dtp .slots button[aria-pressed=true]::before { content: ''; width: 6px; height: 11px; margin: -3px 2px 0 0; border: solid currentColor; border-width: 0 2.5px 2.5px 0; transform: rotate(45deg); }
 .dtp .empty-day { margin: 20px 0 12px; }
 @media (min-width: 560px) { .dtp .slots { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* Times that are not free, shown faded so a client can ask about the one they wanted (ADR-095). */
+.dtp .slots button.slot-faded { position: relative; gap: 4px; border: 1.5px solid var(--hairline); background: var(--paper); color: var(--muted); font-weight: 500; box-shadow: none; }
+.dtp .slots button.slot-faded svg { position: absolute; top: 5px; right: 6px; opacity: .8; }
+.dtp .slots button.slot-faded.is-asked { border-color: var(--primary-line); background: var(--primary-soft); color: var(--primary); }
+.dtp .slots button.slot-faded[aria-pressed=true] { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); box-shadow: none; }
+.dtp .slots button.slot-faded[aria-pressed=true]::before { content: none; }
+.dtp .faded-hint { display: flex; align-items: flex-start; gap: 6px; margin: 4px 0 10px; color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+.dtp .faded-hint svg { flex: 0 0 auto; margin-top: 2px; }

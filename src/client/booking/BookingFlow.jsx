@@ -22,6 +22,7 @@ import { bankFromSettings, chooseBank, paymentConfig } from './paymentConfig.js'
 import { useBookingRules } from '../bookingRules.js'
 import { useWelcome } from '../welcome.js'
 import { minimumFor } from '../../booking/bookingWords.js'
+import { createVisitLog, STEP_KINDS } from './visitLog.js'
 import './booking.css'
 
 const api = createBookingApi(supabase)
@@ -46,6 +47,21 @@ export default function BookingFlow() {
   const [clock, setClock] = useState(Date.now)
   const [savedBank, setSavedBank] = useState(null)
   const rules = useBookingRules(supabase)
+  // The visit log for the Visitors page (ADR-095): which steps this visit reached. Kept in memory only.
+  const [visit] = useState(() => createVisitLog((id, kind, detail) => api.recordVisit(id, kind, detail)))
+  const opened = useRef(false)
+  useEffect(() => {
+    if (opened.current) return
+    opened.current = true
+    visit.record('opened', { step })
+  }, [visit, step])
+  const totalMinutes = draft.sessions.reduce((sum, session) => sum + session.duration_minutes, 0)
+  useEffect(() => {
+    const kind = STEP_KINDS[step]
+    if (!kind) return
+    visit.record(kind, step === 3 ? { minutes: totalMinutes, people: draft.sessions.length } : step === 4 ? { date: draft.date, start: draft.start } : {})
+  }, [visit, step]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (draft.bookingId) visit.record('booked', { booking_id: draft.bookingId }) }, [visit, draft.bookingId])
   const welcome = useWelcome(supabase)
   // The test-client helper exists only in development builds: the live page and its previews never offer it.
   const testMode = import.meta.env.DEV
@@ -226,7 +242,9 @@ export default function BookingFlow() {
               const same = durations.length === draft.sessions.length && durations.every((minutes, index) => draft.sessions[index].duration_minutes === minutes)
               if (same || await store.changeSelection({ sessions: durations.map(newSession) })) navigate(3)
             }} />}
-          {step === 3 && <TimeStep rules={rules} joinWaitlist={api.joinWaitlist} draft={draft} loadAvailability={store.availability} selectSlot={store.selectSlot} next={() => goWithQuote(4)} />}
+          {step === 3 && <TimeStep rules={rules} draft={draft} loadAvailability={store.availability} next={() => goWithQuote(4)}
+            selectSlot={(start, date) => { visit.record('time', { date, start, minutes: totalMinutes }); return store.selectSlot(start, date) }}
+            wanted={{ load: api.wantedTimes, ask: api.askForTime, record: visit.record, signedIn: Boolean(auth.session) }} />}
           {step === 4 && <ReviewStep draft={draft} catalogue={catalogue} quote={quote} quoteError={quoteError} edit={store.edit} navigate={navigate} refreshQuote={store.refreshQuote} retryQuote={store.retryQuote} next={() => goWithQuote(5)} />}
           {!auth.ready && step >= 5 && <p role="status">Checking your account…</p>}
           {auth.ready && needsAuth && <AuthPanel client={supabase} onGuest={startGuest} startOpen={wantsAccount} />}
@@ -236,6 +254,7 @@ export default function BookingFlow() {
         </fieldset>
       </>}
     </main>
-    <footer>Personal treatments, thoughtfully arranged. <a href="https://vadmassage.com">Contact Vad</a></footer>
+    <footer>Personal treatments, thoughtfully arranged. <a href="https://vadmassage.com">Contact Vad</a>
+      <p className="privacy-note">To make booking easier, I note which steps of this page are used and which times people look for. This uses no cookies, saves nothing on your phone, and is deleted after 90 days.</p></footer>
   </div>
 }
