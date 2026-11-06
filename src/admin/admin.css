@@ -583,3 +583,36 @@
 .admin-income-count { display: inline-grid; place-items: center; min-width: 26px; height: 26px; padding: 0 8px; border-radius: var(--radius-pill); background: var(--sand-rail); color: var(--surface); font: 700 13px/1 var(--font-ui); }
 .admin-income-list small { color: var(--ink-soft); font-size: 13px; overflow-wrap: anywhere; }
 .admin-income-list .figure { font-weight: 600; white-space: nowrap; }
+
+/* Income: the month's calendar and "Your hour". Sage = money received (deeper = more), dashed sage = booked and not paid yet,
+   an accent dot = money owed for that day, the primary ring = today. */
+.admin-income-subhead { margin: 18px 0 8px; font: 600 18px/1.3 var(--font-display); color: var(--ink); }
+.admin-income-minor { margin: 14px 0 6px; font: 600 14px/1.3 var(--font-ui); color: var(--ink-soft); }
+.admin-income-cal { width: 100%; border-collapse: separate; border-spacing: 4px; table-layout: fixed; margin: 0 -4px; width: calc(100% + 8px); }
+.admin-income-cal th { font: 500 12px/1 var(--font-ui); color: var(--ink-soft); padding: 0 0 2px; }
+.admin-income-cal td { padding: 0; }
+.admin-shell .admin-income-day { position: relative; width: 100%; aspect-ratio: 1 / 1.05; min-height: 44px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; padding: 4px 5px; border: 1px solid var(--hairline); border-radius: 8px; background: var(--surface); color: var(--ink); text-align: left; overflow: hidden; }
+.admin-income-day-number { font: 500 12px/1 var(--font-ui); }
+.admin-income-day-money { font: 600 11px/1 var(--font-ui); font-variant-numeric: tabular-nums; white-space: nowrap; max-width: 100%; overflow: hidden; }
+.admin-shell .admin-income-day.shade-1 { background: var(--sage-bg); border-color: var(--sage-hair); }
+.admin-shell .admin-income-day.shade-2 { background: var(--sage-chip); border-color: var(--sage-line); color: var(--sage-ink); }
+.admin-shell .admin-income-day.shade-3 { background: var(--sage-rail); border-color: var(--sage-rail); color: var(--surface); }
+.admin-shell .admin-income-day.is-booked.shade-0 { border: 1.5px dashed var(--sage-line); color: var(--sage-ink-soft); }
+.admin-shell .admin-income-day.is-today { box-shadow: 0 0 0 2px var(--primary); }
+.admin-shell .admin-income-day[aria-pressed="true"] { outline: 3px solid var(--primary); outline-offset: 1px; }
+.admin-income-day.is-owed::after { content: ""; position: absolute; top: 4px; right: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.admin-income-key { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 6px 0 0; font-size: 12px; color: var(--ink-soft); }
+.admin-income-key span::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 3px; vertical-align: -1px; }
+.admin-income-key .key-received::before, .admin-income-key .key-work::before { background: var(--sage-rail); }
+.admin-income-key .key-booked::before { border: 1.5px dashed var(--sage-line); }
+.admin-income-key .key-owed::before { border-radius: 50%; background: var(--accent); }
+.admin-income-key .key-travel::before { background: var(--accent); }
+.admin-income-hour { margin-top: 8px; }
+.admin-review .admin-income-rate { display: grid; justify-items: center; gap: 2px; margin: 4px 0 12px; text-align: center; color: var(--ink-soft); font-size: 14px; }
+.admin-income-rate strong { font: 600 44px/1.05 var(--font-display); color: var(--ink); }
+.admin-income-split { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: var(--accent); }
+.admin-income-split .is-work { flex: 0 0 calc(var(--share) * 100%); background: var(--sage-rail); }
+.admin-income-rates { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.admin-income-rates li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 12px; border-radius: var(--radius-sm); background: var(--surface); box-shadow: var(--shadow-card); }
+.admin-income-rates .figure { font-weight: 600; }
+.admin-income-section > .btn--tonal { margin-top: 8px; }
