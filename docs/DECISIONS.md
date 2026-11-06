@@ -874,3 +874,13 @@ The page stays where the Admin needs it:
 - **Pages:** `/oauth/consent` (sign in, then Allow or No thanks) and `/book-with-ai` (the address to copy, steps for Claude and ChatGPT, and the client's connected assistants with Disconnect), linked from the account page.
 - **Set-up on the hosted project:** Authentication > OAuth Server: enable, authorization path `/oauth/consent`, allow dynamic client registration; Authentication > URL Configuration: Site URL = the live site. Locally this is in `supabase/config.toml`.
 - **Tests:** `server/aiConnector/mcp.test.js`, `server/aiConnector/tools.test.js`, `server/aiConnector.integration.test.js` (the whole OAuth sign-in and a couple's booking against local Supabase), and the browser test `aiConsent.spec.js`.
+
+## ADR-094 — Income: a calendar for the month and "Your hour" (2026-11-06)
+
+**Decision:** The Month view of More › Income shows the month as a calendar instead of weekly bars. Each day is shaded by the money received for it (deeper sage = more), days with appointments still to be paid have a dashed edge and their amount, a dot marks a day with money owed, and today has a ring. Tapping a day narrows the Bookings list to that day ("Show the whole month" goes back). Every view also has a "Your hour" section: what each working hour earned, travel included, with treatment and travel time as a split bar, the rate by area, and in the Year and tax-year views the rate for each month. Week and Year keep their bars.
+
+**Reason:** Vadim picked these two from five concepts (6 Nov 2026, [concepts](https://claude.ai/artifact/GfzWCKvwAC6bfDijVEzHEr)). The weekly bars also gave a stray first day of the month its own bar and named each week by its first day, which read like single days.
+
+- **How an hour is counted:** only appointments that went ahead and were paid. Work is the treatment time. Travel is the travel time set on each appointment (`travel_buffer_minutes`, usually 60): once for the journey there, and once more after the last appointment of the day for the journey home. A late fee from a cancellation counts in Income but not in the hourly figure, as it took no time. The app does not know real driving times, so this is the planned travel, not a measured one.
+- **Migration `20261129100000_income_calendar_hourly.sql`:** `income_work_lines()` (internal) and `income_hour_figures()`, and `admin_income_summary` adds `days` (month only), `hours` (with `areas`) and work/travel/hourly figures on each bar. It is numbered after PR #90's `20261128100000_review_follow_ups.sql`, which also replaces `admin_income_summary`, and keeps that change (owed count per booking).
+- **Tests:** `supabase/tests/income_hourly.test.sql`, `src/admin/incomeCalendar.test.js`, and the browser test `income.spec.js`.

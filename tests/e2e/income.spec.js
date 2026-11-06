@@ -9,6 +9,7 @@ let f
 test.beforeEach(async () => { f = await adminFixture(5) })
 test.afterEach(async () => { await f?.cleanup() })
 
+const dayName = date => new Intl.DateTimeFormat('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).format(new Date(date + 'T12:00:00Z'))
 const monthName = date => new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(date + 'T12:00:00Z'))
 
 test('Income: the month\'s money, the bookings behind it, money owed, the tax year and the accountant\'s file', async ({ page }) => {
@@ -31,8 +32,20 @@ test('Income: the month\'s money, the bookings behind it, money owed, the tax ye
   const mine = list.getByRole('button', { name: /^AlexandraAlexandra.*Cash.*£85\.00$/ })
   await expect(mine).toBeVisible()
   await expect(page.getByText('Bank transfer', { exact: true })).toBeVisible()
-  await expect(page.getByRole('list', { name: 'Income in each part of the period' }).getByRole('listitem').first()).toBeVisible()
+  // The month is a calendar: today's square says what came in, and tapping it narrows the list to today; tapping again shows the month.
+  const calendar = page.getByRole('region', { name: 'Day by day' })
+  const todaySquare = calendar.getByRole('button', { name: new RegExp(`^${dayName(now)}: .*received`) })
+  await expect(todaySquare).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Your hour' }).getByText('Each working hour earned you')).toBeVisible()
   await page.screenshot({ path: 'test-results/income-month.png', fullPage: true })
+  await todaySquare.click()
+  await expect(todaySquare).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('heading', { level: 2, name: `Bookings on ${dayName(now)}` })).toBeVisible()
+  await expect(page.getByRole('region', { name: /^Bookings on/ }).getByRole('button', { name: /^AlexandraAlexandra.*Cash.*£85\.00$/ })).toBeVisible()
+  await page.getByRole('button', { name: 'Show the whole month' }).click()
+  await expect(page.getByRole('heading', { level: 2, name: 'Bookings', exact: true })).toBeVisible()
+  // Yesterday's unpaid cash puts a "money owed" mark on its square (when yesterday is in this month).
+  if (shiftDate(now, -1).slice(0, 7) === now.slice(0, 7)) await expect(calendar.getByRole('button', { name: new RegExp(`^${dayName(shiftDate(now, -1))}: .*money owed`) })).toBeVisible()
 
   // Money owed to you: yesterday's cash, not marked received, opens its booking.
   await page.getByText('Money owed to you').click()
@@ -60,6 +73,7 @@ test('Income: the month\'s money, the bookings behind it, money owed, the tax ye
   const taxStart = now.slice(5) >= '04-06' ? Number(now.slice(0, 4)) : Number(now.slice(0, 4)) - 1
   await expect(page.getByRole('heading', { level: 2, name: `Tax year ${taxStart}/${String(taxStart + 1).slice(2)}` })).toBeVisible()
   await expect(page.getByRole('list', { name: 'Income in each part of the period' }).getByRole('listitem')).toHaveCount(13)
+  await expect(page.getByRole('region', { name: 'Your hour' }).getByRole('heading', { name: 'Each month' })).toBeVisible()
   await page.screenshot({ path: 'test-results/income-tax-year.png', fullPage: true })
 })
 
