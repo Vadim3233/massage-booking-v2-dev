@@ -159,7 +159,7 @@ export default function DayTimePicker({ horizonDays, dateLabel = 'Appointment da
     </>}
     {groups.length > 0 && <div role="group" aria-label={free.length ? 'Available times' : 'Times you can ask about'}>
       <p className="day-name">{dayParts(viewDate).long}</p>
-      {groups.map((group) => <div key={group.key}>
+      {groups.map((group) => <div key={group.key} className="slot-part" data-part={group.key}>
         {groups.length > 1 && <h2 className="slot-group">{group.label}</h2>}
         <div className="slots">{group.slots.map((start) => free.includes(start)
           ? <button type="button" key={start} aria-pressed={selected?.date === viewDate && selected?.start === start} onClick={() => choose(start)}>{timeLabel(start)}</button>

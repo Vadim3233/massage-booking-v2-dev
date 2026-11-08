@@ -37,6 +37,12 @@
   --accent-ink: #915d43;
   --accent-soft: #f8e7de;
 
+  /* The client's main button (Continue, Review booking, Confirm): terracotta, so the next step stands out from the navy around it (owner's decision,
+     2026-11-08). Only the client booking pages use it; the Admin's main button stays navy. White on it is 5.5:1, on the pressed shade 7:1. */
+  --action: #915d43;
+  --action-strong: #7a4b35;
+  --shadow-action: 0 6px 16px -8px rgb(145 93 67 / .7);
+
   /* Errors and the choices that cannot be undone. */
   --danger: #8e3029;
   --danger-line: #b45644;

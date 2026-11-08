@@ -63,7 +63,7 @@ export default function PeopleLengthStep({ draft, catalogue, edit, choose, noMin
             onClick={() => setEach(each.map((value, i) => (i === index ? option : value)))}>{shortLength(option)}</button>
         })}</div>
       </fieldset>)}
-      <p className="total-line"><b>{peopleSentence(each, noun)}</b>{price !== null && <> – <span className="figure">{money(price)}</span></>}</p>
+      <p className="total-line"><b>{peopleSentence(each, noun)}</b>{price !== null && <> – <span className="figure roll" key={price}>{money(price)}</span></>}</p>
       {feeNote}
       {total < minimum && <p className="fine" role="status">{minimumSentence(area, minimum)} Please choose longer times.</p>}
       <div className="action-bar"><button className="btn--primary btn--lg btn--block" disabled={total < minimum} onClick={() => choose(each)}>Choose date &amp; time</button></div>

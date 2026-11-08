@@ -31,7 +31,7 @@ export function TreatmentStep({ catalogue, choose }) {
     return prices.length ? Math.min(...prices) : null
   }
   return <><h1 tabIndex={-1}>What would help you <em>most today?</em></h1><p className="lede">Choose the treatment that feels closest to what you need.</p>
-    <div className="tiles">{catalogue.services.map((service) => <button className="tile tile--wide" key={service.id} onClick={() => choose(service.id)}>
+    <div className="tiles tiles--treatments">{catalogue.services.map((service) => <button className="tile tile--wide" key={service.id} onClick={() => choose(service.id)}>
       <span className="tile-body">
         <strong className="tile-title tile-title--display">{service.name}</strong>
         <span className="tile-note">{service.short_description || service.long_description}</span>
