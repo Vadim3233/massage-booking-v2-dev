@@ -8,6 +8,8 @@ const TIME_TAKEN = 'Sorry, that time has just been taken. Please choose another;
 const REWRITES = [
   [/no longer available|^booking unavailable$|time is not available|time slot/i, TIME_TAKEN],
   [/hold (identity|token)|hold was not found|hold has expired|released/i, 'Your time was released. Please choose a time again.'],
+  // The owner testing the booking flow while signed in to the Admin: the database refuses on purpose, so say why.
+  [/admin accounts cannot be activated/i, "You're signed in with the Admin account, which can't book as a client. To test a booking, sign out and continue as a guest, or use a client account."],
   [/client account is not activated|authentication required/i, 'Please sign in or continue as a guest to carry on.'],
   [/online booking is disabled/i, "Online booking isn't available on this account just now. Please get in touch and I'll arrange your appointment."],
   [/already in progress|command in progress/i, 'That is still being saved. Please wait a moment and try again.'],

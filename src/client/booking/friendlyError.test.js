@@ -23,6 +23,12 @@ describe('what a client is allowed to read', () => {
     }
     expect(friendlyError(new Error('Missing command arguments'))).toBe(GENERIC)
   })
+  it('tells the owner, signed in to the Admin, why booking as a client is refused', () => {
+    const shown = friendlyError(Object.assign(new Error('Admin accounts cannot be activated as client accounts'), { code: '42501' }))
+    expect(shown).not.toBe(GENERIC)
+    expect(shown).toMatch(/Admin account/)
+    expect(shown).toMatch(/guest/)
+  })
   it('uses the fallback when there is no message, and accepts plain text', () => {
     expect(friendlyError(undefined)).toBe(GENERIC)
     expect(friendlyError({}, 'Try again')).toBe('Try again')
