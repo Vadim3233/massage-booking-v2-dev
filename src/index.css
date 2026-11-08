@@ -42,6 +42,8 @@
   --action: #915d43;
   --action-strong: #7a4b35;
   --shadow-action: 0 6px 16px -8px rgb(145 93 67 / .7);
+  /* The thin diagonal lines across a full time, like a closed lane. Decoration only: the time's words keep --muted on the page. */
+  --hatch-line: rgb(123 135 148 / .24);
 
   /* Errors and the choices that cannot be undone. */
   --danger: #8e3029;

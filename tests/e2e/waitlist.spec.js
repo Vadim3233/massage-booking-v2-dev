@@ -33,7 +33,10 @@ test.describe('the client asks about a time that is not free (ADR-095)', () => {
     await f.admin.from('working_hours_overrides').upsert({ date: day, available: true, start_minutes: 600, end_minutes: 720, start_mode: 'fixed', fixed_start_minutes: 660 })
     try {
       await openDay(page, day)
-      await expect(page.getByText("Faded times aren't available right now.")).toBeVisible()
+      // Full times are tucked away until asked for.
+      await expect(page.getByRole('button', { name: '10:00, not available right now' })).toHaveCount(0)
+      await page.getByRole('button', { name: /full times? — I can tell you if one frees up/ }).click()
+      await expect(page.getByText("Full times aren't available right now.")).toBeVisible()
       await expect(page.getByRole('button', { name: '09:30, not available right now' })).toHaveCount(0)
       await expect(page.getByRole('button', { name: '13:00, not available right now' })).toBeVisible()
       await page.getByRole('button', { name: '10:00, not available right now' }).click()

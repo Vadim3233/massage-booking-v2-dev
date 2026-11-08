@@ -34,3 +34,9 @@
 .dtp .slots button.slot-faded[aria-pressed=true]::before { content: none; }
 .dtp .faded-hint { display: flex; align-items: flex-start; gap: 6px; margin: 4px 0 10px; color: var(--muted); font-size: 13.5px; line-height: 1.45; }
 .dtp .faded-hint svg { flex: 0 0 auto; margin-top: 2px; }
+
+/* Full times (option D): tucked behind one button; when shown they carry thin diagonal lines, like a closed lane, and dimmer words.
+   Still buttons: tapping one asks to hear if it frees up. */
+.dtp .slots button.slot-faded:not(.is-asked):not([aria-pressed=true]) { border-color: var(--hairline); background-color: var(--paper); background-image: repeating-linear-gradient(135deg, var(--hatch-line) 0 1.5px, transparent 1.5px 7px); color: var(--muted); }
+.dtp .full-toggle { display: flex; align-items: center; justify-content: flex-start; gap: 8px; width: 100%; min-height: 48px; margin: 8px 0; padding: 0 16px; border: 1.5px dashed var(--control-border); border-radius: var(--radius-pill); background: transparent; color: var(--primary); font-size: 15px; font-weight: 600; text-align: left; }
+.dtp .full-toggle span { flex: 1; }
