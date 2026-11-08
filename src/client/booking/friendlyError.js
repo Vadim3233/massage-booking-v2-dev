@@ -1,6 +1,6 @@
 // What a client may read when something goes wrong. The database writes a few sentences for them (the ones that say what to
 // do, such as "Please choose a later time"); everything else is about the connection or the system and stays out of sight.
-export const GENERIC = 'Something went wrong. Please try again, or contact Vad if it keeps happening.'
+export const GENERIC = 'Something went wrong. Please try again, or contact Vadim if it keeps happening.'
 
 const TIME_TAKEN = 'Sorry, that time has just been taken. Please choose another; your details are saved.'
 

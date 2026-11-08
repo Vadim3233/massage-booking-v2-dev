@@ -37,7 +37,7 @@ export function TreatmentStep({ catalogue, choose }) {
         <span className="tile-note">{service.short_description || service.long_description}</span>
       </span>
       <span className="tile-side">{from(service.id) !== null && <span className="tile-from">From <b className="figure">{money(from(service.id))}</b></span>}<Icon name="right" size={20} className="tile-chevron" /></span>
-    </button>)}</div>{!catalogue.services.length && <p>No treatments are currently available. Please contact Vad.</p>}
+    </button>)}</div>{!catalogue.services.length && <p>No treatments are currently available. Please contact Vadim.</p>}
   </>
 }
 
@@ -61,7 +61,7 @@ export function TimeStep({ rules, draft, loadAvailability, selectSlot, next, wan
     <DayTimePicker key={duration} horizonDays={rules.horizonDays} initialDate={draft.date} reloadKey={holdKey}
       loadDay={(date) => loadAvailability(date, duration).then((rows) => rows.map((row) => row.start_minutes))}
       selected={chosen ? { date: draft.date, start: draft.start } : null} onPick={(date, start) => selectSlot(start, date)}
-      emptyMessage={<>No suitable times on this day. Choose another date or <a href="https://vadmassage.com">contact Vad</a>.</>}
+      emptyMessage={<>No suitable times on this day. Choose another date or <a href="https://vadmassage.com">contact Vadim</a>.</>}
       {...(wanted ? {
         loadWanted: (date) => wanted.load(date, duration),
         onDayShown: (date, free) => wanted.record('day', { date, free, minutes: duration }),

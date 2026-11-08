@@ -101,7 +101,7 @@ export function createBookingApi(client) {
     async askForTime({ date, start, duration, contact = null }) {
       const { data, error } = await client.rpc('ask_for_time', { p_date: date, p_start_minutes: start, p_duration_minutes: duration, p_contact: contact?.trim() || null })
       if (error) {
-        const problem = new Error(error.code === '22023' ? error.message : 'Sorry, that did not work. Please try again, or contact Vad.')
+        const problem = new Error(error.code === '22023' ? error.message : 'Sorry, that did not work. Please try again, or contact Vadim.')
         problem.needsContact = error.code === '22023' && /phone number or email/.test(error.message)
         throw problem
       }
@@ -112,7 +112,7 @@ export function createBookingApi(client) {
       const { data, error } = await client.rpc('join_waitlist', { p_date: details.date, p_from_minutes: details.from, p_to_minutes: details.to, p_duration_minutes: details.duration,
         p_name: details.name, p_phone: details.phone?.trim() || null, p_email: details.email?.trim() || null, p_note: details.note?.trim() || null })
       // The server's sentences are written for clients (code 22023); anything else stays out of sight.
-      if (error) throw new Error(error.code === '22023' ? error.message : 'Sorry, that did not work. Please try again, or contact Vad.')
+      if (error) throw new Error(error.code === '22023' ? error.message : 'Sorry, that did not work. Please try again, or contact Vadim.')
       return data
     },
   }

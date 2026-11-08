@@ -134,6 +134,6 @@ export default function ResetPassword() {
       {error && <p role="alert" className="error">{error}</p>}
       {message && <p role="status" className="notice">{message}</p>}
     </main>
-    <footer>Personal treatments, thoughtfully arranged. <a href="https://vadmassage.com">Contact Vad</a></footer>
+    <footer>Personal treatments, thoughtfully arranged. <a href="https://vadmassage.com">Contact Vadim</a></footer>
   </div>
 }

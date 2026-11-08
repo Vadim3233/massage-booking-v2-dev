@@ -49,7 +49,7 @@ export function buildCalendarFile(booking, now = new Date(), origin = '') {
     `DTSTAMP:${now.toISOString().replace(/[-:]|\.\d{3}/g, '')}`,
     `DTSTART;TZID=Europe/London:${clock(booking.date, booking.start_minutes)}`,
     `DTEND;TZID=Europe/London:${clock(booking.date, booking.start_minutes + booking.treatment_duration_minutes)}`,
-    'SUMMARY:Massage with Vad',
+    'SUMMARY:Massage with Vadim',
     ...(where ? [`LOCATION:${escapeText(where)}`] : []),
     `DESCRIPTION:${escapeText(`Booking reference: ${booking.booking_reference}${manage ? `\nTo change or cancel: ${manage}` : ''}`)}`,
     ...(manage ? [`URL:${manage}`] : []),

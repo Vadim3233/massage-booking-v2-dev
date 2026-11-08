@@ -254,7 +254,7 @@ export default function BookingFlow() {
         </fieldset>
       </>}
     </main>
-    <footer>Personal treatments, thoughtfully arranged. <a href="https://vadmassage.com">Contact Vad</a>
+    <footer>Personal treatments, thoughtfully arranged. <a href="https://vadmassage.com">Contact Vadim</a>
       <p className="privacy-note">To make booking easier, I note which steps of this page are used and which times people look for. This uses no cookies, saves nothing on your phone, and is deleted after 90 days.</p></footer>
   </div>
 }

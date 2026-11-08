@@ -17,7 +17,7 @@ export default function BookingSummary({ booking, paymentLabel, quote, emailHint
     {/* Who, how long and the price, in the words the booking screens used. */}
     <p className="summary-sentence"><strong>{bookingSentence([...booking.booking_sessions].sort((a, b) => a.position - b.position).map((session) => session.duration_minutes), booking.total_gbp, treatmentNoun(booking.booking_sessions[0]?.service_name_snapshot))}</strong></p>
     <p className="summary-line">{booking.address_snapshot}</p>
-    <p className="summary-line">Confirmation email: <strong>{booking.booking_email_snapshot || 'Please contact Vad to confirm your email'}</strong></p>
+    <p className="summary-line">Confirmation email: <strong>{booking.booking_email_snapshot || 'Please contact Vadim to confirm your email'}</strong></p>
     {/* A new sender's first email can land in spam, and one "Not spam" teaches the inbox. */}
     {emailHint && booking.booking_email_snapshot && <p className="summary-hint">My emails come from <strong>{EMAIL_SENDER}</strong>. Can't find one? Look in your spam folder and press “Not spam”.</p>}
     <ol className="summary-sessions">{booking.booking_sessions.map((session) => <li key={session.position}>{session.service_name_snapshot} · {session.duration_minutes} minutes{session.recipient_name ? ` · ${session.recipient_name}` : ''}</li>)}</ol>
