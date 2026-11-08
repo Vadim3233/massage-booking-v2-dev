@@ -339,12 +339,12 @@
 
 /* The welcome: the header, the progress line and the introduction run together as one navy band, with Vadim's photo in it. */
 .booking-shell > .brand { margin-bottom: 0; }
-.booking-main:has(.welcome-band) .stepper,
-.booking-main:has(.welcome-band) .busy-bar { margin: 0; background: var(--primary); box-shadow: 0 0 0 100vmax var(--primary); clip-path: inset(0 -100vmax); }
-.booking-main:has(.welcome-band) .stepper { padding: 2px 0 6px; }
-.booking-main:has(.welcome-band) .progress-summary { color: var(--primary-line); }
-.booking-main:has(.welcome-band) .progress-bar span { background: var(--on-dark-wash); }
-.booking-main:has(.welcome-band) .progress-bar .current { background: var(--sand-chip); }
+.booking-main.is-banded .stepper,
+.booking-main.is-banded .busy-bar { margin: 0; background: var(--primary); box-shadow: 0 0 0 100vmax var(--primary); clip-path: inset(0 -100vmax); }
+.booking-main.is-banded .stepper { padding: 2px 0 6px; }
+.booking-main.is-banded .progress-summary { color: var(--primary-line); }
+.booking-main.is-banded .progress-bar span { background: var(--on-dark-wash); }
+.booking-main.is-banded .progress-bar .current { background: var(--sand-chip); }
 .welcome-band { margin-bottom: 18px; padding: 4px 0 22px; background: var(--primary); color: var(--on-primary); box-shadow: 0 0 0 100vmax var(--primary); clip-path: inset(0 -100vmax); }
 .welcome-band .eyebrow { margin-top: 10px; color: var(--primary-line); }
 .welcome-band h1 { color: var(--on-primary); }
@@ -396,3 +396,40 @@
 .roll { display: inline-block; animation: roll 320ms var(--ease) both; }
 @keyframes roll { from { opacity: 0; transform: translateY(60%); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .roll { animation: none; } .trust > summary::after { transition: none; } }
+
+/* Design refresh, stage 3: the navy band carries each step's heading on the first four steps (Area, Treatment, People & length, Time),
+   so every one of them opens with the brand colour. Review, Details and Payment stay calm on the page. If an error sits between the
+   progress line and the heading, the heading stays on the page instead. */
+.booking-main.is-banded:not(:has(> .error)) .screen > h1:first-child,
+.booking-main.is-banded:not(:has(> .error)) .screen > h1:first-child + .lede { margin: 0; background: var(--primary); color: var(--on-primary); box-shadow: 0 0 0 100vmax var(--primary); clip-path: inset(0 -100vmax); }
+.booking-main.is-banded:not(:has(> .error)) .screen > h1:first-child { padding: 10px 0 8px; }
+.booking-main.is-banded:not(:has(> .error)) .screen > h1:first-child em { color: var(--sand-chip); }
+.booking-main.is-banded:not(:has(> .error)) .screen > h1:first-child:focus-visible { outline-color: var(--on-primary); }
+.booking-main.is-banded:not(:has(> .error)) .screen > h1:first-child + .lede { padding-bottom: 22px; margin-bottom: 18px; color: var(--primary-line); }
+.booking-main.is-banded:not(:has(> .error)) .screen > h1:first-child:not(:has(+ .lede)) { padding-bottom: 22px; margin-bottom: 18px; }
+.booking-main.is-banded .stepper .back { color: var(--on-primary); }
+.booking-main.is-banded .stepper .back:not(:disabled):hover { background: var(--on-dark-wash); }
+.booking-main.is-banded .stepper :focus-visible { outline-color: var(--on-primary); }
+.booking-main.is-banded .progress-bar .done { background: var(--on-primary); }
+
+/* How many people: a number badge on each option, filled navy when it is the one chosen. */
+.tile--people { flex-wrap: nowrap; justify-content: flex-start; gap: 14px; }
+.count-badge { display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); font: 600 20px/1 var(--font-display); font-variant-numeric: lining-nums; }
+.tile--people[aria-pressed=true] .count-badge { background: var(--primary); color: var(--on-primary); }
+
+/* How much time: the length big on the left, so the options compare at a glance. */
+.tile--length { flex-wrap: nowrap; justify-content: flex-start; gap: 14px; }
+.tile--length .tile-body { flex: 1; }
+.length-figure { display: grid; justify-items: center; flex: 0 0 64px; padding: 6px 0; border-radius: var(--radius-sm); background: var(--primary-soft); color: var(--primary-strong); line-height: 1; }
+.length-figure b { font-family: var(--font-display); font-size: 28px; font-weight: 600; }
+.length-figure small { margin-top: 3px; font-size: 11px; font-weight: 600; }
+.tile--length[aria-pressed=true] .length-figure { background: var(--primary); color: var(--on-primary); }
+.tile--length:disabled .length-figure { background: var(--hairline); color: var(--muted); }
+
+/* The header fits on one row on a phone: a slightly smaller name and links. Very narrow screens may still wrap. */
+.booking-shell > .brand { flex-wrap: nowrap; }
+.booking-shell > .brand .brand-link { gap: 8px; font-size: 18px; white-space: nowrap; }
+.booking-shell > .brand .brand-mark { width: 32px; height: 32px; font-size: 12px; }
+.booking-shell > .brand .brand-aside,
+.booking-shell > .brand .btn--quiet { font-size: 14px; white-space: nowrap; }
+@media (width <= 359px) { .booking-shell > .brand { flex-wrap: wrap; } }

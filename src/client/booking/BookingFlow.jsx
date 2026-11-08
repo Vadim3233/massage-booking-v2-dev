@@ -215,7 +215,7 @@ export default function BookingFlow() {
     <header className="brand"><a className="brand-link" href="/"><b className="brand-mark" aria-hidden="true">VM</b>VadMassage</a>
       <div className="brand-actions">{accountControl}<a className="brand-aside" href="/account">Your bookings</a><span className="sr-only" role="status">{signedInAccount ? 'You are signed in.' : ''}</span></div></header>
     {showSignIn && <div className="header-sign-in" id="header-sign-in"><AuthPanel client={supabase} level={2} heading="Sign in" redirectTo={`${window.location.origin}${window.location.pathname}?step=${step}`} /></div>}
-    <main className={`booking-main ${settling ? 'is-settling' : ''}`}>
+    <main className={`booking-main ${settling ? 'is-settling' : ''} ${step <= 3 ? 'is-banded' : ''}`}>
       <nav className="stepper" aria-label="Booking progress">
         <div className="stepper-row">
           {catalogue && canGoBack ? <button className="btn--quiet btn--small back" disabled={busy} onClick={() => navigate(step - 1)}><Icon name="left" size={20} />Back</button> : <span />}

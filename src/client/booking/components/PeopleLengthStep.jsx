@@ -34,6 +34,7 @@ export default function PeopleLengthStep({ draft, catalogue, edit, choose, noMin
     <h1 tabIndex={-1}>How many <em>people?</em></h1>
     <p className="lede">Each person has their own massage, one after the other, at the same address.</p>
     <div className="tiles tiles--people">{peopleChoices(prices).map(count => <button key={count} className="tile tile--wide tile--people" aria-pressed={chosen.length === count} onClick={() => pickPeople(count)}>
+      <span className="count-badge" aria-hidden="true">{count}</span>
       <span className="tile-body"><strong className="tile-title">{count === 1 ? 'Just me' : `${count} people`}</strong>
         <span className="tile-note">{count === 1 ? `One ${noun}` : `${COUNT[count]} ${noun}s, one after the other`}</span></span>
     </button>)}</div>
@@ -83,6 +84,7 @@ export default function PeopleLengthStep({ draft, catalogue, edit, choose, noMin
       const note = short ? `Under the ${hoursWords(minimum)} minimum here` : people === 1 ? `One ${lengthWord(minutes)} ${noun}` : `One after the other · ${hoursWords(minutes * people)} in total`
       return <button key={minutes} className="tile tile--wide tile--length" disabled={short} aria-label={`${minutes} minutes · ${people === 1 ? '1 person' : `${people} people, ${hoursWords(minutes * people)} in total`} · ${money(price)}${short ? ` · under the ${hoursWords(minimum)} minimum here` : ''}`}
         aria-pressed={chosen.length === people && chosen.every(value => value === minutes)} onClick={() => choose(durations)}>
+        <span className="length-figure" aria-hidden="true"><b className="figure">{minutes >= 120 && minutes % 60 === 0 ? minutes / 60 : minutes}</b><small>{minutes >= 120 && minutes % 60 === 0 ? 'hours' : 'min'}{people > 1 ? ' each' : ''}</small></span>
         <span className="tile-body"><strong className="tile-title">{title}</strong><span className="tile-note">{note}</span></span>
         <span className="tile-side"><b className="figure tile-price">{money(price)}</b></span>
       </button>
