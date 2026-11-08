@@ -55,7 +55,7 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
     <MethodChoice cash={cash} locked={Boolean(draft.paymentPending)} choose={switchMethod} />
     <BookingSummary booking={booking} quote={quote} />
     <a className="btn btn--quiet btn--block" href={`/account?booking=${booking.id}`}>Change the time or cancel this booking</a>
-    <p className="fine"><a href="https://vadmassage.com">Contact Vad</a></p>
+    <p className="fine"><a href="https://vadmassage.com">Contact Vadim</a></p>
   </>
   // Switching between bank transfer and cash starts the acknowledgement again, since the terms read differently, and tells a screen reader the page changed.
   function switchMethod() {
@@ -110,7 +110,7 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
     </ol>
     {summary}
     <a className="btn btn--quiet btn--block" href={`/account?booking=${booking.id}`}>Change the time or cancel this booking</a>
-    <p className="fine"><a href="https://vadmassage.com">Contact Vad</a></p>
+    <p className="fine"><a href="https://vadmassage.com">Contact Vadim</a></p>
     <div className="action-bar">
       <button className="btn--primary btn--lg btn--block" disabled={!cash && !bank.configured} onClick={confirm}>
         {draft.paymentPending ? 'Try again' : cash ? 'Confirm cash booking' : "I've made the bank transfer"}

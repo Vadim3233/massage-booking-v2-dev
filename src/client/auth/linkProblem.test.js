@@ -21,7 +21,7 @@ describe('what an email link that did not work says', () => {
   })
   it('gives a plain sentence for any other problem with a link, never the service\'s own words', () => {
     const said = linkProblem('#error=server_error&error_code=unexpected_failure&error_description=Database+error+saving+new+user', '')
-    expect(said).toBe('That email link could not be used. Please sign in, or contact Vad if it keeps happening.')
+    expect(said).toBe('That email link could not be used. Please sign in, or contact Vadim if it keeps happening.')
     expect(said).not.toMatch(/database/i)
   })
 })

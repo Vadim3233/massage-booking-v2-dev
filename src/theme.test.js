@@ -34,6 +34,10 @@ const TEXT = [
   ['--ink', '--needs-tint'], ['--ink-soft', '--needs-tint'], ['--muted', '--needs-tint'], ['--needs-ink', '--needs-tint'],
   ['--block-ink', '--block-bg'], ['--ink-soft', '--buffer-bg'], ['--ok-ink', '--free-bg'], ['--primary', '--primary-line'], ['--ink', '--needs-badge'],
   ['--on-primary', '--ink'], ['--ink-soft', '--hairline'],
+  // The client booking pages: white on the terracotta main button (and pressed), and on the coloured treatment cards; the navy band's
+  // sand highlight and pale-blue second line.
+  ['--on-primary', '--action'], ['--on-primary', '--action-strong'], ['--on-primary', '--accent-ink'], ['--on-primary', '--sage-ink-soft'],
+  ['--sand-chip', '--primary'], ['--primary-line', '--primary'],
   // Edit hours: the words on a working half hour, a booking and its travel.
   ['--grid-open-ink', '--grid-open-bg'], ['--grid-open-ink', '--grid-open-line'], ['--grid-booking-ink', '--grid-booking-bg'], ['--grid-travel-ink', '--grid-travel-bg'],
   // The Admin's booking boxes: the name, time and price on the sage and sand tints (and on their pressed colour), the softer words under them, and the pill

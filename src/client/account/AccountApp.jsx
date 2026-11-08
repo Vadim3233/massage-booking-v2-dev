@@ -49,7 +49,7 @@ function servicesLabel(text) {
 
 function Terms({ terms, action }) {
   if (!terms) return <p role="status">Checking your options…</p>
-  if (!terms.can_change) return <p>This appointment can no longer be changed online. Please contact Vad.</p>
+  if (!terms.can_change) return <p>This appointment can no longer be changed online. Please contact Vadim.</p>
   const fee = Number(action === 'cancel' ? terms.cancel_fee_gbp : terms.reschedule_fee_gbp)
   return fee > 0
     ? <p className="account-note account-note--fee" role="status">This is inside {terms.free_cancellation_hours ?? 24} hours of your appointment, so a late fee of <strong>{money(fee)}</strong> applies. I can still make this change for you now.</p>
@@ -176,7 +176,7 @@ function Manage({ id, rules, close, changed, api, linked = false }) {
     <h1 tabIndex={-1}>Your <em>appointment</em></h1>
     <section className="panel">
       {error ? <><p role="alert" className="error">{error}</p>{error !== LINK_INVALID && <button onClick={load}>Try again</button>}</> : <p role="status">Loading your appointment…</p>}
-      {linked ? <p><a href="https://vadmassage.com">Contact Vad</a></p> : <button onClick={close}>Back to your bookings</button>}
+      {linked ? <p><a href="https://vadmassage.com">Contact Vadim</a></p> : <button onClick={close}>Back to your bookings</button>}
     </section>
     {error && signIn}
   </>
@@ -200,11 +200,11 @@ function Manage({ id, rules, close, changed, api, linked = false }) {
         <Terms terms={terms} action="reschedule" />
         <div className="actions"><button className="btn--primary" onClick={() => setMode('reschedule')}>Change the time</button><button className="btn--danger" onClick={() => setMode('cancel')}>Cancel appointment</button></div>
       </>}
-      {open && terms && !terms.can_change && <p>This appointment can no longer be changed online. Please contact Vad.</p>}
+      {open && terms && !terms.can_change && <p>This appointment can no longer be changed online. Please contact Vadim.</p>}
     </>}
     {mode === 'cancel' && terms && <CancelPanel api={api} booking={booking} terms={terms} back={() => setMode('view')} refresh={load} done={result => done(result, 'Your appointment is cancelled.')} />}
     {mode === 'reschedule' && terms && <ReschedulePanel api={api} booking={booking} terms={terms} rules={rules} back={() => setMode('view')} refresh={load} done={result => done(result, 'Your appointment has been moved.')} />}
-    <p><a href="https://vadmassage.com">Contact Vad</a></p>
+    <p><a href="https://vadmassage.com">Contact Vadim</a></p>
     {signIn}
   </section>
 }
@@ -298,6 +298,6 @@ export default function AccountApp() {
           : <><h1 tabIndex={-1}>Your <em>bookings</em></h1><BookingList key={revision} open={select} /></>)}
       </>}
     </main>
-    <footer>Personal treatments, thoughtfully arranged. <a href="https://vadmassage.com">Contact Vad</a></footer>
+    <footer>Personal treatments, thoughtfully arranged. <a href="https://vadmassage.com">Contact Vadim</a></footer>
   </div>
 }

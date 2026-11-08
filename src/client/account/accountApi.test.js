@@ -15,7 +15,7 @@ describe('what a client is told when something goes wrong', () => {
   })
   it('hides anything technical', () => {
     const leaked = friendlyError({ code: 'XX000', message: 'duplicate key value violates unique constraint "bookings_pkey"' })
-    expect(leaked.message).toBe('Something went wrong. Please try again, or contact Vad if it keeps happening.')
+    expect(leaked.message).toBe('Something went wrong. Please try again, or contact Vadim if it keeps happening.')
     expect(leaked.message).not.toMatch(/constraint|bookings|duplicate/)
   })
 })

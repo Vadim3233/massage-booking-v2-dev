@@ -86,6 +86,9 @@ export default function DayTimePicker({ horizonDays, dateLabel = 'Appointment da
   // The faded times of the day on show. A failure only means none are shown.
   const [wanted, setWanted] = useState({})
   const [asking, setAsking] = useState(null)
+  // Full (faded) times are tucked away behind one button, so a client first sees only what can be booked (owner's choice, option D).
+  // They open again on their own when one of them is being asked about.
+  const [fullOpen, setFullOpen] = useState(false)
   const loadWantedRef = useRef(loadWanted)
   useEffect(() => { loadWantedRef.current = loadWanted })
   useEffect(() => {
@@ -97,7 +100,8 @@ export default function DayTimePicker({ horizonDays, dateLabel = 'Appointment da
   const view = viewDate ? days[viewDate] : null
   const free = view && !view.error ? view.slots : []
   const faded = view && !view.error ? (wanted[viewDate] || []).filter((start) => !free.includes(start)) : []
-  const groups = groupSlots([...free, ...faded])
+  const showFull = fullOpen || asking?.date === viewDate
+  const groups = groupSlots(showFull ? [...free, ...faded] : free)
   const shownKey = view && !view.error ? `${viewDate}:${free.length}` : ''
   const onDayShownRef = useRef(onDayShown)
   useEffect(() => { onDayShownRef.current = onDayShown })
@@ -112,6 +116,7 @@ export default function DayTimePicker({ horizonDays, dateLabel = 'Appointment da
   // Tapping a day that is already on show leaves the row where it is, so the days do not move under a finger.
   function pick(date) {
     if (!usable(date)) return
+    if (date !== viewDate) setFullOpen(false)
     setViewDate(date)
     if (!dates.includes(date)) setStripStart(clampStrip(date, today, last))
     // A day looked at again is asked about again, so its list is never older than the last look.
@@ -159,7 +164,7 @@ export default function DayTimePicker({ horizonDays, dateLabel = 'Appointment da
     </>}
     {groups.length > 0 && <div role="group" aria-label={free.length ? 'Available times' : 'Times you can ask about'}>
       <p className="day-name">{dayParts(viewDate).long}</p>
-      {groups.map((group) => <div key={group.key}>
+      {groups.map((group) => <div key={group.key} className="slot-part" data-part={group.key}>
         {groups.length > 1 && <h2 className="slot-group">{group.label}</h2>}
         <div className="slots">{group.slots.map((start) => free.includes(start)
           ? <button type="button" key={start} aria-pressed={selected?.date === viewDate && selected?.start === start} onClick={() => choose(start)}>{timeLabel(start)}</button>
@@ -168,9 +173,15 @@ export default function DayTimePicker({ horizonDays, dateLabel = 'Appointment da
               onClick={() => { setAsking({ date: viewDate, start }); onWanted?.(viewDate, start) }}>
               <Icon name={isAsked?.(viewDate, start) ? 'tick' : 'bell'} size={14} />{timeLabel(start)}</button>)}</div>
       </div>)}
-      {faded.length > 0 && <p className="faded-hint"><Icon name="bell" size={14} />Faded times aren't available right now. Tap one if you'd like to hear if anything changes.</p>}
+      {showFull && faded.length > 0 && <p className="faded-hint"><Icon name="bell" size={14} />Full times aren't available right now. Tap one if you'd like to hear if anything changes.</p>}
       {asking?.date === viewDate && renderAsk?.(viewDate, asking.start, () => setAsking(null))}
     </div>}
+    {faded.length > 0 && <button type="button" className="full-toggle" aria-expanded={showFull}
+      onClick={() => { if (showFull) setAsking(null); setFullOpen(!showFull) }}>
+      <Icon name="bell" size={16} />
+      <span>{showFull ? 'Hide full times' : `${faded.length} full ${faded.length === 1 ? 'time' : 'times'} — I can tell you if one frees up`}</span>
+      <Icon name={showFull ? 'up' : 'down'} size={16} />
+    </button>}
     {viewDate && renderFooter?.(viewDate)}
   </div>
 }

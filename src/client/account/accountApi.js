@@ -19,7 +19,7 @@ const SAFE_MESSAGES = new Set([
 const REWRITES = new Map([
   ['Booking is not available to this client', 'This appointment is not on the account you are signed in to. If you booked as a guest, open the link in your latest confirmation email, or contact Vad.'],
 ])
-const GENERIC = 'Something went wrong. Please try again, or contact Vad if it keeps happening.'
+const GENERIC = 'Something went wrong. Please try again, or contact Vadim if it keeps happening.'
 
 // Messages with a number in them, because the number comes from the Admin's settings.
 const SAFE_PATTERNS = [/^Online appointments can currently be arranged up to \d+ days ahead\. Please choose (another|an earlier) date\.$/]

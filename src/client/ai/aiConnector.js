@@ -17,4 +17,4 @@ export const ASSISTANT_STEPS = [
   { name: 'ChatGPT', steps: ['In ChatGPT, go to Settings, then Apps & Connectors (custom connectors may need developer mode, or a paid plan).', 'Create a connector, name it VadMassage, and paste the address.', 'Sign in with your VadMassage account and press Allow.'] },
 ]
 
-export const EXAMPLE_ASKS = ['Book me with Vad next Tuesday evening, 60 minutes.', 'Same as last time, sometime next week.', 'Book a couples massage for me and Sam, 90 minutes each, this weekend.', "I've paid for my booking."]
+export const EXAMPLE_ASKS = ['Book me with Vadim next Tuesday evening, 60 minutes.', 'Same as last time, sometime next week.', 'Book a couples massage for me and Sam, 90 minutes each, this weekend.', "I've paid for my booking."]

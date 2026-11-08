@@ -300,3 +300,206 @@
 .none-suit-choices { display: flex; flex-wrap: wrap; gap: 8px; }
 .booking-shell .none-suit-choice { min-height: 44px; padding: 0 14px; border-radius: var(--radius-pill); border-color: var(--control-border); color: var(--ink); font-size: 15px; }
 .privacy-note { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); }
+
+/* Design refresh, stage 1 (see the style gallery). Only how things look; nothing here changes what a step does.
+   - The header is a navy band across the screen, so every step opens with the brand colour.
+   - Choices are see-through: an outline on the page instead of a white card with a shadow. The chosen one keeps its powder-blue tint.
+   - Areas are a list, one per row, with a chevron, rather than a two-column grid.
+   - Times are rounded pills.
+   The edges of anything tapped stay --control-border, so they still stand out (3:1) as theme.test.js asks. No new motion: AGENTS.md. */
+.booking-shell > .brand { margin-bottom: 4px; padding: 14px 0 12px; background: var(--primary); color: var(--on-primary); box-shadow: 0 0 0 100vmax var(--primary); clip-path: inset(0 -100vmax); }
+.booking-shell > .brand .brand-link,
+.booking-shell > .brand .brand-aside { color: var(--on-primary); }
+.booking-shell > .brand .brand-mark { border-color: var(--on-primary); background: transparent; color: var(--on-primary); }
+.booking-shell > .brand .btn--quiet { color: var(--on-primary); }
+.booking-shell > .brand .btn--quiet:not(:disabled):hover,
+.booking-shell > .brand .brand-actions .btn--quiet[aria-expanded='true'] { background: var(--on-dark-wash); }
+.booking-shell > .brand :focus-visible { outline-color: var(--on-primary); }
+
+.welcome-hero { display: flex; align-items: center; gap: 16px; }
+.welcome-hero h1 { margin-bottom: 0; }
+.welcome-photo { flex: none; width: 88px; height: 88px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 3px var(--surface), 0 0 0 4.5px var(--primary-line), var(--shadow-1); }
+@media (width <= 359px) { .welcome-photo { width: 64px; height: 64px; } }
+
+.tile { background: transparent; box-shadow: none; }
+.tile[aria-pressed=true] { box-shadow: none; }
+.dtp .daychip { background: transparent; }
+
+.tiles--areas { grid-template-columns: 1fr; gap: 8px; }
+.tiles--areas .tile { position: relative; min-height: 56px; padding-right: 44px; }
+.tiles--areas .tile::after { content: ''; position: absolute; right: 20px; top: 50%; width: 8px; height: 8px; margin-top: -5px; border: solid var(--muted); border-width: 0 2px 2px 0; transform: rotate(-45deg); }
+
+.dtp .slots button { border-radius: var(--radius-pill); }
+
+/* Design refresh, stage 2. */
+
+/* The main button on the client pages is terracotta (--action), so the next step stands out from the navy. The Admin keeps navy. */
+.booking-flow .btn--primary { border-color: var(--action); background: var(--action); color: var(--on-primary); box-shadow: var(--shadow-action); }
+.booking-flow .btn--primary:not(:disabled):hover { border-color: var(--action-strong); background: var(--action-strong); }
+
+/* The welcome: the header, the progress line and the introduction run together as one navy band, with Vadim's photo in it. */
+.booking-shell > .brand { margin-bottom: 0; }
+.booking-main.is-banded .stepper,
+.booking-main.is-banded .busy-bar { margin: 0; background: var(--primary); box-shadow: 0 0 0 100vmax var(--primary); clip-path: inset(0 -100vmax); }
+.booking-main.is-banded .stepper { padding: 2px 0 6px; }
+.booking-main.is-banded .progress-summary { color: var(--primary-line); }
+.booking-main.is-banded .progress-bar span { background: var(--on-dark-wash); }
+.booking-main.is-banded .progress-bar .current { background: var(--sand-chip); }
+.welcome-band { margin-bottom: 18px; padding: 4px 0 22px; background: var(--primary); color: var(--on-primary); box-shadow: 0 0 0 100vmax var(--primary); clip-path: inset(0 -100vmax); }
+.welcome-band .eyebrow { margin-top: 10px; color: var(--primary-line); }
+.welcome-band h1 { color: var(--on-primary); }
+.welcome-band h1 em { color: var(--sand-chip); }
+.welcome-band .lede { margin-bottom: 0; color: var(--primary-line); }
+.welcome-band :focus-visible { outline-color: var(--on-primary); }
+.welcome-band .welcome-photo { box-shadow: 0 0 0 3px var(--sand-chip), var(--shadow-2); }
+
+/* The trust strip: one line until tapped. */
+.trust { margin-top: 16px; border: 1px solid var(--on-dark-wash-strong); border-radius: var(--radius); background: var(--on-dark-wash); }
+.trust > summary { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 14px; cursor: pointer; list-style: none; font-size: 14px; font-weight: 600; }
+.trust > summary::-webkit-details-marker { display: none; }
+.trust > summary .icon { color: var(--sand-chip); flex-shrink: 0; }
+.trust > summary::after { content: ''; margin-left: auto; width: 8px; height: 8px; border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform var(--dur) var(--ease); }
+.trust[open] > summary::after { transform: rotate(-135deg); }
+.trust-body { display: grid; gap: 12px; padding: 0 14px 14px; }
+.trust-words { margin: 0; font: italic 500 17px/1.4 var(--font-display); }
+.trust-words span { display: block; margin-top: 4px; font: 400 13px/1.4 var(--font-ui); font-style: normal; color: var(--primary-line); }
+.trust-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.trust-tags li { padding: 4px 10px; border-radius: var(--radius-pill); background: var(--on-dark-wash); color: var(--sand-chip); font-size: 12px; font-weight: 600; }
+.trust-links { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0; }
+.trust-links a { display: flex; align-items: center; justify-content: center; min-height: 44px; border-radius: var(--radius-pill); font-size: 14px; font-weight: 700; text-decoration: none; }
+.trust-links a:first-child { background: var(--surface); color: var(--primary-strong); }
+.trust-links a:last-child { border: 1px solid var(--on-primary); color: var(--on-primary); }
+
+/* Treatments: each card its own colour from the palette (navy, terracotta, sage), white words on it. */
+.tiles--treatments .tile { --card: var(--primary); border-color: var(--card); background: var(--card); color: var(--on-primary); box-shadow: var(--shadow-1); }
+.tiles--treatments .tile:nth-child(3n+2) { --card: var(--accent-ink); }
+.tiles--treatments .tile:nth-child(3n) { --card: var(--sage-ink-soft); }
+.tiles--treatments .tile:hover,
+.tiles--treatments .tile:active { border-color: var(--card); background: var(--card); box-shadow: var(--shadow-2); }
+.tiles--treatments .tile-note,
+.tiles--treatments .tile-from,
+.tiles--treatments .tile-from b,
+.tiles--treatments .tile-chevron { color: var(--on-primary); }
+
+/* Days with free times are sage; the chosen day stays navy. */
+.dtp .daychip[data-free=yes]:not([aria-pressed=true]) { border-color: var(--sage-rail); background: var(--sage-bg); }
+
+/* Times are tinted by part of the day: morning sage, afternoon sand, evening powder blue. Their edges stay --control-border. */
+.slot-part[data-part=morning] .slots button:not(.slot-faded):not([aria-pressed=true]) { background: var(--sage-bg); }
+.slot-part[data-part=afternoon] .slots button:not(.slot-faded):not([aria-pressed=true]) { background: var(--sand-bg); }
+.slot-part[data-part=evening] .slots button:not(.slot-faded):not([aria-pressed=true]) { background: var(--primary-soft); }
+.slot-part[data-part=morning] .slot-group { color: var(--sage-ink); }
+.slot-part[data-part=afternoon] .slot-group { color: var(--sand-ink); }
+.slot-part[data-part=evening] .slot-group { color: var(--primary-strong); }
+
+/* A total rolls in when it changes (its element is re-keyed on the amount). */
+.roll { display: inline-block; animation: roll 320ms var(--ease) both; }
+@keyframes roll { from { opacity: 0; transform: translateY(60%); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .roll { animation: none; } .trust > summary::after { transition: none; } }
+
+/* Design refresh, stage 3: the navy band carries each step's heading on the first four steps (Area, Treatment, People & length, Time),
+   so every one of them opens with the brand colour. Review, Details and Payment stay calm on the page. If an error sits between the
+   progress line and the heading, the heading stays on the page instead. */
+.booking-main.is-banded:not(:has(> .error)) .screen > h1:first-child,
+.booking-main.is-banded:not(:has(> .error)) .screen > h1:first-child + .lede { margin: 0; background: var(--primary); color: var(--on-primary); box-shadow: 0 0 0 100vmax var(--primary); clip-path: inset(0 -100vmax); }
+.booking-main.is-banded:not(:has(> .error)) .screen > h1:first-child { padding: 10px 0 8px; }
+.booking-main.is-banded:not(:has(> .error)) .screen > h1:first-child em { color: var(--sand-chip); }
+.booking-main.is-banded:not(:has(> .error)) .screen > h1:first-child:focus-visible { outline-color: var(--on-primary); }
+.booking-main.is-banded:not(:has(> .error)) .screen > h1:first-child + .lede { padding-bottom: 22px; margin-bottom: 18px; color: var(--primary-line); }
+.booking-main.is-banded:not(:has(> .error)) .screen > h1:first-child:not(:has(+ .lede)) { padding-bottom: 22px; margin-bottom: 18px; }
+.booking-main.is-banded .stepper .back { color: var(--on-primary); }
+.booking-main.is-banded .stepper .back:not(:disabled):hover { background: var(--on-dark-wash); }
+.booking-main.is-banded .stepper :focus-visible { outline-color: var(--on-primary); }
+.booking-main.is-banded .progress-bar .done { background: var(--on-primary); }
+
+/* How many people: a number badge on each option, filled navy when it is the one chosen. */
+.tile--people { flex-wrap: nowrap; justify-content: flex-start; gap: 14px; }
+.count-badge { display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); font: 600 20px/1 var(--font-display); font-variant-numeric: lining-nums; }
+.tile--people[aria-pressed=true] .count-badge { background: var(--primary); color: var(--on-primary); }
+
+/* How much time: the length big on the left, so the options compare at a glance. */
+.tile--length { flex-wrap: nowrap; justify-content: flex-start; gap: 14px; }
+.tile--length .tile-body { flex: 1; }
+.length-figure { display: grid; justify-items: center; flex: 0 0 64px; padding: 6px 0; border-radius: var(--radius-sm); background: var(--primary-soft); color: var(--primary-strong); line-height: 1; }
+.length-figure b { font-family: var(--font-display); font-size: 28px; font-weight: 600; }
+.length-figure small { margin-top: 3px; font-size: 11px; font-weight: 600; }
+.tile--length[aria-pressed=true] .length-figure { background: var(--primary); color: var(--on-primary); }
+.tile--length:disabled .length-figure { background: var(--hairline); color: var(--muted); }
+
+/* The header fits on one row on a phone: a slightly smaller name and links. Very narrow screens may still wrap. */
+.booking-shell > .brand { flex-wrap: nowrap; }
+.booking-shell > .brand .brand-link { gap: 8px; font-size: 18px; white-space: nowrap; }
+.booking-shell > .brand .brand-mark { width: 32px; height: 32px; font-size: 12px; }
+.booking-shell > .brand .brand-aside,
+.booking-shell > .brand .btn--quiet { font-size: 14px; white-space: nowrap; }
+@media (width <= 359px) { .booking-shell > .brand { flex-wrap: wrap; } }
+
+/* Design refresh, stage 4: the motion from the reel, within AGENTS.md (0.4 s or less, never in the way of a tap, off under reduced motion
+   through index.css). */
+
+/* Press: the main button and the choices sink to 95% while held, then spring back a little past full size. */
+.booking-shell .btn--primary,
+.booking-shell .tile,
+.booking-shell .chip-choice,
+.dtp .slots button,
+.dtp .daychip { transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), transform 320ms cubic-bezier(.34, 1.56, .64, 1); }
+.booking-shell .btn--primary:not(:disabled):active,
+.booking-shell .tile:not(:disabled):active,
+.booking-shell .chip-choice:not(:disabled):active,
+.dtp .slots button:not(:disabled):active,
+.dtp .daychip:active { transform: scale(.95); transition-duration: var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), 90ms; }
+
+/* A total rolls in character by character. */
+.rolling { display: inline-flex; overflow: hidden; vertical-align: bottom; }
+.roll-digit { display: inline-block; white-space: pre; animation: roll 220ms var(--ease) both; }
+
+/* "Booked": the circle is drawn, then the tick (0.4 s in all). */
+.success-mark--drawn { animation: none; }
+.success-mark--drawn svg { overflow: visible; }
+.tick-ring { stroke: currentColor; stroke-width: 3.5; stroke-linecap: round; stroke-dasharray: 176; stroke-dashoffset: 176; transform: rotate(-90deg); transform-origin: 32px 32px; animation: draw 240ms cubic-bezier(.4, 0, .2, 1) forwards; }
+.tick-path { stroke: currentColor; stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 36; stroke-dashoffset: 36; animation: draw 170ms cubic-bezier(.4, 0, .2, 1) 230ms forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .roll-digit, .tick-ring, .tick-path { animation: none; stroke-dashoffset: 0; } }
+
+/* The length Vadim recommends: a sand label above the title. It is not the highlight (that is the length chosen last time). */
+.recommended-tag { justify-self: start; padding: 2px 9px; border-radius: var(--radius-pill); background: var(--sand-chip); color: var(--sand-ink); font-size: 12px; font-weight: 700; letter-spacing: .02em; }
+
+/* The heading and the line under it are two blocks of the band; the heading's band reaches 2px into the next one so no seam shows. */
+.booking-main.is-banded:not(:has(> .error)) .screen > h1:first-child { clip-path: inset(0 -100vmax -2px); position: relative; z-index: 1; }
+
+/* The navy band is made of several blocks (header, progress line, welcome or heading). Each reaches 2px into the next, so no light seam shows. */
+.booking-shell > .brand,
+.booking-main.is-banded .stepper { position: relative; z-index: 1; clip-path: inset(0 -100vmax -2px); }
+/* The trust strip stays on one line. */
+.trust > summary { white-space: nowrap; }
+.trust > summary .trust-line { overflow: hidden; text-overflow: ellipsis; }
+
+/* Design refresh, stage 5: the last steps, calm but warm. */
+
+/* Review: the appointment card reads like a ticket, its date and time on a navy strip. (The summary card on Payment and the
+   confirmation, .ticket--summary, keeps its own look.) */
+.ticket:not(.ticket--summary) .ticket-head { padding: 16px 12px 18px 16px; background: var(--primary); color: var(--on-primary); }
+.ticket:not(.ticket--summary) .ticket-head .eyebrow { color: var(--primary-line); }
+.ticket:not(.ticket--summary) .ticket-when,
+.ticket:not(.ticket--summary) .ticket-time { color: var(--on-primary); }
+.ticket:not(.ticket--summary) .ticket-time span { color: var(--primary-line); }
+.ticket:not(.ticket--summary) .ticket-head .btn--quiet { color: var(--on-primary); }
+.ticket:not(.ticket--summary) .ticket-head .btn--quiet:not(:disabled):hover { background: var(--on-dark-wash); }
+.ticket:not(.ticket--summary) .ticket-head :focus-visible { outline-color: var(--on-primary); }
+.ticket-sentence { display: grid; justify-items: start; gap: 2px; padding: 12px 16px 6px; background: var(--primary-soft); }
+.ticket-sentence p { margin: 0; color: var(--ink); font-size: 16px; line-height: 1.45; }
+.ticket-rows { border-top: 0; }
+.ticket-rows .btn--quiet { font-size: 14px; font-weight: 600; padding-inline: 8px; }
+.ticket-with { display: flex; align-items: center; gap: 10px; margin: 0; padding: 12px 16px; border-top: 1px solid var(--hairline); background: var(--cream); color: var(--ink-soft); font-size: 14px; line-height: 1.4; }
+.ticket-with img { flex: none; width: 36px; height: 36px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px var(--surface); }
+.ticket-with strong { color: var(--ink); }
+
+/* Preferences and extras: see-through like the other choices; an extra's price sits in a sand chip. */
+.booking-flow .more { background: transparent; }
+.booking-shell .addon { background: transparent; }
+.addon-price { padding: 3px 10px; border-radius: var(--radius-pill); background: var(--sand-chip); color: var(--sand-ink); font-size: 13px; }
+
+/* Details and Payment: what is being booked, in a pill at the top. */
+.trip-pill { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; width: fit-content; margin: 6px 0 14px; padding: 8px 14px; border-radius: var(--radius-pill); background: var(--primary-soft); color: var(--primary-strong); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.trip-pill > * + *::before { content: '·'; margin-right: 10px; color: var(--primary); }
+.trip-pill b { font-family: var(--font-display); font-size: 16px; }

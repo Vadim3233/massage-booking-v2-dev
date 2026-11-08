@@ -1,8 +1,11 @@
 import { useState } from 'react'
+import RollingFigure from './RollingFigure.jsx'
 import { money } from '../bookingDraft.js'
 import { hoursWords, lengthWord, MAX_VISIT_MINUTES, minimumFor, minimumSentence, optionTotal, peopleChoices, peopleSentence, shortLength, treatmentNoun } from '../../../booking/bookingWords.js'
 
 const COUNT = ['', 'One', 'Two', 'Three', 'Four']
+// The length Vadim recommends (his choice, 2026-11-08). It gets a label, never a highlight: the highlight means "what you chose last time".
+const RECOMMENDED_MINUTES = 90
 
 // Step 3, People & length (Vadim's change request 2): first how many people, a choice of its own that nothing answers in advance, then how
 // long, with every option saying how many people, how long each and the price, so "2 hours for 1 person" cannot be read as "2 people".
@@ -34,6 +37,7 @@ export default function PeopleLengthStep({ draft, catalogue, edit, choose, noMin
     <h1 tabIndex={-1}>How many <em>people?</em></h1>
     <p className="lede">Each person has their own massage, one after the other, at the same address.</p>
     <div className="tiles tiles--people">{peopleChoices(prices).map(count => <button key={count} className="tile tile--wide tile--people" aria-pressed={chosen.length === count} onClick={() => pickPeople(count)}>
+      <span className="count-badge" aria-hidden="true">{count}</span>
       <span className="tile-body"><strong className="tile-title">{count === 1 ? 'Just me' : `${count} people`}</strong>
         <span className="tile-note">{count === 1 ? `One ${noun}` : `${COUNT[count]} ${noun}s, one after the other`}</span></span>
     </button>)}</div>
@@ -63,7 +67,7 @@ export default function PeopleLengthStep({ draft, catalogue, edit, choose, noMin
             onClick={() => setEach(each.map((value, i) => (i === index ? option : value)))}>{shortLength(option)}</button>
         })}</div>
       </fieldset>)}
-      <p className="total-line"><b>{peopleSentence(each, noun)}</b>{price !== null && <> – <span className="figure">{money(price)}</span></>}</p>
+      <p className="total-line"><b>{peopleSentence(each, noun)}</b>{price !== null && <> – <span className="figure" key={price}><RollingFigure text={money(price)} /></span></>}</p>
       {feeNote}
       {total < minimum && <p className="fine" role="status">{minimumSentence(area, minimum)} Please choose longer times.</p>}
       <div className="action-bar"><button className="btn--primary btn--lg btn--block" disabled={total < minimum} onClick={() => choose(each)}>Choose date &amp; time</button></div>
@@ -78,12 +82,15 @@ export default function PeopleLengthStep({ draft, catalogue, edit, choose, noMin
     <div className="tiles tiles--durations">{sameOptions.map(minutes => {
       const durations = Array(people).fill(minutes)
       const price = optionTotal(prices, area, durations)
-      const title = people === 1 ? `${shortLength(minutes)} · 1 person` : `${people} people × ${minutes} min`
+      // The big figure on the left already says how long, so the title says who for.
+      const title = people === 1 ? '1 person' : `${people} people`
       const short = minutes * people < minimum
+      const recommended = minutes === RECOMMENDED_MINUTES && !short
       const note = short ? `Under the ${hoursWords(minimum)} minimum here` : people === 1 ? `One ${lengthWord(minutes)} ${noun}` : `One after the other · ${hoursWords(minutes * people)} in total`
-      return <button key={minutes} className="tile tile--wide tile--length" disabled={short} aria-label={`${minutes} minutes · ${people === 1 ? '1 person' : `${people} people, ${hoursWords(minutes * people)} in total`} · ${money(price)}${short ? ` · under the ${hoursWords(minimum)} minimum here` : ''}`}
+      return <button key={minutes} className="tile tile--wide tile--length" disabled={short} aria-label={`${minutes} minutes · ${people === 1 ? '1 person' : `${people} people, ${hoursWords(minutes * people)} in total`} · ${money(price)}${recommended ? ' · recommended' : ''}${short ? ` · under the ${hoursWords(minimum)} minimum here` : ''}`}
         aria-pressed={chosen.length === people && chosen.every(value => value === minutes)} onClick={() => choose(durations)}>
-        <span className="tile-body"><strong className="tile-title">{title}</strong><span className="tile-note">{note}</span></span>
+        <span className="length-figure" aria-hidden="true"><b className="figure">{minutes >= 120 && minutes % 60 === 0 ? minutes / 60 : minutes}</b><small>{minutes >= 120 && minutes % 60 === 0 ? 'hours' : 'min'}{people > 1 ? ' each' : ''}</small></span>
+        <span className="tile-body">{recommended && <span className="recommended-tag">Recommended</span>}<strong className="tile-title">{title}</strong><span className="tile-note">{note}</span></span>
         <span className="tile-side"><b className="figure tile-price">{money(price)}</b></span>
       </button>
     })}</div>

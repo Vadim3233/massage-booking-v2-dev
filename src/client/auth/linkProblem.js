@@ -13,7 +13,7 @@ export function linkProblem(hash = '', search = '') {
   if (/otp_expired|expired|invalid/i.test(reason)) {
     return 'That email link has already been used or has expired. If you were confirming your email, you can sign in now. If you were resetting your password, ask for a new link from the Sign in page.'
   }
-  return 'That email link could not be used. Please sign in, or contact Vad if it keeps happening.'
+  return 'That email link could not be used. Please sign in, or contact Vadim if it keeps happening.'
 }
 
 // The same address without the reason in it, so a reload does not say it again. Anything else in the address (the private code of a booking link,
