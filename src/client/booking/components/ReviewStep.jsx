@@ -81,8 +81,6 @@ export default function ReviewStep({ draft, catalogue, quote, quoteError, edit, 
   // One plain sentence of who, how long and the price (from the database's quote), so the number of people cannot be misread.
   const sentence = quote ? bookingSentence(durations, quote.total_gbp, treatmentNoun(service)) : peopleSentence(durations, treatmentNoun(service))
   return <><h1 tabIndex={-1}>Review your <em>booking</em></h1><p className="lede">Nothing is booked yet, so you can still change anything here.</p>
-    <div className="people-sentence"><p><strong>{sentence}</strong></p>
-      <button type="button" className="btn--quiet btn--small" onClick={() => { edit({ askPeople: true }); navigate(2) }}>Change number of people</button></div>
     <section className="ticket" aria-label="Your appointment">
       <div className="ticket-head">
         <div>
@@ -92,11 +90,15 @@ export default function ReviewStep({ draft, catalogue, quote, quoteError, edit, 
         </div>
         <button className="btn--quiet btn--small" aria-label="Change date and time" onClick={() => navigate(3)}>Change</button>
       </div>
+      {/* Who, how long and the price in one sentence, at the top of the card rather than in a box of its own above it. */}
+      <div className="ticket-sentence"><p><strong>{sentence}</strong></p>
+        <button type="button" className="btn--quiet btn--small" onClick={() => { edit({ askPeople: true }); navigate(2) }}>Change number of people</button></div>
       <dl className="ticket-rows">
         {row('Treatment', service, 1)}
         {row('Length', draft.sessions.map((session) => `${session.duration_minutes} min`).join(' + '), 2)}
         {row('Area', area, 0)}
       </dl>
+      <p className="ticket-with"><img src="/vadim-portrait.jpg" alt="" width="36" height="36" /><span>With <strong>Vadim</strong>, coming to you in {area}</span></p>
     </section>
     <details className="more">
       <summary><span className="more-title">Your preferences</span><span className="more-hint">{chosenCount ? `${chosenCount} chosen` : 'Optional'}</span></summary>

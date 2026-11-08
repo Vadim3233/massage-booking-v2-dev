@@ -334,8 +334,8 @@
 /* Design refresh, stage 2. */
 
 /* The main button on the client pages is terracotta (--action), so the next step stands out from the navy. The Admin keeps navy. */
-.booking-shell .btn--primary { border-color: var(--action); background: var(--action); color: var(--on-primary); box-shadow: var(--shadow-action); }
-.booking-shell .btn--primary:not(:disabled):hover { border-color: var(--action-strong); background: var(--action-strong); }
+.booking-flow .btn--primary { border-color: var(--action); background: var(--action); color: var(--on-primary); box-shadow: var(--shadow-action); }
+.booking-flow .btn--primary:not(:disabled):hover { border-color: var(--action-strong); background: var(--action-strong); }
 
 /* The welcome: the header, the progress line and the introduction run together as one navy band, with Vadim's photo in it. */
 .booking-shell > .brand { margin-bottom: 0; }
@@ -473,3 +473,33 @@
 /* The trust strip stays on one line. */
 .trust > summary { white-space: nowrap; }
 .trust > summary .trust-line { overflow: hidden; text-overflow: ellipsis; }
+
+/* Design refresh, stage 5: the last steps, calm but warm. */
+
+/* Review: the appointment card reads like a ticket, its date and time on a navy strip. (The summary card on Payment and the
+   confirmation, .ticket--summary, keeps its own look.) */
+.ticket:not(.ticket--summary) .ticket-head { padding: 16px 12px 18px 16px; background: var(--primary); color: var(--on-primary); }
+.ticket:not(.ticket--summary) .ticket-head .eyebrow { color: var(--primary-line); }
+.ticket:not(.ticket--summary) .ticket-when,
+.ticket:not(.ticket--summary) .ticket-time { color: var(--on-primary); }
+.ticket:not(.ticket--summary) .ticket-time span { color: var(--primary-line); }
+.ticket:not(.ticket--summary) .ticket-head .btn--quiet { color: var(--on-primary); }
+.ticket:not(.ticket--summary) .ticket-head .btn--quiet:not(:disabled):hover { background: var(--on-dark-wash); }
+.ticket:not(.ticket--summary) .ticket-head :focus-visible { outline-color: var(--on-primary); }
+.ticket-sentence { display: grid; justify-items: start; gap: 2px; padding: 12px 16px 6px; background: var(--primary-soft); }
+.ticket-sentence p { margin: 0; color: var(--ink); font-size: 16px; line-height: 1.45; }
+.ticket-rows { border-top: 0; }
+.ticket-rows .btn--quiet { font-size: 14px; font-weight: 600; padding-inline: 8px; }
+.ticket-with { display: flex; align-items: center; gap: 10px; margin: 0; padding: 12px 16px; border-top: 1px solid var(--hairline); background: var(--cream); color: var(--ink-soft); font-size: 14px; line-height: 1.4; }
+.ticket-with img { flex: none; width: 36px; height: 36px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 2px var(--surface); }
+.ticket-with strong { color: var(--ink); }
+
+/* Preferences and extras: see-through like the other choices; an extra's price sits in a sand chip. */
+.booking-flow .more { background: transparent; }
+.booking-shell .addon { background: transparent; }
+.addon-price { padding: 3px 10px; border-radius: var(--radius-pill); background: var(--sand-chip); color: var(--sand-ink); font-size: 13px; }
+
+/* Details and Payment: what is being booked, in a pill at the top. */
+.trip-pill { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; width: fit-content; margin: 6px 0 14px; padding: 8px 14px; border-radius: var(--radius-pill); background: var(--primary-soft); color: var(--primary-strong); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.trip-pill > * + *::before { content: '·'; margin-right: 10px; color: var(--primary); }
+.trip-pill b { font-family: var(--font-display); font-size: 16px; }

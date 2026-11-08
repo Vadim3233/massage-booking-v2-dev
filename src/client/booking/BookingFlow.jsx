@@ -3,7 +3,8 @@ import { supabase } from '../../lib/supabase.js'
 import { createBookingApi } from './bookingApi.js'
 import { createBookingStore } from './bookingStore.js'
 import Icon from '../../ui/icons.jsx'
-import { activeHold, browserClientKey, draftKey, newSession, STEPS } from './bookingDraft.js'
+import { activeHold, browserClientKey, draftKey, money, newSession, STEPS, timeLabel } from './bookingDraft.js'
+import { dayParts } from './dateStrip.js'
 import { presetFromSearch, stepForPreset } from './deepLink.js'
 import { readUsual, rememberUsual } from './usualBooking.js'
 import { friendlyError } from './friendlyError.js'
@@ -211,7 +212,7 @@ export default function BookingFlow() {
     : signedInAccount ? <button type="button" className="btn--quiet btn--small" onClick={signOut}>Sign out</button>
       : needsAuth ? null
         : <button type="button" className="btn--quiet btn--small" aria-expanded={showSignIn} aria-controls={showSignIn ? 'header-sign-in' : undefined} onClick={() => setSignInOpen(open => !open)}>Sign in</button>
-  return <div className="booking-shell">
+  return <div className="booking-shell booking-flow">
     <header className="brand"><a className="brand-link" href="/"><b className="brand-mark" aria-hidden="true">VM</b>VadMassage</a>
       <div className="brand-actions">{accountControl}<a className="brand-aside" href="/account">Your bookings</a><span className="sr-only" role="status">{signedInAccount ? 'You are signed in.' : ''}</span></div></header>
     {showSignIn && <div className="header-sign-in" id="header-sign-in"><AuthPanel client={supabase} level={2} heading="Sign in" redirectTo={`${window.location.origin}${window.location.pathname}?step=${step}`} /></div>}
@@ -234,6 +235,9 @@ export default function BookingFlow() {
         ? <>{step === 6 && error && <p role="alert" className="error">{error}</p>}<button className="btn--tonal" onClick={() => { setCatalogueFailed(false); store.setError(''); setCatalogueAttempt(catalogueAttempt + 1) }}>Try again</button></>
         : <div className="skeleton-rows" role="status"><span className="sr-only">Just getting things ready…</span><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>) : <>
         {!held && step >= 4 && step < 7 && !draft.pending && !draft.bookingId && <button className="btn--tonal" onClick={() => navigate(3)}>Choose a time again</button>}
+        {/* Details and Payment: what is being booked, always in sight, so nobody pays without seeing it. */}
+        {(step === 5 || step === 6) && draft.date && draft.start != null && <p className="trip-pill" aria-label="Your booking">
+          <span>{(({ weekday, day, month }) => `${weekday} ${day} ${month}`)(dayParts(draft.date))}</span><span>{timeLabel(draft.start)}</span>{quote && <b>{money(quote.total_gbp)}</b>}</p>}
         <fieldset className={`screen enter ${busy ? 'is-busy' : ''}`} key={step}>
           {step === 0 && <AreaStep welcome={welcome} rules={rules} catalogue={catalogue} usual={usual} bookUsual={bookUsual} choose={async (areaId) => { if (areaId === draft.areaId || await store.changeSelection({ areaId })) navigate(1) }} />}
           {step === 1 && <TreatmentStep catalogue={catalogue} choose={async (serviceId) => { if (serviceId === draft.serviceId || await store.changeSelection({ serviceId, sessions: [], enhancementIds: [] })) navigate(2) }} />}
