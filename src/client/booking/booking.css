@@ -433,3 +433,30 @@
 .booking-shell > .brand .brand-aside,
 .booking-shell > .brand .btn--quiet { font-size: 14px; white-space: nowrap; }
 @media (width <= 359px) { .booking-shell > .brand { flex-wrap: wrap; } }
+
+/* Design refresh, stage 4: the motion from the reel, within AGENTS.md (0.4 s or less, never in the way of a tap, off under reduced motion
+   through index.css). */
+
+/* Press: the main button and the choices sink to 95% while held, then spring back a little past full size. */
+.booking-shell .btn--primary,
+.booking-shell .tile,
+.booking-shell .chip-choice,
+.dtp .slots button,
+.dtp .daychip { transition: background-color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease), transform 320ms cubic-bezier(.34, 1.56, .64, 1); }
+.booking-shell .btn--primary:not(:disabled):active,
+.booking-shell .tile:not(:disabled):active,
+.booking-shell .chip-choice:not(:disabled):active,
+.dtp .slots button:not(:disabled):active,
+.dtp .daychip:active { transform: scale(.95); transition-duration: var(--dur-fast), var(--dur-fast), var(--dur-fast), var(--dur-fast), 90ms; }
+
+/* A total rolls in character by character. */
+.rolling { display: inline-flex; overflow: hidden; vertical-align: bottom; }
+.roll-digit { display: inline-block; white-space: pre; animation: roll 220ms var(--ease) both; }
+
+/* "Booked": the circle is drawn, then the tick (0.4 s in all). */
+.success-mark--drawn { animation: none; }
+.success-mark--drawn svg { overflow: visible; }
+.tick-ring { stroke: currentColor; stroke-width: 3.5; stroke-linecap: round; stroke-dasharray: 176; stroke-dashoffset: 176; transform: rotate(-90deg); transform-origin: 32px 32px; animation: draw 240ms cubic-bezier(.4, 0, .2, 1) forwards; }
+.tick-path { stroke: currentColor; stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 36; stroke-dashoffset: 36; animation: draw 170ms cubic-bezier(.4, 0, .2, 1) 230ms forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .roll-digit, .tick-ring, .tick-path { animation: none; stroke-dashoffset: 0; } }

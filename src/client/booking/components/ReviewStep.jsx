@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import RollingFigure from './RollingFigure.jsx'
 import { money, timeLabel, durationOf } from '../bookingDraft.js'
 import { quoteParams } from '../bookingApi.js'
 import { dayParts } from '../dateStrip.js'
@@ -119,7 +120,7 @@ export default function ReviewStep({ draft, catalogue, quote, quoteError, edit, 
     <PriceSummary quote={quote} quoteError={quoteError} retry={retryQuote} />
     <p className="sr-only" role="status">{quote ? `Total ${money(quote.total_gbp)}` : ''}</p>
     <div className="action-bar">
-      <p className="action-summary"><span>Total</span><b className="figure roll" key={quote?.total_gbp ?? 'none'}>{quote ? money(quote.total_gbp) : '–'}</b></p>
+      <p className="action-summary"><span>Total</span><b className="figure" key={quote?.total_gbp ?? 'none'}>{quote ? <RollingFigure text={money(quote.total_gbp)} /> : '–'}</b></p>
       <button className="btn--primary btn--lg" onClick={next}>Continue to your details</button>
     </div>
   </>

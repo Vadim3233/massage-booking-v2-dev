@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import DrawnTick from './DrawnTick.jsx'
 import Icon from '../../../ui/icons.jsx'
 import BankDetails from './BankDetails.jsx'
 import BookingSummary from './BookingSummary.jsx'
@@ -26,7 +27,7 @@ export default function ConfirmationStep({ id, api, bank, quote, again }) {
   const status = booking.booking_status
   const another = <button className="btn--tonal btn--block" onClick={again}>Book another appointment</button>
   if (['confirmed', 'completed', 'cancelled'].includes(status)) return <>
-    <div className="success-mark" data-status={status} aria-hidden="true"><Icon name={status === 'cancelled' ? 'minus' : 'tick'} size={30} /></div>
+    {status === 'cancelled' ? <div className="success-mark" data-status={status} aria-hidden="true"><Icon name="minus" size={30} /></div> : <DrawnTick />}
     <h1 tabIndex={-1}>{status === 'cancelled' ? <>Your appointment is <em>cancelled</em></> : status === 'completed' ? <>Your appointment is <em>complete</em></> : <>Your appointment is <em>confirmed</em></>}</h1>
     <p className="lede">{status === 'cancelled' ? 'This appointment will not go ahead. Contact Vadim if you have any questions.' : status === 'completed' ? 'Thank you for your visit.' : "I'm looking forward to seeing you."}</p>
     {status === 'confirmed' && <TelegramBox />}
@@ -39,7 +40,7 @@ export default function ConfirmationStep({ id, api, bank, quote, again }) {
   </>
   const bankTransfer = booking.booking_payments.method === 'bank_transfer'
   return <>
-    <div className="success-mark" aria-hidden="true"><Icon name="tick" size={30} /></div>
+    <DrawnTick />
     <h1 tabIndex={-1}>I've <em>received</em> your booking</h1>
     <p className="lede">{bankTransfer ? "Thank you. I look forward to seeing you. I'll check your transfer and confirm your appointment as soon as possible." : "Thank you. I look forward to seeing you. I'll confirm your appointment as soon as possible."}</p>
     <TelegramBox />
