@@ -4,7 +4,7 @@ import { usualLabel } from '../usualBooking.js'
 
 // What a new client can open under the welcome to see who is coming: Vadim's own words about how he works, his qualifications and his reviews.
 // Kept here, short, until it is editable in the Admin. Every line must stay true (the rating especially).
-const TRUST_SUMMARY = '5.0 on Google · 10+ years · Level 5 therapist'
+const TRUST_SUMMARY = '5.0 on Google · 10+ years · Level 5'
 const TRUST_WORDS = "Tell me where it hurts and how you feel. I'll build the session around that, not a set routine."
 const TRUST_TAGS = ['10+ years in London', 'Level 5 Soft Tissue', 'BTEC & ITEC', 'ISRM member']
 const GOOGLE_REVIEWS = 'https://share.google/fZ3sjkYZd2BYrC7Eg'
@@ -19,13 +19,13 @@ export default function Welcome({ welcome, rules, usual, bookUsual }) {
       <div className="welcome-hero">
         <img className="welcome-photo" src="/vadim-portrait.jpg" alt="Vadim, your massage therapist" width="88" height="88" />
         <div>
-          <p className="eyebrow">Massage at your place</p>
+          <p className="eyebrow">Soft tissue &amp; massage therapy</p>
           <h1 id="welcome-title" tabIndex={-1}>A massage that <em>comes to you</em></h1>
         </div>
       </div>
       {(intro.length ? intro : paragraphs(DEFAULT_WELCOME)).map((text, index) => <p className="lede" key={index}>{text}</p>)}
       {!usual && <details className="trust">
-        <summary><Icon name="sparkle" size={16} />{TRUST_SUMMARY}</summary>
+        <summary><Icon name="sparkle" size={16} /><span className="trust-line">{TRUST_SUMMARY}</span></summary>
         <div className="trust-body">
           <p className="trust-words">{TRUST_WORDS}<span>— Vadim</span></p>
           <ul className="trust-tags" role="list">{TRUST_TAGS.map(tag => <li key={tag}>{tag}</li>)}</ul>

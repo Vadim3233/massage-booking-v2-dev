@@ -466,3 +466,10 @@
 
 /* The heading and the line under it are two blocks of the band; the heading's band reaches 2px into the next one so no seam shows. */
 .booking-main.is-banded:not(:has(> .error)) .screen > h1:first-child { clip-path: inset(0 -100vmax -2px); position: relative; z-index: 1; }
+
+/* The navy band is made of several blocks (header, progress line, welcome or heading). Each reaches 2px into the next, so no light seam shows. */
+.booking-shell > .brand,
+.booking-main.is-banded .stepper { position: relative; z-index: 1; clip-path: inset(0 -100vmax -2px); }
+/* The trust strip stays on one line. */
+.trust > summary { white-space: nowrap; }
+.trust > summary .trust-line { overflow: hidden; text-overflow: ellipsis; }
