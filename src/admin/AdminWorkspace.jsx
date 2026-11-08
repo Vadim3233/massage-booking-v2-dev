@@ -221,7 +221,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {surface === '/admin/settings/google-calendar' && <GoogleCalendarSettings />}
       {surface === '/admin/visitors' && <Visitors openClient={id => navigate(`/admin/clients/${id}`)} openRules={() => navigate('/admin/settings/rules')} />}
       {surface === '/admin/waitlist' && <Waitlist bookFor={request => newBooking(request.requested_date, request.client_id)} />}
-      {!creating && !match && !['/admin', '/admin/agenda', '/admin/day-settings', '/admin/review', '/admin/alerts', '/admin/more', '/admin/clients', ...SETTINGS_PAGES].includes(surface) && !profile && !combining && <section className="admin-review"><h1>Admin page not found</h1><a href="/admin">Back to Calendar</a></section>}
+      {!creating && !match && !['/admin', '/admin/agenda', '/admin/day-settings', '/admin/day-hours', '/admin/review', '/admin/alerts', '/admin/more', '/admin/clients', ...SETTINGS_PAGES].includes(surface) && !profile && !combining && <section className="admin-review"><h1>Admin page not found</h1><a href="/admin">Back to Calendar</a></section>}
       </main>
       {match && <BookingDestination key={match[1]} id={match[1]} close={close} returnFocus={opener} changed={() => setRevision(value => value + 1)} openPage={path => { headingFocusWanted.current = true; navigate(path) }} />}
     </Suspense>

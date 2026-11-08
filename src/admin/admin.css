@@ -725,3 +725,71 @@
 .admin-shell button:not(:disabled):active,
 .admin-shell .admin-primary-nav a:active,
 .admin-shell .admin-calendar-views a:active { transform: scale(.96); }
+
+/* Design refresh, stage 2 (2026-11-08): the same navy band on every Admin page, not only the ones with a page heading box.
+   The pages below were still opening on the ivory page: More, Day settings, Edit hours, New booking, a client's page and Same person?.
+   Their heading (and the line under it) now sits on the navy band too, and the "← More / ← Day / ← Clients" link above a heading
+   joins the band in white, so every page opens the same way. Only how things look. */
+
+/* The back link above a page: part of the band, white on navy. */
+.admin-shell .admin-content > .admin-back-link,
+.admin-shell .admin-review > .admin-back-link:first-child { display: flex; width: auto; min-height: 44px; margin: 0; padding: 4px 16px 0; border-radius: 0; background: var(--primary); color: var(--on-primary); text-decoration: none; box-shadow: 0 0 0 100vmax var(--primary); clip-path: inset(0 -100vmax -2px); position: relative; z-index: 1; }
+.admin-shell .admin-review > .admin-back-link:first-child { padding-inline: 0; }
+.admin-shell .admin-content > .admin-back-link:hover,
+.admin-shell .admin-review > .admin-back-link:first-child:hover { background: var(--primary); color: var(--on-primary); }
+.admin-shell .admin-content > .admin-back-link:focus-visible,
+.admin-shell .admin-review > .admin-back-link:first-child:focus-visible { outline-color: var(--on-primary); outline-offset: -3px; }
+/* The page right under a back link starts in the band, with no ivory gap between them. */
+.admin-content > .admin-back-link + .admin-review { padding-top: 0; }
+.admin-content > .admin-back-link + .admin-review > .admin-review-heading { padding-top: 4px; }
+
+/* Pages whose heading is a plain h1 (More, Day settings, a client, Same person?): the heading, and the line right under it, on the band. */
+.admin-review:has(> h1:first-child),
+.admin-review:has(> .admin-back-link:first-child) { padding-top: 0; }
+.admin-review > h1:first-child,
+.admin-review > .admin-back-link:first-child + h1 { margin: 0; padding: 18px 0 20px; background: var(--primary); color: var(--on-primary); box-shadow: 0 0 0 100vmax var(--primary); clip-path: inset(0 -100vmax -2px); position: relative; z-index: 1; }
+.admin-review > .admin-back-link:first-child + h1 { padding-top: 6px; }
+.admin-review > h1:first-child:has(+ p),
+.admin-review > .admin-back-link:first-child + h1:has(+ p) { padding-bottom: 4px; }
+.admin-review > h1:first-child + p,
+.admin-review > .admin-back-link:first-child + h1 + p { margin: 0 0 16px; padding: 0 0 20px; background: var(--primary); color: var(--primary-line); box-shadow: 0 0 0 100vmax var(--primary); clip-path: inset(0 -100vmax); }
+.admin-review > h1:first-child:not(:has(+ p)),
+.admin-review > .admin-back-link:first-child + h1:not(:has(+ p)) { margin-bottom: 16px; }
+.admin-review > h1:first-child:focus-visible,
+.admin-review > .admin-back-link:first-child + h1:focus-visible { outline-color: var(--on-primary); outline-offset: -3px; }
+
+/* Edit hours: its heading row (title, date, hours, Cancel) on the band; Cancel white on a light wash. */
+.admin-day-grid > .admin-day-grid-head:first-child { margin: 0 0 16px; padding: 18px 0 20px; background: var(--primary); color: var(--on-primary); box-shadow: 0 0 0 100vmax var(--primary); clip-path: inset(0 -100vmax); }
+.admin-review.admin-day-grid { padding-top: 0; }
+.admin-day-grid-head h1 { color: var(--on-primary); }
+.admin-day-grid-head p { color: var(--primary-line); }
+.admin-day-grid-head .admin-day-grid-summary { color: var(--on-primary); }
+.admin-shell .admin-day-grid-head > button { border-color: var(--on-dark-wash-strong); background: var(--on-dark-wash); color: var(--on-primary); }
+.admin-day-grid-head :focus-visible { outline-color: var(--on-primary); }
+
+/* New booking: the title and Cancel on the band. */
+.admin-new-booking { padding-top: 0; }
+.admin-new-booking > .anb-header { margin-bottom: 14px; padding: 16px 0 18px; background: var(--primary); color: var(--on-primary); box-shadow: 0 0 0 100vmax var(--primary); clip-path: inset(0 -100vmax); }
+.admin-new-booking > .anb-header h1 { color: var(--on-primary); }
+.admin-shell .admin-new-booking > .anb-header .btn--quiet { color: var(--on-primary); }
+.admin-shell .admin-new-booking > .anb-header .btn--quiet:not(:disabled):hover { background: var(--on-dark-wash); }
+.admin-new-booking > .anb-header :focus-visible { outline-color: var(--on-primary); }
+
+/* Sign-in: the brand on a navy band across the top, like the header of the client app. */
+.admin-login { padding-top: 0; }
+.admin-login > .admin-login-brand { margin: 0 0 24px; padding: 22px 0; background: var(--primary); color: var(--on-primary); box-shadow: 0 0 0 100vmax var(--primary); clip-path: inset(0 -100vmax); }
+.admin-login .admin-login-brand h1 { color: var(--on-primary); }
+.admin-login-brand .brand-mark { border-color: var(--on-primary); background: transparent; color: var(--on-primary); }
+
+/* New booking: the step numbers are filled powder-blue badges, like the number badges in the client app. */
+.anb-block > h2::before { border-color: transparent; background: var(--primary-soft); }
+
+/* A booking, opened: its top bar (Close, the date and time, Share) is a navy strip, like the ticket on the client app's Review step. */
+.admin-details-bar { border-bottom-color: var(--primary); background: var(--primary); color: var(--on-primary); }
+.admin-details .admin-details-bar > button { color: var(--on-primary); }
+.admin-details .admin-details-bar > button:not(:disabled):hover { background: var(--on-dark-wash); }
+.admin-details-when > div > span { color: var(--primary-line); }
+.admin-details .admin-details-bar .admin-share-button { border-color: var(--on-dark-wash-strong); background: var(--on-dark-wash); color: var(--on-primary); }
+.admin-details .admin-details-bar .admin-share-button:not(:disabled):hover { background: var(--on-dark-wash-strong); }
+.admin-details-bar :focus-visible { outline-color: var(--on-primary); }
+.admin-details .admin-share-menu { color: var(--ink); }
