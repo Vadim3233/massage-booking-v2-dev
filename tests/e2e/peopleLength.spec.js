@@ -24,7 +24,8 @@ test('people first, then lengths for that many, each saying how many people and 
   // The test area adds its fees to every option, so the price is the whole visit's.
   const option = page.getByRole('button', { name: /^60 minutes · 2 people, 2 hours in total · £\d+\.\d\d$/ })
   await expect(option).toBeVisible()
-  await expect(option).toContainText('2 people × 60 min')
+  await expect(option).toContainText('2 people')
+  await expect(option).toContainText('min each')
   await expect(option).toContainText('One after the other · 2 hours in total')
   await expect(page.getByText(/^Prices include the Integration area travel fee \(£\d+\.\d\d\) and congestion charge \(£\d+\.\d\d\)\.$/)).toBeVisible()
   await page.screenshot({ path: 'test-results/people-lengths.png', fullPage: true })

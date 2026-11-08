@@ -460,3 +460,9 @@
 .tick-path { stroke: currentColor; stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 36; stroke-dashoffset: 36; animation: draw 170ms cubic-bezier(.4, 0, .2, 1) 230ms forwards; }
 @keyframes draw { to { stroke-dashoffset: 0; } }
 @media (prefers-reduced-motion: reduce) { .roll-digit, .tick-ring, .tick-path { animation: none; stroke-dashoffset: 0; } }
+
+/* The length Vadim recommends: a sand label above the title. It is not the highlight (that is the length chosen last time). */
+.recommended-tag { justify-self: start; padding: 2px 9px; border-radius: var(--radius-pill); background: var(--sand-chip); color: var(--sand-ink); font-size: 12px; font-weight: 700; letter-spacing: .02em; }
+
+/* The heading and the line under it are two blocks of the band; the heading's band reaches 2px into the next one so no seam shows. */
+.booking-main.is-banded:not(:has(> .error)) .screen > h1:first-child { clip-path: inset(0 -100vmax -2px); position: relative; z-index: 1; }
