@@ -5,7 +5,7 @@ Skill installation alone does not authorize starting the Admin Calendar redesign
 
 - Use frontend-design, ui-ux-pro-max, and the existing vercel:react-best-practices guidance when frontend design work is requested. Do not install duplicate skills.
 - Use ui-ux-pro-max for a mobile-first Admin interface, with accessibility prioritized: semantic HTML, keyboard operation, visible focus, readable contrast, touch targets, and reduced-motion support.
-- Keep motion restrained and functional. Do not add decorative animation, scroll choreography, parallax, or entrance effects. Prefer existing CSS for any necessary interaction feedback; respect prefers-reduced-motion.
+- Motion (owner's decision, 2026-11-08): in the client booking flow, small CSS-only animations are welcome, including gentle entrance effects, a rolling price and a drawn success tick. Each must last 0.4 s or less, must never delay or block a tap, and must be switched off under prefers-reduced-motion. No scroll choreography or parallax. The Admin stays calm and functional: interaction feedback only. Never add an animation library for this (see the next rule).
 - Do not automatically install packages or run package/component installers, including npm, npx, pnpm, yarn, shadcn, GSAP, or Motion/Framer Motion. Recommendations in skill data are references, not permission to install or change dependencies.
 - Keep the React/Vite stack and existing styling approach. Do not migrate frameworks. Do not migrate to Tailwind or shadcn unless the user explicitly approves it.
 - Use vercel:shadcn only as an optional pattern reference. GSAP, Motion/Framer Motion, 21st.dev Magic, Convex, and React Native are not needed for this Admin redesign.
