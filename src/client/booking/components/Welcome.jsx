@@ -6,8 +6,13 @@ import { usualLabel } from '../usualBooking.js'
 export default function Welcome({ welcome, rules, usual, bookUsual }) {
   const intro = paragraphs(welcome.welcome)
   return <section className="welcome" aria-labelledby="welcome-title">
-    <p className="eyebrow">Massage at your place</p>
-    <h1 id="welcome-title" tabIndex={-1}>A massage that <em>comes to you</em></h1>
+    <div className="welcome-hero">
+      <img className="welcome-photo" src="/vadim-portrait.jpg" alt="Vadim, your massage therapist" width="88" height="88" />
+      <div>
+        <p className="eyebrow">Massage at your place</p>
+        <h1 id="welcome-title" tabIndex={-1}>A massage that <em>comes to you</em></h1>
+      </div>
+    </div>
     {(intro.length ? intro : paragraphs(DEFAULT_WELCOME)).map((text, index) => <p className="lede" key={index}>{text}</p>)}
     {usual && <button className="usual" onClick={bookUsual}>
       <span className="usual-text"><span className="eyebrow">Book your usual</span><strong>{usualLabel(usual)}</strong></span>

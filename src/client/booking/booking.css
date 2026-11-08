@@ -300,3 +300,33 @@
 .none-suit-choices { display: flex; flex-wrap: wrap; gap: 8px; }
 .booking-shell .none-suit-choice { min-height: 44px; padding: 0 14px; border-radius: var(--radius-pill); border-color: var(--control-border); color: var(--ink); font-size: 15px; }
 .privacy-note { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); }
+
+/* Design refresh, stage 1 (see the style gallery). Only how things look; nothing here changes what a step does.
+   - The header is a navy band across the screen, so every step opens with the brand colour.
+   - Choices are see-through: an outline on the page instead of a white card with a shadow. The chosen one keeps its powder-blue tint.
+   - Areas are a list, one per row, with a chevron, rather than a two-column grid.
+   - Times are rounded pills.
+   The edges of anything tapped stay --control-border, so they still stand out (3:1) as theme.test.js asks. No new motion: AGENTS.md. */
+.booking-shell > .brand { margin-bottom: 4px; padding: 14px 0 12px; background: var(--primary); color: var(--on-primary); box-shadow: 0 0 0 100vmax var(--primary); clip-path: inset(0 -100vmax); }
+.booking-shell > .brand .brand-link,
+.booking-shell > .brand .brand-aside { color: var(--on-primary); }
+.booking-shell > .brand .brand-mark { border-color: var(--on-primary); background: transparent; color: var(--on-primary); }
+.booking-shell > .brand .btn--quiet { color: var(--on-primary); }
+.booking-shell > .brand .btn--quiet:not(:disabled):hover,
+.booking-shell > .brand .brand-actions .btn--quiet[aria-expanded='true'] { background: var(--on-dark-wash); }
+.booking-shell > .brand :focus-visible { outline-color: var(--on-primary); }
+
+.welcome-hero { display: flex; align-items: center; gap: 16px; }
+.welcome-hero h1 { margin-bottom: 0; }
+.welcome-photo { flex: none; width: 88px; height: 88px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 3px var(--surface), 0 0 0 4.5px var(--primary-line), var(--shadow-1); }
+@media (width <= 359px) { .welcome-photo { width: 64px; height: 64px; } }
+
+.tile { background: transparent; box-shadow: none; }
+.tile[aria-pressed=true] { box-shadow: none; }
+.dtp .daychip { background: transparent; }
+
+.tiles--areas { grid-template-columns: 1fr; gap: 8px; }
+.tiles--areas .tile { position: relative; min-height: 56px; padding-right: 44px; }
+.tiles--areas .tile::after { content: ''; position: absolute; right: 20px; top: 50%; width: 8px; height: 8px; margin-top: -5px; border: solid var(--muted); border-width: 0 2px 2px 0; transform: rotate(-45deg); }
+
+.dtp .slots button { border-radius: var(--radius-pill); }
