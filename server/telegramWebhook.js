@@ -13,8 +13,8 @@ export const MESSAGES = {
   invalid: 'I could not use that link. Open your booking page and press the Telegram button again.',
   stopped: "Done. I won't send you any more updates here. You can turn them back on from your booking page whenever you like.",
   notStarted: "You weren't getting updates here, so there is nothing to stop. You can turn them on from your booking page.",
-  hello: 'Hello, this is Vad. I send updates about your appointment here. To start, open your booking page and press the Telegram button.',
-  help: 'I only send updates about your appointment. To change or cancel it, use the link in your email, or contact Vad.',
+  hello: 'Hello, this is Vadim. I send updates about your appointment here. To start, open your booking page and press the Telegram button.',
+  help: 'I only send updates about your appointment. To change or cancel it, use the link in your email, or contact Vadim.',
 }
 
 // Whose appointments the chat is now connected to, so that someone who was sent a link that is not theirs sees a name that is not theirs and can

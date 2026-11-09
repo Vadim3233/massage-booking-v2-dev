@@ -106,7 +106,7 @@ select ok((select body not like '%late fee%' from pg_temp.rows((select id from e
 insert into ev values ('verified', pg_temp.emit('booking.bank_transfer_verified', '00000000-0000-4000-8000-00000000c001'));
 select results_eq($$select channel, audience, recipient, title from pg_temp.rows((select id from ev where name = 'verified'))$$,
   $$values ('email'::text, 'client'::text, 'notify-client@example.test'::text, 'Your appointment is confirmed'::text)$$, 'Confirming a transfer emails only the client');
-select ok((select body like '%I have received your payment.%{link}%Warm wishes,%Vad' from pg_temp.rows((select id from ev where name = 'verified'))), 'The email thanks them, carries the link marker and signs off warmly');
+select ok((select body like '%I have received your payment.%{link}%Warm wishes,%Vadim' from pg_temp.rows((select id from ev where name = 'verified'))), 'The email thanks them, carries the link marker and signs off warmly');
 select is((select link_path from pg_temp.rows((select id from ev where name = 'verified'))), '/account?booking=00000000-0000-4000-8000-00000000c001', 'The client link goes to their own booking page');
 insert into ev values ('approved', pg_temp.emit('booking.cash_approved', '00000000-0000-4000-8000-00000000c001'));
 select ok((select body like '%Please pay the full amount in cash at your appointment.%' from pg_temp.rows((select id from ev where name = 'approved'))), 'A cash confirmation reminds them to bring cash');
@@ -116,7 +116,7 @@ insert into ev values ('admin_created', pg_temp.emit('booking.created', '0000000
 select results_eq($$select audience, title from pg_temp.rows((select id from ev where name = 'admin_created'))$$,
   $$values ('client'::text, 'Your appointment is booked'::text)$$, 'A booking the Admin creates emails the client, and does not alert the Admin');
 insert into ev values ('refund', pg_temp.emit('booking.refund_recorded', '00000000-0000-4000-8000-00000000c001', '{"refunded_gbp":55}'));
-select is((select body from pg_temp.rows((select id from ev where name = 'refund')) limit 1), E'I have sent your refund of £55.00 for the appointment on Mon 5 May at 14:30.\n\nSee or change your booking: {link}\n\nWarm wishes,\nVad', 'A refund email says how much and for which appointment');
+select is((select body from pg_temp.rows((select id from ev where name = 'refund')) limit 1), E'I have sent your refund of £55.00 for the appointment on Mon 5 May at 14:30.\n\nSee or change your booking: {link}\n\nWarm wishes,\nVadim', 'A refund email says how much and for which appointment');
 
 -- ---------------------------------------------------------------------------------------------
 -- Cases that must stay quiet
