@@ -1,3 +1,4 @@
+import { phoneProblem } from '../../lib/phone.js'
 import { postcodeOf, tidyAddress } from '../../lib/address.js'
 export const STEPS = ['Area', 'Treatment', 'People & length', 'Date & Time', 'Review', 'Your Details', 'Payment', 'Confirmation']
 export const draftKey = 'vad-v2-booking-draft-v1'
@@ -41,8 +42,8 @@ export function restoreDraft(storage) {
 // not judged: it is one text, and only the client knows whether it is complete. A missing postcode is a gentle note on the screen, never a stop.)
 export function detailProblems(details) {
   const problems = {}
-  const digits = String(details.phone || '').replace(/\D/g, '')
-  if (details.phone?.trim() && (digits.length < 7 || digits.length > 20)) problems.phone = "That number doesn't look right. Please check it, so I can reach you."
+  const phone = phoneProblem(details.phone)
+  if (phone) problems.phone = `${phone} Please check it, so I can reach you.`
   return problems
 }
 

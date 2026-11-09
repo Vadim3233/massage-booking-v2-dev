@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase.js'
+import { phoneProblem } from '../lib/phone.js'
 
 // Messages written for the Admin on the server. Anything else becomes a generic line.
 export const SAFE_MESSAGES = new Set([
@@ -30,10 +31,10 @@ export const fullName = client => [client?.first_name, client?.last_name].filter
 // Only the name is needed. A phone number or an email that is typed has to look right.
 export function validateClient(details) {
   if (!details.first_name?.trim()) return 'Enter a first name.'
-  const phone = (details.phone || '').replace(/[^0-9]/g, '')
   const email = (details.email || '').trim()
   if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return 'That email address does not look right.'
-  if (phone && (phone.length < 7 || phone.length > 20)) return 'That phone number does not look right.'
+  const phone = phoneProblem(details.phone)
+  if (phone) return phone
   return ''
 }
 // An address is one text (ADR-059), whatever the Admin writes or pastes. The database tidies it and checks it again.

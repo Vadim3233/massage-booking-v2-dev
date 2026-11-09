@@ -13,7 +13,8 @@ describe('checking a client before saving', () => {
   })
   it('catches an email or phone that cannot be right', () => {
     expect(validateClient({ first_name: 'Ana', email: 'ana-at-example' })).toBe('That email address does not look right.')
-    expect(validateClient({ first_name: 'Ana', phone: '123' })).toBe('That phone number does not look right.')
+    expect(validateClient({ first_name: 'Ana', phone: '123' })).toMatch(/doesn't look right/)
+    expect(validateClient({ first_name: 'Ana', phone: '077009001234' })).toMatch(/one digit too many/)
     expect(validateClient({ first_name: 'Ana', phone: '+44 (0)7700 900123 ext 4' })).toBe('')
   })
   it('needs only an address, as one text', () => {

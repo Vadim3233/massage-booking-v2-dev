@@ -83,6 +83,7 @@ export function clientFaq({ rules, areas = [] }) {
     { title: 'Your account and privacy', items: [
       { q: 'I forgot my password.', a: ['Press "Forgot password" on the sign-in page and I\'ll email you a link to choose a new one. If it doesn\'t arrive within a minute, please look in your junk folder too.'] },
       { q: 'Do you track me on the booking page?', a: ['Only the steps of your visit, so I can see where booking gets difficult. There are no tracking cookies and nothing is stored on your phone for this, and I don\'t keep your IP address or device details. If your browser asks not to be tracked, nothing is recorded. Visits are deleted after 90 days.'] },
+      { q: 'I typed my phone number wrong. How do I fix it?', a: ['Next time you book, press "Edit my details" on the details step and correct it. Or let me know, and I\'ll correct it for you.', 'A UK mobile number has 11 digits and starts with 07. If your number is from another country, start with + and the country code.'] },
       { q: 'How do I see my bookings?', a: ['Sign in to see your coming and earlier appointments, their payment status and your receipts.'], link: { href: '/account', text: 'Your bookings' } },
     ] },
     { title: 'Booking with your AI assistant', items: [
