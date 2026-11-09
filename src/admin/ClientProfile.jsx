@@ -3,6 +3,7 @@ import Icon from '../ui/icons.jsx'
 import { clientsApi, fullName } from './clientsApi.js'
 import { AddressForm, ClientForm } from './ClientForms.jsx'
 import { clientContactLinks } from './contactLinks.js'
+import { phoneProblem } from '../lib/phone.js'
 import { bookingState, dateLabel, money, time } from './calendarPresentation.js'
 import ClientRepeats from './ClientRepeats.jsx'
 import ClientTelegram from './ClientTelegram.jsx'
@@ -165,6 +166,7 @@ export default function ClientProfile({ id, back, backLabel = 'Clients', openBoo
     <button className="admin-back-link" onClick={back}>← {backLabel}</button>
     <h1 id="client-name">{fullName(client)}</h1>
     <p>{[client.phone, client.email].filter(Boolean).join(' · ') || 'No contact details'}</p>
+    {phoneProblem(client.phone) && !editing && <p role="status" className="admin-field-error">This phone number looks wrong. {phoneProblem(client.phone)} Press Edit details to correct it.</p>}
     {contactLinks.length > 0 && <nav className="admin-contact-actions" aria-label="Quick contact">{contactLinks.map(link => <a key={link.key} href={link.href} {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}><Icon name={link.icon} />{link.label}</a>)}</nav>}
     <div className="admin-payment-buttons"><button className="btn--primary" onClick={() => newBooking(client.id)}>+ New booking</button><button className="btn--tonal" onClick={() => setEditing(!editing)}>{editing ? 'Close' : 'Edit details'}</button></div>
     {editing && <section aria-label="Edit details"><ClientForm initial={client} submitLabel="Save details" onCancel={() => setEditing(false)} onSubmit={async details => { await api.update(id, details); setEditing(false); changed() }} /></section>}

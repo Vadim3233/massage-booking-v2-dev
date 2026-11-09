@@ -1,6 +1,6 @@
 # VadMassage booking app: feature catalogue
 
-Last updated: 9 November 2026 (up to PR #112).
+Last updated: 9 November 2026 (up to PR #114).
 
 This is a plain-English list of everything the app does today, grouped by area. Each entry says what the feature does, why it was built, where it was built (the pull request, or "PR", and any database change, called a "migration"), and what would need to become a **setting** if the same feature were offered to other therapists in a general app.
 
@@ -391,6 +391,12 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **Why:** Look someone up, see what they owe, correct details without the database.
 - **Built in:** PR #8 (`20261015100000_admin_clients.sql`, ADR-025), PR #51 (`20261101100000_client_name_only.sql`, ADR-056).
 - **For a general app:** nothing specific.
+
+### Phone number checks (booking and Admin)
+- **What it does:** When a client types their phone number on the booking details step, the app checks its length as they leave the box: a UK mobile has 11 digits starting 07 (other UK numbers 10 or 11), and a number from another country starts with + (or 00) and its country code. If it looks wrong, a gentle note says what (for example "one digit too many") and asks them to double-check, but **never stops the booking**: Vadim corrects the number later if needed. Only something that cannot be a phone number at all (fewer than 7 or more than 20 digits) stops the step, as before. A short hint sits under the box. In the Admin's own client forms the same check must pass before saving. A client page whose saved number looks wrong says so in red and points to Edit details.
+- **Why:** A client registered with one extra digit, so Vadim could not reach him. Vadim did not want a new obstacle in the booking journey.
+- **Built in:** PR #114 (no database change; the database still accepts 7 to 20 digits).
+- **For a general app:** the home country (UK, 11 digits) should be a setting.
 
 ### Same person? Combine two profiles
 - **What it does:** Profiles sharing an email or phone are listed as "Might be the same person". Vadim compares them side by side and combines them, or says they are different people (remembered). Nothing is ever combined by itself.

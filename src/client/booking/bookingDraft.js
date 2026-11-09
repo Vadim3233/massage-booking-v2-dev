@@ -1,3 +1,4 @@
+import { phoneProblem } from '../../lib/phone.js'
 import { postcodeOf, tidyAddress } from '../../lib/address.js'
 export const STEPS = ['Area', 'Treatment', 'People & length', 'Date & Time', 'Review', 'Your Details', 'Payment', 'Confirmation']
 export const draftKey = 'vad-v2-booking-draft-v1'
@@ -44,6 +45,13 @@ export function detailProblems(details) {
   const digits = String(details.phone || '').replace(/\D/g, '')
   if (details.phone?.trim() && (digits.length < 7 || digits.length > 20)) problems.phone = "That number doesn't look right. Please check it, so I can reach you."
   return problems
+}
+
+// A number that may be mistyped (a digit too many, say) is only a gentle note beside the box: the client can still book, and Vadim corrects
+// the number later if he needs to. Only a number that cannot be a phone number at all (above) stops the step.
+export function phoneNote(phone) {
+  const problem = phoneProblem(phone)
+  return problem ? `${problem} Please double-check it. You can still continue.` : ''
 }
 
 export function validDetails(details) {

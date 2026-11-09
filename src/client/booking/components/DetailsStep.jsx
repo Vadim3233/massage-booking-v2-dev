@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { addressFields, addressTyped, blankAddressFields, contactComplete, detailProblems, usualAddress, validDetails, withPostcode } from '../bookingDraft.js'
+import { addressFields, addressTyped, blankAddressFields, contactComplete, detailProblems, phoneNote, usualAddress, validDetails, withPostcode } from '../bookingDraft.js'
 import { friendlyError } from '../friendlyError.js'
 import { MAX_ADDRESS, postcodeCheck } from '../../../lib/address.js'
 
@@ -26,6 +26,7 @@ export default function DetailsStep({ draft, areas = [], user, api, edit, next, 
   const [testing, setTesting] = useState(false)
   const [switching, setSwitching] = useState(false)
   const [problems, setProblems] = useState({})
+  const [phoneLeft, setPhoneLeft] = useState(false)
   const [unlocked, setUnlocked] = useState(false)
   const showTestTools = import.meta.env.DEV
   useEffect(() => {
@@ -142,8 +143,10 @@ export default function DetailsStep({ draft, areas = [], user, api, edit, next, 
         <label>Last name<input readOnly={locked} autoComplete="family-name" maxLength={60} value={details.last_name} required onChange={(event) => field('last_name', event.target.value)} /></label>
       </div>
       <label>Email address<input type="email" inputMode="email" autoComplete="email" maxLength={120} value={guest ? details.email : (user.email || details.email)} readOnly={!guest} required onChange={(event) => guest && field('email', event.target.value)} /></label>
-      <label>Contact number<input id="details-phone" readOnly={locked} type="tel" inputMode="tel" autoComplete="tel" maxLength={30} aria-invalid={Boolean(problems.phone)} aria-describedby={problems.phone ? 'details-phone-problem' : undefined} value={details.phone} required onChange={(event) => field('phone', event.target.value)} /></label>
+      <label>Contact number<input id="details-phone" readOnly={locked} type="tel" inputMode="tel" autoComplete="tel" maxLength={30} placeholder="07700 900123" aria-invalid={Boolean(problems.phone)} aria-describedby={problems.phone ? 'details-phone-hint details-phone-problem' : 'details-phone-hint'} value={details.phone} required onBlur={() => setPhoneLeft(true)} onChange={(event) => field('phone', event.target.value)} /></label>
+      {!locked && <p className="fine" id="details-phone-hint">A UK mobile has 11 digits and starts with 07. Not a UK number? Start with + and your country code.</p>}
       {problems.phone && <p className="field-problem" id="details-phone-problem" role="alert">{problems.phone}</p>}
+      {!problems.phone && (phoneLeft || locked) && phoneNote(details.phone) && <p className="fine details-phone-note" role="status">{phoneNote(details.phone)}</p>}
       {!guest && addresses.length > 0 && <label>Saved address<select value={details.savedAddressId} onChange={(event) => {
         const address = addresses.find((item) => item.id === event.target.value)
         // A saved address fills the boxes. Putting it down for "Enter an address" empties them, so nothing of it is left behind in the new address.
