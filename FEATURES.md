@@ -393,8 +393,8 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **For a general app:** nothing specific.
 
 ### Phone number checks (booking and Admin)
-- **What it does:** When a client books, the phone number is checked for length before they continue: a UK mobile must have 11 digits starting 07 (other UK numbers 10 or 11), and a number from another country must start with + (or 00) and its country code. The message says exactly what is wrong, for example "one digit too many". A short hint sits under the box. The same check runs in the Admin's client forms. A client page whose saved number looks wrong says so in red and points to Edit details. Older numbers stay as they are until corrected.
-- **Why:** A client registered with one extra digit, so Vadim could not reach him.
+- **What it does:** When a client types their phone number on the booking details step, the app checks its length as they leave the box: a UK mobile has 11 digits starting 07 (other UK numbers 10 or 11), and a number from another country starts with + (or 00) and its country code. If it looks wrong, a gentle note says what (for example "one digit too many") and asks them to double-check, but **never stops the booking**: Vadim corrects the number later if needed. Only something that cannot be a phone number at all (fewer than 7 or more than 20 digits) stops the step, as before. A short hint sits under the box. In the Admin's own client forms the same check must pass before saving. A client page whose saved number looks wrong says so in red and points to Edit details.
+- **Why:** A client registered with one extra digit, so Vadim could not reach him. Vadim did not want a new obstacle in the booking journey.
 - **Built in:** PR #114 (no database change; the database still accepts 7 to 20 digits).
 - **For a general app:** the home country (UK, 11 digits) should be a setting.
 

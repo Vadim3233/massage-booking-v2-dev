@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addressFields, addressTyped, blankAddressFields, contactComplete, detailProblems, emptyDetails, migrateDetails, restoreDraft, usualAddress, validDetails, withPostcode } from './bookingDraft.js'
+import { addressFields, addressTyped, blankAddressFields, contactComplete, detailProblems, emptyDetails, phoneNote, migrateDetails, restoreDraft, usualAddress, validDetails, withPostcode } from './bookingDraft.js'
 
 const details = (changes = {}) => ({ first_name: 'Ada', last_name: 'Lovelace', email: 'ada@example.test', phone: '07700 900123', address: '1 Test Road, London SW3 1AA', savedAddressId: '', ...changes })
 
@@ -8,10 +8,12 @@ describe('what is plainly wrong with the details a client typed', () => {
     for (const phone of ['07700 900123', '+44 7700 900123', '020 7946 0000', '(020) 7946-0000', '+1 415 555 0100', '+44 7700 900123 ext 4567']) expect(detailProblems(details({ phone }))).toEqual({})
   })
   it('names a number that cannot be right', () => {
-    for (const phone of ['12345', 'abc', '123456789012345678901', '+44 7700 900123 4567 8901 2345']) expect(detailProblems(details({ phone })).phone).toMatch(/doesn't look right|too many|too short/)
+    for (const phone of ['12345', 'abc', '123456789012345678901', '+44 7700 900123 4567 8901 2345']) expect(detailProblems(details({ phone })).phone).toMatch(/doesn't look right/)
   })
-  it('catches a UK mobile with one digit too many', () => {
-    expect(detailProblems(details({ phone: '077009001234' })).phone).toBe('That number has one digit too many for a UK number. A UK mobile number has 11 digits and starts with 07. Please check it, so I can reach you.')
+  it('never stops a UK mobile with one digit too many, but asks the client to double-check it', () => {
+    expect(detailProblems(details({ phone: '077009001234' }))).toEqual({})
+    expect(phoneNote('077009001234')).toBe('That number has one digit too many for a UK number. A UK mobile number has 11 digits and starts with 07. Please double-check it. You can still continue.')
+    expect(phoneNote('07700 900123')).toBe('')
   })
   it('does not judge an address: it is one text, and only the client knows whether it is complete', () => {
     for (const address of ['', 'Flat 2, 5 Road', 'ZZZ', '12345', 'hello world', '10 High Street, London, no postcode here']) expect(detailProblems(details({ address }))).toEqual({})

@@ -42,9 +42,16 @@ export function restoreDraft(storage) {
 // not judged: it is one text, and only the client knows whether it is complete. A missing postcode is a gentle note on the screen, never a stop.)
 export function detailProblems(details) {
   const problems = {}
-  const phone = phoneProblem(details.phone)
-  if (phone) problems.phone = `${phone} Please check it, so I can reach you.`
+  const digits = String(details.phone || '').replace(/\D/g, '')
+  if (details.phone?.trim() && (digits.length < 7 || digits.length > 20)) problems.phone = "That number doesn't look right. Please check it, so I can reach you."
   return problems
+}
+
+// A number that may be mistyped (a digit too many, say) is only a gentle note beside the box: the client can still book, and Vadim corrects
+// the number later if he needs to. Only a number that cannot be a phone number at all (above) stops the step.
+export function phoneNote(phone) {
+  const problem = phoneProblem(phone)
+  return problem ? `${problem} Please double-check it. You can still continue.` : ''
 }
 
 export function validDetails(details) {
