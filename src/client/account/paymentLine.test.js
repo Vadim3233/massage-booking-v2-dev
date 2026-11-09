@@ -23,6 +23,14 @@ describe('the payment line under a booking in Your bookings', () => {
     expect(paymentLine(row({ booking_status: 'awaiting_cash_approval', payment_method: 'cash', payment_status: 'awaiting_approval', total_gbp: 60 }), { upcoming: true })).toEqual({ text: '£60.00 · Cash', tone: '' })
   })
 
+  it('says a later session is paid after the earlier one, calmly, until that day has passed', () => {
+    const later = row({ payment_status: 'awaiting_transfer', pay_after_date: '2026-11-12' })
+    expect(paymentLine(later, { upcoming: true, today: '2026-11-09' })).toEqual({ text: '£90.00 · Pay after your 12 Nov session', tone: '' })
+    expect(paymentLine(later, { upcoming: true, today: '2026-11-12' })).toEqual({ text: '£90.00 · Pay after your 12 Nov session', tone: '' })
+    expect(paymentLine(later, { upcoming: true, today: '2026-11-13' })).toEqual({ text: '£90.00 to pay by bank transfer', tone: 'due' })
+    expect(paymentLine(later, { upcoming: false, today: '2026-11-09' })).toEqual({ text: '£90.00 to pay by bank transfer', tone: 'due' })
+  })
+
   it('says what is still to pay by bank transfer, and shows only the amount once the transfer has been sent', () => {
     expect(paymentLine(row({ booking_status: 'awaiting_transfer', payment_status: 'awaiting_transfer' }), { upcoming: true })).toEqual({ text: '£90.00 to pay by bank transfer', tone: 'due' })
     expect(paymentLine(row({ booking_status: 'awaiting_payment_verification', payment_status: 'awaiting_verification' }), { upcoming: true })).toEqual({ text: '£90.00', tone: '' })

@@ -67,6 +67,36 @@ function EveningSetting({ api }) {
   </form>
 }
 
+// Booking several sessions (ADR-097): a client pays for one session at a time. A later session is confirmed automatically once the session
+// before it is confirmed, unless this is switched off; then it waits for "Confirm, pay later" like any request. Saved as soon as it is changed.
+function LaterSessionsSetting({ api }) {
+  const [on, setOn] = useState(null)
+  const [error, setError] = useState('')
+  const [message, setMessage] = useState('')
+  const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    let live = true
+    api.autoConfirmLater().then(value => { if (live) setOn(Boolean(value)) }, failure => { if (live) setError(failure.message) })
+    return () => { live = false }
+  }, [api])
+  if (on === null) return error ? <p role="alert">{error}</p> : null
+  async function change(event) {
+    const next = event.target.checked
+    if (busy) return
+    setBusy(true); setError(''); setMessage('')
+    setOn(next)
+    try { await api.saveAutoConfirmLater(next); setMessage('Saved.') } catch (failure) { setOn(!next); setError(failure.message) } finally { setBusy(false) }
+  }
+  return <section className="admin-client-form" aria-labelledby="later-setting-title">
+    <h2 id="later-setting-title">Clients booking several sessions</h2>
+    <label className="admin-field admin-field--switch"><span><input type="checkbox" role="switch" checked={on} disabled={busy} onChange={change} /> Confirm later sessions automatically</span>
+      <span className="admin-detail-hint">A client pays for one session at a time: each later session is paid after the one before it. When this is on, a later session is confirmed as soon as the session before it is. When it is off, it comes to you as a request, and you confirm it with "Confirm, pay later". Either way, the time stays reserved for the client.</span>
+    </label>
+    {error && <p role="alert" className="admin-field-error">{error}</p>}
+    {message && <p role="status">{message}</p>}
+  </section>
+}
+
 export default function SettingsRules({ api = settingsApi, repeatApi = seriesApi, eveningApi = visitorsApi }) {
   const [values, setValues] = useState(null)
   const [error, setError] = useState('')
@@ -103,5 +133,6 @@ export default function SettingsRules({ api = settingsApi, repeatApi = seriesApi
     </form>
     <RepeatSetting api={repeatApi} />
     <EveningSetting api={eveningApi} />
+    <LaterSessionsSetting api={eveningApi} />
   </section>
 }

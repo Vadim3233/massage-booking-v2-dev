@@ -105,9 +105,12 @@ function pillsOf(booking) {
   const status = booking.booking_status
   if (!('booking_payments' in booking) || ['cancelled', 'no_show'].includes(status)) return null
   // A client's request whose postcode is in none of the areas, or that has no postcode, says so until it is confirmed: that is what to look at first.
+  // A later session the client pays for after their earlier one (ADR-097) says so until it is paid.
+  const later = Boolean(booking.pay_after_booking_id)
   const waiting = AREA_PILL[booking.area_check] || 'Not confirmed yet'
   const appointment = status === 'completed' ? { text: 'Completed', chip: 'done' } : status === 'confirmed' ? { text: 'Confirmed', chip: 'ok' } : { text: waiting, chip: 'needs' }
-  return [appointment, PAYMENT_PILL[booking.booking_payments?.status] || { text: 'Payment not recorded', chip: 'wait' }]
+  const payment = later && booking.booking_payments?.status === 'awaiting_transfer' ? { text: 'Paid after earlier session', chip: 'wait' } : PAYMENT_PILL[booking.booking_payments?.status]
+  return [appointment, payment || { text: 'Payment not recorded', chip: 'wait' }]
 }
 function stateOf(booking) {
   const status = booking.booking_status

@@ -11,6 +11,9 @@ export function createVisitorsApi(client) {
     visits: (from, to) => run(client.rpc('admin_visits', { p_from: from, p_to: to }), 'load the visits').then(rows => (rows || []).map(row => ({ ...row, events: row.events || [] }))),
     eveningHours: () => run(client.rpc('admin_wanted_evening_hours'), 'load the setting'),
     saveEveningHours: hours => run(client.rpc('admin_save_wanted_evening_hours', { p_hours: hours }), 'save the setting'),
+    // Booking several sessions (ADR-097): whether a client's later sessions are confirmed automatically.
+    autoConfirmLater: () => run(client.rpc('admin_auto_confirm_later_sessions'), 'load the setting'),
+    saveAutoConfirmLater: on => run(client.rpc('admin_save_auto_confirm_later_sessions', { p_on: on }), 'save the setting'),
   }
 }
 export const visitorsApi = createVisitorsApi(supabase)

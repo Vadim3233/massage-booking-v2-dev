@@ -94,6 +94,8 @@ export function createBookingApi(client) {
     booking: (id) => unwrap(client.rpc('get_my_booking', { p_booking_id: id })),
     declareTransfer: (id) => unwrap(client.rpc('declare_my_bank_transfer', { p_booking_id: id })),
     confirmCash: (id) => unwrap(client.rpc('confirm_my_cash_booking', { p_booking_id: id })),
+    // A later session: nothing to pay yet, it is paid after the client's earlier session (book_my_session_pay_later).
+    payAfter: (id) => unwrap(client.rpc('book_my_session_pay_later', { p_booking_id: id })),
     bankDetails: () => unwrap(client.rpc('get_bank_details')),
     // The times a client could ask about on a day, free or not (ADR-095). Free ones are shown as usual, the rest faded.
     wantedTimes: (date, duration) => unwrap(client.rpc('wanted_times', { p_date: date, p_duration_minutes: duration })).then(rows => (rows || []).map(row => row.start_minutes)),

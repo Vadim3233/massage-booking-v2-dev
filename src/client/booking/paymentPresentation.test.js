@@ -5,6 +5,8 @@ it('uses explicit client-friendly payment wording', () => {
  expect(paymentStatus({booking_payments:{status:'awaiting_transfer'}})).toBe('Awaiting your bank transfer')
  expect(paymentStatus({booking_payments:{status:'awaiting_verification'}})).toBe("Transfer sent — I'll check it shortly")
  expect(paymentStatus({booking_payments:{status:'awaiting_approval'}})).toBe('Cash on arrival')
+ expect(paymentStatus({booking_payments:{status:'awaiting_transfer'},pay_after_session:{date:'2026-11-12'}})).toBe('To pay after your 12 Nov session')
+ expect(paymentStatus({booking_payments:{status:'paid'},pay_after_session:{date:'2026-11-12'}})).toBe('Payment received')
 })
 
 it('prefers bank details saved in the app and falls back to the build-time ones', () => {

@@ -46,7 +46,7 @@ export function clientFaq({ rules, areas = [] }) {
       { q: 'How long is my time held while I book?', a: ['About 20 minutes. If you need longer, the app asks whether you would like to keep it. If you do nothing, the time is released for someone else.'] },
       { q: "Why can't I see the time I want?", a: ['I travel between clients, so the times you see already allow for my journey.', 'Faded times aren\'t available right now. Tap one if you\'d like to hear if anything changes, and I\'ll let you know. If nothing suits you, press "None of these suit me" and tell me what would.'] },
       { q: 'Is my booking confirmed straight away?', a: ['Your time is reserved as soon as you book. I check every booking myself and confirm it by email, and on Telegram if you turn that on.'] },
-      { q: 'Can I book more than one appointment?', a: ['Yes. New clients can book a limited number of appointments ahead at first. Once you have had your first treatment, you can book more.'] },
+      { q: 'Can I book more than one appointment?', a: ['Yes. New clients can book a limited number of appointments ahead at first. Once you have had your first treatment, you can book as many as you like.', 'After booking, press "Book another session": the same treatment and length are kept, so you just pick the time.'] },
     ] },
     { title: 'Couples and groups', items: [
       { q: 'Can I book for two people, or more?', a: ['Yes. Each person has their own treatment, one after the other, at the same address. You can choose the same length for everyone, or a different length for each person. The price is the total of each person\'s treatment.'] },
@@ -65,6 +65,7 @@ export function clientFaq({ rules, areas = [] }) {
     { title: 'Paying', items: [
       { q: 'How can I pay?', a: ['By bank transfer or in cash. You choose at the payment step.'] },
       { q: 'How does a bank transfer work?', a: ['After you reserve, you see my bank details and a payment reference. Make the transfer with that reference, then press "I\'ve made the bank transfer". I check it and confirm your appointment.'] },
+      { q: 'Do I have to pay for all my sessions at once?', a: ['No. You only pay for your next session. When you book a later one, the payment step says "Nothing to pay yet". After each session I send you the amount and bank details for the next one, by email and on Telegram if you turned it on. If you pay in cash, just pay at each appointment.', 'Would you rather pay for a later session straight away? Press "I\'d rather pay for this one now".'] },
       { q: 'Can I pay later?', a: ['Sometimes I confirm a bank-transfer booking before the money arrives. Your booking then shows that the payment is still awaited, and I may send you a reminder with the date, time, length and amount so you can find it in your bank.'] },
       { q: 'How does paying in cash work?', a: ['Choose Cash at the payment step and send me your request. I confirm it, and you pay the full amount in cash at your appointment.'] },
     ] },

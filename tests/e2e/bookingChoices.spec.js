@@ -181,9 +181,13 @@ test('every booking screen fits a 320px phone, and the usual booking is offered 
   await page.getByRole('button', { name: "I've made the bank transfer" }).click()
   await expect(page.getByRole('heading', { name: "I've received your booking" })).toBeVisible()
   expect(await noSideways(page)).toBe(true)
-  // The next visit starts from the last booking: tap it and the time is the only choice left.
-  await page.getByRole('button', { name: 'Book another appointment' }).click()
-  await expect(page.getByRole('heading', { name: 'Choose your area', level: 2 })).toBeVisible()
+  // Booking another session starts from this one: the time is the only choice left (ADR-097).
+  await expect(page.getByText('You only pay for the next one.', { exact: false })).toBeVisible()
+  await page.getByRole('button', { name: 'Book another session' }).click()
+  await expect(page.getByRole('heading', { name: 'Choose date and time' })).toBeVisible()
+  expect(new URL(page.url()).searchParams.get('another')).toBeNull()
+  // The next visit also starts from the last booking.
+  await page.goto('/')
   const usual = page.getByRole('button', { name: /Book your usual/ })
   await expect(usual).toContainText('Integration massage · 60 min · Integration area')
   await usual.click()

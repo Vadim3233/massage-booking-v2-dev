@@ -505,7 +505,7 @@ for (const decision of ['approve', 'reject', 'receive']) test(`saved client conf
       await expect(calendar).toHaveAttribute('download', 'massage-with-vad.ics')
       await expect(calendar).toHaveAttribute('href', /^data:text\/calendar;charset=utf-8,BEGIN%3AVCALENDAR/)
     }
-    await expect(page.getByRole('button', { name: 'Book another appointment' })).toBeVisible()
+    await expect(page.getByRole('button', { name: decision === 'reject' ? 'Book another appointment' : 'Book another session' })).toBeVisible()
     if (decision === 'receive') await expect(page.getByText('Payment: Payment received', { exact: true })).toBeVisible()
     if (decision === 'reject') await expect(page.getByText('This appointment will not go ahead.', { exact: false })).toBeVisible()
     if (decision === 'approve') await expect(page.getByText('Please pay the full amount in cash at your appointment.')).toBeVisible()

@@ -12,6 +12,7 @@ import TelegramBox from '../booking/components/TelegramBox.jsx'
 import { accountApi, createAccountApi, LINK_INVALID } from './accountApi.js'
 import { cancelledOn } from './cancelledOn.js'
 import { paymentLine } from './paymentLine.js'
+import { shortDay } from '../booking/payAfter.js'
 import { downloadReceiptPdf } from '../../lib/receiptPdf.js'
 import { useBookingRules } from '../bookingRules.js'
 import '../booking/booking.css'
@@ -26,6 +27,8 @@ const CHIP = {
 }
 const HEADING = { ...STATUS_TEXT, confirmed: 'Your appointment is confirmed', completed: 'Your appointment is complete', cancelled: 'Your appointment is cancelled', no_show: 'This appointment was missed' }
 const OPEN = ['awaiting_transfer', 'awaiting_payment_verification', 'awaiting_cash_approval', 'confirmed']
+// A later session not confirmed yet (ADR-097) is not waiting for a transfer.
+const statusText = (status, payAfterDate) => (status === 'awaiting_transfer' && payAfterDate ? 'To be confirmed' : STATUS_TEXT[status])
 const londonStamp = value => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
 
 // The private link in a booking email is /account?booking=<id>#key=<code>. The code is kept for this tab only (so a reload still works)
@@ -186,12 +189,16 @@ function Manage({ id, rules, close, changed, api, linked = false }) {
   return <section>
     {!linked && <button className="btn--quiet btn--small account-back" onClick={close}><Icon name="left" size={20} />Your bookings</button>}
     {/* A booking outside the areas (or with no postcode) waits for Vad to look before anything is paid. */}
-    <h1 tabIndex={-1}>{booking.area_check && booking.booking_status === 'awaiting_transfer' ? "I'm checking your address" : HEADING[booking.booking_status]}</h1>
+    <h1 tabIndex={-1}>{booking.area_check && booking.booking_status === 'awaiting_transfer' ? "I'm checking your address"
+      : booking.pay_after_session && booking.booking_status === 'awaiting_transfer' ? (booking.pay_after_session.auto_confirm === false ? "I'll confirm this soon"
+        : `I'll confirm this with your ${shortDay(booking.pay_after_session.date)} session`) : HEADING[booking.booking_status]}</h1>
     {booking.booking_status === 'cancelled' && cancelledAt && <p className="account-cancelled-on">{cancelledAt}</p>}
     {message && <p role="alert" className="account-note">{message}</p>}
     {mode === 'view' && <>
       {/* Linking Telegram is done as the signed-in client, so it is not offered on a page opened from the email link, where nobody has signed in. */}
       {open && !linked && <TelegramBox />}
+      {booking.pay_after_session && open && booking.booking_payments?.status === 'awaiting_transfer' && booking.pay_after_session.date >= londonDate()
+        && <p className="account-note">Nothing to pay yet. After your {shortDay(booking.pay_after_session.date)} session, I'll send you the details to pay {money(booking.total_gbp)} for this one.</p>}
       <BookingSummary booking={booking} emailHint />
       <ReceiptDownload id={id} api={api} />
       {owes && <p className="account-note account-note--fee">A late fee of {money(booking.late_fee_due_gbp)} is due for this appointment. I will be in touch about it.</p>}
@@ -225,19 +232,23 @@ function BookingList({ open }) {
   const earlier = rows.filter(row => !upcoming.includes(row))
   // Under the treatment, one line on where the money stands (see paymentLine.js); a booking with nothing to say has none.
   const item = (row, isUpcoming) => {
-    const pay = paymentLine(row, { upcoming: isUpcoming })
+    const pay = paymentLine(row, { upcoming: isUpcoming, today })
     return <li key={row.id}>
       <button className="tile account-booking" onClick={() => open(row.id)}>
         <span className="account-when">{dateLabel(row.date)} · {timeLabel(row.start_minutes)}</span>
         <span className="account-what">{servicesLabel(row.services)} · {row.treatment_duration_minutes} min</span>
         {pay && <span className={`account-pay${pay.tone ? ` account-pay--${pay.tone}` : ''}`}>{pay.text}</span>}
-        <span className={`chip chip--${CHIP[row.booking_status] || 'done'} account-status`}>{STATUS_TEXT[row.booking_status]}</span>
+        <span className={`chip chip--${row.booking_status === 'awaiting_transfer' && row.pay_after_date ? 'wait' : CHIP[row.booking_status] || 'done'} account-status`}>{statusText(row.booking_status, row.pay_after_date)}</span>
       </button>
     </li>
   }
   return <>
     <h2 className="section-title">Coming up</h2>
     {upcoming.length ? <ul role="list" className="account-list">{upcoming.map(row => item(row, true))}</ul> : <p>You have no upcoming appointments. <a href="/">Book a treatment</a></p>}
+    {upcoming.length > 0 && <>
+      <p className="fine">You pay for one session at a time. After each session I'll send you the details to pay for the next one.</p>
+      <a className="btn btn--tonal btn--block" href="/?another=1">Book another session</a>
+    </>}
     {earlier.length > 0 && <><h2 className="section-title">Earlier</h2><ul role="list" className="account-list">{earlier.map(row => item(row, false))}</ul></>}
     <p className="fine">Use Claude, ChatGPT or another AI assistant? <a href="/book-with-ai">Book with your AI assistant</a>.</p>
     <p className="fine">Questions? <a href="/faq">Read the answers</a>.</p>

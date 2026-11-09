@@ -12,6 +12,7 @@ export const ADMIN_HELP = [
     { q: 'How do I confirm a booking?', a: ['Open the booking. For a bank transfer, check the money arrived, then confirm and Mark paid. To confirm before the money arrives, use "Confirm, pay later" and Mark paid when it comes in. For cash, approve the cash request. The client gets an email (and Telegram, if they turned it on).'] },
     { q: 'How do I move or cancel a booking?', a: ['Open the booking and move it or press Cancel booking. When a late fee applies you can keep it or Waive fee. Mark fee received when the client pays it.'] },
     { q: 'After the appointment', a: ['Mark completed, or Mark no-show if the client was not there.'] },
+    { q: 'What happens when a client books several sessions?', a: ['They pay for one at a time. A later session is paid after the one before it: the payment step says "Nothing to pay yet", and its money shows "Paid after earlier session" until it is paid.', 'It is confirmed by itself as soon as the session before it is confirmed. To confirm these yourself instead, switch off "Confirm later sessions automatically" in More › Booking rules; they then come to you as requests, and "Confirm, pay later" confirms them. When the earlier session is over, the client is sent the amount and bank details for the next one. Mark paid when the money arrives.'] },
     { q: 'How do I change the address on a booking?', a: ['Open the booking and press Edit address. An address in another area brings that area\'s fees. The price can\'t change once the booking is paid or a transfer is declared. The client is emailed.'] },
     { q: 'How do I set up repeating bookings?', a: ['Open the booking and press Repeat this booking, or use Repeating bookings on the client\'s page.'] },
     { q: 'How do I send a client my booking link?', a: ['More › Your booking link. The share button on a booking sends the Share message (More › Share message).'] },
@@ -31,7 +32,7 @@ export const ADMIN_HELP = [
     { q: 'How do receipts work?', a: ['A receipt is made automatically when you mark a booking paid. Clients download the PDF from their booking page. Change the details printed on it in More › Receipt details.'] },
   ] },
   { title: 'Settings in More', items: [
-    { q: 'What can I change?', a: ['Services and prices, Extras, Areas and travel fees (postcodes, congestion charge, minimum booking length), Bank transfer details, Receipt details, Booking rules (notice, how far ahead, free cancellation time, booking limits), Welcome message, Share message and Google Calendar.', 'The client FAQ takes its numbers from Booking rules and Areas, so it follows your changes by itself.'] },
+    { q: 'What can I change?', a: ['Services and prices, Extras, Areas and travel fees (postcodes, congestion charge, minimum booking length), Bank transfer details, Receipt details, Booking rules (notice, how far ahead, free cancellation time, booking limits, and whether later sessions are confirmed automatically), Welcome message, Share message and Google Calendar.', 'The client FAQ takes its numbers from Booking rules and Areas, so it follows your changes by itself.'] },
     { q: 'Where is the client FAQ?', a: ['At /faq on your booking site. Clients find it from the first booking screen, the payment step and their account page.'], link: { href: '/faq', text: 'Open the client FAQ' } },
   ] },
 ]

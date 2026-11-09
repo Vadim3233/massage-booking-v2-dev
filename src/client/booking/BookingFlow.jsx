@@ -154,10 +154,21 @@ export default function BookingFlow() {
     const short = total < minimumFor(catalogue.areas.find(area => area.id === usual.areaId), noMinimum)
     if (await store.changeSelection({ areaId: usual.areaId, serviceId: usual.serviceId, sessions: usual.durations.map(newSession), enhancementIds: [] })) navigate(short ? 2 : 3)
   }
-  function startAgain() {
+  // "Book another session" starts again with the same treatment and length, straight at the times (ADR-097); otherwise from the beginning.
+  function startAgain(another = false) {
     sessionStorage.removeItem(draftKey)
-    window.location.assign('/')
+    window.location.assign(another ? '/?another=1' : '/')
   }
+  const anotherChecked = useRef(false)
+  useEffect(() => {
+    if (!catalogue || anotherChecked.current) return
+    anotherChecked.current = true
+    const url = new URL(window.location.href)
+    if (url.searchParams.get('another') !== '1') return
+    url.searchParams.delete('another')
+    window.history.replaceState(window.history.state, '', url)
+    if (usual && step === 0 && !draft.bookingId && !draft.sessions.length) bookUsual()
+  }, [catalogue, usual, step, draft]) // eslint-disable-line react-hooks/exhaustive-deps
   async function goWithQuote(target) {
     if (await store.loadQuote()) {
       navigate(target)
