@@ -23,6 +23,7 @@ const WelcomeSettings = lazy(() => import('./SettingsWelcome.jsx'))
 const ShareLink = lazy(() => import('./ShareLink.jsx'))
 const Income = lazy(() => import('./Income.jsx'))
 const ShareMessageSettings = lazy(() => import('./SettingsShareMessage.jsx'))
+const HelpPage = lazy(() => import('./HelpPage.jsx'))
 const GoogleCalendarSettings = lazy(() => import('./SettingsGoogleCalendar.jsx'))
 const Waitlist = lazy(() => import('./Waitlist.jsx'))
 const Visitors = lazy(() => import('./Visitors.jsx'))
@@ -39,6 +40,7 @@ const MORE_GROUPS = [
   ['What you offer', [['/admin/settings/services', 'Services and prices'], ['/admin/settings/extras', 'Extras'], ['/admin/settings/areas', 'Areas and travel fees']]],
   ['Payments and rules', [['/admin/settings/bank', 'Bank transfer details'], ['/admin/settings/receipts', 'Receipt details'], ['/admin/settings/rules', 'Booking rules']]],
   ['What clients read', [['/admin/settings/welcome', 'Welcome message'], ['/admin/settings/share-message', 'Share message']]],
+  ['Help', [['/admin/help', 'Help: how the app works']]],
 ]
 const SETTINGS_PAGES = MORE_GROUPS.flatMap(([, links]) => links.map(([path]) => path))
 // Each settings page is named in the tab and read out first by its own name, not as "Settings".
@@ -218,6 +220,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {surface === '/admin/settings/link' && <ShareLink />}
       {surface === '/admin/income' && <Income openBooking={openBooking} />}
       {surface === '/admin/settings/share-message' && <ShareMessageSettings />}
+      {surface === '/admin/help' && <HelpPage />}
       {surface === '/admin/settings/google-calendar' && <GoogleCalendarSettings />}
       {surface === '/admin/visitors' && <Visitors openClient={id => navigate(`/admin/clients/${id}`)} openRules={() => navigate('/admin/settings/rules')} />}
       {surface === '/admin/waitlist' && <Waitlist bookFor={request => newBooking(request.requested_date, request.client_id)} />}

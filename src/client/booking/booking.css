@@ -113,6 +113,8 @@
 .welcome--after .welcome-steps { margin-top: 0; }
 .welcome-about { margin: 8px 0 0; }
 .welcome-about summary { display: flex; align-items: center; min-height: 44px; color: var(--primary); font-weight: 600; cursor: pointer; }
+.welcome-faq { margin: 4px 0 0; font-size: 15px; }
+.welcome-faq a { display: inline-flex; align-items: center; min-height: 44px; color: var(--primary); font-weight: 600; }
 .usual { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; margin: 4px 0 8px; padding: 14px 16px; border: 1.5px solid var(--primary); border-radius: var(--radius); background: var(--primary-soft); text-align: left; box-shadow: var(--shadow-1); }
 .usual-text { display: grid; gap: 2px; min-width: 0; }
 .usual-text strong { color: var(--ink); font-size: 16px; }

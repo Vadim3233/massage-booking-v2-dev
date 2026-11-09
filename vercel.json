@@ -6,6 +6,7 @@
     { "source": "/.well-known/oauth-protected-resource/mcp", "destination": "/api/oauth-protected-resource" },
     { "source": "/oauth/consent", "destination": "/index.html" },
     { "source": "/book-with-ai", "destination": "/index.html" },
+    { "source": "/faq", "destination": "/index.html" },
     { "source": "/admin", "destination": "/index.html" },
     { "source": "/admin/(.*)", "destination": "/index.html" },
     { "source": "/account", "destination": "/index.html" },
