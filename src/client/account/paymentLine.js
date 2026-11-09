@@ -1,4 +1,5 @@
 import { money } from '../booking/bookingDraft.js'
+import { shortDay } from '../booking/payAfter.js'
 
 // The one quiet line under a booking in Your bookings that says where its money stands: what it comes to and whether that is paid, still to
 // pay or to be paid in cash, and, after a cancellation, a refund on its way or a late fee that is due. The words are the ones the booking's own
@@ -6,7 +7,9 @@ import { money } from '../booking/bookingDraft.js'
 // been and gone no longer says to pay at the appointment. The tone is `ok` for money that is settled and `due` for money that still has to move
 // (the line is `due` whenever any part of it is); anything else has none. A booking with nothing to say, such as a cancelled one with nothing
 // owed either way, gets no line at all.
-export function paymentLine(row, { upcoming = false } = {}) {
+// A later session paid after the client's earlier one (ADR-097) says so, calmly, until that earlier day has passed (`today`, London time);
+// then it is simply still to pay.
+export function paymentLine(row, { upcoming = false, today = '' } = {}) {
   const total = Number(row.total_gbp) > 0 ? money(row.total_gbp) : ''
   const parts = []
   let tone = ''
@@ -21,6 +24,7 @@ export function paymentLine(row, { upcoming = false } = {}) {
     if (row.payment_status === 'paid') add(`${total} · Paid`, 'ok')
     else if (row.payment_status === 'approved' && upcoming) add(`${total} · Pay in cash at your appointment`, 'due')
     else if (row.payment_status === 'approved' || row.payment_status === 'awaiting_approval') add(`${total} · Cash`)
+    else if (row.payment_status === 'awaiting_transfer' && upcoming && row.pay_after_date && row.pay_after_date >= today) add(`${total} · Pay after your ${shortDay(row.pay_after_date)} session`)
     else if (row.payment_status === 'awaiting_transfer') add(`${total} to pay by bank transfer`, 'due')
     else if (row.payment_status === 'awaiting_verification') add(total)
     else if (row.payment_status === 'refunded') add('Refunded')

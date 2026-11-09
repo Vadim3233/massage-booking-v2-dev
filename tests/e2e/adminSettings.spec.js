@@ -155,3 +155,23 @@ test('booking rules are checked, saved and put to work for clients', async ({ pa
     if (original.length) await f.admin.from('business_settings').upsert(original)
   }
 })
+
+test('later sessions are confirmed automatically to start with, and the switch turns it off and on', async ({ page }) => {
+  const original = (await f.admin.from('business_settings').select('*').eq('key', 'auto_confirm_later_sessions')).data
+  try {
+    await f.authorize()
+    await signIn(page, '/admin/settings/rules')
+    const toggle = page.getByRole('switch', { name: 'Confirm later sessions automatically' })
+    await expect(toggle).toBeChecked()
+    await toggle.uncheck()
+    await expect(page.getByText('Saved.', { exact: true })).toBeVisible()
+    expect((await f.admin.from('business_settings').select('value').eq('key', 'auto_confirm_later_sessions').single()).data.value).toBe(false)
+    await page.reload()
+    await expect(toggle).not.toBeChecked()
+    await toggle.check()
+    await expect(page.getByText('Saved.', { exact: true })).toBeVisible()
+    expect((await f.admin.from('business_settings').select('value').eq('key', 'auto_confirm_later_sessions').single()).data.value).toBe(true)
+  } finally {
+    if (original.length) await f.admin.from('business_settings').upsert(original)
+  }
+})

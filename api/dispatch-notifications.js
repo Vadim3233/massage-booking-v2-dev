@@ -36,12 +36,14 @@ export async function handle(request, response, { env = process.env, createServi
     const repeats = await client.rpc('run_series_maintenance').then(({ data, error }) => (error ? { failed: true } : data), () => ({ failed: true }))
     // Then the morning reminders that are due, for the same reason. It does nothing until it is time, and never reminds twice.
     const reminders = await client.rpc('plan_day_of_reminders').then(({ data, error }) => (error ? { failed: true } : { made: data }), () => ({ failed: true }))
+    // Then the payment details for a client's next session, once the session before it is over (a client pays for one session at a time).
+    const nextPayments = await client.rpc('plan_next_session_payments').then(({ data, error }) => (error ? { failed: true } : { made: data }), () => ({ failed: true }))
     // The Google Calendar copy runs beside the messages, once its Google codes are set, with its own time limit. A problem with Google never stops them.
     const calendarConfig = readCalendarConfig(env)
     const calendar = calendarConfigured(calendarConfig)
       ? createCalendarSync({ client, config: calendarConfig, fetchImpl }).run().catch(() => ({ failed: true }))
       : null
-    const summary = { ...(await sendAll(createDispatcher({ client, config: readConfig(env), fetchImpl }))), repeats, reminders, ...(calendar ? { calendar: await calendar } : {}) }
+    const summary = { ...(await sendAll(createDispatcher({ client, config: readConfig(env), fetchImpl }))), repeats, reminders, nextPayments, ...(calendar ? { calendar: await calendar } : {}) }
     response.statusCode = 200
     response.setHeader('content-type', 'application/json')
     response.end(JSON.stringify(summary))

@@ -87,17 +87,21 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
     },
     resumePayment(booking) {
       if (booking.id !== state.draft.bookingId) return
-      if (booking.booking_payments.status !== 'awaiting_transfer') {
+      // A later session paid after the one before it keeps its payment open, but the payment step is done.
+      if (booking.booking_payments.status !== 'awaiting_transfer' || booking.pay_after_session) {
         try { save({ ...state.draft, paymentComplete: true, paymentPending: null }); publish({ step: 7 }) }
         catch (error) { publish({ error: friendlyError(error) }) }
       }
     },
-    completePayment() { return run(async () => {
+    // `choice` is 'pay_after' for "Nothing to pay yet": a later session, paid after the client's earlier one. Otherwise the chosen method.
+    completePayment(choice) { return run(async () => {
       if (!state.draft.bookingId) return
-      const action = state.draft.paymentPending || state.draft.paymentMethod
+      const action = state.draft.paymentPending || (choice === 'pay_after' ? choice : state.draft.paymentMethod)
       save({ ...state.draft, paymentPending: action })
-      const booking = await (action === 'cash' ? api.confirmCash(state.draft.bookingId) : api.declareTransfer(state.draft.bookingId))
-      if (booking.id !== state.draft.bookingId || booking.booking_payments.status === 'awaiting_transfer') {
+      const id = state.draft.bookingId
+      const booking = await (action === 'cash' ? api.confirmCash(id) : action === 'pay_after' ? api.payAfter(id) : api.declareTransfer(id))
+      const done = action === 'pay_after' ? Boolean(booking.pay_after_session) : booking.booking_payments.status !== 'awaiting_transfer'
+      if (booking.id !== state.draft.bookingId || !done) {
         throw new Error("I couldn't check that your request went through. Please try again; nothing will be recorded twice.")
       }
       save({ ...state.draft, paymentComplete: true, paymentPending: null })

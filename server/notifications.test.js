@@ -17,6 +17,7 @@ function fakeClient(rows, failRepeats = false, failReminders = false, mint = nul
     if (name === 'stop_client_telegram') { stopped.push(args); return { data: 1, error: null } }
     if (name === 'run_series_maintenance') return failRepeats ? { data: null, error: { message: 'boom' } } : { data: { made: 2, clashes: 0, ended: 0 }, error: null }
     if (name === 'plan_day_of_reminders') return failReminders ? { data: null, error: { message: 'boom' } } : { data: 2, error: null }
+    if (name === 'plan_next_session_payments') return failReminders ? { data: null, error: { message: 'boom' } } : { data: 1, error: null }
     throw new Error(`unexpected ${name}`)
   } }
 }
@@ -282,7 +283,7 @@ describe('the endpoint', () => {
   it('runs for the right caller and returns only counts', async () => {
     const response = reply(); await handle(request(), response, deps)
     expect(response.out.statusCode).toBe(200)
-    expect(JSON.parse(response.out.body)).toEqual({ claimed: 1, sent: 1, failed: 0, channels: ['telegram', 'email'], repeats: { made: 2, clashes: 0, ended: 0 }, reminders: { made: 2 } })
+    expect(JSON.parse(response.out.body)).toEqual({ claimed: 1, sent: 1, failed: 0, channels: ['telegram', 'email'], repeats: { made: 2, clashes: 0, ended: 0 }, reminders: { made: 2 }, nextPayments: { made: 1 } })
     expect(response.out.body).not.toMatch(/SECRET|service-key/)
   })
   it('still sends messages when the repeating-bookings job fails, without saying why', async () => {
@@ -305,6 +306,21 @@ describe('the endpoint', () => {
     const response = reply(); await handle(request(), response, { ...deps, createServiceClient: () => client })
     expect(order).toContain('plan_day_of_reminders')
     expect(order.indexOf('plan_day_of_reminders')).toBeLessThan(order.indexOf('claim_notification_deliveries'))
+  })
+  it("plans the payment details for clients' next sessions before it sends, and says how many", async () => {
+    const order = []
+    const client = fakeClient([row()])
+    const original = client.rpc.bind(client)
+    client.rpc = async (name, args) => { order.push(name); return original(name, args) }
+    const response = reply(); await handle(request(), response, { ...deps, createServiceClient: () => client })
+    expect(order.indexOf('plan_next_session_payments')).toBeGreaterThan(-1)
+    expect(order.indexOf('plan_next_session_payments')).toBeLessThan(order.indexOf('claim_notification_deliveries'))
+    expect(JSON.parse(response.out.body)).toMatchObject({ sent: 1, nextPayments: { made: 1 } })
+  })
+  it('still sends messages when the next-session payments step fails, without saying why', async () => {
+    const response = reply(); await handle(request(), response, { ...deps, createServiceClient: () => fakeClient([row()], false, true) })
+    expect(JSON.parse(response.out.body)).toMatchObject({ sent: 1, nextPayments: { failed: true } })
+    expect(response.out.body).not.toMatch(/boom/)
   })
   describe('a long queue', () => {
     // A queue that hands out the next rows each time it is asked, as the real one does.

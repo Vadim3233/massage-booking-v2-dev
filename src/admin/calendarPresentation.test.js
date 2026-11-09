@@ -99,6 +99,12 @@ describe('how a booking is drawn', () => {
     expect(bookingState(booked('no_show', 'paid')).pills).toBeNull()
     expect(bookingState({ booking_status: 'confirmed' }).pills).toBeNull()
   })
+  it("says a client's later session is paid after their earlier one", () => {
+    const later = (status, payment) => ({ ...booked(status, payment), pay_after_booking_id: 'earlier' })
+    expect(bookingState(later('confirmed', 'awaiting_transfer')).pills).toEqual([{ text: 'Confirmed', chip: 'ok' }, { text: 'Paid after earlier session', chip: 'wait' }])
+    expect(bookingState(later('awaiting_transfer', 'awaiting_transfer')).pills).toEqual([{ text: 'Not confirmed yet', chip: 'needs' }, { text: 'Paid after earlier session', chip: 'wait' }])
+    expect(bookingState(later('confirmed', 'paid')).pills).toEqual([{ text: 'Confirmed', chip: 'ok' }, { text: 'Paid', chip: 'ok' }])
+  })
   it('names a booking that is known only by its status (a clash warning, a repeat) by that status alone', () => {
     expect(getBookingStatusLabel({ booking_status: 'confirmed' })).toBe('Confirmed')
     expect(getBookingStatusLabel({ booking_status: 'awaiting_transfer' })).toBe('Awaiting transfer')

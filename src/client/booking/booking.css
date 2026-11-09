@@ -205,6 +205,14 @@
 .details-unlocked { margin: 0 0 12px; }
 .reserved { display: flex; align-items: center; gap: 8px; margin: 4px 0 6px; color: var(--ok-ink); font-weight: 600; }
 .reserved-dot { flex-shrink: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--ok-rail); box-shadow: 0 0 0 4px var(--ok-bg); }
+/* Booking several sessions (ADR-097): the one-at-a-time rule on the payment step of a later session, and the offer to book another after booking. */
+.pay-after-note { margin: 16px 0; padding: 14px 16px; border: 1px solid var(--sage-hair); border-radius: var(--radius); background: var(--sage-bg); color: var(--sage-ink); }
+.pay-after-note h2 { margin: 0 0 4px; font-size: 16px; color: inherit; }
+.pay-after-note p { margin: 0; }
+.another-session { margin: 18px 0; padding: 16px; border: 1px solid var(--primary-line); border-radius: var(--radius); background: var(--primary-soft); color: var(--primary-strong); }
+.another-session h2 { margin: 0 0 6px; font-size: 17px; color: var(--ink); }
+.another-session p { margin: 0 0 12px; }
+.another-session .fine { margin: 10px 0 0; color: var(--ink-soft); }
 .amount-card { margin: 16px 0; padding: 18px 20px; border-radius: var(--radius); background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow-2); }
 .amount-card .eyebrow { color: var(--on-primary-soft); }
 .amount { margin: 0; font-size: 46px; line-height: 1.1; letter-spacing: -.01em; }

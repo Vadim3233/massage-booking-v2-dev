@@ -55,6 +55,8 @@
 .admin-field, .field { display: grid; gap: 6px; font-size: 14px; font-weight: 600; color: var(--ink); margin: 12px 0; }
 .field-hint, .admin-detail-hint { font-size: 13px; font-weight: 400; color: var(--muted); line-height: 1.45; }
 .admin-field-error { color: var(--danger); font-size: 14px; font-weight: 500; margin: 0; }
+.admin-field--switch > span:first-child { display: flex; align-items: center; gap: 10px; }
+.admin-field--switch input[type=checkbox] { width: 22px; height: 22px; margin: 0; flex-shrink: 0; }
 
 /* A heading that was moved to on purpose (a new screen) is not a control, so it needs no ring. */
 :where(.booking-shell, .admin-shell) :is(h1, h2)[tabindex="-1"]:focus { outline: none; }

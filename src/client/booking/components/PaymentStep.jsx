@@ -6,14 +6,16 @@ import { PriceSummary } from './ReviewStep.jsx'
 import BankDetails from './BankDetails.jsx'
 import BookingSummary from './BookingSummary.jsx'
 import { postcodeOf } from '../../../lib/address.js'
+import { payAfterChoice, sessionDay, shortDay } from '../payAfter.js'
 
 // The two ways to pay sit side by side near the top of the page, so cash is as easy to find as a bank transfer.
-function MethodChoice({ cash, locked, choose }) {
+// For a later session (`after` is the earlier one), the bank transfer is made after that session.
+function MethodChoice({ cash, locked, choose, after }) {
   return <section aria-labelledby="method-title">
-    <h2 className="section-title" id="method-title">How would you like to pay?</h2>
+    <h2 className="section-title" id="method-title">{after ? 'How would you like to pay for it?' : 'How would you like to pay?'}</h2>
     <div className="tiles tiles--methods">
-      <button type="button" className="tile" aria-pressed={!cash} disabled={locked} onClick={() => cash && choose()}><span className="tile-title">Bank transfer</span><span className="tile-note">Pay now with your reference</span></button>
-      <button type="button" className="tile" aria-pressed={cash} disabled={locked} onClick={() => !cash && choose()}><span className="tile-title">Cash</span><span className="tile-note">Pay at your appointment</span></button>
+      <button type="button" className="tile" aria-pressed={!cash} disabled={locked} onClick={() => cash && choose()}><span className="tile-title">Bank transfer</span><span className="tile-note">{after ? `After your ${shortDay(after.date)} session` : 'Pay now with your reference'}</span></button>
+      <button type="button" className="tile" aria-pressed={cash} disabled={locked} onClick={() => !cash && choose()}><span className="tile-title">Cash</span><span className="tile-note">{after ? 'At this appointment' : 'Pay at your appointment'}</span></button>
     </div>
   </section>
 }
@@ -25,6 +27,8 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
   const errorBox = useRef(null)
   const [view, setView] = useState({ booking: null, error: '' })
   const [attempt, setAttempt] = useState(0)
+  // A later session can still be paid now, the usual way, if the client would rather.
+  const [payNow, setPayNow] = useState(false)
   useEffect(() => {
     if (!draft.bookingId) return
     let live = true
@@ -64,17 +68,52 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
     setTermsHint(false)
     setTimeout(() => document.querySelector('.booking-main h1')?.focus({ preventScroll: true }), 0)
   }
+  const summary = <BookingSummary booking={booking} paymentLabel={cash ? 'Cash on arrival' : undefined} quote={quote} />
   // The button is always there to press; if the terms have not been ticked it says so and takes her to the box.
-  function confirm() {
+  function confirm(choice) {
     if (!acknowledged) {
       setTermsHint(true)
       termsBox.current?.closest('label')?.scrollIntoView({ block: 'center' })
       termsBox.current?.focus({ preventScroll: true })
       return
     }
-    store.completePayment()
+    store.completePayment(choice)
   }
-  const summary = <BookingSummary booking={booking} paymentLabel={cash ? 'Cash on arrival' : undefined} quote={quote} />
+  const terms = <>
+    <p className="terms-note" id="terms-note">{cancellationNote(rules)}</p>
+    <label className="check terms"><input ref={termsBox} type="checkbox" aria-describedby={termsHint && !acknowledged ? 'terms-note terms-help' : 'terms-note'} checked={acknowledged} onChange={(event) => { setAcknowledged(event.target.checked); if (event.target.checked) setTermsHint(false) }} />I understand the payment and cancellation terms.</label>
+    {termsHint && !acknowledged && <p role="alert" className="error" id="terms-help">Please tick the box to say you understand the terms, then press the button again.</p>}
+    {error && <p role="alert" className="error" ref={errorBox}>{error}</p>}
+  </>
+  // A later session (the client has an earlier one still to come): nothing to pay yet. It is paid after the earlier session, and is confirmed
+  // straight away when that one is confirmed, or as soon as it is (ADR-097). A "pay_after" left pending by a lost answer is retried here too.
+  const earlier = payAfterChoice(booking, cash)
+  if (earlier && (!payNow || draft.paymentPending === 'pay_after')) {
+    const earlierDay = shortDay(earlier.date)
+    return <>
+      <h1 tabIndex={-1}>Nothing to pay <em>yet</em></h1>
+      <p role="status" className="reserved"><span className="reserved-dot" aria-hidden="true" />Your appointment time is reserved for you.</p>
+      <section className="pay-after-note" aria-labelledby="pay-after-title">
+        <h2 id="pay-after-title">You pay for one session at a time</h2>
+        <p>You already have a session with me on <strong>{sessionDay(earlier.date)}</strong>. Pay for this one after that session. I'll send you the amount and bank details then.</p>
+      </section>
+      <MethodChoice cash={cash} locked={Boolean(draft.paymentPending)} choose={switchMethod} after={earlier} />
+      <h2 className="section-title">What happens next</h2>
+      <ol role="list" className="steps-list">
+        <li>Press <strong>Book this session</strong>. {earlier.auto_confirm === false ? "I'll look at it and confirm it." : earlier.booking_status === 'confirmed' ? "It's confirmed straight away." : `It's confirmed as soon as your ${earlierDay} session is.`}</li>
+        <li>After your {earlierDay} session, I'll send you {money(booking.total_gbp)} to pay for this one.</li>
+        <li>Pay it before {shortDay(booking.date)}.</li>
+      </ol>
+      {terms}
+      {summary}
+      {!draft.paymentPending && <button type="button" className="btn--quiet btn--block" onClick={() => setPayNow(true)}>I'd rather pay for this one now</button>}
+      <a className="btn btn--quiet btn--block" href={`/account?booking=${booking.id}`}>Change the time or cancel this booking</a>
+      <p className="fine"><a href="https://vadmassage.com">Contact Vadim</a></p>
+      <div className="action-bar">
+        <button className="btn--primary btn--lg btn--block" onClick={() => confirm('pay_after')}>{draft.paymentPending ? 'Try again' : 'Book this session'}</button>
+      </div>
+    </>
+  }
   return <>
     <h1 tabIndex={-1}>{cash ? <>Paying by <em>cash</em></> : <>One last <em>step</em></>}</h1>
     <p role="status" className="reserved"><span className="reserved-dot" aria-hidden="true" />Your appointment time is reserved for you.</p>
@@ -93,10 +132,7 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
       <p>You can pay the full amount in cash at your appointment.</p>
       {areaNote && <p>{areaNote}</p>}
     </section>}
-    <p className="terms-note" id="terms-note">{cancellationNote(rules)}</p>
-    <label className="check terms"><input ref={termsBox} type="checkbox" aria-describedby={termsHint && !acknowledged ? 'terms-note terms-help' : 'terms-note'} checked={acknowledged} onChange={(event) => { setAcknowledged(event.target.checked); if (event.target.checked) setTermsHint(false) }} />I understand the payment and cancellation terms.</label>
-    {termsHint && !acknowledged && <p role="alert" className="error" id="terms-help">Please tick the box to say you understand the terms, then press the button again.</p>}
-    {error && <p role="alert" className="error" ref={errorBox}>{error}</p>}
+    {terms}
     <h2 className="section-title">What happens next</h2>
     <ol role="list" className="steps-list">
       {cash ? <>
@@ -112,7 +148,7 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
     <a className="btn btn--quiet btn--block" href={`/account?booking=${booking.id}`}>Change the time or cancel this booking</a>
     <p className="fine"><a href="https://vadmassage.com">Contact Vadim</a></p>
     <div className="action-bar">
-      <button className="btn--primary btn--lg btn--block" disabled={!cash && !bank.configured} onClick={confirm}>
+      <button className="btn--primary btn--lg btn--block" disabled={!cash && !bank.configured} onClick={() => confirm()}>
         {draft.paymentPending ? 'Try again' : cash ? 'Confirm cash booking' : "I've made the bank transfer"}
       </button>
     </div>
