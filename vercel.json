@@ -4,6 +4,7 @@
     { "source": "/mcp", "destination": "/api/mcp" },
     { "source": "/.well-known/oauth-protected-resource", "destination": "/api/oauth-protected-resource" },
     { "source": "/.well-known/oauth-protected-resource/mcp", "destination": "/api/oauth-protected-resource" },
+    { "source": "/calendar/:id", "destination": "/api/calendar?b=:id" },
     { "source": "/oauth/consent", "destination": "/index.html" },
     { "source": "/book-with-ai", "destination": "/index.html" },
     { "source": "/faq", "destination": "/index.html" },

@@ -44,10 +44,10 @@ function treatments(booking) {
 
 // The Admin can reword the message (Settings › Share message), with these blanks and no others: the database refuses any other,
 // so nothing but what is filled in here can ever be sent. Empty means the standard wording.
-export const SHARE_BLANKS = ['date', 'time', 'address', 'treatment', 'payment', 'cancellation', 'bank details']
-export const STANDARD_SHARE_MESSAGE = 'Hi! Thank you so much for booking with me, I am really looking forward to seeing you.\n\n*Massage booking – {date}, {time}*\n{address}\n{treatment}\n{payment}\n{cancellation}\n\nIf anything changes or you have any questions, just message me here. See you soon!\n\nWarm wishes,\nVadim'
+export const SHARE_BLANKS = ['date', 'time', 'address', 'treatment', 'payment', 'cancellation', 'bank details', 'calendar']
+export const STANDARD_SHARE_MESSAGE = 'Hi! Thank you so much for booking with me, I am really looking forward to seeing you.\n\n*Massage booking – {date}, {time}*\n{address}\n{treatment}\n{payment}\n{cancellation}\n\nAdd it to your calendar: {calendar}\n\nIf anything changes or you have any questions, just message me here. See you soon!\n\nWarm wishes,\nVadim'
 export const SHARE_MESSAGE_LIMIT = 1000
-const BLANK = /\{(date|time|address|treatment|payment|bank details|cancellation)\}/g
+const BLANK = /\{(date|time|address|treatment|payment|bank details|cancellation|calendar)\}/g
 
 // What is wrong with a wording, in the words the database uses when it refuses one ('' when it can be saved).
 export function shareMessageProblem(text) {
@@ -79,7 +79,12 @@ export function cancellationWords(terms) {
   return `Free to cancel or move until ${londonDay.format(until).replace(',', '')}, ${londonTime.format(until)}. After that, the full price may be charged.`
 }
 
-export function shareValues(booking, bank, terms) {
+// The "Add to your calendar" link: a page on this site where the client adds the appointment to Google Calendar, or to iPhone, Outlook and other
+// calendars (server/calendarLink.js). `origin` is this site's address; without it, or without a booking id, the line is left out.
+const siteOrigin = () => (typeof window !== 'undefined' ? window.location.origin : '')
+export const calendarLink = (booking, origin = siteOrigin()) => (origin && booking.id ? `${origin}/calendar/${booking.id}` : '')
+
+export function shareValues(booking, bank, terms, origin = siteOrigin()) {
   const end = booking.start_minutes + booking.treatment_duration_minutes
   return {
     date: dateLabel(booking.date).replace(',', ''),
@@ -89,22 +94,26 @@ export function shareValues(booking, bank, terms) {
     payment: paymentWords(booking),
     'bank details': bankLines(booking, bank),
     cancellation: cancellationWords(terms),
+    calendar: calendarLink(booking, origin),
   }
 }
 
-// The wording with its blanks filled. A line whose blanks have nothing to say (no address; no bank details when nothing is due) is left out,
+// The wording with its blanks filled. A line whose blanks all have nothing to say (no address; no bank details when nothing is due) is left out,
 // and so is a run of empty lines that leaves behind.
 export function fillShareMessage(wording, values) {
   const lines = (wording?.trim() ? wording.trim() : STANDARD_SHARE_MESSAGE).split('\n').flatMap(line => {
-    if (!line.match(BLANK)) return [line]
+    const blanks = line.match(BLANK)
+    if (!blanks) return [line]
+    // "Add it to your calendar: {calendar}" with no link to give says nothing, so it goes too.
+    if (blanks.every(blank => !values[blank.slice(1, -1)])) return []
     const filled = line.replace(BLANK, (_, name) => values[name] || '')
     return filled.trim() ? [filled] : []
   })
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
 }
 
-export function shareText(booking, bank, wording = STANDARD_SHARE_MESSAGE, terms = null) {
-  return fillShareMessage(wording, shareValues(booking, bank, terms))
+export function shareText(booking, bank, wording = STANDARD_SHARE_MESSAGE, terms = null, origin = siteOrigin()) {
+  return fillShareMessage(wording, shareValues(booking, bank, terms, origin))
 }
 
 // The payment reminder, for a client who pays later: after the session, a friendly note that the payment is still outstanding, with the bank details

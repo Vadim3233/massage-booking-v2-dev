@@ -1,6 +1,6 @@
 # VadMassage booking app: feature catalogue
 
-Last updated: 9 November 2026 (up to PR #114).
+Last updated: 9 November 2026 (up to the add-to-calendar link in the share message).
 
 This is a plain-English list of everything the app does today, grouped by area. Each entry says what the feature does, why it was built, where it was built (the pull request, or "PR", and any database change, called a "migration"), and what would need to become a **setting** if the same feature were offered to other therapists in a general app.
 
@@ -301,6 +301,12 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **Why:** Vadim talks to most clients on WhatsApp.
 - **Built in:** PR #58 (ADR-063), PR #61 (`20261106100000_share_message.sql`, ADR-066), PR #67 (`20261106110000_cancellation_terms.sql`), PR #76 (warmer standard wording, no bank details).
 - **For a general app:** the wording (already editable), the messaging app used.
+
+### Add-to-calendar link in the share message
+- **What it does:** The share message has an "Add it to your calendar: <link>" line (the `{calendar}` blank). The link opens a small page on the booking site showing the date, time and address, with two buttons: **Add to iPhone, Outlook or other calendar** (a calendar file) and **Add to Google Calendar**. The page is read fresh each time, so a moved booking gives the new time and a cancelled one says it was cancelled. The link uses the booking's long random id, so nobody can guess another client's link.
+- **Why:** Clients get the message on WhatsApp and want the appointment in their phone's calendar with one tap.
+- **Built in:** PR #115 (`20261203100000_share_message_calendar.sql`, only needed for using `{calendar}` in custom wording; the standard message works without it). Server: `api/calendar.js`, `server/calendarLink.js`, short address `/calendar/<id>` in `vercel.json`.
+- **For a general app:** the event title ("Massage with Vadim"), the time zone (London), the site address.
 
 ---
 

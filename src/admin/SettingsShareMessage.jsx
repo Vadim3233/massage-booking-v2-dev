@@ -4,7 +4,7 @@ import { shareMessageApi } from './shareMessageApi.js'
 
 // A made-up booking, only to show how the wording reads: labelled as an example on the page.
 const EXAMPLE_BOOKING = {
-  date: '2026-11-12', start_minutes: 1050, treatment_duration_minutes: 90, total_gbp: 105, booking_reference: 'VM-0000', address_snapshot: '1 Example Street, London SW1A 1AA',
+  id: '00000000-0000-4000-8000-000000000000', date: '2026-11-12', start_minutes: 1050, treatment_duration_minutes: 90, total_gbp: 105, booking_reference: 'VM-0000', address_snapshot: '1 Example Street, London SW1A 1AA',
   booking_sessions: [{ position: 1, service_name_snapshot: 'Deep tissue', duration_minutes: 90 }],
   booking_payments: { method: 'bank_transfer', status: 'awaiting_transfer', payment_reference: 'VM-0000' },
 }
