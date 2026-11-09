@@ -26,3 +26,10 @@ The client FAQ (`/faq`, content in `src/client/faq/faqContent.js`) and the Admin
 - If you are not sure the change belongs in the FAQ, ask Vadim in plain words: "Shall I add this to the FAQ: '<question>'?"
 - Policy answers (refunds, missed appointments, what to prepare at home, contact) are Vadim's words only. Never invent them.
 - Numbers that live in settings (booking rules, areas, fees) are read live, never typed into the answers.
+
+# Keep FEATURES.md up to date (owner's rule, 2026-11-09)
+
+`FEATURES.md` in the repository root is the plain-English catalogue of every feature, used to carry features over to Vadim's general therapist app.
+
+- Whenever a feature ships or changes, add or update its entry in `FEATURES.md` in the same pull request: what it does, why, the PR number and any migration, and what would need to become a setting in a general therapist app.
+- Write it in plain language: Vadim is not a developer.
