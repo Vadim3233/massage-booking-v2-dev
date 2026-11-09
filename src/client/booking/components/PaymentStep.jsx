@@ -95,6 +95,7 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
     </section>}
     <p className="terms-note" id="terms-note">{cancellationNote(rules)}</p>
     <label className="check terms"><input ref={termsBox} type="checkbox" aria-describedby={termsHint && !acknowledged ? 'terms-note terms-help' : 'terms-note'} checked={acknowledged} onChange={(event) => { setAcknowledged(event.target.checked); if (event.target.checked) setTermsHint(false) }} />I understand the payment and cancellation terms.</label>
+    <p className="fine"><a href="/faq" target="_blank" rel="noopener">Questions about paying or cancelling?<span className="sr-only"> (opens in a new tab)</span></a></p>
     {termsHint && !acknowledged && <p role="alert" className="error" id="terms-help">Please tick the box to say you understand the terms, then press the button again.</p>}
     {error && <p role="alert" className="error" ref={errorBox}>{error}</p>}
     <h2 className="section-title">What happens next</h2>

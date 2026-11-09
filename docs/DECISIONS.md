@@ -903,3 +903,16 @@ The page stays where the Admin needs it:
 - **Migration `20261130100000_visitors_and_wanted_times.sql`:** `visit_events` (RLS on, no browser grants), `record_visit(visit, kind, detail)` (anyone; known kinds and details only, short values, at most 300 steps a visit and 3000 rows an hour, a 'booked' step only for the caller's own booking), `wanted_times(date, length)`, `ask_for_time(date, start, length, contact)` (uses `join_waitlist`, so its limits still apply), `admin_visits(from, to)` (Admin only, up to 92 days), `admin_wanted_evening_hours` / `admin_save_wanted_evening_hours`, the `wanted_evening_hours` setting (2), and a new `plan_waitlist_notifications`.
 - **Screens:** `DayTimePicker` takes optional `loadWanted`, `onWanted`, `renderAsk`, `isAsked`, `onDayShown` (the Admin's pickers do not pass them, so they are unchanged); `WantedTime.jsx` (`AskPanel`, `NoneSuit`); `visitLog.js`; `Visitors.jsx` with `visitorsPresentation.js`; the setting on Booking rules.
 - **Tests:** `supabase/tests/visitors.test.sql` (47 checks), `waitlist.test.sql` (the cancel alert now names who wanted the time), `visitorsPresentation.test.js`, `visitLog.test.js`, `wantedTimes.test.js`, and the browser test `waitlist.spec.js` (a faded time, the request and the visit log; "None of these suit me").
+
+## ADR-096 — Client FAQ and Admin Help (2026-11-09)
+
+**Context:** Vadim wanted an FAQ "where everything possible is explained", for clients and for himself, and asked that it be kept up to date with every new feature.
+
+**Decision:**
+- **Client FAQ at `/faq`:** questions grouped under Booking, Couples and groups, Treatments, Areas and travel, Paying, Changing or cancelling, Receipts and insurance, Updates, Your account and privacy, and Booking with your AI assistant. Each question opens on its own. Linked from the first booking screen ("Questions? Read the answers"), the payment step (opens in a new tab, so the held time is not lost) and the account page.
+- **Live numbers:** how far ahead, notice, free cancellation time and the change-your-mind window come from `get_booking_rules`; area names, travel fees, congestion charges and minimum lengths come from `service_areas`. Nothing to retype when settings change. New-client booking limits are not public, so the answer stays general.
+- **Left out until Vadim gives his words:** how quickly he confirms, preparing the room, deadlines for paying later, missed appointments, refund timing, his own cancellations, day-before reminders, contact details.
+- **Admin Help at More › Help:** short "how do I…" answers grouped like the app (Calendar, Bookings, To check and Alerts, Clients, Money and receipts, Settings).
+- **Kept up to date:** AGENTS.md now says every change a client or the Admin can see updates the FAQ or Help in the same pull request.
+
+**How it was built:** `src/client/faq/` (`faqContent.js`, `FaqList.jsx`, `FaqPage.jsx`, `faq.css`), `src/admin/helpContent.js`, `src/admin/HelpPage.jsx`, route in `App.jsx`, rewrite in `vercel.json`. No migration. Tests: `faqContent.test.js`.
