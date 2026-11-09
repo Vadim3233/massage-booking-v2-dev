@@ -51,7 +51,7 @@ export default function BookingDestination({ id, close, changed, returnFocus, op
   const receiptClosed = ['cancelled', 'no_show'].includes(booking.booking_status) || booking.booking_payments?.status === 'refunded'
   return <BookingDetails booking={booking} close={close} returnFocus={returnFocus} payment={<>
     <p className="admin-next-status">{label(booking.booking_payments?.method)} · {label(booking.booking_payments?.status)}</p>
-    {error ? <p role="alert">{error}</p> : <PaymentActions booking={booking} refresh={refresh} />}
+    {error ? <p role="alert">{error}</p> : <PaymentActions booking={booking} refresh={refresh} switchMethod />}
     {!error && reminderDue(booking, new Date()) && <BookingPaymentReminder key={booking.id} booking={booking} />}
     {!error && canHaveReceipt && <ReceiptPanel key={booking.id} booking={booking} openPage={openPage} />}
     {!error && !canHaveReceipt && receiptClosed && <ReceiptNote key={booking.id} booking={booking} />}

@@ -37,8 +37,18 @@ export const paymentActions = booking => {
   if (['confirmed', 'completed'].includes(booking.booking_status) && payment?.method === 'bank_transfer' && ['awaiting_transfer', 'awaiting_verification'].includes(payment.status)) return ['receiveBank']
   return []
 }
-export const actionLabels = { verify: 'Verify payment', payLater: 'Confirm, pay later', approve: 'Approve', remove: 'Cancel unpaid booking', receive: 'Mark payment received', receiveBank: 'Mark paid' }
-const operations = { verify: 'admin_verify_bank_transfer', payLater: 'admin_confirm_pay_later', approve: 'admin_approve_cash_request', remove: 'admin_remove_pending_booking', receive: 'admin_record_payment_received', receiveBank: 'admin_record_bank_transfer_received' }
+// How a confirmed booking is paid can be changed (bank transfer to cash, or back), whether or not it has been paid yet: a client may have picked
+// the wrong one, or paid at the door. A paid booking stays paid and its receipt is corrected; a rejected or refunded payment is left alone.
+export const methodSwitch = booking => {
+  const payment = booking.booking_payments
+  if (!['confirmed', 'completed'].includes(booking.booking_status) || !payment) return null
+  if (payment.method === 'bank_transfer' && ['awaiting_transfer', 'awaiting_verification', 'paid'].includes(payment.status)) return 'toCash'
+  if (payment.method === 'cash' && ['approved', 'paid'].includes(payment.status)) return 'toBank'
+  return null
+}
+export const actionLabels = { verify: 'Verify payment', payLater: 'Confirm, pay later', approve: 'Approve', remove: 'Cancel unpaid booking', receive: 'Mark payment received', receiveBank: 'Mark paid', toCash: 'Change to cash', toBank: 'Change to bank transfer' }
+const operations = { verify: 'admin_verify_bank_transfer', payLater: 'admin_confirm_pay_later', approve: 'admin_approve_cash_request', remove: 'admin_remove_pending_booking', receive: 'admin_record_payment_received', receiveBank: 'admin_record_bank_transfer_received', toCash: 'admin_switch_payment_method', toBank: 'admin_switch_payment_method' }
+const methods = { toCash: 'cash', toBank: 'bank_transfer' }
 export function createPaymentReviewApi(client) {
   const authorized = createAdminGate(client, { signedOut: 'Admin sign-in required.', denied: 'Admin access required.' })
   return {
@@ -59,7 +69,7 @@ export function createPaymentReviewApi(client) {
     async act(action, booking, requestId) {
       if (!operations[action]) throw new Error('Action unavailable.')
       const { error } = await client.rpc(operations[action], { p_booking_id: booking.id, p_request_id: requestId,
-        p_booking_updated_at: booking.updated_at, p_payment_updated_at: booking.booking_payments.updated_at })
+        p_booking_updated_at: booking.updated_at, p_payment_updated_at: booking.booking_payments.updated_at, ...(methods[action] && { p_method: methods[action] }) })
       if (error) {
         const failure = new Error(['PT409', '40001'].includes(error.code) ? 'This booking changed before you could finish, so it has been reloaded. Please check it and try again.' : 'Could not complete the payment action. Refresh the booking before trying again.')
         failure.conflict = ['PT409', '40001'].includes(error.code)

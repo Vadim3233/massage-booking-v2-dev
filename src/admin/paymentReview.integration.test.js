@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { paymentReviewFixture } from '../../tests/paymentReviewFixture.js'
-import { createPaymentReviewApi, paymentActions } from './paymentReviewApi.js'
+import { createPaymentReviewApi, methodSwitch, paymentActions } from './paymentReviewApi.js'
 import { unwrap } from '../client/booking/bookingApi.js'
 let f, api
 beforeEach(async () => { f = await paymentReviewFixture(); api = createPaymentReviewApi(f.client) }, 30000)
@@ -53,6 +53,22 @@ describe('server-authoritative Admin payment commands', () => {
     const paid = await api.booking(b.id)
     expect(paid.booking_status).toBe('confirmed'); expect(paid.booking_payments.status).toBe('paid'); expect(paid.booking_payments.verified_by).toBe(f.user.id)
     expect(paymentActions(paid)).toEqual([])
+  })
+  it('changes how a confirmed booking is paid, before and after it is paid', async () => {
+    await f.authorize(); await f.prepare(0, 'bank_transfer', 'confirmed', 'awaiting_verification')
+    const b = await api.booking(f.bookings[0].id)
+    expect(methodSwitch(b)).toBe('toCash')
+    await api.act('toCash', b, crypto.randomUUID())
+    const cash = await api.booking(b.id)
+    expect(cash.booking_payments.method).toBe('cash'); expect(cash.booking_payments.status).toBe('approved')
+    expect(paymentActions(cash)).toEqual(['receive']); expect(methodSwitch(cash)).toBe('toBank')
+    await api.act('receive', cash, crypto.randomUUID())
+    const paid = await api.booking(b.id)
+    expect(methodSwitch(paid)).toBe('toBank')
+    await api.act('toBank', paid, crypto.randomUUID())
+    const bank = await api.booking(b.id)
+    expect(bank.booking_payments.method).toBe('bank_transfer'); expect(bank.booking_payments.status).toBe('paid')
+    await expect(api.act('toBank', paid, crypto.randomUUID())).rejects.toThrow('This booking changed')
   })
   it('lists a confirmed booking left unpaid once its appointment has happened, cash or transfer, and drops it when paid', async () => {
     await f.authorize()

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { actionLabels, needsYou, paymentActions, paymentReviewApi } from './paymentReviewApi.js'
+import { actionLabels, methodSwitch, needsYou, paymentActions, paymentReviewApi } from './paymentReviewApi.js'
 import { activeReminder, clearReminder, reminderChoices, reminderWhen, setReminder, useReminders } from './paymentReminders.js'
 import ReminderDialog from './ReminderDialog.jsx'
 import { clientName, dateLabel, money, time } from './calendarPresentation.js'
@@ -15,7 +15,13 @@ const CONSEQUENCES = {
   receive: 'Confirm that you have actually received this cash payment.',
   receiveBank: 'Check that the transfer has reached your bank. This records the payment as received.',
 }
-const SHORT = { verify: 'Verify', payLater: 'Pay later', approve: 'Approve', remove: 'Cancel', receive: 'Received', receiveBank: 'Received' }
+// Changing how it is paid: what happens depends on whether the money has already been received.
+const switchConsequence = (action, booking) => booking.booking_payments?.status === 'paid'
+  ? `It stays paid. Only the way it was paid changes, to ${action === 'toCash' ? 'cash' : 'bank transfer'}, and the receipt is corrected to match. The client is not sent a message.`
+  : action === 'toCash'
+    ? 'The client pays cash at the appointment. Mark it received once you have it. The client is not sent a message.'
+    : `The client pays by bank transfer, using the reference ${booking.booking_payments?.payment_reference || booking.booking_reference}. Mark it paid once it arrives. The client is not sent a message.`
+const SHORT = { verify: 'Verify', payLater: 'Pay later', approve: 'Approve', remove: 'Cancel', receive: 'Received', receiveBank: 'Received', toCash: 'Cash', toBank: 'Bank transfer' }
 const confirmLabel = (action, booking) => ({
   remove: 'Yes, cancel this booking',
   approve: 'Yes, approve cash',
@@ -23,6 +29,8 @@ const confirmLabel = (action, booking) => ({
   payLater: 'Yes, confirm now',
   receive: `Yes, ${money(booking.total_gbp)} cash received`,
   receiveBank: `Yes, ${money(booking.total_gbp)} has arrived`,
+  toCash: 'Yes, change to cash',
+  toBank: 'Yes, change to bank transfer',
 }[action])
 const doneMessage = (action, booking) => ({
   remove: `Booking cancelled · ${clientName(booking)}`,
@@ -31,6 +39,8 @@ const doneMessage = (action, booking) => ({
   payLater: `Confirmed, payment to come · ${clientName(booking)}`,
   receive: `Cash received · ${clientName(booking)} ${money(booking.total_gbp)}`,
   receiveBank: `Transfer received · ${clientName(booking)} ${money(booking.total_gbp)}`,
+  toCash: `Changed to cash · ${clientName(booking)}`,
+  toBank: `Changed to bank transfer · ${clientName(booking)}`,
 }[action])
 
 function Confirmation({ action, booking, cancel, confirm, busy }) {
@@ -49,7 +59,7 @@ function Confirmation({ action, booking, cancel, confirm, busy }) {
   return <dialog ref={ref} className="admin-confirm" aria-labelledby="payment-confirm-title" aria-describedby="payment-confirm-what" onCancel={event => { event.preventDefault(); event.stopPropagation(); if (!busy) cancel() }}>
     <h2 id="payment-confirm-title">{actionLabels[action]}?</h2>
     <div className="admin-confirm-summary"><strong>{clientName(booking)}</strong><span>{dateLabel(booking.date)} · {time(booking.start_minutes)}</span><b className="figure">{money(booking.total_gbp)}</b></div>
-    <p id="payment-confirm-what">{CONSEQUENCES[action]}</p>
+    <p id="payment-confirm-what">{CONSEQUENCES[action] || switchConsequence(action, booking)}</p>
     {(action === 'verify' || action === 'receiveBank') && booking.booking_reference && <p className="admin-confirm-ref">Look for the reference <strong>{booking.booking_reference}</strong> on your bank statement.</p>}
     <div className="admin-payment-buttons">
       <button className={action === 'remove' ? 'btn--danger-solid' : 'btn--primary'} disabled={busy} onClick={confirm}>{busy ? 'Saving…' : confirmLabel(action, booking)}</button>
@@ -61,6 +71,7 @@ function Confirmation({ action, booking, cancel, confirm, busy }) {
 // The one thing to do next is filled in; removing is outlined in red and kept apart from it.
 function buttonClass(action, booking) {
   if (action === 'remove') return 'btn--danger'
+  if (methodSwitch(booking) === action) return 'btn--quiet'
   const status = booking.booking_payments?.status
   if (action === 'approve' || (action === 'verify' && status === 'awaiting_verification') || (action === 'payLater' && status === 'awaiting_transfer')) return 'btn--primary'
   return ''
@@ -68,8 +79,9 @@ function buttonClass(action, booking) {
 
 // `short` shows one word on each button (Verify, Cancel) where the card around it already says whose booking it is.
 // `later` adds "Not yet" to a payment that needs the Admin: it puts the payment off until a time the Admin chooses (see paymentReminders.js).
+// `switchMethod` also offers changing how it is paid (Change to cash / Change to bank transfer), on the booking itself.
 // `onReminded` is called once that is done, so the screen can decide where focus goes when the payment has left it.
-export default function PaymentActions({ booking, refresh, only, compact = false, short = compact, later = false, onReminded }) {
+export default function PaymentActions({ booking, refresh, only, compact = false, short = compact, later = false, switchMethod = false, onReminded }) {
   const [confirmation, setConfirmation] = useState(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState(null)
@@ -95,7 +107,7 @@ export default function PaymentActions({ booking, refresh, only, compact = false
       if (error.conflict) { try { await refresh() } catch { setMessage({ error: true, text: 'The booking changed. Could not refresh its status; please retry refresh.' }) } }
     } finally { locked.current = false; setBusy(false) }
   }
-  const available = paymentActions(booking).filter(action => !only || only.includes(action))
+  const available = [...paymentActions(booking), ...(switchMethod && methodSwitch(booking) ? [methodSwitch(booking)] : [])].filter(action => !only || only.includes(action))
   const offerLater = later && needsYou(booking)
   const reminder = offerLater ? activeReminder(booking, reminders) : null
   function remind(choice) {
