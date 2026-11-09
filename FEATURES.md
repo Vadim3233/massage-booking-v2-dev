@@ -305,7 +305,7 @@ These are the things that are written for Vadim today. In a general therapist ap
 ### Add-to-calendar link in the share message
 - **What it does:** The share message has an "Add it to your calendar: <link>" line (the `{calendar}` blank). The link opens a small page on the booking site showing the date, time and address, with two buttons: **Add to iPhone, Outlook or other calendar** (a calendar file) and **Add to Google Calendar**. The page is read fresh each time, so a moved booking gives the new time and a cancelled one says it was cancelled. The link uses the booking's long random id, so nobody can guess another client's link.
 - **Why:** Clients get the message on WhatsApp and want the appointment in their phone's calendar with one tap.
-- **Built in:** PR #<this PR> (`20261203100000_share_message_calendar.sql`, only needed for using `{calendar}` in custom wording; the standard message works without it). Server: `api/calendar.js`, `server/calendarLink.js`, short address `/calendar/<id>` in `vercel.json`.
+- **Built in:** PR #115 (`20261203100000_share_message_calendar.sql`, only needed for using `{calendar}` in custom wording; the standard message works without it). Server: `api/calendar.js`, `server/calendarLink.js`, short address `/calendar/<id>` in `vercel.json`.
 - **For a general app:** the event title ("Massage with Vadim"), the time zone (London), the site address.
 
 ---
