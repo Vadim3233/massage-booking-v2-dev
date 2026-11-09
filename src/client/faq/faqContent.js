@@ -78,7 +78,7 @@ export function clientFaq({ rules, areas = [] }) {
       { q: 'Can I get a receipt for my health insurance?', a: ['Yes. Once your appointment is paid, a PDF receipt is ready on your booking page. It shows the treatment, the date, what you paid (with travel and congestion as separate lines), and my details: Vadim Susarin, Level 5 Soft Tissue Therapist, member of the Institute for Soft Tissue Therapists (ISRM), membership number 9555.'] },
     ] },
     { title: 'Updates', items: [
-      { q: 'How will you keep me updated?', a: ['By email, always. You can also turn on Telegram messages when you book: I\'ll message you when your appointment is confirmed, moved or cancelled. Send /stop in the chat to turn them off.', 'You can also add the appointment to your phone\'s calendar with one tap.'] },
+      { q: 'How will you keep me updated?', a: ['By email, always. You can also turn on Telegram messages when you book: I\'ll message you when your appointment is confirmed, moved or cancelled. Send /stop in the chat to turn them off.', 'You can also add the appointment to your phone\'s calendar with one tap, from your booking page or from the "Add it to your calendar" link in my message. It works with iPhone, Google Calendar, Outlook and most others.'] },
     ] },
     { title: 'Your account and privacy', items: [
       { q: 'I forgot my password.', a: ['Press "Forgot password" on the sign-in page and I\'ll email you a link to choose a new one. If it doesn\'t arrive within a minute, please look in your junk folder too.'] },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canShare, cancellationWords, fillShareMessage, paymentWords, combinedReminderText, dueForClient, owedTotal, sessionLength, reminderDue, reminderText, SHARE_BLANKS, shareMessageProblem, shareText, shareValues, STANDARD_SHARE_MESSAGE, whatsappShareLink } from './shareBooking.js'
+import { calendarLink, canShare, cancellationWords, fillShareMessage, paymentWords, combinedReminderText, dueForClient, owedTotal, sessionLength, reminderDue, reminderText, SHARE_BLANKS, shareMessageProblem, shareText, shareValues, STANDARD_SHARE_MESSAGE, whatsappShareLink } from './shareBooking.js'
 import { createShareMessageApi } from './shareMessageApi.js'
 
 const bank = { configured: true, accountName: 'V Massage', bankName: 'WISE', sortCode: '00-00-00', accountNumber: '00000000', note: '' }
@@ -97,6 +97,23 @@ describe('reading and saving the share message', () => {
     await expect(createShareMessageApi(settings(null, { message: 'Only the blanks listed can be used, each in curly brackets' })).save('{x}')).rejects.toThrow('Only the blanks listed can be used, each in curly brackets.')
     await expect(createShareMessageApi(settings(null, { code: 'PGRST202', message: 'Could not find the function public.admin_save_share_message(p_text)' })).save('Hi')).rejects.toThrow('Saving your own wording is not switched on yet.')
     await expect(createShareMessageApi(settings(null, { message: 'permission denied for table secrets' })).save('Hi')).rejects.toThrow('Could not save. Please check your connection and try again.')
+  })
+})
+
+describe('the add-to-calendar link', () => {
+  const origin = 'https://book.example.test'
+  it('links to the booking\'s calendar page on this site, after the cancellation line in the standard message', () => {
+    expect(calendarLink(booking(), origin)).toBe('https://book.example.test/calendar/0b1c2d3e-0000-4000-8000-000000000001')
+    const lines = shareText(booking(), bank, undefined, null, origin).split('\n')
+    expect(lines).toContain('Add it to your calendar: https://book.example.test/calendar/0b1c2d3e-0000-4000-8000-000000000001')
+    expect(lines.indexOf('Add it to your calendar: https://book.example.test/calendar/0b1c2d3e-0000-4000-8000-000000000001')).toBeLessThan(lines.indexOf('Warm wishes,'))
+  })
+  it('leaves the whole line out when there is no link to give, and can be used in the Admin\'s own wording', () => {
+    expect(calendarLink(booking({ id: undefined }), origin)).toBe('')
+    expect(shareText(booking(), bank, undefined, null, '')).not.toContain('calendar')
+    expect(SHARE_BLANKS).toContain('calendar')
+    expect(shareMessageProblem('Save the date: {calendar}')).toBe('')
+    expect(shareText(booking(), bank, 'See you!\nCalendar: {calendar}', null, origin)).toBe('See you!\nCalendar: https://book.example.test/calendar/0b1c2d3e-0000-4000-8000-000000000001')
   })
 })
 

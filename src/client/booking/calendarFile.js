@@ -59,3 +59,17 @@ export function buildCalendarFile(booking, now = new Date(), origin = '') {
 }
 
 export const calendarHref = text => `data:text/calendar;charset=utf-8,${encodeURIComponent(text)}`
+
+// The same appointment as a "add to Google Calendar" link, which opens Google Calendar with the event filled in for the client to save.
+export function googleCalendarLink(booking, origin = '') {
+  const manage = origin ? `${origin}/account?booking=${booking.id}` : ''
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: 'Massage with Vadim',
+    dates: `${clock(booking.date, booking.start_minutes)}/${clock(booking.date, booking.start_minutes + booking.treatment_duration_minutes)}`,
+    ctz: 'Europe/London',
+    details: `Booking reference: ${booking.booking_reference}${manage ? `\nTo change or cancel: ${manage}` : ''}`,
+  })
+  if (booking.address_snapshot) params.set('location', booking.address_snapshot)
+  return `https://calendar.google.com/calendar/render?${params}`
+}
