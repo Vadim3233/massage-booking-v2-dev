@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Icon from '../../../ui/icons.jsx'
 import { AskPanel, NoneSuit } from './WantedTime.jsx'
 import Welcome, { HowItWorks } from './Welcome.jsx'
@@ -11,11 +12,35 @@ const surcharges = area => [
   Number(area.congestion_fee_gbp) > 0 && `Congestion +${money(area.congestion_fee_gbp)}`,
 ].filter(Boolean)
 
+// On a phone the welcome can fill the whole screen, so the areas start out of sight. While the first area is still hidden below the bottom
+// of the screen, a small pill with a gently bouncing arrow sits there; a tap glides down to the areas. It goes away once the first area is
+// properly in view (and does not come back when scrolling up past it). No bounce when the phone asks for less motion.
+function ScrollHint({ target, watch }) {
+  const [below, setBelow] = useState(false)
+  useEffect(() => {
+    const areas = watch.current
+    if (!areas || typeof IntersectionObserver === 'undefined') return undefined
+    const observer = new IntersectionObserver(([entry]) => setBelow(!entry.isIntersecting && entry.boundingClientRect.top > 0), { rootMargin: '0px 0px -72px 0px' })
+    observer.observe(areas)
+    return () => observer.disconnect()
+  }, [watch])
+  if (!below) return null
+  const go = () => {
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    target.current?.scrollIntoView({ behavior: still ? 'auto' : 'smooth', block: 'start' })
+  }
+  // Drawn straight into the page body: the step's slide-in animation would otherwise pin it to the step instead of the screen.
+  return createPortal(<button type="button" className="scroll-hint" onClick={go}>Choose your area<Icon name="down" size={18} className="scroll-hint-arrow" /></button>, document.body)
+}
+
 export function AreaStep({ catalogue, choose, welcome, rules, usual, bookUsual }) {
+  const areasHeading = useRef(null)
+  const areaList = useRef(null)
   return <>
     <Welcome welcome={welcome} rules={rules} usual={usual} bookUsual={bookUsual} />
-    <h2 className="section-title">Choose your area</h2>
-    <div className="tiles tiles--areas">{catalogue.areas.map((area) => <button className="tile" key={area.id} onClick={() => choose(area.id)}>
+    <h2 className="section-title" ref={areasHeading}>Choose your area</h2>
+    {catalogue.areas.length > 0 && <ScrollHint target={areasHeading} watch={areaList} />}
+    <div className="tiles tiles--areas" ref={areaList}>{catalogue.areas.map((area) => <button className="tile" key={area.id} onClick={() => choose(area.id)}>
       <strong className="tile-title">{area.name}</strong>
       {surcharges(area).map(note => <span className="tile-note" key={note}>{note}</span>)}
     </button>)}</div>

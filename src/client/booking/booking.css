@@ -513,3 +513,13 @@
 .trip-pill { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; width: fit-content; margin: 6px 0 14px; padding: 8px 14px; border-radius: var(--radius-pill); background: var(--primary-soft); color: var(--primary-strong); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .trip-pill > * + *::before { content: '·'; margin-right: 10px; color: var(--primary); }
 .trip-pill b { font-family: var(--font-display); font-size: 16px; }
+
+/* The "Choose your area" hint: a navy pill at the bottom of the screen while the areas are still out of sight, with a slow, soft bounce on the arrow. */
+.section-title { scroll-margin-top: 16px; }
+.scroll-hint { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 5; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px 0 18px; border: 0; border-radius: var(--radius-pill); background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow-2); font: 600 15px/1.2 var(--font-ui); cursor: pointer; transform: translateX(-50%); animation: scroll-hint-in var(--dur) var(--ease) both; }
+.scroll-hint:not(:disabled):hover { background: var(--primary-strong); }
+.scroll-hint:focus-visible { outline-color: var(--sand-chip); }
+.scroll-hint-arrow { color: var(--sand-chip); animation: scroll-hint-bounce 1.8s ease-in-out infinite; }
+@keyframes scroll-hint-bounce { 0%, 55%, 100% { transform: translateY(0); } 25% { transform: translateY(4px); } 40% { transform: translateY(1px); } }
+@keyframes scroll-hint-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .scroll-hint, .scroll-hint-arrow { animation: none; } }
