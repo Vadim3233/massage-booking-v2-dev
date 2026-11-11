@@ -1,6 +1,6 @@
 # VadMassage booking app: feature catalogue
 
-Last updated: 9 November 2026 (up to the add-to-calendar link in the share message).
+Last updated: 11 November 2026 (up to the client's first name in the share message).
 
 This is a plain-English list of everything the app does today, grouped by area. Each entry says what the feature does, why it was built, where it was built (the pull request, or "PR", and any database change, called a "migration"), and what would need to become a **setting** if the same feature were offered to other therapists in a general app.
 
@@ -313,6 +313,12 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **Why:** Clients get the message on WhatsApp and want the appointment in their phone's calendar with one tap.
 - **Built in:** PR #115 (`20261203100000_share_message_calendar.sql`, only needed for using `{calendar}` in custom wording; the standard message works without it). Server: `api/calendar.js`, `server/calendarLink.js`, short address `/calendar/<id>` in `vercel.json`.
 - **For a general app:** the event title ("Massage with Vadim"), the time zone (London), the site address.
+
+### Client's first name in the share message
+- **What it does:** The share message greets the client by first name: "Hi Sarah! Thank you so much for booking with me...". If no first name is saved it says "Hi! Thank you...", never "Hi !". Custom wording (More › Share message) can put the `{name}` blank anywhere.
+- **Why:** A personal greeting feels warmer than a plain "Hi!".
+- **Built in:** PR #(this one) (`20261205100000_share_message_name.sql`, only needed for using `{name}` in custom wording; the standard message works without it).
+- **For a general app:** nothing Vadim-specific; first name only (not the full name), by choice.
 
 ---
 
