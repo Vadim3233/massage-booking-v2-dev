@@ -793,3 +793,7 @@
 .admin-details .admin-details-bar .admin-share-button:not(:disabled):hover { background: var(--on-dark-wash-strong); }
 .admin-details-bar :focus-visible { outline-color: var(--on-primary); }
 .admin-details .admin-share-menu { color: var(--ink); }
+
+/* More › Family alerts: the linked chats, one per line with its Switch off button. */
+.admin-family-chats { list-style: none; padding: 0; margin: 0 0 1rem; display: grid; gap: .5rem; }
+.admin-family-chats li { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }

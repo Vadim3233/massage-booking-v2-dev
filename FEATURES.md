@@ -296,6 +296,12 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **Built in:** PR #36 (`20261028100000_client_telegram.sql`, ADR-049), PR #47, PR #78 (`20261113100000_admin_telegram_link.sql`, ADR-078).
 - **For a general app:** the therapist's own bot.
 
+### Family alerts on Telegram (for Vadim's wife)
+- **What it does:** Vadim's wife gets a short Telegram message when a booking is confirmed, moved or cancelled: the day, the times and when he will likely be home that day (end of the day's last booking plus its travel time). Unconfirmed requests and past bookings say nothing. The messages are in Spanish, with emojis, and each ends with one of 100 funny love lines (Vadim's own nine, plus ones he approved, 20 of them Andalusian for Seville and Olivares), in a mixed order: every line once before any repeats. They never include the client's name, address, phone or price. She connects from a one-time link Vadim makes in More › Family alerts and sends her on WhatsApp; she presses Start in Telegram. /stop in the chat, or Switch off on the page, ends it. More than one person can be connected.
+- **Why:** She wants to know when he is working and when he will be home, without seeing clients' private details.
+- **Built in:** PR #118 (`20261206100000_family_telegram_alerts.sql`). Uses the clients' Telegram bot, so nothing new to set up. Server: `server/familyAlerts.js` (sent by the every-minute sender), `server/telegramWebhook.js` (family links start with `family_`). Page: `src/admin/SettingsFamilyAlerts.jsx`.
+- **For a general app:** the language, the love lines (the `family_love_lines` table), how much detail to show, and who the alerts are for (partner, assistant, receptionist).
+
 ### Sign-off "Warm wishes, Vadim"
 - **What it does:** Every client message ends "Warm wishes, Vadim".
 - **Why:** Vadim's chosen voice, with his full name.

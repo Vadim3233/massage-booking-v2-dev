@@ -17,6 +17,17 @@ export const MESSAGES = {
   help: 'I only send updates about your appointment. To change or cancel it, use the link in your email, or contact Vadim.',
 }
 
+// A family member (the owner's wife) linking her chat for family alerts, from a link the Admin made in More › Family alerts. Her messages are
+// in Spanish, like the alerts themselves. A family code starts with "family_", which a client's code never does.
+export const FAMILY_MESSAGES = {
+  linked: '¡Conectada! 💛 Te avisaré aquí cuando tenga una reserva nueva, o cuando una cambie o se cancele, y a qué hora estaré en casa. 🏠 Escribe /stop cuando quieras dejar de recibirlos.',
+  used: 'Ese enlace ya se ha usado. Pídele a Vadim uno nuevo. 💌',
+  expired: 'Ese enlace ha caducado. Pídele a Vadim uno nuevo. 💌',
+  invalid: 'No he podido usar ese enlace. Pídele a Vadim uno nuevo. 💌',
+  stopped: 'Hecho. Ya no te enviaré más avisos aquí. 👋',
+}
+export const isFamilyCode = code => typeof code === 'string' && code.startsWith('family_')
+
 // Whose appointments the chat is now connected to, so that someone who was sent a link that is not theirs sees a name that is not theirs and can
 // answer /stop. The name is the client's first name, from the database (kept short and on one line here too); without one the plain answer is used.
 export function linkedMessage(firstName) {
@@ -71,6 +82,13 @@ export function createWebhookHandler({ client, token, fetchImpl = fetch }) {
     // Only a person talking to the bot in a private chat; groups, channels and edits are ignored.
     if (!message || message.chat?.type !== 'private' || !Number.isSafeInteger(chat) || typeof message.text !== 'string') return { handled: false }
     const command = parseCommand(message.text)
+    if (command?.name === 'start' && isFamilyCode(command.code)) {
+      const { data, error } = await client.rpc('link_family_telegram', { p_token: command.code, p_chat_id: chat })
+      if (error) throw new Error('Could not link the chat')
+      const status = Object.hasOwn(FAMILY_MESSAGES, data?.status) ? data.status : 'invalid'
+      await reply(chat, FAMILY_MESSAGES[status])
+      return { handled: true, status: `family_${status}` }
+    }
     if (command?.name === 'start' && command.code) {
       const { data, error } = await client.rpc('link_client_telegram', { p_token: command.code, p_chat_id: chat })
       if (error) throw new Error('Could not link the chat')
@@ -80,8 +98,12 @@ export function createWebhookHandler({ client, token, fetchImpl = fetch }) {
     }
     if (command?.name === 'start') { await reply(chat, MESSAGES.hello); return { handled: true, status: 'hello' } }
     if (command?.name === 'stop') {
+      // A chat can have family alerts as well as client updates: /stop ends both. Until the family alerts' database update is applied, its
+      // stop is simply not there, and only the client updates are stopped, as before.
+      const family = await client.rpc('stop_family_telegram', { p_chat_id: chat }).then(({ data, error }) => (error ? 0 : Number(data) || 0), () => 0)
       const { data, error } = await client.rpc('stop_client_telegram', { p_chat_id: chat })
       if (error) throw new Error('Could not stop the chat')
+      if (family > 0 && !(data > 0)) { await reply(chat, FAMILY_MESSAGES.stopped); return { handled: true, status: 'family_stopped' } }
       await reply(chat, data > 0 ? MESSAGES.stopped : MESSAGES.notStarted)
       return { handled: true, status: data > 0 ? 'stopped' : 'notStarted' }
     }

@@ -1,16 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import { handle } from '../api/telegram-webhook.js'
-import { CALL_LIMIT_MS, createWebhookHandler, linkedMessage, MESSAGES, parseCommand, readTelegramConfig, secretMatches } from './telegramWebhook.js'
+import { CALL_LIMIT_MS, createWebhookHandler, FAMILY_MESSAGES, linkedMessage, MESSAGES, parseCommand, readTelegramConfig, secretMatches } from './telegramWebhook.js'
 
 const TOKEN = '987:CLIENT-BOT-SECRET'
 const env = { TELEGRAM_CLIENT_BOT_TOKEN: TOKEN, TELEGRAM_WEBHOOK_SECRET: 'a-long-secret-the-owner-made-up', SUPABASE_URL: 'http://localhost', SUPABASE_SERVICE_ROLE_KEY: 'service-key' }
 const privateMessage = (text, chat = 555) => ({ update_id: 1, message: { message_id: 1, chat: { id: chat, type: 'private' }, text } })
 
 // A database that answers what it is told to, and a Telegram that records what it is asked to send.
-function fakes({ link = { status: 'linked' }, stopped = 1, rpcError = null, failReply = false } = {}) {
+function fakes({ link = { status: 'linked' }, familyLink = { status: 'linked' }, stopped = 1, familyStopped = 0, familyMissing = false, rpcError = null, failReply = false } = {}) {
   const rpcs = []
   const sent = []
-  const client = { async rpc(name, args) { rpcs.push([name, args]); if (rpcError) return { data: null, error: rpcError }; return { data: name === 'link_client_telegram' ? link : stopped, error: null } } }
+  const answers = { link_client_telegram: link, link_family_telegram: familyLink, stop_client_telegram: stopped, stop_family_telegram: familyStopped }
+  const client = { async rpc(name, args) {
+    rpcs.push([name, args])
+    if (rpcError) return { data: null, error: rpcError }
+    if (familyMissing && name === 'stop_family_telegram') return { data: null, error: { code: 'PGRST202', message: 'not found' } }
+    return { data: answers[name], error: null }
+  } }
   const fetchImpl = async (url, init) => { if (failReply) throw new Error(`network down ${url}`); sent.push({ url, body: JSON.parse(init.body), signal: init.signal }); return { ok: true, status: 200 } }
   return { client, fetchImpl, rpcs, sent }
 }
@@ -126,10 +132,31 @@ describe('what the bot does with a message', () => {
   })
   it('stops the updates on /stop, and says so only if there was something to stop', async () => {
     const stopped = await run('/stop', { stopped: 2 })
-    expect(stopped.rpcs).toEqual([['stop_client_telegram', { p_chat_id: 555 }]])
+    expect(stopped.rpcs).toEqual([['stop_family_telegram', { p_chat_id: 555 }], ['stop_client_telegram', { p_chat_id: 555 }]])
     expect(stopped.sent[0].body.text).toBe(MESSAGES.stopped)
     const none = await run('/stop', { stopped: 0 })
     expect(none.sent[0].body.text).toBe(MESSAGES.notStarted)
+  })
+  it('links a family chat from a family code, and answers in Spanish', async () => {
+    const code = 'family_0123456789abcdef0123456789abcdef'
+    const { rpcs, sent, result } = await run(`/start ${code}`)
+    expect(rpcs).toEqual([['link_family_telegram', { p_token: code, p_chat_id: 555 }]])
+    expect(sent[0].body.text).toBe(FAMILY_MESSAGES.linked)
+    expect(result.status).toBe('family_linked')
+    for (const status of ['used', 'expired', 'invalid']) {
+      const other = await run(`/start ${code}`, { familyLink: { status } })
+      expect(other.sent[0].body.text).toBe(FAMILY_MESSAGES[status])
+    }
+    const odd = await run(`/start ${code}`, { familyLink: { status: 'surprise' } })
+    expect(odd.sent[0].body.text).toBe(FAMILY_MESSAGES.invalid)
+  })
+  it('stops family alerts on /stop too, and still stops client updates before the family update is applied', async () => {
+    const family = await run('/stop', { stopped: 0, familyStopped: 1 })
+    expect(family.sent[0].body.text).toBe(FAMILY_MESSAGES.stopped)
+    const both = await run('/stop', { stopped: 1, familyStopped: 1 })
+    expect(both.sent[0].body.text).toBe(MESSAGES.stopped)
+    const before = await run('/stop', { stopped: 1, familyMissing: true })
+    expect(before.sent[0].body.text).toBe(MESSAGES.stopped)
   })
   it('answers anything else with where to change or cancel, and does nothing else', async () => {
     const { rpcs, sent, result } = await run('Can I move my booking to Friday?')
@@ -208,7 +235,7 @@ describe('the endpoint', () => {
   it('reads a body that arrived as text, and answers ok to one that is nothing to read', async () => {
     const asText = await run(request({ body: JSON.stringify(privateMessage('/stop')) }))
     expect(asText.response.out.statusCode).toBe(200)
-    expect(asText.rpcs).toEqual([['stop_client_telegram', { p_chat_id: 555 }]])
+    expect(asText.rpcs).toEqual([['stop_family_telegram', { p_chat_id: 555 }], ['stop_client_telegram', { p_chat_id: 555 }]])
     for (const body of ['{not json', '', undefined, null, 42]) {
       const nothing = await run(request({ body }))
       expect(nothing.response.out.statusCode).toBe(200)
