@@ -317,7 +317,7 @@ These are the things that are written for Vadim today. In a general therapist ap
 ### Client's first name in the share message
 - **What it does:** The share message greets the client by first name: "Hi Sarah! Thank you so much for booking with me...". If no first name is saved it says "Hi! Thank you...", never "Hi !". Custom wording (More › Share message) can put the `{name}` blank anywhere.
 - **Why:** A personal greeting feels warmer than a plain "Hi!".
-- **Built in:** PR #(this one) (`20261205100000_share_message_name.sql`, only needed for using `{name}` in custom wording; the standard message works without it).
+- **Built in:** PR #117 (`20261205100000_share_message_name.sql`, only needed for using `{name}` in custom wording; the standard message works without it).
 - **For a general app:** nothing Vadim-specific; first name only (not the full name), by choice.
 
 ---
