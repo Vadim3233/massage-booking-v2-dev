@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import { createDispatcher, readConfig } from '../server/notifications.js'
+import { createFamilySender } from '../server/familyAlerts.js'
 import { calendarConfigured, createCalendarSync, readCalendarConfig } from '../server/calendarSync.js'
 
 function authorised(header, secret) {
@@ -43,7 +44,10 @@ export async function handle(request, response, { env = process.env, createServi
     const calendar = calendarConfigured(calendarConfig)
       ? createCalendarSync({ client, config: calendarConfig, fetchImpl }).run().catch(() => ({ failed: true }))
       : null
-    const summary = { ...(await sendAll(createDispatcher({ client, config: readConfig(env), fetchImpl }))), repeats, reminders, nextPayments, ...(calendar ? { calendar: await calendar } : {}) }
+    const config = readConfig(env)
+    const summary = { ...(await sendAll(createDispatcher({ client, config, fetchImpl }))), repeats, reminders, nextPayments, ...(calendar ? { calendar: await calendar } : {}) }
+    // The family alerts go out with the clients' bot, once it is set up. A problem with them never stops the rest.
+    if (config.telegramClient.token) summary.family = await createFamilySender({ client, token: config.telegramClient.token, fetchImpl }).run().catch(() => ({ failed: true }))
     response.statusCode = 200
     response.setHeader('content-type', 'application/json')
     response.end(JSON.stringify(summary))
