@@ -21,7 +21,9 @@ export function paymentLine(row, { upcoming = false, today = '' } = {}) {
     if (row.payment_status === 'paid' && Number(row.refund_due_gbp) > 0) add(`Refund of ${money(row.refund_due_gbp)} on its way`, 'due')
     else if (row.payment_status === 'refunded') add('Refunded')
   } else if (total) {
-    if (row.payment_status === 'paid') add(`${total} · Paid`, 'ok')
+    // Paid, then made longer: what is still to come in shows until Vadim has it.
+    if (row.payment_status === 'paid' && Number(row.balance_due_gbp) > 0) add(`${total} · ${money(row.balance_due_gbp)} still to pay`, 'due')
+    else if (row.payment_status === 'paid') add(`${total} · Paid`, 'ok')
     else if (row.payment_status === 'approved' && upcoming) add(`${total} · Pay in cash at your appointment`, 'due')
     else if (row.payment_status === 'approved' || row.payment_status === 'awaiting_approval') add(`${total} · Cash`)
     else if (row.payment_status === 'awaiting_transfer' && upcoming && row.pay_after_date && row.pay_after_date >= today) add(`${total} · Pay after your ${shortDay(row.pay_after_date)} session`)

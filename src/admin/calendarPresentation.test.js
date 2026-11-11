@@ -92,6 +92,7 @@ describe('how a booking is drawn', () => {
   it('draws a booking that is going ahead as two pills, the appointment and its money, which move separately', () => {
     expect(bookingState(booked('confirmed', 'awaiting_transfer')).pills).toEqual([{ text: 'Confirmed', chip: 'ok' }, { text: 'Payment awaited', chip: 'wait' }])
     expect(bookingState(booked('confirmed', 'paid')).pills).toEqual([{ text: 'Confirmed', chip: 'ok' }, { text: 'Paid', chip: 'ok' }])
+    expect(bookingState({ ...booked('confirmed', 'paid'), balance_due_gbp: '30.00' }).pills[1]).toEqual({ text: '£30.00 still to pay', chip: 'wait' })
     expect(bookingState(booked('confirmed', 'awaiting_verification')).pills).toEqual([{ text: 'Confirmed', chip: 'ok' }, { text: 'Transfer to check', chip: 'needs' }])
     expect(bookingState(booked('awaiting_transfer', 'awaiting_transfer')).pills).toEqual([{ text: 'Not confirmed yet', chip: 'needs' }, { text: 'Payment awaited', chip: 'wait' }])
     expect(bookingState(booked('completed', 'paid')).pills).toEqual([{ text: 'Completed', chip: 'done' }, { text: 'Paid', chip: 'ok' }])

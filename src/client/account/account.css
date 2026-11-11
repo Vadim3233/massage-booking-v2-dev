@@ -12,3 +12,11 @@
 .booking-shell .account-back { margin: 0 0 0 -10px; padding-inline: 8px 14px; }
 .account-receipt { margin: 16px 0; }
 .account-receipt p { margin: 0 0 12px; }
+
+/* Changing who is coming, treatments and lengths (ChangePanel.jsx). */
+.account-change .account-person { display: grid; gap: 10px; margin: 12px 0; padding: 12px 14px; border: 1px solid var(--hairline); border-radius: 12px; }
+.account-change .account-person label { display: grid; gap: 4px; }
+.account-change .account-person > .btn--quiet { justify-self: start; }
+.account-change-total { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.account-change h3 { margin: 20px 0 8px; }
+.account-change .account-note p { margin: 4px 0; }

@@ -6,10 +6,16 @@ import { toast } from '../ui/toast.js'
 import { cancelOutcome, REFUND_HINT } from './cancelOutcome.js'
 import DayTimePicker from '../client/booking/components/DayTimePicker.jsx'
 import AllTimes from './newBooking/AllTimes.jsx'
+import EditBooking from './EditBooking.jsx'
 
-const ACTION_STYLE = { complete: 'btn--primary', feeReceived: 'btn--primary', refund: 'btn--primary', cancel: 'btn--danger', feeWaive: 'btn--quiet', noShow: '', reschedule: '' }
+const ACTION_STYLE = { complete: 'btn--primary', feeReceived: 'btn--primary', refund: 'btn--primary', balance: 'btn--primary', cancel: 'btn--danger', feeWaive: 'btn--quiet', noShow: '', edit: '', reschedule: '' }
 
 const WHO = [['client', 'The client asked'], ['admin', 'It is my own decision']]
+// Some explanations depend on the booking: a refund after a cancellation, or after a price went down on a booking going ahead.
+const explanationFor = (kind, booking) => kind === 'refund' && booking.booking_status !== 'cancelled'
+  ? `Confirm that you have sent ${money(booking.refund_due_gbp)} back. The booking stays paid at its new price of ${money(booking.total_gbp)}.`
+  : kind === 'balance' ? `Confirm that the extra ${money(booking.balance_due_gbp)} has been paid. The booking is then fully paid at ${money(booking.total_gbp)}.`
+    : explanations[kind]
 const explanations = {
   complete: 'Mark this appointment as completed.',
   noShow: 'The client did not attend. The full price is recorded as a late fee unless you change it.',
@@ -123,7 +129,7 @@ export function ActionDialog({ kind, booking, api, close, done }) {
     <form onSubmit={submit}>
       <h2 id="booking-action-title">{lifecycleLabels[kind]}?</h2>
       <div className="admin-confirm-summary"><strong>{clientName(booking)}</strong><span>{dateLabel(booking.date)} · {time(booking.start_minutes)}</span><b className="figure">{money(booking.total_gbp)}</b></div>
-      {explanations[kind] && <p>{explanations[kind]}</p>}
+      {explanationFor(kind, booking) && <p>{explanationFor(kind, booking)}</p>}
 
       {(kind === 'cancel' || kind === 'reschedule') && <Who value={initiatedBy} onChange={changeWho} disabled={busy} />}
       {kind === 'reschedule' && <>
@@ -196,11 +202,13 @@ export default function BookingActions({ booking, refresh, api = lifecycleApi })
   const owed = []
   if (Number(booking.late_fee_due_gbp) > 0 || booking.late_fee_status === 'waived') owed.push(`Late fee: ${label(booking.late_fee_status)}${Number(booking.late_fee_due_gbp) > 0 ? ` · ${money(booking.late_fee_due_gbp)}` : ''}`)
   if (Number(booking.refund_due_gbp) > 0) owed.push(`Refund due: ${money(booking.refund_due_gbp)}`)
+  if (Number(booking.balance_due_gbp) > 0) owed.push(`Still to pay: ${money(booking.balance_due_gbp)}`)
   return <div className="admin-booking-actions">
     {owed.length > 0 && <ul role="list" className="admin-owed">{owed.map(line => <li key={line}>{line}</li>)}</ul>}
     {actions.length > 0 && <div className="admin-payment-buttons">{actions.map(action => <button key={action} className={ACTION_STYLE[action]} onClick={() => { setMessage(null); setKind(action) }}>{lifecycleLabels[action]}</button>)}</div>}
     {message && <p role={message.error ? 'alert' : 'status'}>{message.text}</p>}
-    {kind && <ActionDialog key={kind} kind={kind} booking={booking} api={api} close={() => setKind(null)} done={done} />}
+    {kind === 'edit' && <EditBooking booking={booking} close={() => setKind(null)} done={done} times={api} />}
+    {kind && kind !== 'edit' && <ActionDialog key={kind} kind={kind} booking={booking} api={api} close={() => setKind(null)} done={done} />}
     <History booking={booking} api={api} />
   </div>
 }

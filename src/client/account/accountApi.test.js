@@ -20,6 +20,24 @@ describe('what a client is told when something goes wrong', () => {
   })
 })
 
+describe('changing who is coming or the length', () => {
+  it('shows the sentences written for clients, with the area and the minimum in them', () => {
+    expect(friendlyError({ code: '22023', message: 'In Central London the minimum booking is 1.5 hours in total. Please contact Vadim to make it shorter.' }).message).toContain('Central London')
+    expect(friendlyError({ code: 'PT409', message: 'The price has changed. Please check it and confirm again.' })).toMatchObject({ refresh: true })
+  })
+  it('sends the people, the time and the price the client was shown, signed in or from the email link', async () => {
+    const calls = []
+    const client = { rpc: async (name, args) => { calls.push([name, args]); return { data: [], error: null } } }
+    const people = [{ id: 's1', service_id: 'swed', duration_minutes: 60, recipient_name: '' }]
+    await createAccountApi(client).change('b1', 'r1', people, '2026-12-01', 600, 85)
+    await createAccountApi(client, { bookingId: 'b1', key: 'k' }).change('b1', 'r2', people, '2026-12-01', 600, 85)
+    expect(calls[0]).toEqual(['change_my_booking', { p_booking_id: 'b1', p_request_id: 'r1', p_sessions: [{ id: 's1', service_id: 'swed', duration_minutes: 60, recipient_name: null }],
+      p_new_date: '2026-12-01', p_new_start_minutes: 600, p_acknowledged_total: 85 }])
+    expect(calls[1][0]).toBe('change_by_key')
+    expect(calls[1][1]).toMatchObject({ p_booking_id: 'b1', p_key: 'k', p_request_id: 'r2', p_acknowledged_total: 85 })
+  })
+})
+
 describe('what someone is told when a link or an account does not match the booking', () => {
   it('says one plain thing for a link that does not work', () => {
     expect(friendlyError({ code: '42501', message: 'This link is not valid or has expired. Please contact Vad.' }).message).toBe('This link is not valid or has expired. Please contact Vad.')
