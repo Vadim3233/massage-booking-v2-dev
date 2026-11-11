@@ -109,7 +109,10 @@ function pillsOf(booking) {
   const later = Boolean(booking.pay_after_booking_id)
   const waiting = AREA_PILL[booking.area_check] || 'Not confirmed yet'
   const appointment = status === 'completed' ? { text: 'Completed', chip: 'done' } : status === 'confirmed' ? { text: 'Confirmed', chip: 'ok' } : { text: waiting, chip: 'needs' }
-  const payment = later && booking.booking_payments?.status === 'awaiting_transfer' ? { text: 'Paid after earlier session', chip: 'wait' } : PAYMENT_PILL[booking.booking_payments?.status]
+  // Paid, then made longer (Edit booking): what is still to come in shows until "Mark extra received".
+  const balance = Number(booking.balance_due_gbp) || 0
+  const payment = later && booking.booking_payments?.status === 'awaiting_transfer' ? { text: 'Paid after earlier session', chip: 'wait' }
+    : balance > 0 && booking.booking_payments?.status === 'paid' ? { text: `${money(balance)} still to pay`, chip: 'wait' } : PAYMENT_PILL[booking.booking_payments?.status]
   return [appointment, payment || { text: 'Payment not recorded', chip: 'wait' }]
 }
 function stateOf(booking) {

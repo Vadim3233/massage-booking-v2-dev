@@ -12,6 +12,7 @@ import TelegramBox from '../booking/components/TelegramBox.jsx'
 import { accountApi, createAccountApi, LINK_INVALID } from './accountApi.js'
 import { cancelledOn } from './cancelledOn.js'
 import { paymentLine } from './paymentLine.js'
+import ChangePanel from './ChangePanel.jsx'
 import { shortDay } from '../booking/payAfter.js'
 import { downloadReceiptPdf } from '../../lib/receiptPdf.js'
 import { useBookingRules } from '../bookingRules.js'
@@ -203,13 +204,20 @@ function Manage({ id, rules, close, changed, api, linked = false }) {
       <ReceiptDownload id={id} api={api} />
       {owes && <p className="account-note account-note--fee">A late fee of {money(booking.late_fee_due_gbp)} is due for this appointment. I will be in touch about it.</p>}
       {booking.booking_status === 'cancelled' && Number(booking.refund_due_gbp) > 0 && <p className="account-note">A refund of {money(booking.refund_due_gbp)} is due to you. I'll send it soon.</p>}
+      {/* After a change to the booking: money back on its way, or a little more to pay. */}
+      {booking.booking_status !== 'cancelled' && Number(booking.refund_due_gbp) > 0 && booking.booking_payments?.status === 'paid' && <p className="account-note">After your change, {money(booking.refund_due_gbp)} is on its way back to you.</p>}
+      {Number(booking.balance_due_gbp) > 0 && booking.booking_payments?.status === 'paid' && <p className="account-note account-note--fee">{booking.booking_payments.method === 'cash'
+        ? `After your change, please have the extra ${money(booking.balance_due_gbp)} ready in cash at your appointment.`
+        : `After your change, ${money(booking.balance_due_gbp)} more is to pay by bank transfer. The details are in the email I sent you.`}</p>}
       {open && terms?.can_change && <>
         <Terms terms={terms} action="reschedule" />
         <div className="actions"><button className="btn--primary" onClick={() => setMode('reschedule')}>Change the time</button><button className="btn--danger" onClick={() => setMode('cancel')}>Cancel appointment</button></div>
+        <button className="btn--tonal btn--block" onClick={() => setMode('change')}>Change who's coming, treatment or length</button>
       </>}
       {open && terms && !terms.can_change && <p>This appointment can no longer be changed online. Please contact Vadim.</p>}
     </>}
     {mode === 'cancel' && terms && <CancelPanel api={api} booking={booking} terms={terms} back={() => setMode('view')} refresh={load} done={result => done(result, 'Your appointment is cancelled.')} />}
+    {mode === 'change' && <ChangePanel api={api} booking={booking} rules={rules} back={() => setMode('view')} done={result => done(result, 'Your booking has been changed. I have sent you the new details.')} />}
     {mode === 'reschedule' && terms && <ReschedulePanel api={api} booking={booking} terms={terms} rules={rules} back={() => setMode('view')} refresh={load} done={result => done(result, 'Your appointment has been moved.')} />}
     <p><a href="https://vadmassage.com">Contact Vadim</a></p>
     {signIn}

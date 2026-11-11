@@ -7,6 +7,11 @@ const row = (overrides = {}) => ({
 })
 
 describe('the payment line under a booking in Your bookings', () => {
+  it('says what is still to pay after a change made a paid booking longer', () => {
+    expect(paymentLine(row({ total_gbp: 120, balance_due_gbp: 30 }))).toEqual({ text: '£120.00 · £30.00 still to pay', tone: 'due' })
+    expect(paymentLine(row({ balance_due_gbp: 0 }))).toEqual({ text: '£90.00 · Paid', tone: 'ok' })
+  })
+
   it('says a bank transfer that has arrived is paid', () => {
     expect(paymentLine(row())).toEqual({ text: '£90.00 · Paid', tone: 'ok' })
     expect(paymentLine(row({ booking_status: 'completed', total_gbp: 125 }))).toEqual({ text: '£125.00 · Paid', tone: 'ok' })

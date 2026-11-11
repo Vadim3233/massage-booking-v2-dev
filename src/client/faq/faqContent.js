@@ -72,6 +72,11 @@ export function clientFaq({ rules, areas = [] }) {
     { title: 'Changing or cancelling', items: [
       { q: 'How do I change or cancel?', a: ['Use the link in your confirmation email, or sign in and open your booking, then press "Change the time" or "Cancel appointment". Booked as a guest? The link in your latest confirmation email works without a password.'], link: { href: '/account', text: 'Your bookings' } },
       { q: 'Is there a fee for changing or cancelling?', a: cancelFee },
+      { q: "Can I change who's coming, the treatment or the length?", a: [
+        'Yes. Open your booking and press "Change who\'s coming, treatment or length". You can add or remove a person, change a treatment or a length, and pick a time that suits the new length. You see the new price before you save.',
+        free === 0 ? 'The price follows your change: if it goes down after you have paid, I send the difference back; if it goes up, you pay the extra.'
+          : `More than ${plural(free, 'hour')} before your appointment, the price follows your change: if it goes down after you have paid, I send the difference back; if it goes up, you pay the extra. Within ${plural(free, 'hour')}, you can still make changes, but the price does not go down and there is no refund. If you pay in cash, I still expect the full amount.`,
+      ], link: { href: '/account', text: 'Your bookings' } },
       { q: 'What happens to my payment if I cancel?', a: ['If you have paid and a refund is due, your booking shows "Refund on its way". If a late fee applies, your booking shows that too.'] },
     ] },
     { title: 'Receipts and insurance', items: [

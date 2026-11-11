@@ -1,0 +1,16 @@
+/* Edit booking (EditBooking.jsx): the people, their lengths as chips, and the date and time. Calm, like the rest of the Admin. */
+.aeb-people { border: 0; padding: 0; margin: 8px 0; }
+.aeb-people > legend { padding: 0 0 4px; font: 600 14px/1.3 var(--font-ui); }
+.aeb-person { margin: 0 0 10px; padding: 10px 12px; border: 1.5px solid var(--field-border); border-radius: var(--radius-sm); background: var(--surface); }
+.aeb-person > legend { padding: 0 4px; font: 600 14px/1.3 var(--font-ui); }
+.aeb-lengths { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.aeb-chip { position: relative; display: block; margin: 0; }
+.aeb-chip input { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.aeb-chip > span { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 48px; min-width: 84px; padding: 4px 14px; border: 1.5px solid var(--field-border); border-radius: var(--radius-sm); background: var(--surface); font-size: 15px; font-weight: 600; }
+.aeb-chip small { font-size: 12px; font-weight: 500; }
+.aeb-chip input:checked + span { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+.aeb-chip input:disabled + span { opacity: 0.45; }
+.aeb-chip input:focus-visible + span { outline: 3px solid var(--primary); outline-offset: 2px; }
+.aeb-add { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 4px 0 8px; font-size: 14px; }
+.aeb-check { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0; font-size: 15px; }
+.aeb-check input { margin-top: 3px; }

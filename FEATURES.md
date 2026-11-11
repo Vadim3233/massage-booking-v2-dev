@@ -160,6 +160,12 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **Built in:** PR #8 (`20261012100000_client_self_service.sql`, ADR-022), PR #44 (money line, ADR-052), PR #45 (cancelled date, ADR-053).
 - **For a general app:** cancellation rules (already settings).
 
+### Change who's coming, treatment or length (clients)
+- **What it does:** From their booking page (signed in or from the email link) a client can add or remove a person, change a treatment, a name or a length, and choose a time that suits the new length. Only the usual chain-mode times are offered, worked out as if their own booking weren't there, and the current time stays chosen if it still fits. The new price and what it means for their money show before they save. They can't go below the area minimum, or change once the appointment has started. Vadim gets an alert for every change.
+- **Why:** A couple where one person can't come shouldn't need a message to Vadim.
+- **Built in:** this PR (`20261204100000_edit_booking_services.sql`, `src/client/account/ChangePanel.jsx`).
+- **For a general app:** the free-cancellation window (already a setting).
+
 ### Open a booking from the email, with no sign-in
 - **What it does:** The "See or change your booking" link in every email carries a private code that opens that one booking on any phone, for cancelling or moving it, without signing in.
 - **Why:** Guests and clients Vadim added himself have no login.
@@ -371,6 +377,12 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **What it does:** Every change goes through one safe action that records who did what and when; repeated taps never do it twice. Status and payment are separate, and each step is guarded so impossible changes can't happen.
 - **Why:** Money and appointments must always be right and traceable.
 - **Built in:** PR #8 (`20261009100000_booking_status_guard_and_audit.sql`, `20261011100000_booking_lifecycle.sql`, `20261019100000_cancel_reason_optional.sql`, ADR-018, ADR-021).
+
+### Edit booking: people, treatments, lengths and time in one step
+- **What it does:** "Edit booking" changes who is coming (1 to 4 people), each person's name, treatment and length, and the date and time, in one step, with the new price and money outcome shown before saving. Unchanged people keep their booked price; changes use today's prices; travel and extras stay. Outside the free-cancellation window the price follows the change both ways; inside it the price never goes below what was booked unless "Lower the price anyway" is ticked. Paid and cheaper: "Refund to send" until Record refund sent. Paid and dearer: "£X still to pay" until "Mark extra received". A refund already sent is never undone, and the receipt is corrected. The client gets an email and Telegram message unless unticked.
+- **Why:** A booking for two where one person can't come had to be cancelled and rebooked.
+- **Built in:** this PR (`20261204100000_edit_booking_services.sql`, `src/admin/EditBooking.jsx`, rules in the Claude Doc "Changing a booking: the rules").
+- **For a general app:** nothing specific.
 
 ### Edit address on a booking
 - **What it does:** Vadim can change the address of a booking still to come. A different area brings its fees and a new total, which is refused once money has been paid or a transfer declared. The client is emailed.

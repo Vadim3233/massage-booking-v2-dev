@@ -7,12 +7,12 @@ const booking = (overrides = {}) => ({ id: 'b1', updated_at: '2031-01-01T10:00:0
 
 describe('which actions the Admin is offered', () => {
   it('offers change and cancel for confirmed and pending bookings only', () => {
-    expect(lifecycleActions(booking())).toEqual(['reschedule', 'cancel'])
-    for (const status of ['awaiting_transfer', 'awaiting_payment_verification', 'awaiting_cash_approval']) expect(lifecycleActions(booking({ booking_status: status }))).toEqual(['reschedule', 'cancel'])
+    expect(lifecycleActions(booking())).toEqual(['edit', 'reschedule', 'cancel'])
+    for (const status of ['awaiting_transfer', 'awaiting_payment_verification', 'awaiting_cash_approval']) expect(lifecycleActions(booking({ booking_status: status }))).toEqual(['edit', 'reschedule', 'cancel'])
     for (const status of ['cancelled', 'completed', 'no_show']) expect(lifecycleActions(booking({ booking_status: status }))).toEqual([])
   })
   it('offers completion and no-show once the day has come', () => {
-    expect(lifecycleActions(booking({ date: today() }))).toEqual(['complete', 'noShow', 'reschedule', 'cancel'])
+    expect(lifecycleActions(booking({ date: today() }))).toEqual(['complete', 'noShow', 'edit', 'reschedule', 'cancel'])
     expect(lifecycleActions(booking({ date: shiftDate(today(), -2) }))).toContain('complete')
     expect(lifecycleActions(booking({ booking_status: 'awaiting_cash_approval', date: today() }))).not.toContain('complete')
   })
@@ -21,6 +21,13 @@ describe('which actions the Admin is offered', () => {
     expect(lifecycleActions(booking({ booking_status: 'cancelled', refund_due_gbp: '0.00', booking_payments: { status: 'paid' } }))).toEqual([])
     expect(lifecycleActions(booking({ booking_status: 'no_show', late_fee_status: 'due' }))).toEqual(['feeReceived', 'feeWaive'])
     expect(lifecycleActions(booking({ booking_status: 'cancelled', late_fee_status: 'received' }))).toEqual([])
+  })
+  it('offers a refund on a booking still going ahead once a change has lowered the price, and the extra once it went up', () => {
+    expect(lifecycleActions(booking({ refund_due_gbp: '20.00', booking_payments: { status: 'paid' } }))).toContain('refund')
+    expect(lifecycleActions(booking({ refund_due_gbp: '0.00', booking_payments: { status: 'paid' } }))).not.toContain('refund')
+    expect(lifecycleActions(booking({ balance_due_gbp: '30.00', booking_payments: { status: 'paid' } }))).toContain('balance')
+    expect(lifecycleActions(booking({ balance_due_gbp: '0.00', booking_payments: { status: 'paid' } }))).not.toContain('balance')
+    expect(lifecycleActions(booking({ booking_status: 'no_show', refund_due_gbp: '20.00', booking_payments: { status: 'paid' } }))).not.toContain('refund')
   })
 })
 

@@ -23,13 +23,17 @@ export const lifecycleActions = booking => {
   const payment = booking.booking_payments
   const actions = []
   if (status === 'confirmed' && booking.date <= today()) actions.push('complete', 'noShow')
-  if (PENDING.includes(status) || status === 'confirmed') actions.push('reschedule', 'cancel')
-  if (status === 'cancelled' && payment?.status === 'paid' && Number(booking.refund_due_gbp) > 0) actions.push('refund')
+  if (PENDING.includes(status) || status === 'confirmed') actions.push('edit', 'reschedule', 'cancel')
+  // A refund to send: after a cancellation, or after a paid booking was changed to cost less (Edit booking).
+  if (Number(booking.refund_due_gbp) > 0 && (status === 'cancelled' ? payment?.status === 'paid'
+    : status !== 'no_show' && ['paid', 'awaiting_verification'].includes(payment?.status))) actions.push('refund')
+  // The extra still to pay after a paid booking was changed to cost more.
+  if (Number(booking.balance_due_gbp) > 0 && payment?.status === 'paid' && ['confirmed', 'completed'].includes(status)) actions.push('balance')
   if (booking.late_fee_status === 'due') actions.push('feeReceived', 'feeWaive')
   return actions
 }
 export const lifecycleLabels = {
-  complete: 'Mark completed', noShow: 'Mark no-show', reschedule: 'Reschedule', cancel: 'Cancel booking',
+  complete: 'Mark completed', noShow: 'Mark no-show', edit: 'Edit booking', reschedule: 'Reschedule', balance: 'Mark extra received', cancel: 'Cancel booking',
   refund: 'Record refund sent', feeReceived: 'Mark fee received', feeWaive: 'Waive fee',
 }
 
@@ -65,6 +69,7 @@ export function createLifecycleApi(client) {
     feeReceived: (booking, id) => ['admin_settle_late_fee', { ...versions(booking), p_request_id: id, p_action: 'received' }],
     feeWaive: (booking, id) => ['admin_settle_late_fee', { ...versions(booking), p_request_id: id, p_action: 'waive' }],
     refund: (booking, id) => ['admin_record_refund', { ...withPayment(booking), p_request_id: id }],
+    balance: (booking, id) => ['admin_record_balance_received', { ...versions(booking), p_request_id: id }],
   }
   return {
     async act(kind, booking, requestId, input = {}) {
@@ -103,4 +108,4 @@ export function createLifecycleApi(client) {
 export const lifecycleApi = createLifecycleApi(supabase)
 
 // What the sheet and the toast say once it is done: the outcome, not the name of the button that was pressed.
-export const DONE = { complete: 'Marked completed', noShow: 'Marked no-show', reschedule: 'Booking moved', cancel: 'Booking cancelled', refund: 'Refund recorded', feeReceived: 'Fee recorded as received', feeWaive: 'Fee waived' }
+export const DONE = { edit: 'Booking changed', balance: 'Extra payment recorded', complete: 'Marked completed', noShow: 'Marked no-show', reschedule: 'Booking moved', cancel: 'Booking cancelled', refund: 'Refund recorded', feeReceived: 'Fee recorded as received', feeWaive: 'Fee waived' }
