@@ -14,7 +14,7 @@
 --  * "Reserva cancelada" (cancelled) when a confirmed booking is cancelled (or removed).
 --  * Only for bookings still to come: nothing about the past, so entering an old booking or marking one done says nothing.
 -- Each message is in Spanish, says when he is likely home that day (the end of that day's last confirmed booking plus its travel time), and
--- ends with one of his love lines, picked at random.
+-- ends with one of his 100 love lines, in a mixed order.
 --
 -- How it is worked out: a trigger on bookings compares each booking with what she was last told (family_booking_told) and writes a message
 -- only when it differs. The trigger runs when the change is saved (at commit), so a change made in several steps sends one message, with
@@ -106,26 +106,143 @@ as $$
     || ', de ' || public.family_alert_clock(p_start) || ' a ' || public.family_alert_clock(p_end);
 $$;
 
--- Every message ends with one of the owner's own love lines, picked at random (his words, 11 Nov 2026). To add one, add it to this list.
+-- Every message ends with one of the owner's love lines (his own nine and 91 more he approved on 11 Nov 2026, 20 of them Andalusian for
+-- his wife, from Olivares near Seville). They come in a mixed order: every line once, at random, before any comes back; after that, a
+-- line is picked at random from the 50 used longest ago, so no line comes back until at least 50 others have been sent. To add a line, insert it into family_love_lines.
+create table public.family_love_lines (
+  id integer primary key,
+  line text not null constraint family_love_lines_line_valid check (length(btrim(line)) between 1 and 300),
+  last_used_at timestamptz
+);
+alter table public.family_love_lines enable row level security;
+revoke all on table public.family_love_lines from public, anon, authenticated;
+grant select, insert, update, delete on table public.family_love_lines to service_role;
+
+insert into public.family_love_lines(id, line) values
+  (1, 'Te amo con todo mi culo. Diría corazón, pero mi culo es más grande. 🍑❤️'),
+  (2, 'Eres la única persona con la que compartiría mis papitas... y por compartir me refiero a darte una. 🥔🍟'),
+  (3, 'Te quiero tanto que soporto que tu lado de la cama ocupe el 80% del espacio. 🛏️😅'),
+  (4, 'Me gustas más que dormir cinco minutos más por la mañana. 😴⏰'),
+  (5, 'Gracias por aguantarme. Sé que no soy fácil, pero al menos soy guapo. 😎'),
+  (6, 'Te amo incluso cuando me preguntas qué quiero cenar y rechazas todas mis opciones. 🍕🙄'),
+  (7, 'Eres mi persona favorita para no hacer nada juntos. 🛋️💕'),
+  (8, 'Si me dieran a elegir entre tú y un millón de dólares... me costaría un par de segundos, pero te elegiría a ti. 💰➡️💖'),
+  (9, 'Te amo de aquí a la cocina, porque hasta allá llego por un snack. 🍪😘'),
+  (10, 'Te quiero más que al último trozo de pizza. Y eso es mucho decir. 🍕❤️'),
+  (11, 'Eres el queso de mi sándwich: sin ti, solo soy pan triste. 🧀🥪'),
+  (12, 'Te amo tanto que te dejo elegir el postre... y luego me como la mitad. 🍰😏'),
+  (13, 'Si fueras una verdura, serías una papa-cito. 🥔😍'),
+  (14, 'Mi amor por ti es como mi hambre: no tiene fin. 🍔♾️'),
+  (15, 'Eres la salsa de mis tacos. 🌮💃'),
+  (16, 'Te amo aunque te comas mis galletas a escondidas. Lo sé todo. 🍪👀'),
+  (17, 'Eres mi café de la mañana: sin ti no funciono. ☕😵'),
+  (18, 'Te daría mi último nugget. Bueno, la mitad. 🍗🤏'),
+  (19, 'Te amo aunque me robes la manta todas las noches. 🛌🥶'),
+  (20, 'Te quiero tanto que te dejo los pies fríos en mis piernas. 🦶🧊'),
+  (21, 'Mi lugar favorito del mundo es a tu lado... en el sofá... con la tele. 🛋️📺'),
+  (22, 'Soñé contigo. Bueno, con una pizza, pero tú estabas al lado. 💭🍕'),
+  (23, 'Te amo más que a la siesta del domingo. Y eso ya es amor de verdad. 😴❤️'),
+  (24, 'Prometo no despertarte... a menos que tenga hambre. 🌙🍳'),
+  (25, 'Soy guapo, trabajador y humilde. Tú tienes suerte. 😎💪'),
+  (26, 'Tienes un marido increíble. Lo sé porque me lo digo cada mañana en el espejo. 🪞😏'),
+  (27, 'Gracias por casarte conmigo. Alguien tenía que hacerlo. 💍😂'),
+  (28, 'No soy perfecto, pero soy perfecto para ti. Y eso es lo que cuenta. 🧩💞'),
+  (29, 'Mis manos son mágicas, pero mi corazón es todo tuyo. 👐✨'),
+  (30, 'Mis clientes me pagan por un masaje. Tú los tienes gratis. Qué suerte, ¿eh? 💆‍♀️😉'),
+  (31, 'Te debo un masaje. Bueno, cincuenta. Apúntalo. 📝💆'),
+  (32, 'Soy masajista, pero la que me relaja eres tú. 😌💛'),
+  (33, 'Trabajo con mis manos, pero pienso en ti con todo lo demás. 🙌💭'),
+  (34, 'Gracias por quererme incluso cuando dejo los calcetines por ahí. 🧦🙈'),
+  (35, 'Sé que a veces soy un desastre, pero soy TU desastre. 🌪️❤️'),
+  (36, 'Eres la única que se ríe de mis chistes malos. Por eso me casé contigo. 🤡💍'),
+  (37, 'Te quiero aunque siempre tengas razón. Sobre todo cuando tienes razón. 🤷‍♂️💕'),
+  (38, 'Gracias por no venderme en internet cuando me pongo pesado. 📦😅'),
+  (39, 'Eres tan paciente que deberían darte una medalla. Yo te doy un beso. 🏅😘'),
+  (40, 'Te amo incluso cuando me dices "haz lo que quieras" y no es verdad. 😬❤️'),
+  (41, 'Contigo discutir es casi divertido. Casi. 🥊💞'),
+  (42, 'Te amo aunque cambies el canal justo en lo mejor. 📺😤❤️'),
+  (43, 'Trabajo duro para poder volver a casa contigo. Y para comprar snacks. 🏠🍿'),
+  (44, 'Cuenta atrás para volver a verte: activada. ⏳💓'),
+  (45, 'Mi parte favorita del día es abrir la puerta y verte. La segunda es la cena. 🚪🍝'),
+  (46, 'Voy a trabajar como un campeón para volver a casa como un príncipe. 🏆👑'),
+  (47, 'Si llego tarde, es culpa del tráfico. Si llego pronto, es culpa del amor. 🚗💨❤️'),
+  (48, 'Guárdame un abrazo. Y un poco de cena. Pero sobre todo el abrazo. 🤗🍲'),
+  (49, 'Cuando vuelva, prometo quitarme los zapatos en la entrada. Esta vez sí. 👟🙏'),
+  (50, 'Ya estoy pensando en el beso de bienvenida. 💋⏰'),
+  (51, 'Vuelvo pronto. No te comas todo el chocolate. 🍫🚨'),
+  (52, 'Eres mi persona favorita. Lo siento por todos los demás. 🥇💛'),
+  (53, 'Te elegiría otra vez. Y otra. Y otra. Ya me entiendes. 🔁💍'),
+  (54, 'Eres la mejor decisión que he tomado. La segunda fue pedir pizza anoche. 🍕✅'),
+  (55, 'Contigo hasta hacer la compra es una cita romántica. 🛒💘'),
+  (56, 'Te quiero más que ayer y menos que mañana. Y mañana tengo reservas, así que mucho. 📈❤️'),
+  (57, 'Si el amor fuera dinero, serías millonaria. Y yo te pediría un préstamo. 💸😂'),
+  (58, 'Eres el GPS de mi corazón: siempre me llevas a casa. 🧭❤️'),
+  (59, 'Eres mi "y vivieron felices", con algunos dramas de por medio. 📖🎭'),
+  (60, 'Cada día me gustas más. Es un problema y no busco solución. 🤷‍♂️💘'),
+  (61, 'Te amo más que a mi equipo de fútbol. No se lo digas a nadie. ⚽🤫'),
+  (62, 'Eres la reina de la casa. Yo soy el que saca la basura. 👑🗑️'),
+  (63, 'Mi amor por ti es como mi espalda después de diez masajes: no se puede medir. 📏😩❤️'),
+  (64, 'Si besarte fuera delito, estaría en la cárcel con cadena perpetua. 💋⛓️'),
+  (65, 'Te quiero hasta la luna y de vuelta. Pero vuelvo, eh, que allí no hay snacks. 🌙🚀'),
+  (66, 'Eres tan bonita que hasta mi madre te prefiere a ti. 👩‍🦳😅'),
+  (67, 'Quiero envejecer contigo y discutir por el mando de la tele hasta los 90. 👴👵📺'),
+  (68, 'Eres la única persona que me ve recién levantado y aún así se queda. 🧟‍♂️❤️'),
+  (69, 'Te amo más de lo que odio el despertador. Y odio MUCHO el despertador. ⏰😤'),
+  (70, 'Eres guapísima incluso sin filtro. Yo necesito tres. 📸😂'),
+  (71, 'Te quiero tanto que te dejo elegir la serie. Una vez al mes. 🍿📺'),
+  (72, 'Eres mi superheroína: aguantas mis chistes y no pierdes los poderes. 🦸‍♀️💥'),
+  (73, 'Eres como un buen masaje: me quitas todo el estrés. 💆‍♂️✨'),
+  (74, 'Ozú, mi arma, qué bonita eres. Más que la Giralda iluminada. 🌙⛪'),
+  (75, 'Te quiero más que un sevillano a la sombra en agosto. ☀️🌳'),
+  (76, 'Eres la aceituna de mi tapa. Y de Olivares, que son las mejores. 🫒😍'),
+  (77, 'En Olivares hay muchos olivos, pero ninguno tan bonito como tú. 🌳🫒'),
+  (78, 'Contigo no necesito aire acondicionado... bueno, en Sevilla en julio sí. 🥵❄️'),
+  (79, 'Eres más fresquita que un salmorejo en pleno verano. 🍅🧊'),
+  (80, 'Quillo, qué suerte tengo contigo. 🍀😎'),
+  (81, 'Tienes más arte que toda la Feria de Abril junta. 💃🎡'),
+  (82, 'Te quiero más que al rebujito en la Feria. Y mira que me gusta el rebujito. 🍹💃'),
+  (83, 'Eres mi pescaíto frito: no me canso de ti. 🐟😋'),
+  (84, 'Contigo hasta los 45 grados de Sevilla se aguantan. Más o menos. 🌡️😅'),
+  (85, 'Si me preguntan por la octava maravilla del mundo, digo: una de Olivares. 🌍🫒'),
+  (86, 'Hablas tan rápido que a veces no te entiendo, pero te quiero igual, mi arma. 🗣️💨❤️'),
+  (87, 'Te amo con más ganas que un sevillano esperando la Semana Santa. 🕯️🙏'),
+  (88, 'Eres como el aceite de oliva de tu tierra: lo mejor y en todo. 🫒✨'),
+  (89, 'Mi corazón está más contento que un niño con una torrija. 🍞🍯'),
+  (90, 'Te quiero a ti más que al montadito de pringá. Y eso en Sevilla es una declaración de amor. 🥪❤️'),
+  (91, 'Me dices "ahora mismito voy" y yo ya sé que es en una hora. Te quiero igual. ⏳😂'),
+  (92, 'Eres más salá que las papas de la Feria. 🥔🧂😍'),
+  (93, '¡Illo, que te quiero! Y no es broma, es de corazón. 💛❤️'),
+  (94, 'Gracias por hacer que cada día valga la pena, incluso los días de lluvia en Londres. 🌧️☔💛'),
+  (95, 'Si tuviera que elegir entre respirar y quererte, usaría mi último aliento para decirte que te quiero. Y luego pediría oxígeno. 🫁😂'),
+  (96, 'Hoy trabajo por los dos. Tú encárgate de estar guapa. Ah, ya lo estás. 💪😍'),
+  (97, 'Si el amor se pudiera reservar, tendrías todos mis huecos libres. 📅💖'),
+  (98, 'Tú eres mi cliente VIP: sin cita previa y con atención ilimitada. ⭐💆‍♀️'),
+  (99, 'Mi reserva favorita es para siempre, y es contigo. 💍📅'),
+  (100, 'Te quiero. Ya está. No hay chiste. Bueno, sí: te quiero más que a la pizza. 🍕❤️');
+
 create function public.family_alert_love_line()
 returns text
-language sql
+language plpgsql
 volatile
+security definer
 set search_path = ''
 as $$
-  select l[1 + floor(random() * array_length(l, 1))::integer]
-  from (select array[
-    'Te amo con todo mi culo. Diría corazón, pero mi culo es más grande. 🍑❤️',
-    'Eres la única persona con la que compartiría mis papitas... y por compartir me refiero a darte una. 🥔🍟',
-    'Te quiero tanto que soporto que tu lado de la cama ocupe el 80% del espacio. 🛏️😅',
-    'Me gustas más que dormir cinco minutos más por la mañana. 😴⏰',
-    'Gracias por aguantarme. Sé que no soy fácil, pero al menos soy guapo. 😎',
-    'Te amo incluso cuando me preguntas qué quiero cenar y rechazas todas mis opciones. 🍕🙄',
-    'Eres mi persona favorita para no hacer nada juntos. 🛋️💕',
-    'Si me dieran a elegir entre tú y un millón de dólares... me costaría un par de segundos, pero te elegiría a ti. 💰➡️💖',
-    'Te amo de aquí a la cocina, porque hasta allá llego por un snack. 🍪😘'
-  ] as l) lines;
+declare
+  v_id integer;
+  v_line text;
+begin
+  -- A line never used yet, if there is one; otherwise one of the 50 used longest ago.
+  select f.id, f.line into v_id, v_line from public.family_love_lines f where f.last_used_at is null order by random() limit 1;
+  if v_id is null then
+    select l.id, l.line into v_id, v_line
+    from (select f.id, f.line from public.family_love_lines f order by f.last_used_at limit 50) l
+    order by random() limit 1;
+  end if;
+  if v_id is not null then update public.family_love_lines set last_used_at = clock_timestamp() where id = v_id; end if;
+  return v_line;
+end;
 $$;
+revoke all on function public.family_alert_love_line() from public, anon, authenticated;
 
 -- The last line: when he is likely home that day (the end of the day's last confirmed booking plus its travel time), or that there is no
 -- other booking that day. A time past midnight is not given (it cannot happen with today's opening hours).
@@ -204,7 +321,7 @@ begin
     end if;
 
     if v_text is not null then
-      v_text := v_text || E'\n\n💛 ' || public.family_alert_love_line();
+      v_text := concat_ws(E'\n\n💛 ', v_text, public.family_alert_love_line());
       insert into public.family_telegram_messages(chat_id, body)
       select c.chat_id, v_text from public.family_telegram_chats c where c.stopped_at is null;
     end if;

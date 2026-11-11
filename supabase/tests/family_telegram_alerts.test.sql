@@ -99,8 +99,8 @@ update public.bookings set booking_status = 'confirmed' where id = '00000000-000
 select is(pg_temp.messages(), 1, 'Confirming it sends one message');
 select is(pg_temp.last_news(), E'📅 Nueva reserva\n🕑 ' || pg_temp.day(current_date + 3) || E', de 14:00 a 15:30\n🏠 Ese día estaré en casa sobre las 16:00.',
   'It gives the day, the times and when he is home, nothing about the client');
-select ok(pg_temp.last_body() !~* 'Carla|Client|Test Road|SW1A|90|chelsea', 'No name, address, postcode, area or price');
-select ok(split_part(pg_temp.last_body(), E'\n\n💛 ', 2) <> '' and position(split_part(pg_temp.last_body(), E'\n\n💛 ', 2) in pg_get_functiondef('public.family_alert_love_line()'::regprocedure)) > 0,
+select ok(pg_temp.last_news() !~* 'Carla|Client|Test Road|SW1A|90|chelsea', 'No name, address, postcode, area or price');
+select ok(exists (select 1 from public.family_love_lines where line = split_part(pg_temp.last_body(), E'\n\n💛 ', 2)),
   'and ends with one of his love lines');
 select is((select chat_id from public.family_telegram_messages limit 1), 501::bigint, 'It goes to the linked chat');
 
@@ -166,6 +166,16 @@ insert into codes select public.admin_create_family_telegram_link();
 select is(public.link_family_telegram((select code from codes), 501), '{"status": "linked"}'::jsonb, 'A new link turns a stopped chat back on');
 select public.admin_stop_family_telegram(((public.admin_family_telegram_status()->'chats')->0->>'id')::uuid);
 select is(public.admin_family_telegram_status(), '{"chats": []}'::jsonb, 'The Admin can switch a chat off');
+
+-- The love lines: 100 of them, in a mixed order, none back until at least 50 others have been used.
+select is((select count(*)::integer from public.family_love_lines), 100, 'There are 100 love lines');
+update public.family_love_lines set last_used_at = null;
+create temp table picked(n integer generated always as identity, line text) on commit drop;
+insert into picked(line) select public.family_alert_love_line() from generate_series(1, 150);
+select is((select count(distinct line)::integer from picked where n <= 100), 100, 'The first 100 picks use every line once');
+select ok(not exists (select 1 from picked a join picked b on a.line = b.line and b.n > a.n and b.n - a.n < 51), 'and no line comes back within 50 picks');
+select ok((select string_agg(line, '|' order by n) from picked where n <= 10) <> (select string_agg(line, '|' order by id) from public.family_love_lines where id <= 10),
+  'They come in a mixed order, not the list order');
 
 -- A failure in the alerts never stops a booking being saved.
 alter table public.family_telegram_messages add constraint fam_test_break check (false) not valid;
