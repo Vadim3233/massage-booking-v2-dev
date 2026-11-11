@@ -20,6 +20,7 @@ export const ADMIN_HELP = [
     { q: 'How do I set up repeating bookings?', a: ['Open the booking and press Repeat this booking, or use Repeating bookings on the client\'s page.'] },
     { q: 'How do I send a client my booking link?', a: ['More › Your booking link. The share button on a booking sends the Share message (More › Share message).'] },
     { q: 'Can the client add a booking to their calendar?', a: ['Yes. The message from the share button on a booking includes an "Add it to your calendar" link. It opens a page with two buttons: Google Calendar, and iPhone, Outlook or other calendars. If you move the booking, the same link gives the new time. In your own wording (More › Share message), the {calendar} blank puts the link where you want it.'] },
+    { q: 'Does the share message use the client\'s name?', a: ['Yes. It starts "Hi Sarah!" with the client\'s first name, or just "Hi!" if no first name is saved. In your own wording (More › Share message), the {name} blank puts the first name where you want it.'] },
   ] },
   { title: 'To check and Alerts', items: [
     { q: 'What is in To check?', a: ['Everything waiting for you: bank transfers to check, cash requests, bookings outside your areas, and confirmed bookings still unpaid after the session.', 'When a client owes for more than one session, "Remind about both" (or all) sends one WhatsApp reminder listing each session with its date, time, length and amount.'] },

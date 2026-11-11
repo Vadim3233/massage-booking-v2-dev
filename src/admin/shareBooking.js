@@ -44,10 +44,12 @@ function treatments(booking) {
 
 // The Admin can reword the message (Settings › Share message), with these blanks and no others: the database refuses any other,
 // so nothing but what is filled in here can ever be sent. Empty means the standard wording.
-export const SHARE_BLANKS = ['date', 'time', 'address', 'treatment', 'payment', 'cancellation', 'bank details', 'calendar']
-export const STANDARD_SHARE_MESSAGE = 'Hi! Thank you so much for booking with me, I am really looking forward to seeing you.\n\n*Massage booking – {date}, {time}*\n{address}\n{treatment}\n{payment}\n{cancellation}\n\nAdd it to your calendar: {calendar}\n\nIf anything changes or you have any questions, just message me here. See you soon!\n\nWarm wishes,\nVadim'
+// {name} is the client's first name ("Hi Sarah!"); with no first name saved it is left out with the space before it ("Hi!"), and a line is never
+// dropped for it alone.
+export const SHARE_BLANKS = ['name', 'date', 'time', 'address', 'treatment', 'payment', 'cancellation', 'bank details', 'calendar']
+export const STANDARD_SHARE_MESSAGE = 'Hi {name}! Thank you so much for booking with me, I am really looking forward to seeing you.\n\n*Massage booking – {date}, {time}*\n{address}\n{treatment}\n{payment}\n{cancellation}\n\nAdd it to your calendar: {calendar}\n\nIf anything changes or you have any questions, just message me here. See you soon!\n\nWarm wishes,\nVadim'
 export const SHARE_MESSAGE_LIMIT = 1000
-const BLANK = /\{(date|time|address|treatment|payment|bank details|cancellation|calendar)\}/g
+const BLANK = /\{(name|date|time|address|treatment|payment|bank details|cancellation|calendar)\}/g
 
 // What is wrong with a wording, in the words the database uses when it refuses one ('' when it can be saved).
 export function shareMessageProblem(text) {
@@ -87,6 +89,7 @@ export const calendarLink = (booking, origin = siteOrigin()) => (origin && booki
 export function shareValues(booking, bank, terms, origin = siteOrigin()) {
   const end = booking.start_minutes + booking.treatment_duration_minutes
   return {
+    name: booking.clients?.first_name?.trim() || '',
     date: dateLabel(booking.date).replace(',', ''),
     time: `${time(booking.start_minutes)}–${time(end)}`,
     address: booking.address_snapshot || '',
@@ -105,8 +108,10 @@ export function fillShareMessage(wording, values) {
     const blanks = line.match(BLANK)
     if (!blanks) return [line]
     // "Add it to your calendar: {calendar}" with no link to give says nothing, so it goes too.
-    if (blanks.every(blank => !values[blank.slice(1, -1)])) return []
-    const filled = line.replace(BLANK, (_, name) => values[name] || '')
+    const others = blanks.filter(blank => blank !== '{name}')
+    if (others.length && others.every(blank => !values[blank.slice(1, -1)])) return []
+    const named = values.name ? line : line.replace(/ ?\{name\}/g, '')
+    const filled = named.replace(BLANK, (_, name) => values[name] || '')
     return filled.trim() ? [filled] : []
   })
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
