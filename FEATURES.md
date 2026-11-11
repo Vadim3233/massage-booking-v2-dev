@@ -299,7 +299,7 @@ These are the things that are written for Vadim today. In a general therapist ap
 ### Family alerts on Telegram (for Vadim's wife)
 - **What it does:** Vadim's wife gets a short Telegram message when a booking is confirmed, moved or cancelled: the day, the times and when he will likely be home that day (end of the day's last booking plus its travel time). Unconfirmed requests and past bookings say nothing. The messages are in Spanish, with emojis, and each ends with one of Vadim's own funny love lines, picked at random. They never include the client's name, address, phone or price. She connects from a one-time link Vadim makes in More › Family alerts and sends her on WhatsApp; she presses Start in Telegram. /stop in the chat, or Switch off on the page, ends it. More than one person can be connected.
 - **Why:** She wants to know when he is working and when he will be home, without seeing clients' private details.
-- **Built in:** PR #TBD (`20261206100000_family_telegram_alerts.sql`). Uses the clients' Telegram bot, so nothing new to set up. Server: `server/familyAlerts.js` (sent by the every-minute sender), `server/telegramWebhook.js` (family links start with `family_`). Page: `src/admin/SettingsFamilyAlerts.jsx`.
+- **Built in:** PR #118 (`20261206100000_family_telegram_alerts.sql`). Uses the clients' Telegram bot, so nothing new to set up. Server: `server/familyAlerts.js` (sent by the every-minute sender), `server/telegramWebhook.js` (family links start with `family_`). Page: `src/admin/SettingsFamilyAlerts.jsx`.
 - **For a general app:** the language, the love lines (in `family_alert_love_line()`), how much detail to show, and who the alerts are for (partner, assistant, receptionist).
 
 ### Sign-off "Warm wishes, Vadim"
