@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canOffer, closingChoices, lengthsThatFit, londonInstant, offerDay, offerMessage, startsThatFit, withOffers } from './slotOffers.js'
+import { bestStart, canOffer, roomAround, travelUsed, closingChoices, lengthsThatFit, londonInstant, offerDay, offerMessage, startsThatFit, withOffers } from './slotOffers.js'
 
 const offer = { id: 'o1', code: 'K7Q2MX', date: '2026-11-12', start_minutes: 1020, duration_minutes: 60, price_gbp: '55.00', normal_price_gbp: '80.00', closes_at: '2026-11-12T16:00:00Z' }
 
@@ -59,5 +59,34 @@ describe('special-price offers (Admin)', () => {
       ['booking', 900, 990], ['free', 960, 1020], ['offer', 1020, 1080], ['buffer', 1080, 1140],
     ])
     expect(withOffers(rows, [])).toBe(rows)
+  })
+
+  it('lets an offer use the travel time either side of a short free stretch (Vadim, 12 Nov: 17:30-18:00 free, offer 17:00-18:00)', () => {
+    const rows = [
+      { kind: 'booking', id: 'a', start: 930, end: 990 },
+      { kind: 'buffer', id: 'b1', start: 990, end: 1050 },
+      { kind: 'free', id: 'free-1050', start: 1050, end: 1080 },
+      { kind: 'buffer', id: 'b2', start: 1080, end: 1140 },
+      { kind: 'booking', id: 'c', start: 1140, end: 1200 },
+    ]
+    const room = roomAround(rows, rows[2])
+    expect(room).toEqual({ start: 990, end: 1140, free: { start: 1050, end: 1080 } })
+    expect(lengthsThatFit(room, [60, 90, 120, 180])).toEqual([60, 90, 120])
+    expect(bestStart(room, 60)).toBe(1020)
+    expect(travelUsed(room, 1020, 60)).toBe(30)
+    expect(travelUsed(room, 990, 150)).toBe(120)
+    expect(bestStart(room, 60, 1060)).toBe(1080)
+    expect(roomAround([{ kind: 'free', id: 'f', start: 600, end: 720 }], { kind: 'free', id: 'f', start: 600, end: 720 })).toEqual({ start: 600, end: 720, free: { start: 600, end: 720 } })
+  })
+
+  it('takes an offer out of the travel time it uses too', () => {
+    const rows = [
+      { kind: 'buffer', id: 'b1', start: 990, end: 1050 },
+      { kind: 'free', id: 'free-1050', start: 1050, end: 1080 },
+      { kind: 'buffer', id: 'b2', start: 1080, end: 1140 },
+    ]
+    expect(withOffers(rows, [offer]).map(row => [row.kind, row.start, row.end])).toEqual([
+      ['buffer', 990, 1020], ['offer', 1020, 1080], ['buffer', 1080, 1140],
+    ])
   })
 })

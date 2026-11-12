@@ -68,18 +68,46 @@ export function startsThatFit(free, minutes, earliest = 0) {
   return starts
 }
 
-// The day's rows with the open offers in them: an offer takes its time out of a free stretch and shows in its place.
+// The room an offer can use (Vadim, 12 Nov 2026): the free stretch plus the travel time right next to it, because he decides
+// how much travel he needs. A 30-minute gap between two hours of travel can still take a 60-minute offer.
+export function roomAround(rows, row) {
+  let start = row.start, end = row.end
+  for (let moved = true; moved;) {
+    moved = false
+    for (const next of rows) {
+      if (next.kind !== 'buffer') continue
+      if (next.end === start && next.start < start) { start = next.start; moved = true }
+      if (next.start === end && next.end > end) { end = next.end; moved = true }
+    }
+  }
+  return { start, end, free: { start: row.start, end: row.end } }
+}
+
+// The start Vadim most likely wants: the one that uses the most of the free stretch (the earliest when two do the same).
+export function bestStart(room, minutes, earliest = 0) {
+  const free = room.free || room
+  const used = start => Math.max(0, Math.min(start + minutes, free.end) - Math.max(start, free.start))
+  return startsThatFit(room, minutes, earliest).reduce((best, start) => (best == null || used(start) > used(best) ? start : best), null)
+}
+
+// How many minutes of travel time an offer at this start takes.
+export const travelUsed = (room, start, minutes) => {
+  const free = room.free || room
+  return Math.max(0, free.start - start) + Math.max(0, start + minutes - free.end)
+}
+
+// The day's rows with the open offers in them: an offer takes its time out of a free stretch (or travel time) and shows in its place.
 export function withOffers(rows, offers = []) {
   if (!offers.length) return rows
   const out = []
   for (const row of rows) {
-    if (row.kind !== 'free') { out.push(row); continue }
+    if (row.kind !== 'free' && row.kind !== 'buffer') { out.push(row); continue }
     let pieces = [[row.start, row.end]]
     for (const offer of offers) {
       const from = offer.start_minutes, to = offer.start_minutes + offer.duration_minutes
       pieces = pieces.flatMap(([start, end]) => (to <= start || from >= end ? [[start, end]] : [[start, from], [to, end]].filter(([a, b]) => b > a)))
     }
-    for (const [start, end] of pieces) out.push({ ...row, id: `free-${start}`, start, end })
+    for (const [start, end] of pieces) out.push({ ...row, id: `${row.kind}-${start}`, start, end })
   }
   for (const offer of offers) out.push({ kind: 'offer', id: offer.id, start: offer.start_minutes, end: offer.start_minutes + offer.duration_minutes, offer })
   return out.sort((a, b) => a.start - b.start || (a.kind === 'offer' ? -1 : b.kind === 'offer' ? 1 : 0))
