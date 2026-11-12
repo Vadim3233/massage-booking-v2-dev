@@ -64,6 +64,7 @@ export default function BookingCard({ booking, open, now, tag, changed }) {
       <span className="admin-card-meta">
         <span className="admin-card-treatment">{treatmentName(booking)}</span>
         {booking.source_channel === 'ai_assistant' && <><span aria-hidden="true">·</span><span className="admin-card-via">via AI</span></>}
+        {booking.slot_offer_id && <><span aria-hidden="true">·</span><span className="admin-card-offer">Special price</span></>}
         {where && <><span aria-hidden="true">·</span><span className="admin-card-postcode">{where}</span></>}
       </span>
       {extras.length > 0 && <span className="admin-card-extras"><Icon name="plus" size={14} /><span><span className="admin-sr-only">Extras: </span>{extras.join(' · ')}</span></span>}

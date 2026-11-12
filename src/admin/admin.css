@@ -130,6 +130,16 @@
 .admin-timeline-entry.buffer small { color: var(--ink-soft); }
 .admin-block-button { width: 100%; text-align: left; display: grid; gap: 2px; }
 .admin-shell .admin-timeline-entry.block.admin-block-button { min-height: 52px; border: 0; border-left: 4px solid var(--block-rail); border-radius: var(--radius-sm); justify-content: flex-start; align-items: flex-start; flex-direction: column; font-weight: 600; background: var(--block-bg); color: var(--block-ink); }
+/* Special-price offers: a free stretch still to come can be tapped to offer it; an open offer is a gold dashed block until someone books it. */
+.admin-shell .admin-timeline-entry.free.admin-free-button { width: 100%; min-height: 44px; border: 1px dashed var(--sage-line); text-align: left; justify-content: flex-start; font-weight: 400; background: var(--free-bg); color: var(--ok-ink); }
+.admin-shell .admin-timeline-entry.offer.admin-offer-button { width: 100%; min-height: 52px; text-align: left; display: grid; gap: 2px; justify-content: stretch; border: 1.5px dashed var(--sand-rail); border-radius: var(--radius-sm); font-weight: 600; background: var(--sand-bg); color: var(--sand-ink); }
+.admin-timeline-entry.offer small { color: var(--sand-ink-soft); font-weight: 400; }
+.admin-card-offer { color: var(--sand-ink); font-weight: 600; white-space: nowrap; }
+.admin-offer-lengths { display: flex; flex-wrap: wrap; gap: 8px 16px; border: 0; padding: 0; margin: 0; }
+.admin-offer-lengths legend { padding: 0; margin-bottom: 6px; font-weight: 600; }
+.admin-offer-lengths label { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }
+.admin-offer-summary { display: grid; gap: 2px; margin: 0; }
+.admin-offer-message { margin: 0; padding: 12px; border-radius: var(--radius-sm); background: var(--cream); color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.45; }
 
 /* ---------- Day header ---------- */
 .admin-header { position: sticky; top: 0; z-index: 5; padding: 4px 12px 2px; background: var(--paper); border-bottom: 1px solid var(--hairline); transition: transform var(--dur) var(--ease); }

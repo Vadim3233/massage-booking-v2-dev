@@ -8,7 +8,9 @@ import { listedBookings, useShowCancelled } from './cancelledBookings.js'
 import { dateLabel, dayTimeline, shiftDate, time, today } from './calendarPresentation.js'
 import Icon from '../ui/icons.jsx'
 import { dayHoursLine } from './agendaDays.js'
+import { canOffer, londonClock, offerPrice, withOffers } from './slotOffers.js'
 const BlockDialog = lazy(() => import('./BlockDialog.jsx'))
+const OfferDialog = lazy(() => import('./OfferDialog.jsx'))
 const api = createCalendarApi(supabase)
 // The small picture at the start of a free, travel or held stretch of the day.
 const ENTRY_ICON = { free: 'clock', buffer: 'car', hold: 'clock' }
@@ -33,6 +35,7 @@ export default function Calendar({ signOut, openBooking, openDay, openHours, rev
   const [headerHidden, setHeaderHidden] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
   const [blockDialog, setBlockDialog] = useState(null)
+  const [offerDialog, setOfferDialog] = useState(null)
   const [showCancelled, setShowCancelled] = useShowCancelled()
   // The day on screen is the day a new booking starts on, so the page that owns the New booking button needs to know it.
   useEffect(() => { onDate?.(date); return () => onDate?.(undefined) }, [date, onDate])
@@ -72,6 +75,10 @@ export default function Calendar({ signOut, openBooking, openDay, openHours, rev
   // Cancelled bookings are left out unless asked for (the choice made in the Agenda), so a day's free time reads as one stretch.
   const listed = data && listedBookings(data.bookings, showCancelled)
   const timeline = data && dayTimeline({ ...data, bookings: listed }, date, now)
+  // Open special-price offers sit in the free time they take; a free stretch still to come can be offered (tap it).
+  const rows = timeline ? withOffers(timeline.rows, data.offers) : []
+  const [nowHour, nowMinute] = londonClock(new Date(now)).split(':').map(Number)
+  const offerable = row => row.kind === 'free' && canOffer(date, row, today(), nowHour * 60 + nowMinute)
   function navigate(value) { if (!value) return; setDate(value); setHeaderHidden(false) }
   return <>
     <header className={`admin-header ${headerHidden && !accountOpen ? 'is-hidden' : ''}`} onFocusCapture={() => setHeaderHidden(false)}>
@@ -112,8 +119,15 @@ export default function Calendar({ signOut, openBooking, openDay, openHours, rev
         {!listed.length && <p className="admin-day-note">No appointments for this day.</p>}
         <CancelledToggle bookings={data.bookings} on={showCancelled} change={setShowCancelled} />
         <ol role="list" className="admin-timeline" aria-label="Day timeline">
-          {timeline.rows.map(row => <li key={`${row.kind}-${row.id}`} className={`admin-timeline-row admin-timeline-${row.kind}`} data-start={row.start}>
-            {row.kind === 'booking' ? <BookingCard booking={row.booking} open={() => openBooking(row.booking.id)} changed={reread} now={new Date(now)} /> : row.kind === 'block' && row.block.kind !== 'series_hold' ? <button className="admin-timeline-entry block admin-block-button" onClick={() => setBlockDialog({ date, block: row.block })}>
+          {rows.map(row => <li key={`${row.kind}-${row.id}`} className={`admin-timeline-row admin-timeline-${row.kind}`} data-start={row.start}>
+            {row.kind === 'booking' ? <BookingCard booking={row.booking} open={() => openBooking(row.booking.id)} changed={reread} now={new Date(now)} /> : row.kind === 'offer' ? <button className="admin-timeline-entry offer admin-offer-button" onClick={() => setOfferDialog({ offer: row.offer })}>
+                <span>Special offer · {offerPrice(row.offer)}</span>
+                <small>{time(row.start)} – {time(row.end)} · open until {londonClock(new Date(row.offer.closes_at))} · tap to share</small>
+            </button> : offerable(row) ? <button className="admin-timeline-entry free admin-free-button" onClick={() => setOfferDialog({ free: row })}>
+                <Icon name="clock" size={18} />
+                <span>Free</span>
+                <small>{time(row.start)} – {time(row.end)} · {row.end - row.start} min · tap to offer at a special price</small>
+            </button> : row.kind === 'block' && row.block.kind !== 'series_hold' ? <button className="admin-timeline-entry block admin-block-button" onClick={() => setBlockDialog({ date, block: row.block })}>
                 <span>{row.title}</span>
                 <small>{time(row.start)} – {time(row.end)} · tap to change</small>
             </button> : <div className={`admin-timeline-entry ${row.kind}`}>{ENTRY_ICON[row.kind] && <Icon name={ENTRY_ICON[row.kind]} size={18} />}
@@ -124,6 +138,7 @@ export default function Calendar({ signOut, openBooking, openDay, openHours, rev
         </ol>
       </>}
     </section>
+    {offerDialog && <Suspense fallback={null}><OfferDialog date={date} free={offerDialog.free} offer={offerDialog.offer} close={() => setOfferDialog(null)} changed={reread} /></Suspense>}
     {blockDialog && <Suspense fallback={null}><BlockDialog date={blockDialog.date} block={blockDialog.block} close={() => setBlockDialog(null)} saved={() => { setBlockDialog(null); setAttempt(value => value + 1) }} /></Suspense>}
   </>
 }

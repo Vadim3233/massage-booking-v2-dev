@@ -8,6 +8,7 @@
     { "source": "/oauth/consent", "destination": "/index.html" },
     { "source": "/book-with-ai", "destination": "/index.html" },
     { "source": "/faq", "destination": "/index.html" },
+    { "source": "/offer/:code", "destination": "/index.html" },
     { "source": "/admin", "destination": "/index.html" },
     { "source": "/admin/(.*)", "destination": "/index.html" },
     { "source": "/account", "destination": "/index.html" },

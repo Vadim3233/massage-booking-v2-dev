@@ -5,7 +5,7 @@ export const draftKey = 'vad-v2-booking-draft-v1'
 export const holdKey = 'vad-v2-hold-client-v1'
 // The address is one text (ADR-059): whatever the client writes or pastes.
 export const emptyDetails = { first_name: '', last_name: '', email: '', phone: '', savedAddressId: '', address: '', postcode: '', entry_instructions: '' }
-export const newDraft = () => ({ areaId: '', serviceId: '', sessions: [], enhancementIds: [], date: '', start: null, hold: null, details: { ...emptyDetails }, note: '', paymentMethod: 'bank_transfer', pending: null, bookingId: null })
+export const newDraft = () => ({ areaId: '', serviceId: '', sessions: [], enhancementIds: [], date: '', start: null, hold: null, details: { ...emptyDetails }, note: '', paymentMethod: 'bank_transfer', pending: null, bookingId: null, offer: null })
 export const durationOf = (draft) => draft.sessions.reduce((sum, session) => sum + session.duration_minutes, 0)
 export const activeHold = (draft, now = Date.now()) => Boolean(draft.hold && Date.parse(draft.hold.expires_at) > now)
 export const newSession = (duration) => ({ duration_minutes: duration, recipient_name: '', preference_ids: [] })

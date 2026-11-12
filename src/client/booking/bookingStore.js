@@ -1,4 +1,4 @@
-import { activeHold, allowedStep, draftKey, durationOf, restoreDraft } from './bookingDraft.js'
+import { activeHold, allowedStep, draftKey, durationOf, newDraft, newSession, restoreDraft } from './bookingDraft.js'
 import { finalizeParams, quoteParams } from './bookingApi.js'
 import { friendlyError } from './friendlyError.js'
 
@@ -133,6 +133,25 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
       const hold = await api.hold(date, start, durationOf(state.draft), clientKey)
       // create_booking_hold atomically replaces any previous hold for this key.
       save({ ...state.draft, date, start, hold: { ...hold, extension_used: hold.hold_id === state.draft.hold?.hold_id && state.draft.hold.extension_used } })
+      return true
+    }) },
+    // A special-price offer's link was opened. A booking already under way for something else is let go of (its typed details are kept),
+    // and the booking starts again with the offer's time and length fixed.
+    startOffer(offer) { return run(async () => {
+      const current = state.draft
+      if (current.offer?.code === offer.code && !current.bookingId) { save({ ...current, offer }); return true }
+      if (current.hold && !current.bookingId && !current.pending) await api.release(current.hold, clientKey).catch(() => {})
+      save({ ...newDraft(), details: current.details, offer, sessions: [newSession(offer.minutes)], date: offer.date })
+      publish({ quote: null, quoteError: '', result: null, step: 0 })
+      return true
+    }) },
+    // Hold the offer's time, as choosing a usual time does.
+    holdOffer() { return run(async () => {
+      const { offer } = state.draft
+      if (!offer || state.draft.pending || state.draft.bookingId) return
+      const hold = await api.offerHold(offer.code, clientKey)
+      save({ ...state.draft, date: offer.date, start: offer.start, sessions: [newSession(offer.minutes)], enhancementIds: [],
+        hold: { ...hold, extension_used: hold.hold_id === state.draft.hold?.hold_id && state.draft.hold.extension_used } })
       return true
     }) },
     loadQuote() { return run(async () => {

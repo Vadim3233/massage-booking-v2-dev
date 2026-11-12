@@ -40,7 +40,10 @@ export function createCalendarApi(client) {
         // Never request hold tokens or browser client keys.
         read(bounded('booking_holds', 'id,date,start_minutes,treatment_duration_minutes,travel_buffer_minutes,expires_at').eq('status', 'active').gt('expires_at', new Date().toISOString())),
       ])
-      return { bookings, blocks, dayHours, overrides, hours, holds }
+      // Open special-price offers (20261207100000_special_price_offers.sql). Before that change is in the database there are none.
+      const offers = await client.from('slot_offers').select('*').gte('date', start).lt('date', end).eq('status', 'open').gt('closes_at', new Date().toISOString())
+        .then(({ data, error }) => (error ? [] : data || []), () => [])
+      return { bookings, blocks, dayHours, overrides, hours, holds, offers }
     },
     async loadAgendaRange(start, end) {
       validateRange(start, end)
