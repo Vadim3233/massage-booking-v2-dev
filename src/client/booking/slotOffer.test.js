@@ -4,7 +4,7 @@ import { finalizeParams } from './bookingApi.js'
 import { newDraft, newSession } from './bookingDraft.js'
 import { friendlyError } from './friendlyError.js'
 
-const offer = { code: 'K7Q2MX', date: '2026-11-12', start: 1020, minutes: 60, price: 55, normal: 80 }
+const offer = { code: 'K7Q2MX', date: '2026-11-12', start: 1020, minutes: 60, price: 55, normal: 80, addTravelFee: false }
 
 describe('a special-price offer link', () => {
   it('reads the code from the link, in any letter case', () => {
@@ -32,6 +32,10 @@ describe('a special-price offer link', () => {
     expect(narrowed.prices).toEqual([{ service_id: 's1', duration_minutes: 60, price_gbp: 55 }])
     expect(narrowed.enhancements).toEqual([])
     expect(narrowed.areas[0]).toMatchObject({ travel_surcharge_gbp: 0, congestion_fee_gbp: 0, minimum_booking_minutes: null })
+    const withFee = catalogueForOffer(catalogue, { ...offer, addTravelFee: true })
+    expect(withFee.areas[0].travel_surcharge_gbp).toBe(catalogue.areas[0].travel_surcharge_gbp)
+    expect(withFee.areas[0].minimum_booking_minutes).toBe(null)
+    expect(offerFromRow('K7Q2MX', { date: '2026-11-12', start_minutes: 1020, duration_minutes: 60, price_gbp: '55.00', normal_price_gbp: '80.00', add_travel_fee: true }).addTravelFee).toBe(true)
     expect(catalogueForOffer(catalogue, null)).toBe(catalogue)
   })
 

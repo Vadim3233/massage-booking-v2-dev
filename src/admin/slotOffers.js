@@ -43,7 +43,7 @@ export function offerMessage(offer, todayDate, origin = siteOrigin()) {
   const when = `${offerDay(offer.date, todayDate)}, ${time(offer.start_minutes)} to ${time(end)}`
   const what = `A ${offer.duration_minutes}-minute massage at your home for ${pounds(offer.price_gbp)}`
   if (offer.normal_price_gbp != null && !(normal > Number(offer.price_gbp))) {
-    return [`Hi! I have one time left ${when}.`, '', `${what}. Would you like it? You can book it here:`, offerLink(offer, origin), '', SIGN_OFF].join('\n')
+    return [`Hi! I have one slot left ${when}, for a ${offer.duration_minutes}-minute massage at your home. Would you like it? You can book it here:`, offerLink(offer, origin), '', SIGN_OFF].join('\n')
   }
   const cheaper = normal > Number(offer.price_gbp) ? ` instead of ${pounds(normal)}` : ''
   return [
@@ -147,8 +147,8 @@ export function createOfferApi(client) {
       for (const row of rows) cheapest.set(row.duration_minutes, Math.min(cheapest.get(row.duration_minutes) ?? Infinity, Number(row.price_gbp)))
       return [...cheapest].map(([minutes, price]) => ({ minutes, price })).sort((a, b) => a.minutes - b.minutes)
     },
-    create: ({ date, start, minutes, price, closesAt }) => unwrap(client.rpc('admin_create_slot_offer', { p_date: date, p_start_minutes: start, p_duration_minutes: minutes, p_price_gbp: price, p_closes_at: closesAt.toISOString() })),
-    update: (id, { price, closesAt }) => unwrap(client.rpc('admin_update_slot_offer', { p_offer_id: id, p_price_gbp: price, p_closes_at: closesAt.toISOString() })),
+    create: ({ date, start, minutes, price, closesAt, addTravelFee = false }) => unwrap(client.rpc('admin_create_slot_offer', { p_date: date, p_start_minutes: start, p_duration_minutes: minutes, p_price_gbp: price, p_closes_at: closesAt.toISOString(), ...(addTravelFee ? { p_add_travel_fee: true } : {}) })),
+    update: (id, { price, closesAt, addTravelFee }) => unwrap(client.rpc('admin_update_slot_offer', { p_offer_id: id, p_price_gbp: price, p_closes_at: closesAt.toISOString(), ...(addTravelFee == null ? {} : { p_add_travel_fee: addTravelFee }) })),
     stop: id => unwrap(client.rpc('admin_stop_slot_offer', { p_offer_id: id })),
   }
 }

@@ -18,6 +18,7 @@ export default function OfferDialog({ date, free, offer: existing, close, change
   const [start, setStart] = useState(null)
   const [price, setPrice] = useState(existing ? String(Number(existing.price_gbp)) : '')
   const [kind, setKind] = useState(existing && isUsualPrice(existing) ? 'usual' : 'special')
+  const [travelFee, setTravelFee] = useState(existing?.add_travel_fee === true)
   const [closing, setClosing] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -69,7 +70,7 @@ export default function OfferDialog({ date, free, offer: existing, close, change
     if (!ready || start == null || !minutes) return
     setBusy(true); setError('')
     try {
-      const made = await api.create({ date, start, minutes, price: amount, closesAt: choices[closing].at })
+      const made = await api.create({ date, start, minutes, price: amount, closesAt: choices[closing].at, addTravelFee: travelFee })
       setOffer(made); changed?.()
     } catch (failure) { setError(failure.message) } finally { setBusy(false) }
   }
@@ -77,7 +78,7 @@ export default function OfferDialog({ date, free, offer: existing, close, change
     event.preventDefault()
     if (!ready) return
     setBusy(true); setError('')
-    try { setOffer(await api.update(offer.id, { price: amount, closesAt: choices[closing].at })); setEditing(false); changed?.() }
+    try { setOffer(await api.update(offer.id, { price: amount, closesAt: choices[closing].at, addTravelFee: travelFee })); setEditing(false); changed?.() }
     catch (failure) { setError(failure.message) } finally { setBusy(false) }
   }
   async function stop() {
@@ -96,11 +97,12 @@ export default function OfferDialog({ date, free, offer: existing, close, change
       <label><input type="radio" name="offer-kind" checked={kind === 'special'} disabled={busy} onChange={() => setKind('special')} /> Special price</label>
       <label><input type="radio" name="offer-kind" checked={kind === 'usual'} disabled={busy} onChange={() => setKind('usual')} /> Usual price ({money(usual).replace(/\.00$/, '')})</label>
     </fieldset>}
-    {asUsual ? <p className="admin-detail-hint" id="offer-price-hint">The message says you have one time left and asks if they would like it. {money(usual)} is all they pay: no travel fee or extras on top.</p>
+    {asUsual ? <p className="admin-detail-hint" id="offer-price-hint">The message says you have one slot left and asks if they would like it, without naming a price. They pay {money(usual)}{travelFee ? ' plus their area\'s travel fee' : ''}.</p>
       : <label className="admin-field">Special price (£)
         <input inputMode="decimal" value={price} disabled={busy} onChange={event => setPrice(event.target.value.replace(/[£\s]/g, ''))} aria-describedby="offer-price-hint" />
-        <span className="admin-detail-hint" id="offer-price-hint">{usual ? `Usual price ${money(usual)}. ` : ''}This is all they pay: no travel fee or extras on top.</span>
+        <span className="admin-detail-hint" id="offer-price-hint">{usual ? `Usual price ${money(usual)}. ` : ''}{travelFee ? 'Their area\'s travel fee is added on top.' : 'This is all they pay: no travel fee or extras on top.'}</span>
       </label>}
+    <label className="admin-who-row"><input type="checkbox" checked={travelFee} disabled={busy} onChange={event => setTravelFee(event.target.checked)} /> Add travel fee (for areas that have one)</label>
   </>
   const closingField = choices.length > 0
     ? <label className="admin-field">Stop offering it<select value={closing} disabled={busy} onChange={event => setClosing(Number(event.target.value))}>{choices.map((choice, index) => <option key={choice.minutes} value={index}>{choice.label}</option>)}</select></label>
@@ -141,7 +143,7 @@ export default function OfferDialog({ date, free, offer: existing, close, change
       {editing ? <>
         {priceField}
         {closingField}
-        <div className="admin-payment-buttons"><button type="button" className="btn--quiet" disabled={busy} onClick={() => { setEditing(false); setPrice(String(Number(offer.price_gbp))); setKind(isUsualPrice(offer) ? 'usual' : 'special') }}>Keep as it was</button><button type="submit" className="btn--primary" disabled={!ready}>{busy ? 'Saving…' : 'Save changes'}</button></div>
+        <div className="admin-payment-buttons"><button type="button" className="btn--quiet" disabled={busy} onClick={() => { setEditing(false); setPrice(String(Number(offer.price_gbp))); setKind(isUsualPrice(offer) ? 'usual' : 'special'); setTravelFee(offer.add_travel_fee === true) }}>Keep as it was</button><button type="submit" className="btn--primary" disabled={!ready}>{busy ? 'Saving…' : 'Save changes'}</button></div>
       </> : !stopping && <div className="admin-payment-buttons">
         <button type="button" className="btn--quiet" disabled={busy} onClick={() => { setEditing(true); setClosing(Math.max(0, choices.findIndex(choice => Math.abs(choice.at.getTime() - Date.parse(offer.closes_at)) < 60000))) }}>Change price or closing time</button>
         <button type="button" className="btn--danger btn--small" disabled={busy} onClick={() => setStopping(true)}>Stop offer</button>

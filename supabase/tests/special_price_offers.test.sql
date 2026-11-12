@@ -49,7 +49,7 @@ $$;
 -- ---------------------------------------------------------------------------------------------
 -- Who may do what
 -- ---------------------------------------------------------------------------------------------
-select ok(not has_function_privilege('anon', 'public.admin_create_slot_offer(date,integer,integer,numeric,timestamptz)', 'EXECUTE'), 'A visitor cannot make an offer');
+select ok(not has_function_privilege('anon', 'public.admin_create_slot_offer(date,integer,integer,numeric,timestamptz,boolean)', 'EXECUTE'), 'A visitor cannot make an offer');
 select ok(has_function_privilege('anon', 'public.get_slot_offer(text,text)', 'EXECUTE'), 'Anyone with the link can see the offer');
 select ok(has_function_privilege('anon', 'public.create_offer_hold(text,text)', 'EXECUTE'), 'and hold its time before signing in');
 select ok(not has_table_privilege('anon', 'public.slot_offers', 'SELECT'), 'Visitors cannot list offers');
@@ -167,6 +167,33 @@ values ('00000000-0000-4000-8000-00000000c512', '00000000-0000-4000-8000-0000000
   'Offer Test Area', 85, 0, 0, 0, 85, 'VDM-OFFER-TEST-1');
 set local role anon;
 select is((select state from public.get_slot_offer((select code from fourth))), 'taken', 'A time booked another way shows as gone');
+reset role;
+
+-- ---------------------------------------------------------------------------------------------
+-- "Add travel fee" (20261210100000_offer_travel_fee.sql): the area's travel fee and congestion charge go on top of the offer's price
+-- ---------------------------------------------------------------------------------------------
+select pg_temp.as_user('00000000-0000-0000-0000-00000000c501');
+create temp table with_fee as select * from public.admin_create_slot_offer(pg_temp.day(6), 1020, 60, 85, now() + interval '1 day', true);
+grant select on with_fee to authenticated, anon;
+reset role;
+select is((select add_travel_fee from with_fee), true, 'Vadim can make an offer with the travel fee added');
+select is((select add_travel_fee from made), false, 'Offers are all-in unless he ticks it');
+set local role anon;
+select is((select add_travel_fee from public.get_slot_offer((select code from with_fee))), true, 'The link says the travel fee is added');
+select is((select (travel_fee_gbp, congestion_fee_gbp, total_gbp) from public.quote_offer_booking((select code from with_fee), '00000000-0000-4000-8000-00000000c531', '[{"service_id":"00000000-0000-4000-8000-00000000c521","duration_minutes":60}]', '{}')),
+  (20.00::numeric(10,2), 15.00::numeric(10,2), 120.00::numeric(10,2)), 'The price shown is £85 + £20 travel + £15 congestion');
+select is((select count(*)::int from public.create_offer_hold((select code from with_fee), 'offer-browser-fee-0000000000')), 1, 'A visitor holds it');
+reset role;
+insert into browser_holds select id, hold_token, client_key, created_at from public.booking_holds where client_key = 'offer-browser-fee-0000000000' and status = 'active';
+select pg_temp.as_user('00000000-0000-0000-0000-00000000c503');
+create temp table booked_fee as select * from pg_temp.book((select code from with_fee), 'offer-browser-fee-0000000000', '[{"service_id":"00000000-0000-4000-8000-00000000c521","duration_minutes":60}]', 'offer-request-fee') as (id uuid, total numeric);
+reset role;
+select is((select (service_subtotal_gbp, travel_fee_gbp, congestion_fee_gbp, total_gbp) from public.bookings where id = (select id from booked_fee)),
+  (85.00::numeric(10,2), 20.00::numeric(10,2), 15.00::numeric(10,2), 120.00::numeric(10,2)), 'The booking charges the travel fee and congestion charge on top');
+select is((select amount_gbp from public.booking_payments where booking_id = (select id from booked_fee)), 120.00, 'and asks for £120');
+select pg_temp.as_user('00000000-0000-0000-0000-00000000c501');
+select is((select add_travel_fee from public.admin_update_slot_offer((select id from fourth), 50, now() + interval '1 day', true)), true, 'The tick can be changed on an open offer');
+select is((select add_travel_fee from public.admin_update_slot_offer((select id from fourth), 50, now() + interval '1 day')), true, 'and is kept when not given');
 reset role;
 
 select * from finish();

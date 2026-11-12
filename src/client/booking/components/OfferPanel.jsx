@@ -12,7 +12,7 @@ export function OfferCard({ offer, busy = false, heading = true }) {
     <p className="offer-tag"><Icon name="sparkle" size={14} />{cheaper || offer.normal == null ? 'Special offer' : 'One time left'}</p>
     {heading ? <h1 id="offer-title" tabIndex={-1}>{dayParts(offer.date).long}<br /><em>{timeLabel(offer.start)}–{timeLabel(offer.start + offer.minutes)}</em></h1>
       : <p className="offer-when">{dayParts(offer.date).long}, {timeLabel(offer.start)}–{timeLabel(offer.start + offer.minutes)}</p>}
-    <p className="offer-price"><strong className="figure">{whole(offer.price)}</strong>{cheaper && <s>{whole(offer.normal)}</s>}<span>{offer.minutes}-minute massage for one, at your home. That's all you pay: no travel fee or extras.</span></p>
+    <p className="offer-price"><strong className="figure">{whole(offer.price)}</strong>{cheaper && <s>{whole(offer.normal)}</s>}<span>{offer.minutes}-minute massage for one, at your home. {offer.addTravelFee ? 'Plus the travel fee for your area, if it has one.' : "That's all you pay: no travel fee or extras."}</span></p>
     {busy && <p className="offer-busy" role="status">Someone is booking this time right now. If they don't finish in the next few minutes, it can be yours.</p>}
     {heading && <p className="offer-steps">Choose your area and treatment, then add your details. First to book gets it.</p>}
   </section>

@@ -26,8 +26,8 @@ describe('special-price offers (Admin)', () => {
     expect(isUsualPrice(usual)).toBe(true)
     expect(isUsualPrice(offer)).toBe(false)
     expect(offerMessage(usual, '2026-11-12', 'https://book.example')).toBe(
-      'Hi! I have one time left on Sunday 15 November, 17:00 to 18:00.\n\n' +
-      'A 60-minute massage at your home for £80. Would you like it? You can book it here:\nhttps://book.example/offer/K7Q2MX\n\nWarm wishes,\nVadim')
+      'Hi! I have one slot left on Sunday 15 November, 17:00 to 18:00, for a 60-minute massage at your home. Would you like it? You can book it here:\n' +
+      'https://book.example/offer/K7Q2MX\n\nWarm wishes,\nVadim')
   })
 
   it('leaves out "instead of" when the price is not lower', () => {
