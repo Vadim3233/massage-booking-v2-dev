@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase.js'
 import Icon from '../ui/icons.jsx'
 import { acquireBodyScrollLock } from './dialogScrollLock.js'
 import { dateLabel, money, time, today } from './calendarPresentation.js'
-import { closingChoices, createOfferApi, lengthsThatFit, londonClock, offerMessage, offerSummary, startsThatFit, whatsappOfferLink } from './slotOffers.js'
+import { bestStart, closingChoices, createOfferApi, lengthsThatFit, londonClock, offerMessage, offerSummary, startsThatFit, travelUsed, whatsappOfferLink } from './slotOffers.js'
 
 const defaultApi = createOfferApi(supabase)
 const nowMinutes = () => { const [h, m] = londonClock(new Date()).split(':').map(Number); return h * 60 + m }
@@ -40,7 +40,7 @@ export default function OfferDialog({ date, free, offer: existing, close, change
       const fits = lengthsThatFit(free, rows.map(row => row.minutes))
       const chosen = fits.includes(60) ? 60 : fits.at(-1) ?? null
       setMinutes(chosen)
-      if (chosen) setStart(startsThatFit(free, chosen, date === today() ? nowMinutes() : 0)[0] ?? null)
+      if (chosen) setStart(bestStart(free, chosen, date === today() ? nowMinutes() : 0))
     }, failure => { if (live) setError(failure.message) })
     return () => { live = false }
   }, [api, existing, free, date])
@@ -59,7 +59,7 @@ export default function OfferDialog({ date, free, offer: existing, close, change
   function chooseLength(value) {
     setMinutes(value)
     const next = startsThatFit(free, value, earliest)
-    setStart(next.includes(start) ? start : next[0] ?? null)
+    setStart(next.includes(start) ? start : bestStart(free, value, earliest))
     setClosing(0)
   }
   async function create(event) {
@@ -100,7 +100,7 @@ export default function OfferDialog({ date, free, offer: existing, close, change
   return <dialog ref={ref} className="admin-confirm admin-action admin-offer" aria-labelledby="offer-title" onCancel={cancel}>
     {!offer ? <form onSubmit={create}>
       <h2 id="offer-title">Offer at a special price</h2>
-      <p className="admin-detail-hint">{dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long' })}. Free {time(free.start)} – {time(free.end)}. You get a message and a link to send; the first client to book gets it.</p>
+      <p className="admin-detail-hint">{dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long' })}. Free {time((free.free || free).start)} – {time((free.free || free).end)}{free.free && (free.start < free.free.start || free.end > free.free.end) ? `, or ${time(free.start)} – ${time(free.end)} using your travel time` : ''}. You get a message and a link to send; the first client to book gets it.</p>
       {!lengths && !error && <p role="status">Getting your treatments…</p>}
       {lengths && !fits.length && <p role="alert" className="admin-field-error">None of your treatment lengths fits in this free time.</p>}
       {fits.length > 0 && <>
@@ -109,6 +109,7 @@ export default function OfferDialog({ date, free, offer: existing, close, change
         </fieldset>
         {starts.length > 1 && <label className="admin-field">Start<select value={start ?? ''} disabled={busy} onChange={event => { setStart(Number(event.target.value)); setClosing(0) }}>{starts.map(value => <option key={value} value={value}>{time(value)} – {time(value + minutes)}</option>)}</select></label>}
         {starts.length === 1 && <p className="admin-detail-hint">{time(starts[0])} – {time(starts[0] + minutes)}</p>}
+        {start != null && travelUsed(free, start, minutes) > 0 && <p className="admin-detail-hint">This uses {travelUsed(free, start, minutes)} minutes of your travel time.</p>}
         {starts.length === 0 && <p role="alert" className="admin-field-error">That length no longer fits before this time ends.</p>}
         {priceField}
         {starts.length > 0 && closingField}
