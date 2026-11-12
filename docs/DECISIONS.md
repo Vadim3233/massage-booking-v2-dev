@@ -934,7 +934,7 @@ The page stays where the Admin needs it:
 - **Not changed:** booking through a client's AI assistant still asks for payment as before; new clients are still limited to one appointment until their first is completed and paid (`new_client_booking_limit`), so this is for returning clients.
 - **Tests:** `supabase/tests/pay_one_session_at_a_time.test.sql` (39 checks), `payAfter.test.js`, `bookingStore.test.js`, `paymentLine.test.js`, `paymentPresentation.test.js`, `calendarPresentation.test.js`, `server/notifications.test.js`, and the browser tests `payOneSessionAtATime.spec.js` and `adminSettings.spec.js` (the switch).
 
-## ADR-098 — Special-price offers for a free time (2026-11-12)
+## ADR-098 — Special-price offers for a free time (2026-11-12, PR #121)
 
 **Why:** A client moved from 18:00 to 19:00, leaving 17:00 to 18:00 free. Vadim wanted to fill gaps like that at a price he picks (say £50 to £60) by sending a message with a link to clients on WhatsApp. He chose (12 Nov 2026): the price is **all-in** (no travel fee on top), **anyone with the link** can book it, and the **normal booking page stays as it is**.
 

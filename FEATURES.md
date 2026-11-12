@@ -362,7 +362,7 @@ These are the things that are written for Vadim today. In a general therapist ap
 ### Special-price offers for a free time
 - **What it does:** In the Day view, Vadim taps a free time and makes an offer: the length, the start, his price (say £55) and when it stops being offered. He gets a ready WhatsApp message with a link ("A 60-minute massage at your home for £55 instead of £80. First to book gets it: <link>") to send to anyone. Whoever opens the link chooses their area and treatment and books as usual, with the time, length and price fixed. The price is all-in (no travel fee, congestion charge or extras). The first to book gets it; after that, or once it closes or is stopped, the link says the time has gone and shows the normal booking page. Until then the offer shows as a gold "Special offer" block in the day, where he can send it again, change the price or closing time, or stop it. The booking is marked "Special price". The normal booking page doesn't change. Clients can't change a special-price booking online.
 - **Why:** A client moved a booking and left a gap; Vadim wanted to fill gaps like that quickly at a discount.
-- **Built in:** PR #TBD (`20261207100000_special_price_offers.sql`, ADR-098).
+- **Built in:** PR #121 (`20261207100000_special_price_offers.sql`, ADR-098).
 - **For a general app:** whether the price includes travel (all-in here), who can use the link (anyone with it here), the closing-time choices, and the message wording ("at your home" suits a mobile therapist).
 
 ### Google Calendar copy
