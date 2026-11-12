@@ -90,7 +90,7 @@ export default function OfferDialog({ date, free, offer: existing, close, change
 
   const cancel = event => { event.preventDefault(); event.stopPropagation(); if (!busy) close() }
   const priceField = <label className="admin-field">Special price (£)
-    <input inputMode="decimal" value={price} disabled={busy} placeholder="55" onChange={event => setPrice(event.target.value.replace(/[£\s]/g, ''))} aria-describedby="offer-price-hint" />
+    <input inputMode="decimal" value={price} disabled={busy} onChange={event => setPrice(event.target.value.replace(/[£\s]/g, ''))} aria-describedby="offer-price-hint" />
     <span className="admin-detail-hint" id="offer-price-hint">{usual ? `Usual price ${money(usual)}. ` : ''}This is all they pay: no travel fee or extras on top.</span>
   </label>
   const closingField = choices.length > 0
