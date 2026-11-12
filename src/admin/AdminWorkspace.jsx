@@ -23,6 +23,7 @@ const WelcomeSettings = lazy(() => import('./SettingsWelcome.jsx'))
 const ShareLink = lazy(() => import('./ShareLink.jsx'))
 const Income = lazy(() => import('./Income.jsx'))
 const ShareMessageSettings = lazy(() => import('./SettingsShareMessage.jsx'))
+const ReviewSettings = lazy(() => import('./SettingsReviews.jsx'))
 const HelpPage = lazy(() => import('./HelpPage.jsx'))
 const GoogleCalendarSettings = lazy(() => import('./SettingsGoogleCalendar.jsx'))
 const FamilyAlertsSettings = lazy(() => import('./SettingsFamilyAlerts.jsx'))
@@ -40,7 +41,7 @@ const MORE_GROUPS = [
   ['Money', [['/admin/income', 'Income']]],
   ['What you offer', [['/admin/settings/services', 'Services and prices'], ['/admin/settings/extras', 'Extras'], ['/admin/settings/areas', 'Areas and travel fees']]],
   ['Payments and rules', [['/admin/settings/bank', 'Bank transfer details'], ['/admin/settings/receipts', 'Receipt details'], ['/admin/settings/rules', 'Booking rules']]],
-  ['What clients read', [['/admin/settings/welcome', 'Welcome message'], ['/admin/settings/share-message', 'Share message']]],
+  ['What clients read', [['/admin/settings/welcome', 'Welcome message'], ['/admin/settings/share-message', 'Share message'], ['/admin/settings/google-reviews', 'Google reviews']]],
   ['Help', [['/admin/help', 'Help: how the app works']]],
 ]
 const SETTINGS_PAGES = MORE_GROUPS.flatMap(([, links]) => links.map(([path]) => path))
@@ -221,6 +222,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {surface === '/admin/settings/link' && <ShareLink />}
       {surface === '/admin/income' && <Income openBooking={openBooking} />}
       {surface === '/admin/settings/share-message' && <ShareMessageSettings />}
+      {surface === '/admin/settings/google-reviews' && <ReviewSettings />}
       {surface === '/admin/help' && <HelpPage />}
       {surface === '/admin/settings/google-calendar' && <GoogleCalendarSettings />}
       {surface === '/admin/settings/family-alerts' && <FamilyAlertsSettings />}

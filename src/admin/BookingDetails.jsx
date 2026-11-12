@@ -8,7 +8,7 @@ import ShareBooking from './ShareBooking.jsx'
 
 // How a booking was made, in words. A booking made by a client's own AI assistant (through the connector at /mcp) is 'ai_assistant'.
 const SOURCE_NAMES = { web: 'Online booking', ai_assistant: "Client's AI assistant" }
-export default function BookingDetails({ booking: b, close, payment, lifecycle, address, contact, openClient, returnFocus }) {
+export default function BookingDetails({ booking: b, close, payment, lifecycle, review, address, contact, openClient, returnFocus }) {
   const ref = useRef(null)
   useEffect(() => {
     const dialog = ref.current
@@ -36,6 +36,7 @@ export default function BookingDetails({ booking: b, close, payment, lifecycle, 
         <nav className="admin-contact-actions" aria-label="Quick contact">{contactLinks(b).map(link => <a key={link.key} href={link.href} {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}><Icon name={link.icon} />{link.label}</a>)}</nav></section>
       {payment && <section className="admin-next"><h3>Payment</h3>{payment}</section>}
       {lifecycle && <section className="admin-next"><h3>Appointment</h3>{lifecycle}</section>}
+      {review}
       <section><h3>Contact</h3>{contact || <><p>{email ? <a href={`mailto:${email}`}>{email}</a> : 'Email not recorded'}</p><p>{b.clients?.phone ? <a href={`tel:${b.clients.phone}`}>{b.clients.phone}</a> : 'Phone not recorded'}</p></>}</section>
       <ClientNotesSection clientId={b.client_id} />
       <section><h3>Address</h3>{address || <><address>{b.address_snapshot}</address>{b.entry_instructions_snapshot && <p>{b.entry_instructions_snapshot}</p>}</>}</section>

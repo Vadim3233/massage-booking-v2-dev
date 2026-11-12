@@ -60,6 +60,19 @@ describe('the HTML version of a client email', () => {
     expect(make({ url: 'http://localhost:5174/account?booking=b1#key=abc' })).toContain('href="http://localhost:5174/account?booking=b1#key=abc"')
   })
 
+  it('makes a web address written in the text a link (the Google review link), and nothing else', () => {
+    const body = 'Hi Sarah! It really helps other people find me:\nhttps://g.page/r/CU-Ccr2ldxfKEBM/review\n\nWarm wishes,\nVadim'
+    const html = make({ title: 'How was your massage?', body, url: '' })
+    expect(html).toContain('find me:<br><a href="https://g.page/r/CU-Ccr2ldxfKEBM/review" style="')
+    expect(html).toContain('>https://g.page/r/CU-Ccr2ldxfKEBM/review</a></p>')
+    expect(html).not.toContain(BUTTON_LABEL)
+    // A full stop after an address stays outside the link, and an address cannot break out of its attribute.
+    const sentence = make({ body: 'See https://example.com/a?b=1&c=2. Thanks', url: '' })
+    expect(sentence).toContain('<a href="https://example.com/a?b=1&amp;c=2" ')
+    expect(sentence).toContain('</a>. Thanks')
+    expect(make({ body: 'https://example.com/a"onclick=x', url: '' })).not.toMatch(/"onclick=x/)
+  })
+
   it('escapes everything that came from a client or the database', () => {
     const rude = '<script>alert(1)</script> & "quoted" \'single\' <img src=x onerror=y>'
     const html = make({ title: `Hi ${rude}`, body: `Hello ${rude}.\nReference: ${rude}\n\nSee or change your booking: {link}` })

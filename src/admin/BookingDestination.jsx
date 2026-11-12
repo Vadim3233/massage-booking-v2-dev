@@ -6,6 +6,7 @@ import ContactEdit from './ContactEdit.jsx'
 import PaymentActions from './PaymentActions.jsx'
 import ReceiptPanel, { ReceiptNote } from './ReceiptPanel.jsx'
 import PaymentReminder from './PaymentReminder.jsx'
+import ReviewInvite from './ReviewInvite.jsx'
 import { reminderDue } from './shareBooking.js'
 import { clientsApi } from './clientsApi.js'
 import { label } from './calendarPresentation.js'
@@ -57,6 +58,7 @@ export default function BookingDestination({ id, close, changed, returnFocus, op
     {!error && canHaveReceipt && <ReceiptPanel key={booking.id} booking={booking} openPage={openPage} />}
     {!error && !canHaveReceipt && receiptClosed && <ReceiptNote key={booking.id} booking={booking} />}
     <button className="btn--quiet btn--small" onClick={() => setAttempt(value => value + 1)}>Check for changes</button>
-  </>} lifecycle={error ? null : <BookingActions booking={booking} refresh={refresh} />} address={error ? null : <AddressEdit key={booking.updated_at} booking={booking} refresh={refresh} />}
+  </>} lifecycle={error ? null : <BookingActions booking={booking} refresh={refresh} />}
+    review={error ? null : <ReviewInvite key={booking.id} booking={booking} openSettings={openPage && (() => openPage('/admin/settings/google-reviews'))} />} address={error ? null : <AddressEdit key={booking.updated_at} booking={booking} refresh={refresh} />}
     contact={error ? null : <ContactEdit booking={booking} refresh={refresh} />} openClient={openPage && (clientId => openPage(`/admin/clients/${clientId}`))} />
 }

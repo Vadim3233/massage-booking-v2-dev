@@ -40,7 +40,20 @@ function heading(title) {
   return `${lead}<em style="font-style:italic;color:${C.primary}">${escapeHtml(last)}</em>`
 }
 
-const paragraph = (lines, style) => `<p style="margin:0 0 16px;${style}">${lines.map((line) => escapeHtml(line).replace(WHEN, (when) => `<strong>${when}</strong>`)).join('<br>')}</p>`
+// A web address written in the text (a Google review link) is made a link people can press; everything else is plain text, with the day and time in bold.
+const WEB_ADDRESS = /https?:\/\/[^\s"'<>]+/g
+const words = (text) => escapeHtml(text).replace(WHEN, (when) => `<strong>${when}</strong>`)
+function inline(line) {
+  let out = ''
+  let from = 0
+  for (const match of String(line).matchAll(WEB_ADDRESS)) {
+    const url = match[0].replace(/[.,;:!?)]+$/, '')
+    out += words(line.slice(from, match.index)) + `<a href="${escapeHtml(url)}" style="color:${C.primary};text-decoration:underline;word-break:break-all">${escapeHtml(url)}</a>`
+    from = match.index + url.length
+  }
+  return out + words(line.slice(from))
+}
+const paragraph = (lines, style) => `<p style="margin:0 0 16px;${style}">${lines.map(inline).join('<br>')}</p>`
 
 function button(url) {
   return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:8px 0 24px"><tr><td bgcolor="${C.primary}" style="background:${C.primary};border-radius:999px">`
