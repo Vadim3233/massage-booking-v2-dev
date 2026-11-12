@@ -65,6 +65,9 @@ export function createClientsApi(client) {
     setOnlineBooking: (id, enabled) => run(client.from('clients').update({ online_booking_enabled: enabled }).eq('id', id)),
     setNoTravelFee: (id, free) => run(client.from('clients').update({ no_travel_fee: free }).eq('id', id)),
     setNoMinimumBooking: (id, off) => run(client.from('clients').update({ no_minimum_booking: off }).eq('id', id)),
+    // Cash is for returning clients; Trusted lets a new one pay cash too (20261209100000_new_clients_pay_by_transfer.sql).
+    paymentTrust: id => run(client.rpc('admin_client_payment_trust', { p_client_id: id })),
+    setCashTrusted: (id, trusted) => run(client.from('clients').update({ cash_trusted: trusted }).eq('id', id)),
     addresses: id => run(client.from('client_addresses').select('id,label,address,entry_instructions,is_default').eq('client_id', id).order('is_default', { ascending: false }).order('created_at')),
     addAddress: (id, address) => run(client.from('client_addresses').insert({ client_id: id, ...addressRow(address) })),
     updateAddress: (id, address) => run(client.from('client_addresses').update(addressRow(address)).eq('id', id)),

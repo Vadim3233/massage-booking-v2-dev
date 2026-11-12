@@ -86,6 +86,14 @@ describe('real local Supabase client adapter', () => {
     expect((await fixture.api.addresses())[0].address).toBe('10 Test Street, London SW1A 1AA')
     expect(booking.address_snapshot).toBe('10 Test Street, London SW1A 1AA')
   })
+  it('keeps cash for returning clients: a new client pays by transfer unless Vadim marks them Trusted', async () => {
+    expect(await fixture.api.cashAllowed()).toBe(false)
+    await expect(fixture.api.confirmCash(result.booking_id)).rejects.toThrow(/Cash is welcome from your second visit/)
+    expect((await unwrap(fixture.admin.from('booking_payments').select('method,status').eq('booking_id', result.booking_id)))[0]).toEqual({ method: 'bank_transfer', status: 'awaiting_transfer' })
+    await unwrap(fixture.admin.from('clients').update({ cash_trusted: true }).eq('id', fixture.profile.client_id))
+    try { expect(await fixture.api.cashAllowed()).toBe(true) }
+    finally { await unwrap(fixture.admin.from('clients').update({ cash_trusted: false }).eq('id', fixture.profile.client_id)) }
+  })
   it('retries idempotently without duplicate bookings, enhancements or events', async () => {
     await unwrap(fixture.admin.from('services').update({ active: false }).eq('id', fixture.ids.service))
     try { expect(await fixture.api.finalize(params)).toEqual(result) }
@@ -133,6 +141,7 @@ describe('real local Supabase client adapter', () => {
     cash.hold = await fixture.publicApi.hold(cash.date, cash.start, 60, cashKey)
     const provisional = await fixture.api.finalize(finalizeParams(cash, cashKey, crypto.randomUUID()))
     expect(provisional).toMatchObject({ booking_status: 'awaiting_transfer', payment_status: 'awaiting_transfer' })
+    expect(await fixture.api.cashAllowed()).toBe(true)
     const response = await fixture.api.confirmCash(provisional.booking_id)
     expect(response.booking_status).toBe('awaiting_cash_approval')
     expect(response.booking_payments.status).toBe('awaiting_approval')

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { actionLabels, methodSwitch, needsYou, paymentActions, paymentReviewApi } from './paymentReviewApi.js'
+import { actionLabels, FIRST_BOOKING_RISK, isFirstBooking, methodSwitch, needsYou, paymentActions, paymentReviewApi } from './paymentReviewApi.js'
 import { activeReminder, clearReminder, reminderChoices, reminderWhen, setReminder, useReminders } from './paymentReminders.js'
 import ReminderDialog from './ReminderDialog.jsx'
 import { clientName, dateLabel, money, time } from './calendarPresentation.js'
@@ -43,8 +43,16 @@ const doneMessage = (action, booking) => ({
   toBank: `Changed to bank transfer · ${clientName(booking)}`,
 }[action])
 
-function Confirmation({ action, booking, cancel, confirm, busy }) {
+function Confirmation({ action, booking, cancel, confirm, busy, api }) {
   const ref = useRef(null)
+  const [trust, setTrust] = useState(null)
+  useEffect(() => {
+    if (!FIRST_BOOKING_RISK[action] || !api.trust) return undefined
+    let live = true
+    api.trust(booking.client_id || booking.clients?.id).then(row => { if (live) setTrust(row) }, () => {})
+    return () => { live = false }
+  }, [action, booking, api])
+  const risky = Boolean(FIRST_BOOKING_RISK[action]) && isFirstBooking(trust)
   useEffect(() => {
     const opener = document.activeElement
     const dialog = ref.current
@@ -60,9 +68,10 @@ function Confirmation({ action, booking, cancel, confirm, busy }) {
     <h2 id="payment-confirm-title">{actionLabels[action]}?</h2>
     <div className="admin-confirm-summary"><strong>{clientName(booking)}</strong><span>{dateLabel(booking.date)} · {time(booking.start_minutes)}</span><b className="figure">{money(booking.total_gbp)}</b></div>
     <p id="payment-confirm-what">{CONSEQUENCES[action] || switchConsequence(action, booking)}</p>
+    {risky && <p className="admin-field-error" role="status">{FIRST_BOOKING_RISK[action]}</p>}
     {(action === 'verify' || action === 'receiveBank') && booking.booking_reference && <p className="admin-confirm-ref">Look for the reference <strong>{booking.booking_reference}</strong> on your bank statement.</p>}
     <div className="admin-payment-buttons">
-      <button className={action === 'remove' ? 'btn--danger-solid' : 'btn--primary'} disabled={busy} onClick={confirm}>{busy ? 'Saving…' : confirmLabel(action, booking)}</button>
+      <button className={action === 'remove' ? 'btn--danger-solid' : 'btn--primary'} disabled={busy} onClick={confirm}>{busy ? 'Saving…' : risky ? 'Confirm anyway' : confirmLabel(action, booking)}</button>
       <button className="btn--quiet" disabled={busy} onClick={cancel}>Go back</button>
     </div>
   </dialog>
@@ -122,7 +131,7 @@ export default function PaymentActions({ booking, refresh, only, compact = false
   return <div className={`admin-payment-actions ${compact ? 'is-compact' : ''}`}>
     <div className="admin-payment-buttons">{compact && laterButton}{available.map(action => <button key={action} className={`${buttonClass(action, booking)} ${compact ? 'btn--small' : ''}`} aria-label={compact ? `${actionLabels[action]}, ${clientName(booking)} ${money(booking.total_gbp)}` : short ? actionLabels[action] : undefined} disabled={busy} onClick={() => { setMessage(null); setConfirmation(action) }}>{short ? SHORT[action] : actionLabels[action]}</button>)}{!compact && laterButton}</div>
     {message && <p role={message.error ? 'alert' : 'status'}>{message.text}</p>}
-    {confirmation && <Confirmation action={confirmation} booking={booking} cancel={() => setConfirmation(null)} confirm={submit} busy={busy} />}
+    {confirmation && <Confirmation action={confirmation} booking={booking} api={paymentReviewApi} cancel={() => setConfirmation(null)} confirm={submit} busy={busy} />}
     {choices && <ReminderDialog booking={booking} choices={choices} cancel={() => setChoices(null)} choose={remind} />}
   </div>
 }

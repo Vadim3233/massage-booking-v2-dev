@@ -64,11 +64,11 @@ export function clientFaq({ rules, areas = [] }) {
       ...(minimums.length ? [{ q: 'Is there a minimum booking length?', a: ['In some areas the appointment needs to be a little longer:'], list: minimums, after: ['When you book for two or more people, everyone\'s time adds up. Lengths that are too short are greyed out.'] }] : []),
     ] },
     { title: 'Paying', items: [
-      { q: 'How can I pay?', a: ['By bank transfer or in cash. You choose at the payment step.'] },
+      { q: 'How can I pay?', a: ['By bank transfer or in cash. You choose at the payment step. For your first visit, please pay by bank transfer to secure your booking; cash is welcome from your second visit.'] },
       { q: 'How does a bank transfer work?', a: ['After you reserve, you see my bank details and a payment reference. Make the transfer with that reference, then press "I\'ve made the bank transfer". I check it and confirm your appointment.'] },
       { q: 'Do I have to pay for all my sessions at once?', a: ['No. You only pay for your next session. When you book a later one, the payment step says "Nothing to pay yet". After each session I send you the amount and bank details for the next one, by email and on Telegram if you turned it on. If you pay in cash, just pay at each appointment.', 'Would you rather pay for a later session straight away? Press "I\'d rather pay for this one now".'] },
       { q: 'Can I pay later?', a: ['Sometimes I confirm a bank-transfer booking before the money arrives. Your booking then shows that the payment is still awaited, and I may send you a reminder with the date, time, length and amount so you can find it in your bank.'] },
-      { q: 'How does paying in cash work?', a: ['Choose Cash at the payment step and send me your request. I confirm it, and you pay the full amount in cash at your appointment.'] },
+      { q: 'How does paying in cash work?', a: ['Cash is for your second visit onwards. Choose Cash at the payment step and send me your request. I confirm it, and you pay the full amount in cash at your appointment.'] },
     ] },
     { title: 'Changing or cancelling', items: [
       { q: 'How do I change or cancel?', a: ['Use the link in your confirmation email, or sign in and open your booking, then press "Change the time" or "Cancel appointment". Booked as a guest? The link in your latest confirmation email works without a password.'], link: { href: '/account', text: 'Your bookings' } },
