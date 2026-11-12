@@ -8,7 +8,7 @@ import { listedBookings, useShowCancelled } from './cancelledBookings.js'
 import { dateLabel, dayTimeline, shiftDate, time, today } from './calendarPresentation.js'
 import Icon from '../ui/icons.jsx'
 import { dayHoursLine } from './agendaDays.js'
-import { canOffer, londonClock, offerPrice, roomAround, withOffers } from './slotOffers.js'
+import { canOffer, isUsualPrice, londonClock, offerPrice, roomAround, withOffers } from './slotOffers.js'
 const BlockDialog = lazy(() => import('./BlockDialog.jsx'))
 const OfferDialog = lazy(() => import('./OfferDialog.jsx'))
 const api = createCalendarApi(supabase)
@@ -121,12 +121,12 @@ export default function Calendar({ signOut, openBooking, openDay, openHours, rev
         <ol role="list" className="admin-timeline" aria-label="Day timeline">
           {rows.map(row => <li key={`${row.kind}-${row.id}`} className={`admin-timeline-row admin-timeline-${row.kind}`} data-start={row.start}>
             {row.kind === 'booking' ? <BookingCard booking={row.booking} open={() => openBooking(row.booking.id)} changed={reread} now={new Date(now)} /> : row.kind === 'offer' ? <button className="admin-timeline-entry offer admin-offer-button" onClick={() => setOfferDialog({ offer: row.offer })}>
-                <span>Special offer · {offerPrice(row.offer)}</span>
+                <span>{isUsualPrice(row.offer) ? 'Offered' : 'Special offer'} · {offerPrice(row.offer)}</span>
                 <small>{time(row.start)} – {time(row.end)} · open until {londonClock(new Date(row.offer.closes_at))} · tap to share</small>
             </button> : offerable(row) ? <button className="admin-timeline-entry free admin-free-button" onClick={() => setOfferDialog({ free: roomAround(rows, row) })}>
                 <Icon name="clock" size={18} />
                 <span>Free</span>
-                <small>{time(row.start)} – {time(row.end)} · {row.end - row.start} min · tap to offer at a special price</small>
+                <small>{time(row.start)} – {time(row.end)} · {row.end - row.start} min · tap to offer it to clients</small>
             </button> : row.kind === 'block' && row.block.kind !== 'series_hold' ? <button className="admin-timeline-entry block admin-block-button" onClick={() => setBlockDialog({ date, block: row.block })}>
                 <span>{row.title}</span>
                 <small>{time(row.start)} – {time(row.end)} · tap to change</small>

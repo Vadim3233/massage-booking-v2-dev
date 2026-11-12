@@ -33,15 +33,23 @@ export function offerDay(date, todayDate) {
 const pounds = value => money(value).replace(/\.00$/, '')
 export const offerPrice = offer => pounds(offer.price_gbp)
 
-// The message Vadim copies to WhatsApp. "instead of" only when it really is cheaper.
+// Whether the offer is at the usual price (Vadim, 12 Nov 2026: "I have one last time on Sunday, would you like it?"), not a discount.
+export const isUsualPrice = offer => offer.normal_price_gbp != null && Number(offer.price_gbp) >= Number(offer.normal_price_gbp)
+
+// The message Vadim copies to WhatsApp: a deal when it is cheaper ("instead of" the usual price), a friendly heads-up when it is not.
 export function offerMessage(offer, todayDate, origin = siteOrigin()) {
   const end = offer.start_minutes + offer.duration_minutes
   const normal = Number(offer.normal_price_gbp)
+  const when = `${offerDay(offer.date, todayDate)}, ${time(offer.start_minutes)} to ${time(end)}`
+  const what = `A ${offer.duration_minutes}-minute massage at your home for ${pounds(offer.price_gbp)}`
+  if (offer.normal_price_gbp != null && !(normal > Number(offer.price_gbp))) {
+    return [`Hi! I have one slot left ${when}, for a ${offer.duration_minutes}-minute massage at your home. Would you like it? You can book it here:`, offerLink(offer, origin), '', SIGN_OFF].join('\n')
+  }
   const cheaper = normal > Number(offer.price_gbp) ? ` instead of ${pounds(normal)}` : ''
   return [
-    `Hi! I've just had a time free up ${offerDay(offer.date, todayDate)}, ${time(offer.start_minutes)} to ${time(end)}.`,
+    `Hi! I've just had a time free up ${when}.`,
     '',
-    `A ${offer.duration_minutes}-minute massage at your home for ${pounds(offer.price_gbp)}${cheaper}. First to book gets it:`,
+    `${what}${cheaper}. First to book gets it:`,
     offerLink(offer, origin),
     '',
     SIGN_OFF,
@@ -139,8 +147,8 @@ export function createOfferApi(client) {
       for (const row of rows) cheapest.set(row.duration_minutes, Math.min(cheapest.get(row.duration_minutes) ?? Infinity, Number(row.price_gbp)))
       return [...cheapest].map(([minutes, price]) => ({ minutes, price })).sort((a, b) => a.minutes - b.minutes)
     },
-    create: ({ date, start, minutes, price, closesAt }) => unwrap(client.rpc('admin_create_slot_offer', { p_date: date, p_start_minutes: start, p_duration_minutes: minutes, p_price_gbp: price, p_closes_at: closesAt.toISOString() })),
-    update: (id, { price, closesAt }) => unwrap(client.rpc('admin_update_slot_offer', { p_offer_id: id, p_price_gbp: price, p_closes_at: closesAt.toISOString() })),
+    create: ({ date, start, minutes, price, closesAt, addTravelFee = false }) => unwrap(client.rpc('admin_create_slot_offer', { p_date: date, p_start_minutes: start, p_duration_minutes: minutes, p_price_gbp: price, p_closes_at: closesAt.toISOString(), ...(addTravelFee ? { p_add_travel_fee: true } : {}) })),
+    update: (id, { price, closesAt, addTravelFee }) => unwrap(client.rpc('admin_update_slot_offer', { p_offer_id: id, p_price_gbp: price, p_closes_at: closesAt.toISOString(), ...(addTravelFee == null ? {} : { p_add_travel_fee: addTravelFee }) })),
     stop: id => unwrap(client.rpc('admin_stop_slot_offer', { p_offer_id: id })),
   }
 }
