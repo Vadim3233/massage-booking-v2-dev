@@ -811,3 +811,9 @@
 /* More › Family alerts: the linked chats, one per line with its Switch off button. */
 .admin-family-chats { list-style: none; padding: 0; margin: 0 0 1rem; display: grid; gap: .5rem; }
 .admin-family-chats li { display: flex; align-items: center; justify-content: space-between; gap: .75rem; flex-wrap: wrap; }
+
+/* ---------- Ask for a Google review (on a booking once the session is over and paid) ---------- */
+.admin-review-invite { display: grid; gap: 10px; }
+.admin-review-invite .admin-share-preview { font-size: 14px; }
+.admin-review-asked { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--ok-ink); font-weight: 600; }
+.admin-review-asked .icon { flex: 0 0 auto; }

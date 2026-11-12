@@ -39,13 +39,15 @@ export async function handle(request, response, { env = process.env, createServi
     const reminders = await client.rpc('plan_day_of_reminders').then(({ data, error }) => (error ? { failed: true } : { made: data }), () => ({ failed: true }))
     // Then the payment details for a client's next session, once the session before it is over (a client pays for one session at a time).
     const nextPayments = await client.rpc('plan_next_session_payments').then(({ data, error }) => (error ? { failed: true } : { made: data }), () => ({ failed: true }))
+    // Then the Google review requests, two days after a paid session, when the Admin has switched them on (More › Google reviews). Never twice.
+    const reviews = await client.rpc('plan_review_requests').then(({ data, error }) => (error ? { failed: true } : { made: data }), () => ({ failed: true }))
     // The Google Calendar copy runs beside the messages, once its Google codes are set, with its own time limit. A problem with Google never stops them.
     const calendarConfig = readCalendarConfig(env)
     const calendar = calendarConfigured(calendarConfig)
       ? createCalendarSync({ client, config: calendarConfig, fetchImpl }).run().catch(() => ({ failed: true }))
       : null
     const config = readConfig(env)
-    const summary = { ...(await sendAll(createDispatcher({ client, config, fetchImpl }))), repeats, reminders, nextPayments, ...(calendar ? { calendar: await calendar } : {}) }
+    const summary = { ...(await sendAll(createDispatcher({ client, config, fetchImpl }))), repeats, reminders, nextPayments, reviews, ...(calendar ? { calendar: await calendar } : {}) }
     // The family alerts go out with the clients' bot, once it is set up. A problem with them never stops the rest.
     if (config.telegramClient.token) summary.family = await createFamilySender({ client, token: config.telegramClient.token, fetchImpl }).run().catch(() => ({ failed: true }))
     response.statusCode = 200

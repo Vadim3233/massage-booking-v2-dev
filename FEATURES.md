@@ -326,6 +326,12 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **Built in:** PR #117 (`20261205100000_share_message_name.sql`, only needed for using `{name}` in custom wording; the standard message works without it).
 - **For a general app:** nothing Vadim-specific; first name only (not the full name), by choice.
 
+### Asking clients for a Google review
+- **What it does:** Once a session is over and paid, the booking shows "Ask for a Google review" with the message ready: WhatsApp the client, Copy message, or Mark as asked. The message greets the client by first name, hopes they enjoyed their last session and are still feeling the benefit, and gives the Google review link, signed "Warm wishes, Vadim". Each client is asked only once: afterwards every booking of theirs says "Review asked · 12 Nov · by WhatsApp", with Ask again and Not asked after all. In More › Google reviews he keeps the link, rewords the message ({name}, {link}) and can switch on "Ask automatically": then the app emails the client (and sends it on Telegram, if they use it) at 11:00 two days after a paid session, only for sessions from the last two weeks, and never to anyone already asked. The switch starts off.
+- **Why:** Google reviews help new clients find him; asking right after a good session, once, is when people say yes.
+- **Built in:** PR #124 (`20261208100000_google_review_invites.sql`, needed for the card and the settings page; until it is applied they stay hidden). Web addresses in emails are now pressable links.
+- **For a general app:** the review link (or links for other review sites), the wording, how many days after the session, the send time, and whether to ask automatically.
+
 ---
 
 ## 5. Admin: calendar and schedule
