@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bestStart, canOffer, roomAround, travelUsed, closingChoices, lengthsThatFit, londonInstant, offerDay, offerMessage, startsThatFit, withOffers } from './slotOffers.js'
+import { bestStart, canOffer, isUsualPrice, roomAround, travelUsed, closingChoices, lengthsThatFit, londonInstant, offerDay, offerMessage, startsThatFit, withOffers } from './slotOffers.js'
 
 const offer = { id: 'o1', code: 'K7Q2MX', date: '2026-11-12', start_minutes: 1020, duration_minutes: 60, price_gbp: '55.00', normal_price_gbp: '80.00', closes_at: '2026-11-12T16:00:00Z' }
 
@@ -19,6 +19,15 @@ describe('special-price offers (Admin)', () => {
     expect(offerMessage(offer, '2026-11-12', 'https://book.example')).toBe(
       "Hi! I've just had a time free up today, Thursday 12 November, 17:00 to 18:00.\n\n" +
       'A 60-minute massage at your home for £55 instead of £80. First to book gets it:\nhttps://book.example/offer/K7Q2MX\n\nWarm wishes,\nVadim')
+  })
+
+  it('writes a friendly "one time left" message at the usual price', () => {
+    const usual = { ...offer, date: '2026-11-15', price_gbp: '80', normal_price_gbp: '80' }
+    expect(isUsualPrice(usual)).toBe(true)
+    expect(isUsualPrice(offer)).toBe(false)
+    expect(offerMessage(usual, '2026-11-12', 'https://book.example')).toBe(
+      'Hi! I have one time left on Sunday 15 November, 17:00 to 18:00.\n\n' +
+      'A 60-minute massage at your home for £80. Would you like it? You can book it here:\nhttps://book.example/offer/K7Q2MX\n\nWarm wishes,\nVadim')
   })
 
   it('leaves out "instead of" when the price is not lower', () => {

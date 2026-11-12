@@ -9,7 +9,7 @@ const whole = amount => money(amount).replace(/\.00$/, '')
 export function OfferCard({ offer, busy = false, heading = true }) {
   const cheaper = offer.normal != null && offer.normal > offer.price
   return <section className="offer-card" aria-labelledby={heading ? 'offer-title' : undefined} aria-label={heading ? undefined : 'Your special offer'}>
-    <p className="offer-tag"><Icon name="sparkle" size={14} />Special offer</p>
+    <p className="offer-tag"><Icon name="sparkle" size={14} />{cheaper || offer.normal == null ? 'Special offer' : 'One time left'}</p>
     {heading ? <h1 id="offer-title" tabIndex={-1}>{dayParts(offer.date).long}<br /><em>{timeLabel(offer.start)}–{timeLabel(offer.start + offer.minutes)}</em></h1>
       : <p className="offer-when">{dayParts(offer.date).long}, {timeLabel(offer.start)}–{timeLabel(offer.start + offer.minutes)}</p>}
     <p className="offer-price"><strong className="figure">{whole(offer.price)}</strong>{cheaper && <s>{whole(offer.normal)}</s>}<span>{offer.minutes}-minute massage for one, at your home. That's all you pay: no travel fee or extras.</span></p>
@@ -21,7 +21,7 @@ export function OfferCard({ offer, busy = false, heading = true }) {
 // Step "Date & Time" for an offer: the time is fixed, so this only holds it.
 export function OfferTimeStep({ offer, hold, busy }) {
   return <>
-    <h1 tabIndex={-1}>Your special <em>time</em></h1>
+    <h1 tabIndex={-1}>Your <em>time</em></h1>
     <OfferCard offer={offer} heading={false} />
     <p className="lede">Tap below and the time is held for you while you add your details.</p>
     <button className="btn--primary" disabled={busy} onClick={hold}>Hold this time for me</button>

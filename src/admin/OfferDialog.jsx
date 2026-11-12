@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase.js'
 import Icon from '../ui/icons.jsx'
 import { acquireBodyScrollLock } from './dialogScrollLock.js'
 import { dateLabel, money, time, today } from './calendarPresentation.js'
-import { bestStart, closingChoices, createOfferApi, lengthsThatFit, londonClock, offerMessage, offerSummary, startsThatFit, travelUsed, whatsappOfferLink } from './slotOffers.js'
+import { bestStart, closingChoices, createOfferApi, isUsualPrice, lengthsThatFit, londonClock, offerMessage, offerSummary, startsThatFit, travelUsed, whatsappOfferLink } from './slotOffers.js'
 
 const defaultApi = createOfferApi(supabase)
 const nowMinutes = () => { const [h, m] = londonClock(new Date()).split(':').map(Number); return h * 60 + m }
@@ -17,6 +17,7 @@ export default function OfferDialog({ date, free, offer: existing, close, change
   const [minutes, setMinutes] = useState(null)
   const [start, setStart] = useState(null)
   const [price, setPrice] = useState(existing ? String(Number(existing.price_gbp)) : '')
+  const [kind, setKind] = useState(existing && isUsualPrice(existing) ? 'usual' : 'special')
   const [closing, setClosing] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -52,8 +53,9 @@ export default function OfferDialog({ date, free, offer: existing, close, change
   const shownStart = offer ? offer.start_minutes : start
   const choices = shownStart != null ? closingChoices(day, shownStart) : []
   const usual = offer ? Number(offer.normal_price_gbp) : lengths?.find(row => row.minutes === minutes)?.price
-  const amount = Number(price)
-  const priceProblem = price.trim() && !(amount > 0 && amount < 10000 && Math.round(amount * 100) === amount * 100) ? 'Enter a price in pounds, for example 55.' : ''
+  const asUsual = kind === 'usual' && usual > 0
+  const amount = asUsual ? Number(usual) : Number(price)
+  const priceProblem = !asUsual && price.trim() && !(amount > 0 && amount < 10000 && Math.round(amount * 100) === amount * 100) ? 'Enter a price in pounds, for example 55.' : ''
   const ready = !busy && amount > 0 && !priceProblem && choices.length > 0
 
   function chooseLength(value) {
@@ -89,17 +91,24 @@ export default function OfferDialog({ date, free, offer: existing, close, change
   }
 
   const cancel = event => { event.preventDefault(); event.stopPropagation(); if (!busy) close() }
-  const priceField = <label className="admin-field">Special price (£)
-    <input inputMode="decimal" value={price} disabled={busy} onChange={event => setPrice(event.target.value.replace(/[£\s]/g, ''))} aria-describedby="offer-price-hint" />
-    <span className="admin-detail-hint" id="offer-price-hint">{usual ? `Usual price ${money(usual)}. ` : ''}This is all they pay: no travel fee or extras on top.</span>
-  </label>
+  const priceField = <>
+    {usual > 0 && <fieldset className="admin-offer-lengths"><legend>Price</legend>
+      <label><input type="radio" name="offer-kind" checked={kind === 'special'} disabled={busy} onChange={() => setKind('special')} /> Special price</label>
+      <label><input type="radio" name="offer-kind" checked={kind === 'usual'} disabled={busy} onChange={() => setKind('usual')} /> Usual price ({money(usual).replace(/\.00$/, '')})</label>
+    </fieldset>}
+    {asUsual ? <p className="admin-detail-hint" id="offer-price-hint">The message says you have one time left and asks if they would like it. {money(usual)} is all they pay: no travel fee or extras on top.</p>
+      : <label className="admin-field">Special price (£)
+        <input inputMode="decimal" value={price} disabled={busy} onChange={event => setPrice(event.target.value.replace(/[£\s]/g, ''))} aria-describedby="offer-price-hint" />
+        <span className="admin-detail-hint" id="offer-price-hint">{usual ? `Usual price ${money(usual)}. ` : ''}This is all they pay: no travel fee or extras on top.</span>
+      </label>}
+  </>
   const closingField = choices.length > 0
     ? <label className="admin-field">Stop offering it<select value={closing} disabled={busy} onChange={event => setClosing(Number(event.target.value))}>{choices.map((choice, index) => <option key={choice.minutes} value={index}>{choice.label}</option>)}</select></label>
     : <p className="admin-field-error" role="alert">This time is about to start, so it can no longer be offered.</p>
 
   return <dialog ref={ref} className="admin-confirm admin-action admin-offer" aria-labelledby="offer-title" onCancel={cancel}>
     {!offer ? <form onSubmit={create}>
-      <h2 id="offer-title">Offer at a special price</h2>
+      <h2 id="offer-title">Offer this free time</h2>
       <p className="admin-detail-hint">{dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long' })}. Free {time((free.free || free).start)} – {time((free.free || free).end)}{free.free && (free.start < free.free.start || free.end > free.free.end) ? `, or ${time(free.start)} – ${time(free.end)} using your travel time` : ''}. You get a message and a link to send; the first client to book gets it.</p>
       {!lengths && !error && <p role="status">Getting your treatments…</p>}
       {lengths && !fits.length && <p role="alert" className="admin-field-error">None of your treatment lengths fits in this free time.</p>}
@@ -120,7 +129,7 @@ export default function OfferDialog({ date, free, offer: existing, close, change
         <button type="submit" className="btn--primary" disabled={!ready || start == null}>{busy ? 'Creating…' : 'Create offer'}</button>
       </div>
     </form> : <form onSubmit={save}>
-      <h2 id="offer-title">Special offer</h2>
+      <h2 id="offer-title">{isUsualPrice(offer) ? 'Free time offered' : 'Special offer'}</h2>
       <p className="admin-offer-summary"><strong>{dateLabel(offer.date, { weekday: 'long', day: 'numeric', month: 'long' })}</strong><span>{offerSummary(offer)}</span>
         <span className="admin-detail-hint">Open until {londonClock(new Date(offer.closes_at))}{offer.date !== today() ? ` on ${dateLabel(offer.date, { weekday: 'short', day: 'numeric', month: 'short' })}` : ''}. Anyone with the link can book it.</span></p>
       <p className="admin-offer-message" aria-label="Message to send">{message}</p>
@@ -132,7 +141,7 @@ export default function OfferDialog({ date, free, offer: existing, close, change
       {editing ? <>
         {priceField}
         {closingField}
-        <div className="admin-payment-buttons"><button type="button" className="btn--quiet" disabled={busy} onClick={() => { setEditing(false); setPrice(String(Number(offer.price_gbp))) }}>Keep as it was</button><button type="submit" className="btn--primary" disabled={!ready}>{busy ? 'Saving…' : 'Save changes'}</button></div>
+        <div className="admin-payment-buttons"><button type="button" className="btn--quiet" disabled={busy} onClick={() => { setEditing(false); setPrice(String(Number(offer.price_gbp))); setKind(isUsualPrice(offer) ? 'usual' : 'special') }}>Keep as it was</button><button type="submit" className="btn--primary" disabled={!ready}>{busy ? 'Saving…' : 'Save changes'}</button></div>
       </> : !stopping && <div className="admin-payment-buttons">
         <button type="button" className="btn--quiet" disabled={busy} onClick={() => { setEditing(true); setClosing(Math.max(0, choices.findIndex(choice => Math.abs(choice.at.getTime() - Date.parse(offer.closes_at)) < 60000))) }}>Change price or closing time</button>
         <button type="button" className="btn--danger btn--small" disabled={busy} onClick={() => setStopping(true)}>Stop offer</button>
