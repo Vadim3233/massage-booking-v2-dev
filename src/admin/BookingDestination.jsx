@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import BookingDetails from './BookingDetails.jsx'
 import BookingActions from './BookingActions.jsx'
 import AddressEdit from './AddressEdit.jsx'
+import ContactEdit from './ContactEdit.jsx'
 import PaymentActions from './PaymentActions.jsx'
 import ReceiptPanel, { ReceiptNote } from './ReceiptPanel.jsx'
 import PaymentReminder from './PaymentReminder.jsx'
@@ -56,5 +57,6 @@ export default function BookingDestination({ id, close, changed, returnFocus, op
     {!error && canHaveReceipt && <ReceiptPanel key={booking.id} booking={booking} openPage={openPage} />}
     {!error && !canHaveReceipt && receiptClosed && <ReceiptNote key={booking.id} booking={booking} />}
     <button className="btn--quiet btn--small" onClick={() => setAttempt(value => value + 1)}>Check for changes</button>
-  </>} lifecycle={error ? null : <BookingActions booking={booking} refresh={refresh} />} address={error ? null : <AddressEdit key={booking.updated_at} booking={booking} refresh={refresh} />} />
+  </>} lifecycle={error ? null : <BookingActions booking={booking} refresh={refresh} />} address={error ? null : <AddressEdit key={booking.updated_at} booking={booking} refresh={refresh} />}
+    contact={error ? null : <ContactEdit booking={booking} refresh={refresh} />} openClient={openPage && (clientId => openPage(`/admin/clients/${clientId}`))} />
 }

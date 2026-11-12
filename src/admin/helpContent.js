@@ -30,7 +30,7 @@ export const ADMIN_HELP = [
   ] },
   { title: 'Clients', items: [
     { q: 'What is on a client\'s page?', a: ['Their details, notes, bookings, Telegram and repeating bookings. The Prices section has two switches: No travel fee and No minimum booking. They apply to new bookings only.'] },
-    { q: 'A client typed their phone number wrong. How do I fix it?', a: ['Open the client and press Edit details, correct the phone (or the name or email) and press Save details. If a saved number looks wrong, for example one digit too many, the client\'s page says so in red.', 'When clients book, the app checks the length (a UK mobile has 11 digits starting 07; a number from another country starts with + and its code). If it looks wrong, the client is asked to double-check it, but can still book, so look out for the red line on their page.'] },
+    { q: 'A client typed their phone number wrong. How do I fix it?', a: ['Open the booking and press Edit contact details under Contact, or open the client and press Edit details. Correct the phone (or the name or email) and press Save details. The client\'s name at the top of a booking opens their page. If a saved number looks wrong, for example one digit too many, the booking and the client\'s page say so in red.', 'When clients book, the app checks the length (a UK mobile has 11 digits starting 07; a number from another country starts with + and its code). If it looks wrong, the client is asked to double-check it, but can still book, so look out for the red line on their page.'] },
     { q: 'The same person is in Clients twice', a: ['Open "Same person?" from Clients to combine the two into one.'] },
   ] },
   { title: 'Money and receipts', items: [
