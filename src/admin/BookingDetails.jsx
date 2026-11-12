@@ -8,7 +8,7 @@ import ShareBooking from './ShareBooking.jsx'
 
 // How a booking was made, in words. A booking made by a client's own AI assistant (through the connector at /mcp) is 'ai_assistant'.
 const SOURCE_NAMES = { web: 'Online booking', ai_assistant: "Client's AI assistant" }
-export default function BookingDetails({ booking: b, close, payment, lifecycle, address, returnFocus }) {
+export default function BookingDetails({ booking: b, close, payment, lifecycle, address, contact, openClient, returnFocus }) {
   const ref = useRef(null)
   useEffect(() => {
     const dialog = ref.current
@@ -27,7 +27,7 @@ export default function BookingDetails({ booking: b, close, payment, lifecycle, 
   return <dialog className="admin-details" ref={ref} onCancel={close} aria-labelledby="booking-title">
     <header className="admin-details-bar"><button onClick={close} aria-label="Close details"><span aria-hidden="true" className="close-x">×</span> Close</button><div className="admin-details-when"><div><strong>{dateLabel(b.date)}</strong><span>{time(b.start_minutes)}–{time(b.start_minutes + b.treatment_duration_minutes)}</span></div><ShareBooking booking={b} /></div></header>
     <div className="admin-details-content">
-      <section className="admin-details-client"><h2 id="booking-title">{clientName(b)}</h2>
+      <section className="admin-details-client"><h2 id="booking-title">{openClient && b.clients?.id ? <button type="button" className="admin-client-name-link" aria-label={`${clientName(b)}, open client page`} onClick={() => openClient(b.clients.id)}>{clientName(b)} <span aria-hidden="true">›</span></button> : clientName(b)}</h2>
         <p className="admin-when">{dateLabel(b.date, { weekday: 'short', day: 'numeric', month: 'short' })} · {time(b.start_minutes)}–{time(b.start_minutes + b.treatment_duration_minutes)}</p>
         <p>{state.pills
           ? <span className="admin-status-pair">{state.pills.map(pill => <span key={pill.text} className={`chip chip--${pill.chip} admin-status`}>{pill.text}</span>)}</span>
@@ -36,7 +36,7 @@ export default function BookingDetails({ booking: b, close, payment, lifecycle, 
         <nav className="admin-contact-actions" aria-label="Quick contact">{contactLinks(b).map(link => <a key={link.key} href={link.href} {...(link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}><Icon name={link.icon} />{link.label}</a>)}</nav></section>
       {payment && <section className="admin-next"><h3>Payment</h3>{payment}</section>}
       {lifecycle && <section className="admin-next"><h3>Appointment</h3>{lifecycle}</section>}
-      <section><h3>Contact</h3><p>{email ? <a href={`mailto:${email}`}>{email}</a> : 'Email not recorded'}</p><p>{b.clients?.phone ? <a href={`tel:${b.clients.phone}`}>{b.clients.phone}</a> : 'Phone not recorded'}</p></section>
+      <section><h3>Contact</h3>{contact || <><p>{email ? <a href={`mailto:${email}`}>{email}</a> : 'Email not recorded'}</p><p>{b.clients?.phone ? <a href={`tel:${b.clients.phone}`}>{b.clients.phone}</a> : 'Phone not recorded'}</p></>}</section>
       <ClientNotesSection clientId={b.client_id} />
       <section><h3>Address</h3>{address || <><address>{b.address_snapshot}</address>{b.entry_instructions_snapshot && <p>{b.entry_instructions_snapshot}</p>}</>}</section>
       <section><h3>Sessions</h3><ol role="list" className="admin-session-list">{[...b.booking_sessions].sort((a, b) => a.position - b.position).map((s, index) => <li key={s.id}>

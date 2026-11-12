@@ -212,6 +212,10 @@
 .admin-details-content > section:last-child { border-bottom: 0; }
 .admin-details-client { padding-top: 22px !important; }
 .admin-details h2 { font: 600 32px/1.1 var(--font-display); letter-spacing: -.01em; margin: 0 0 10px; }
+.admin-details h2 .admin-client-name-link { all: unset; cursor: pointer; font: inherit; color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 5px; text-decoration-color: var(--hairline); overflow-wrap: anywhere; }
+.admin-details h2 .admin-client-name-link:hover { text-decoration-color: currentColor; }
+.admin-details h2 .admin-client-name-link:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; border-radius: 4px; }
+.admin-details h2 .admin-client-name-link span { color: var(--muted); font-weight: 400; }
 .admin-details h3 { margin: 0 0 10px; font: 600 12px/1.2 var(--font-ui); letter-spacing: .09em; text-transform: uppercase; color: var(--muted); }
 .admin-details h4 { font-size: 16px; margin: 0 0 4px; }
 .admin-details h5 { font-size: 13px; margin: 10px 0 4px; color: var(--muted); }

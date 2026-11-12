@@ -401,6 +401,12 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **Why:** Clients move between home and hotel, or typed the wrong address.
 - **Built in:** PR #87 (ADR-082).
 
+### Edit contact details on a booking, and open the client from it
+- **What it does:** A booking's Contact section has Edit contact details: the client's name, phone and email in the same form and with the same strict phone check as the client page, saved to the client's record. A saved number that looks wrong is shown in red on the booking too. If the client's email is changed, the booking says that its messages still go to the email it was booked with. The client's name at the top of a booking is a link to their client page (Back returns to the booking).
+- **Why:** Vadim could see a wrong phone number on a booking but could not find where to fix it.
+- **Built in:** this PR (no database change; `src/admin/ContactEdit.jsx`).
+- **For a general app:** nothing specific.
+
 ### Repeating bookings
 - **What it does:** A booking can repeat weekly, every 2 to 4 weeks (up to 12), monthly on the same weekday, or on chosen dates. The slot is kept free; a real booking is made about a week before each date, asking for payment then. Vadim can cancel some dates, or everything still to come.
 - **Why:** Regulars book the same slot; a year of real unpaid bookings would clutter the diary.
