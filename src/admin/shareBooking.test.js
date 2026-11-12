@@ -13,9 +13,9 @@ const booking = (changes = {}) => ({
 
 describe('the booking details the Admin sends a client', () => {
   it('greets the client by first name, or just "Hi!" when none is saved', () => {
-    expect(shareText(booking(), bank).split('\n')[0]).toBe('Hi Andreas! Thank you so much for booking with me, I am really looking forward to seeing you.')
+    expect(shareText(booking(), bank).split('\n')[0]).toBe('Hi Andreas! Thank you so much for booking with me, I\'m looking forward to seeing you.')
     for (const clients of [{ first_name: '  ' }, null]) {
-      expect(shareText(booking({ clients }), bank).split('\n')[0]).toBe('Hi! Thank you so much for booking with me, I am really looking forward to seeing you.')
+      expect(shareText(booking({ clients }), bank).split('\n')[0]).toBe('Hi! Thank you so much for booking with me, I\'m looking forward to seeing you.')
     }
     expect(shareText(booking({ clients: { first_name: ' Sarah ' } }), bank, 'Dear {name},\n{name} – see you {date}')).toBe('Dear Sarah,\nSarah – see you Thu 29 Oct')
     expect(shareText(booking({ clients: null }), bank, 'Hi {name}, see you {date}\n{name}\nBye')).toBe('Hi, see you Thu 29 Oct\nBye')
@@ -23,7 +23,7 @@ describe('the booking details the Admin sends a client', () => {
   })
   it('says the date, time, address, treatment, length, price and how the money stands, with *bold* for WhatsApp', () => {
     expect(shareText(booking({ booking_payments: { method: 'bank_transfer', status: 'paid' } }), bank).split('\n')).toEqual([
-      'Hi Andreas! Thank you so much for booking with me, I am really looking forward to seeing you.',
+      'Hi Andreas! Thank you so much for booking with me, I\'m looking forward to seeing you.',
       '',
       '*Massage booking – Thu 29 Oct, 17:30–19:30*',
       '55 Altenburg Gardens, London SW11 1JH',

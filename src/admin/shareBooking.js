@@ -47,7 +47,7 @@ function treatments(booking) {
 // {name} is the client's first name ("Hi Sarah!"); with no first name saved it is left out with the space before it ("Hi!"), and a line is never
 // dropped for it alone.
 export const SHARE_BLANKS = ['name', 'date', 'time', 'address', 'treatment', 'payment', 'cancellation', 'bank details', 'calendar']
-export const STANDARD_SHARE_MESSAGE = 'Hi {name}! Thank you so much for booking with me, I am really looking forward to seeing you.\n\n*Massage booking – {date}, {time}*\n{address}\n{treatment}\n{payment}\n{cancellation}\n\nAdd it to your calendar: {calendar}\n\nIf anything changes or you have any questions, just message me here. See you soon!\n\nWarm wishes,\nVadim'
+export const STANDARD_SHARE_MESSAGE = 'Hi {name}! Thank you so much for booking with me, I\'m looking forward to seeing you.\n\n*Massage booking – {date}, {time}*\n{address}\n{treatment}\n{payment}\n{cancellation}\n\nAdd it to your calendar: {calendar}\n\nIf anything changes or you have any questions, just message me here. See you soon!\n\nWarm wishes,\nVadim'
 export const SHARE_MESSAGE_LIMIT = 1000
 const BLANK = /\{(name|date|time|address|treatment|payment|bank details|cancellation|calendar)\}/g
 
