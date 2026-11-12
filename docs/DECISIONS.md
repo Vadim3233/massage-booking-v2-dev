@@ -950,3 +950,16 @@ The page stays where the Admin needs it:
 - **Migration `20261207100000_special_price_offers.sql`:** table `slot_offers` (Admin-only reads, ADR-075 grants); `booking_holds.slot_offer_id`, `bookings.slot_offer_id`; `admin_create_slot_offer`, `admin_update_slot_offer`, `admin_stop_slot_offer`; `get_slot_offer`, `create_offer_hold`, `quote_offer_booking` (anyone); `finalize_client_booking` gains `p_offer_code` (the 16-argument version is replaced); `check_booking_minimum` and `client_change_check` skip or refuse offer bookings.
 - **Screens:** `src/admin/OfferDialog.jsx`, `src/admin/slotOffers.js`, `Calendar.jsx`, `calendarApi.js`, `BookingCard.jsx`, `BookingDetails.jsx`; `src/client/booking/slotOffer.js`, `components/OfferPanel.jsx`, `BookingFlow.jsx`, `bookingStore.js` (`startOffer`, `holdOffer`), `bookingApi.js`, `ReviewStep.jsx`; rewrite `/offer/:code` in `vercel.json`.
 - **Tests:** `supabase/tests/special_price_offers.test.sql` (54 checks), `src/admin/slotOffers.test.js`, `src/client/booking/slotOffer.test.js`.
+
+## ADR-099 — Client base stats on the Clients page (2026-11-12)
+
+**Why:** Vadim asked to see his client base at a glance: how many clients, how many are new, who comes often, who has gone quiet. He approved a mockup on 8 Nov 2026 and asked that search and the list come straight after the numbers ("I don't want to scroll all the way down to search"), with the lists below.
+
+**Decision:**
+- **Read only.** Nothing is stored; `client_visit_stats(date)` works the numbers out from the bookings each time. A visit is a booking that is `completed`, or `confirmed` with its day passed. Paid money is payments with status `paid`, as on the client summary.
+- **Tags, one per client, in this order:** new (first visit within 60 days), lapsed (last visit over 183 days ago and nothing booked), quiet (3+ visits, nothing booked, days since last visit > max(2 × usual gap, 28)), regular (3+ visits). The usual gap is (last − first) / (visits − 1).
+- **Tiles:** total; active = visit in 90 days or anything booked; new this month and last month by first visit; came back = clients with 2+ visits or 1 visit and something booked, out of clients with a visit; usual gap = median gap of clients with 3+ visits.
+- **Clients page order:** tiles, search, tag filters, Add client, list, then "Worth a look" (Gone quiet, New not back yet, Most loyal). A tag filter lists every client with that tag and the search box narrows it on the page. If the stats can't be read (migration not applied) the page shows the list as before.
+- **Client page:** tag, a quiet banner with a WhatsApp link, usual gap, since last visit, rank by visits, last 12 months, and twelve monthly bars (no chart library).
+
+**How it was built:** migration `20261211100000_client_base_stats.sql` (`client_visit_stats` internal; `admin_client_base()`, `admin_client_rhythm(uuid)` Admin-only); `src/admin/clientStats.js`, `Clients.jsx`, `ClientRhythm.jsx`, `ClientProfile.jsx`, `clientsApi.js`, `admin.css`, `helpContent.js`. Tests: `supabase/tests/client_base_stats.test.sql` (22 checks), `src/admin/clientStats.test.js`, one e2e in `tests/e2e/adminClients.spec.js`.

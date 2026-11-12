@@ -817,3 +817,59 @@
 .admin-review-invite .admin-share-preview { font-size: 14px; }
 .admin-review-asked { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--ok-ink); font-weight: 600; }
 .admin-review-asked .icon { flex: 0 0 auto; }
+
+/* ============ Client base stats (ADR-099): tiles, tags, filters and "Worth a look" on Clients; rhythm on a client's card ============ */
+.client-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0 0 4px; }
+.client-tiles div { display: grid; align-content: start; gap: 2px; padding: 14px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); }
+.client-tiles dt { font: 600 11px/1.2 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.client-tiles dd { margin: 0; font-size: 13px; line-height: 1.35; color: var(--ink-soft); }
+.client-tiles dd.client-tile-value { margin-top: 4px; font: 600 28px/1.1 var(--font-display); font-variant-numeric: lining-nums; color: var(--ink); }
+
+.client-filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+.admin-shell .client-filters button { min-height: 40px; padding: 0 14px; border: 1px solid var(--line-strong); border-radius: var(--radius-pill); background: var(--surface); color: var(--ink-soft); font: 600 14px/1 var(--font-ui); }
+.admin-shell .client-filters button[aria-pressed="true"] { border-color: var(--primary); background: var(--primary); color: var(--on-primary); }
+
+.client-name-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.client-tag { flex: none; display: inline-flex; align-items: center; min-height: 24px; padding: 2px 10px; border-radius: var(--radius-pill); font: 600 12px/1.2 var(--font-ui); }
+.client-tag--regular { background: var(--ok-bg); color: var(--ok-ink); }
+.client-tag--new { background: var(--primary-soft); color: var(--primary-strong); }
+.client-tag--quiet { background: var(--needs-bg); color: var(--needs-ink); }
+.client-tag--lapsed { background: var(--done-bg); color: var(--done-ink); }
+
+.client-worth { display: grid; gap: 12px; margin-top: 28px; }
+.admin-review .client-worth-title { font: 600 13px/1.2 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.client-stat-card { display: grid; gap: 8px; padding: 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); }
+.client-stat-card--quiet { background: var(--sand-bg); box-shadow: 0 0 0 1px var(--sand-line); color: var(--sand-ink); }
+.admin-review .client-stat-card p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+.admin-review .client-stat-card--quiet p { color: var(--sand-ink-soft); }
+.client-stat-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.client-stat-card-heading h3 { margin: 0; font: 600 20px/1.25 var(--font-display); }
+.client-stat-card-heading > span { font-size: 13px; font-weight: 600; color: var(--muted); }
+.client-stat-card--quiet .client-stat-card-heading > span { color: var(--sand-ink-soft); }
+.client-stat-card ul, .client-stat-card ol { list-style: none; margin: 0; padding: 0; display: grid; }
+.client-stat-card li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--hairline); }
+.client-stat-card--quiet li { border-top-color: var(--sand-hair); }
+.admin-shell .client-stat-person { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 4px 0; border: 0; background: transparent; color: var(--ink); text-align: left; justify-content: flex-start; font: 400 15px/1.35 var(--font-ui); }
+.client-stat-person .admin-client-text { min-width: 0; }
+.client-stat-message { flex: none; display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: var(--radius-pill); background: var(--primary); color: var(--on-primary); font: 600 14px/1 var(--font-ui); text-decoration: none; }
+.client-stat-message:hover { background: var(--primary-strong); }
+.client-stat-toggle { display: flex; padding: 3px; border-radius: var(--radius-pill); background: var(--cream); }
+.admin-shell .client-stat-toggle button { min-height: 34px; padding: 0 12px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--ink-soft); font: 600 13px/1 var(--font-ui); }
+.admin-shell .client-stat-toggle button[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); }
+.client-loyal-rank { flex: 0 0 18px; text-align: center; font: 600 15px/1 var(--font-display); color: var(--muted); }
+.client-loyal-figures { flex: none; display: grid; justify-items: end; font-size: 13px; color: var(--muted); }
+.client-loyal-figures strong { font-size: 15px; color: var(--ink); }
+
+.client-rhythm { display: grid; gap: 12px; margin: 0 0 16px; }
+.admin-review .client-rhythm-tag { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; font-size: 13px; color: var(--muted); }
+.client-rhythm-quiet .client-stat-message { justify-self: start; min-height: 44px; }
+.admin-client-summary.client-rhythm-figures { margin: 0; }
+.client-rhythm-figures dd { font-size: 18px; }
+.client-rhythm-months { margin: 0; padding: 14px 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); }
+.client-rhythm-months figcaption { font: 600 11px/1.2 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.client-rhythm-months ol { list-style: none; margin: 10px 0 0; padding: 0; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; }
+.client-rhythm-months li { display: grid; grid-template-rows: 56px auto; justify-items: stretch; text-align: center; font-size: 11px; color: var(--muted); }
+.client-rhythm-bar { align-self: end; height: calc(8px + 48px * var(--share)); border-radius: 4px 4px 2px 2px; background: var(--primary); }
+.client-rhythm-bar.is-empty { height: 4px; background: var(--hairline); }
+.admin-client-list .admin-client-text { flex: 1 1 auto; width: 100%; }
+.admin-client-text .client-stat-line { font-size: 13px; color: var(--muted); }
