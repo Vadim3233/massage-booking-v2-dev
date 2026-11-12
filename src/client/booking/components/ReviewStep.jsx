@@ -76,7 +76,9 @@ export default function ReviewStep({ draft, catalogue, quote, quoteError, edit, 
   const area = catalogue.areas.find((item) => item.id === draft.areaId)?.name
   const service = catalogue.services.find((item) => item.id === draft.serviceId)?.name
   const many = draft.sessions.length > 1
-  const row = (label, text, step) => <div><dt>{label}</dt><dd><span className="row-text">{text}</span><button className="btn--quiet btn--small" aria-label={`Change ${label.toLowerCase()}`} onClick={() => navigate(step)}>Change</button></dd></div>
+  // A special-price offer fixes the time, the length and one person, so those cannot be changed here.
+  const fixed = Boolean(draft.offer)
+  const row = (label, text, step) => <div><dt>{label}</dt><dd><span className="row-text">{text}</span>{step != null && <button className="btn--quiet btn--small" aria-label={`Change ${label.toLowerCase()}`} onClick={() => navigate(step)}>Change</button>}</dd></div>
   const durations = draft.sessions.map((session) => session.duration_minutes)
   // One plain sentence of who, how long and the price (from the database's quote), so the number of people cannot be misread.
   const sentence = quote ? bookingSentence(durations, quote.total_gbp, treatmentNoun(service)) : peopleSentence(durations, treatmentNoun(service))
@@ -88,14 +90,14 @@ export default function ReviewStep({ draft, catalogue, quote, quoteError, edit, 
           <p className="ticket-when figure">{dayParts(draft.date).long}</p>
           <p className="ticket-time">{timeLabel(draft.start)}–{timeLabel(draft.start + total)} <span>London time</span></p>
         </div>
-        <button className="btn--quiet btn--small" aria-label="Change date and time" onClick={() => navigate(3)}>Change</button>
+        {fixed ? <span className="offer-tag">Special offer</span> : <button className="btn--quiet btn--small" aria-label="Change date and time" onClick={() => navigate(3)}>Change</button>}
       </div>
       {/* Who, how long and the price in one sentence, at the top of the card rather than in a box of its own above it. */}
       <div className="ticket-sentence"><p><strong>{sentence}</strong></p>
-        <button type="button" className="btn--quiet btn--small" onClick={() => { edit({ askPeople: true }); navigate(2) }}>Change number of people</button></div>
+        {!fixed && <button type="button" className="btn--quiet btn--small" onClick={() => { edit({ askPeople: true }); navigate(2) }}>Change number of people</button>}</div>
       <dl className="ticket-rows">
         {row('Treatment', service, 1)}
-        {row('Length', draft.sessions.map((session) => `${session.duration_minutes} min`).join(' + '), 2)}
+        {row('Length', draft.sessions.map((session) => `${session.duration_minutes} min`).join(' + '), fixed ? null : 2)}
         {row('Area', area, 0)}
       </dl>
       <p className="ticket-with"><img src="/vadim-portrait.jpg" alt="" width="36" height="36" /><span>With <strong>Vadim</strong>, coming to you in {area}</span></p>

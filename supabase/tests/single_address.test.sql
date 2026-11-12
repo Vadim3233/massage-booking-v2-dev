@@ -57,9 +57,9 @@ select ok(has_function_privilege('authenticated', 'public.clean_address(text)', 
 select ok(not has_function_privilege('anon', 'public.derive_booking_address_snapshot()', 'EXECUTE') and not has_function_privilege('authenticated', 'public.derive_booking_address_snapshot()', 'EXECUTE'),
   'The booking trigger function is not open to callers');
 select ok(to_regprocedure('public.finalize_client_booking(uuid,uuid,text,uuid,jsonb,uuid[],uuid,text,text,text,text,text,text,text,text)') is null, 'The old 15-argument finalize is gone');
-select ok(to_regprocedure('public.finalize_client_booking(uuid,uuid,text,uuid,jsonb,uuid[],uuid,text,text,text,text,text,text,text,text,text)') is not null, 'Replaced by one that also takes the address as one text');
-select ok(not has_function_privilege('anon', 'public.finalize_client_booking(uuid,uuid,text,uuid,jsonb,uuid[],uuid,text,text,text,text,text,text,text,text,text)', 'EXECUTE'), 'Anonymous callers cannot finalize a booking');
-select ok(has_function_privilege('authenticated', 'public.finalize_client_booking(uuid,uuid,text,uuid,jsonb,uuid[],uuid,text,text,text,text,text,text,text,text,text)', 'EXECUTE'), 'A signed-in client can');
+select ok(to_regprocedure('public.finalize_client_booking(uuid,uuid,text,uuid,jsonb,uuid[],uuid,text,text,text,text,text,text,text,text,text,text)') is not null, 'Replaced by one that also takes the address as one text (and, since 20261207100000, a special-price offer code)');
+select ok(not has_function_privilege('anon', 'public.finalize_client_booking(uuid,uuid,text,uuid,jsonb,uuid[],uuid,text,text,text,text,text,text,text,text,text,text)', 'EXECUTE'), 'Anonymous callers cannot finalize a booking');
+select ok(has_function_privilege('authenticated', 'public.finalize_client_booking(uuid,uuid,text,uuid,jsonb,uuid[],uuid,text,text,text,text,text,text,text,text,text,text)', 'EXECUTE'), 'A signed-in client can');
 
 -- ---------------------------------------------------------------------------------------------
 -- A saved address: written as one text, or by an old screen in its parts

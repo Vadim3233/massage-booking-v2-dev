@@ -42,6 +42,8 @@ export function finalizeParams(draft, clientKey, idempotencyKey) {
     // Cash is selected afterwards through confirm_my_cash_booking.
     p_payment_method: 'bank_transfer',
     p_idempotency_key: idempotencyKey,
+    // A booking from a special-price offer's link carries its code (the database then holds the offer's price). Others send nothing new.
+    ...(draft.offer ? { p_offer_code: draft.offer.code } : {}),
   }
 }
 
@@ -75,7 +77,12 @@ export function createBookingApi(client) {
     extend: (hold, key) => one(client.rpc('extend_booking_hold', {
       p_hold_id: hold.hold_id, p_hold_token: hold.hold_token, p_client_key: key,
     })),
-    quote: (draft) => one(client.rpc('quote_client_booking', quoteParams(draft))),
+    quote: (draft) => one(draft.offer
+      ? client.rpc('quote_offer_booking', { p_offer_code: draft.offer.code, ...quoteParams(draft) })
+      : client.rpc('quote_client_booking', quoteParams(draft))),
+    // A special-price offer's link (/offer/<code>): what it offers and whether it can still be booked, and holding its time.
+    offer: (code, key = null) => one(client.rpc('get_slot_offer', { p_code: code, p_client_key: key })),
+    offerHold: (code, key) => one(client.rpc('create_offer_hold', { p_code: code, p_client_key: key })),
     activate: (details = {}) => one(client.rpc('activate_my_client_account', {
       p_first_name: details.first_name?.trim() || null,
       p_last_name: details.last_name?.trim() || null,

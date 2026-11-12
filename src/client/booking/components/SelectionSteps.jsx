@@ -33,11 +33,11 @@ function ScrollHint({ target, watch }) {
   return createPortal(<button type="button" className="scroll-hint" onClick={go}>Choose your area<Icon name="down" size={18} className="scroll-hint-arrow" /></button>, document.body)
 }
 
-export function AreaStep({ catalogue, choose, welcome, rules, usual, bookUsual }) {
+export function AreaStep({ catalogue, choose, welcome, rules, usual, bookUsual, intro = null }) {
   const areasHeading = useRef(null)
   const areaList = useRef(null)
   return <>
-    <Welcome welcome={welcome} rules={rules} usual={usual} bookUsual={bookUsual} />
+    {intro || <Welcome welcome={welcome} rules={rules} usual={usual} bookUsual={bookUsual} />}
     <h2 className="section-title" ref={areasHeading}>Choose your area</h2>
     {catalogue.areas.length > 0 && <ScrollHint target={areasHeading} watch={areaList} />}
     <div className="tiles tiles--areas" ref={areaList}>{catalogue.areas.map((area) => <button className="tile" key={area.id} onClick={() => choose(area.id)}>
@@ -45,7 +45,7 @@ export function AreaStep({ catalogue, choose, welcome, rules, usual, bookUsual }
       {surcharges(area).map(note => <span className="tile-note" key={note}>{note}</span>)}
     </button>)}</div>
     {!catalogue.areas.length && <p>Online booking areas are being updated.</p>}
-    <HowItWorks welcome={welcome} />
+    {!intro && <HowItWorks welcome={welcome} />}
     <p className="fine">I visit selected parts of these areas. Outside my usual route? <a href="https://vadmassage.com">Get in touch</a> and I'll see what I can arrange.</p>
   </>
 }

@@ -1,6 +1,6 @@
 # VadMassage booking app: feature catalogue
 
-Last updated: 12 November 2026 (simpler "looking forward to seeing you" line in the share message).
+Last updated: 12 November 2026 (special-price offers for a free time).
 
 This is a plain-English list of everything the app does today, grouped by area. Each entry says what the feature does, why it was built, where it was built (the pull request, or "PR", and any database change, called a "migration"), and what would need to become a **setting** if the same feature were offered to other therapists in a general app.
 
@@ -358,6 +358,12 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **Why:** The fastest way to open or close parts of a day on a phone.
 - **Built in:** PR #81 (`20261115100000_day_grid.sql`, ADR-080), PR #82, PR #86.
 - **For a general app:** the block size (half hour).
+
+### Special-price offers for a free time
+- **What it does:** In the Day view, Vadim taps a free time and makes an offer: the length, the start, his price (say £55) and when it stops being offered. He gets a ready WhatsApp message with a link ("A 60-minute massage at your home for £55 instead of £80. First to book gets it: <link>") to send to anyone. Whoever opens the link chooses their area and treatment and books as usual, with the time, length and price fixed. The price is all-in (no travel fee, congestion charge or extras). The first to book gets it; after that, or once it closes or is stopped, the link says the time has gone and shows the normal booking page. Until then the offer shows as a gold "Special offer" block in the day, where he can send it again, change the price or closing time, or stop it. The booking is marked "Special price". The normal booking page doesn't change. Clients can't change a special-price booking online.
+- **Why:** A client moved a booking and left a gap; Vadim wanted to fill gaps like that quickly at a discount.
+- **Built in:** PR #TBD (`20261207100000_special_price_offers.sql`, ADR-098).
+- **For a general app:** whether the price includes travel (all-in here), who can use the link (anyone with it here), the closing-time choices, and the message wording ("at your home" suits a mobile therapist).
 
 ### Google Calendar copy
 - **What it does:** Vadim's bookings are copied to a "VadMassage bookings" Google Calendar, with travel as events and each booking's address as its location (works offline, with directions). Titles never include private details. Connected from More › Google Calendar.

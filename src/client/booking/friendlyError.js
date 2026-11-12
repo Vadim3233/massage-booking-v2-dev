@@ -19,6 +19,8 @@ const REWRITES = [
 export function friendlyError(error, fallback = GENERIC) {
   const message = typeof error === 'string' ? error : error?.message || ''
   if (!message) return fallback
+  // About a special-price offer: written for the client already (20261207100000_special_price_offers.sql).
+  if (/^(Sorry, )?this special (time|offer|price)/i.test(message)) return message
   const rewrite = REWRITES.find(([pattern]) => pattern.test(message))
   if (rewrite) return rewrite[1]
   // The server's own advice to a client always asks them to do something ("Please ...").

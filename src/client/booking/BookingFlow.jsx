@@ -24,6 +24,8 @@ import { useBookingRules } from '../bookingRules.js'
 import { useWelcome } from '../welcome.js'
 import { minimumFor } from '../../booking/bookingWords.js'
 import { createVisitLog, STEP_KINDS } from './visitLog.js'
+import { catalogueForOffer, offerCodeFromPath, offerFromRow } from './slotOffer.js'
+import { OfferCard, OfferGone, OfferTimeStep } from './components/OfferPanel.jsx'
 import './booking.css'
 
 const api = createBookingApi(supabase)
@@ -64,6 +66,22 @@ export default function BookingFlow() {
   }, [visit, step]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (draft.bookingId) visit.record('booked', { booking_id: draft.bookingId }) }, [visit, draft.bookingId])
   const welcome = useWelcome(supabase)
+  // A special-price offer's link (/offer/<code>): read what it offers, then start the booking with its time, length and price fixed.
+  // 'loading', 'open', 'busy' (someone else is booking it right now) or why it cannot be booked ('taken', 'closed', 'missing').
+  const [offerCode] = useState(() => offerCodeFromPath(window.location.pathname))
+  // Booked from this link already (on this page): the confirmation shows, as for any booking, and the link is not read again.
+  const [bookedHere] = useState(() => { const mine = store.getSnapshot().draft; return Boolean(offerCode && mine.offer?.code === offerCode && mine.bookingId) })
+  const [offerState, setOfferState] = useState(() => (offerCode ? (bookedHere ? 'open' : 'loading') : null))
+  useEffect(() => {
+    if (!offerCode || bookedHere) return undefined
+    let live = true
+    api.offer(offerCode, browserClientKey(localStorage)).then(async (row) => {
+      if (!live) return
+      if (row.state === 'open' || row.state === 'busy') await store.startOffer(offerFromRow(offerCode, row))
+      if (live) setOfferState(row.state)
+    }, (err) => { if (live) { setOfferState('closed'); store.setError(friendlyError(err)) } })
+    return () => { live = false }
+  }, [offerCode, bookedHere, store])
   // The test-client helper exists only in development builds: the live page and its previews never offer it.
   const testMode = import.meta.env.DEV
   useEffect(() => {
@@ -103,9 +121,12 @@ export default function BookingFlow() {
   }, [signedInUser])
   const freeTravel = Boolean(signedInUser) && travelFee.user === signedInUser && travelFee.free
   const noMinimum = Boolean(signedInUser) && minimumOff.user === signedInUser && minimumOff.off
-  const catalogue = useMemo(() => (loadedCatalogue && freeTravel
+  const plainCatalogue = useMemo(() => (loadedCatalogue && freeTravel
     ? { ...loadedCatalogue, areas: loadedCatalogue.areas.map(area => ({ ...area, travel_surcharge_gbp: 0 })) }
     : loadedCatalogue), [loadedCatalogue, freeTravel])
+  // An offer allows only its own length, at its own all-in price, with no extras.
+  const offer = draft.offer
+  const catalogue = useMemo(() => catalogueForOffer(plainCatalogue, offer), [plainCatalogue, offer])
   useEffect(() => {
     if (!signedInUser || step < 6) return undefined
     let live = true
@@ -139,16 +160,16 @@ export default function BookingFlow() {
   useEffect(() => {
     if (!catalogue || presetChecked.current) return
     presetChecked.current = true
-    if (step !== 0 || draft.areaId || draft.serviceId || draft.sessions.length || draft.bookingId) return
+    if (offerCode || step !== 0 || draft.areaId || draft.serviceId || draft.sessions.length || draft.bookingId) return
     const preset = presetFromSearch(window.location.search, catalogue)
     if (!preset?.areaId) return
     store.changeSelection({ areaId: preset.areaId, ...(preset.serviceId ? { serviceId: preset.serviceId, sessions: preset.minutes ? [newSession(preset.minutes)] : [], enhancementIds: [] } : {}) })
       // A length under the area's minimum stops at the lengths, where the reason is shown.
       .then((saved) => { if (saved) navigate(preset.minutes && preset.minutes < minimumFor(catalogue.areas.find(area => area.id === preset.areaId)) ? 2 : stepForPreset(preset)) })
-  }, [catalogue, step, draft, store, navigate])
+  }, [catalogue, step, draft, store, navigate, offerCode])
   // The last booking made on this phone is offered again, so a regular client is two taps from choosing a time.
   useEffect(() => { if (draft.bookingId) rememberUsual(localStorage, draft) }, [draft])
-  const usual = useMemo(() => (catalogue && !draft.bookingId ? readUsual(localStorage, catalogue) : null), [catalogue, draft.bookingId])
+  const usual = useMemo(() => (catalogue && !draft.bookingId && !offer ? readUsual(localStorage, catalogue) : null), [catalogue, draft.bookingId, offer])
   async function bookUsual() {
     const total = usual.durations.reduce((sum, minutes) => sum + minutes, 0)
     const short = total < minimumFor(catalogue.areas.find(area => area.id === usual.areaId), noMinimum)
@@ -230,7 +251,7 @@ export default function BookingFlow() {
     <main className={`booking-main ${settling ? 'is-settling' : ''} ${step <= 3 ? 'is-banded' : ''}`}>
       <nav className="stepper" aria-label="Booking progress">
         <div className="stepper-row">
-          {catalogue && canGoBack ? <button className="btn--quiet btn--small back" disabled={busy} onClick={() => navigate(step - 1)}><Icon name="left" size={20} />Back</button> : <span />}
+          {catalogue && canGoBack ? <button className="btn--quiet btn--small back" disabled={busy} onClick={() => navigate(offer && step === 3 ? 1 : step - 1)}><Icon name="left" size={20} />Back</button> : <span />}
           <p className="progress-summary">Step {shown + 1} of {STEPS.length} · {STEPS[shown]}</p>
         </div>
         <div className="progress-bar" aria-hidden="true">{STEPS.map((label, index) => <span key={label} className={index < shown ? 'done' : index === shown ? 'current' : ''} />)}</div>
@@ -242,7 +263,9 @@ export default function BookingFlow() {
       {error && step !== 6 && <p role="alert" className="error" ref={alertBox}>{error}</p>}
       {auth.error && <p role="alert" className="error">{auth.error}</p>}
       {linkProblem && <p role="alert" className="error">{linkProblem}</p>}
-      {!catalogue ? (catalogueFailed
+      {offerCode && offerState && !['loading', 'open', 'busy'].includes(offerState) && !draft.bookingId ? <OfferGone state={offerState} />
+        : offerState === 'loading' ? <div className="skeleton-rows" role="status"><span className="sr-only">Getting your special offer…</span><span className="skeleton" /><span className="skeleton" /></div>
+        : !catalogue ? (catalogueFailed
         ? <>{step === 6 && error && <p role="alert" className="error">{error}</p>}<button className="btn--tonal" onClick={() => { setCatalogueFailed(false); store.setError(''); setCatalogueAttempt(catalogueAttempt + 1) }}>Try again</button></>
         : <div className="skeleton-rows" role="status"><span className="sr-only">Just getting things ready…</span><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>) : <>
         {!held && step >= 4 && step < 7 && !draft.pending && !draft.bookingId && <button className="btn--tonal" onClick={() => navigate(3)}>Choose a time again</button>}
@@ -250,14 +273,19 @@ export default function BookingFlow() {
         {(step === 5 || step === 6) && draft.date && draft.start != null && <p className="trip-pill" aria-label="Your booking">
           <span>{(({ weekday, day, month }) => `${weekday} ${day} ${month}`)(dayParts(draft.date))}</span><span>{timeLabel(draft.start)}</span>{quote && <b>{money(quote.total_gbp)}</b>}</p>}
         <fieldset className={`screen enter ${busy ? 'is-busy' : ''}`} key={step}>
-          {step === 0 && <AreaStep welcome={welcome} rules={rules} catalogue={catalogue} usual={usual} bookUsual={bookUsual} choose={async (areaId) => { if (areaId === draft.areaId || await store.changeSelection({ areaId })) navigate(1) }} />}
-          {step === 1 && <TreatmentStep catalogue={catalogue} choose={async (serviceId) => { if (serviceId === draft.serviceId || await store.changeSelection({ serviceId, sessions: [], enhancementIds: [] })) navigate(2) }} />}
-          {step === 2 && <PeopleLengthStep draft={draft} catalogue={catalogue} edit={store.edit} noMinimum={noMinimum}
+          {step === 0 && <AreaStep welcome={welcome} rules={rules} catalogue={catalogue} usual={usual} bookUsual={bookUsual} intro={offer ? <OfferCard offer={offer} busy={offerState === 'busy'} /> : null} choose={async (areaId) => { if (areaId === draft.areaId || await store.changeSelection({ areaId })) navigate(1) }} />}
+          {step === 1 && <TreatmentStep catalogue={catalogue} choose={async (serviceId) => {
+            // An offer's length is fixed, so the people-and-length step is skipped.
+            if (offer) { if ((serviceId === draft.serviceId && draft.sessions.length) || await store.changeSelection({ serviceId, sessions: [newSession(offer.minutes)], enhancementIds: [] })) navigate(3); return }
+            if (serviceId === draft.serviceId || await store.changeSelection({ serviceId, sessions: [], enhancementIds: [] })) navigate(2)
+          }} />}
+          {offer && (step === 2 || step === 3) && <OfferTimeStep offer={offer} busy={busy} hold={async () => { if (await store.holdOffer()) await goWithQuote(4) }} />}
+          {!offer && step === 2 && <PeopleLengthStep draft={draft} catalogue={catalogue} edit={store.edit} noMinimum={noMinimum}
             choose={async (durations) => {
               const same = durations.length === draft.sessions.length && durations.every((minutes, index) => draft.sessions[index].duration_minutes === minutes)
               if (same || await store.changeSelection({ sessions: durations.map(newSession) })) navigate(3)
             }} />}
-          {step === 3 && <TimeStep rules={rules} draft={draft} loadAvailability={store.availability} next={() => goWithQuote(4)}
+          {!offer && step === 3 && <TimeStep rules={rules} draft={draft} loadAvailability={store.availability} next={() => goWithQuote(4)}
             selectSlot={(start, date) => { visit.record('time', { date, start, minutes: totalMinutes }); return store.selectSlot(start, date) }}
             wanted={{ load: api.wantedTimes, ask: api.askForTime, record: visit.record, signedIn: Boolean(auth.session) }} />}
           {step === 4 && <ReviewStep draft={draft} catalogue={catalogue} quote={quote} quoteError={quoteError} edit={store.edit} navigate={navigate} refreshQuote={store.refreshQuote} retryQuote={store.retryQuote} next={() => goWithQuote(5)} />}
