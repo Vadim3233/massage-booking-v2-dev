@@ -1,6 +1,6 @@
 # VadMassage booking app: feature catalogue
 
-Last updated: 12 November 2026 (special-price offers for a free time).
+Last updated: 12 November 2026 (new clients pay by bank transfer; cash from their second visit).
 
 This is a plain-English list of everything the app does today, grouped by area. Each entry says what the feature does, why it was built, where it was built (the pull request, or "PR", and any database change, called a "migration"), and what would need to become a **setting** if the same feature were offered to other therapists in a general app.
 
@@ -27,6 +27,7 @@ These are the things that are written for Vadim today. In a general therapist ap
 | London areas with travel fees, the London congestion charge, UK postcodes | Service areas (or none), travel fee and extra charges per area, the postcode format of the country |
 | British pounds, UK bank transfer (sort code and account number), UK tax year (6 April) | Currency, payment methods and their details, the tax year start |
 | Bank transfer and cash only, no card payments | Which payment methods are offered (a card provider could be added) |
+| Cash only once a client has had a paid visit, or is marked Trusted | Which payment methods a new client may use (cash for everyone, or after a first paid visit) |
 | Session lengths of 60, 90 and 120 minutes, with his prices | Treatments, lengths and prices (already editable in the app) |
 | 60 minutes of travel allowed around each visit | Travel buffer (or none for a clinic) |
 | Free changes up to 24 hours before, and for 1 hour after booking; full price as late fee | Cancellation window, grace period and the late fee amount or percentage (most are already settings) |
@@ -203,6 +204,12 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **Why:** Vadim takes no card payments; a client missed the cash option when it was a small link.
 - **Built in:** foundation and PR #8 (`20260929100000_provisional_payment_reservations.sql`, `20261007120000_admin_payment_review.sql`, `20261010100000_pending_until_admin_decides.sql`, ADR-005, ADR-015, ADR-019), PR #43, PR #96 (no migration).
 - **For a general app:** payment methods offered, bank details format, whether cash needs approval.
+
+### New clients pay by bank transfer; cash from their second visit
+- **What it does:** A client who has not yet had a completed, paid visit sees only Bank transfer at the payment step, with the line "For your first visit, please pay by bank transfer to secure your booking. I'll confirm it as soon as the money arrives. Cash is welcome from your second visit." The database refuses their switch to cash too (in the app, through an offer or through their AI assistant, which is told to offer the transfer). Returning clients see both, as before. On a client's page, "Paying" says whether they are new or returning, and "Trusted, allow cash" lets a new client pay cash (say, a friend of a regular). When Vadim presses "Confirm, pay later" or "Approve" (cash) on a client's first booking, the confirmation says nothing has been paid yet and the button reads "Confirm anyway". It never stops him, and he can still book or change anyone to cash himself.
+- **Why:** As new clients start to come from Google, cash from a stranger means travelling to their home with nothing paid, and a late fee that can't be collected if they don't open the door.
+- **Built in:** PR (this one), `20261209100000_new_clients_pay_by_transfer.sql`.
+- **For a general app:** whether new clients may pay cash (on or off), what counts as returning (a completed, paid visit), the Trusted switch, and the wording of the first-visit line.
 
 ### Bookings wait for Vadim, never for a timer
 - **What it does:** A booking waiting for payment keeps its time until Vadim confirms it or removes it. Nothing is cancelled automatically.

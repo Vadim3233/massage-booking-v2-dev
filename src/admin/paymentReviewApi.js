@@ -46,6 +46,14 @@ export const methodSwitch = booking => {
   if (payment.method === 'cash' && ['approved', 'paid'].includes(payment.status)) return 'toBank'
   return null
 }
+// Confirming with nothing paid is the risk with a client Vadim has never met: on a first booking (no completed, paid visit, not Trusted)
+// "Confirm, pay later" and "Approve cash" say so, and the button says what he is doing. It never stops him.
+export const FIRST_BOOKING_RISK = {
+  payLater: 'This is their first booking and nothing has been paid yet. If they don\'t turn up, there is nothing to cover your time.',
+  approve: 'This is their first booking. With cash, nothing is paid until you arrive. If they don\'t turn up, there is nothing to cover your time.',
+}
+export const isFirstBooking = trust => Boolean(trust) && !trust.has_paid_visit && !trust.trusted
+
 export const actionLabels = { verify: 'Verify payment', payLater: 'Confirm, pay later', approve: 'Approve', remove: 'Cancel unpaid booking', receive: 'Mark payment received', receiveBank: 'Mark paid', toCash: 'Change to cash', toBank: 'Change to bank transfer' }
 const operations = { verify: 'admin_verify_bank_transfer', payLater: 'admin_confirm_pay_later', approve: 'admin_approve_cash_request', remove: 'admin_remove_pending_booking', receive: 'admin_record_payment_received', receiveBank: 'admin_record_bank_transfer_received', toCash: 'admin_switch_payment_method', toBank: 'admin_switch_payment_method' }
 const methods = { toCash: 'cash', toBank: 'bank_transfer' }
@@ -65,6 +73,13 @@ export function createPaymentReviewApi(client) {
       if (error) throw new Error('Could not load booking. Please retry.')
       if (!data) throw new Error('Booking not found.')
       return data
+    },
+    // Whether the client has had a completed, paid visit, and whether Vadim marked them Trusted: a first booking asks once more
+    // before it is confirmed with nothing paid. Unknown (null) if it cannot be read; the confirmation then reads as before.
+    async trust(clientId) {
+      if (!clientId) return null
+      const { data, error } = await client.rpc('admin_client_payment_trust', { p_client_id: clientId })
+      return error ? null : data
     },
     async act(action, booking, requestId) {
       if (!operations[action]) throw new Error('Action unavailable.')

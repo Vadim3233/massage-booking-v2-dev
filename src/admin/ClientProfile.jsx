@@ -133,6 +133,33 @@ function History({ clientId, api, openBooking, version }) {
   </section>
 }
 
+// Cash is for returning clients (a completed, paid visit). A new client pays by bank transfer before the first visit is confirmed,
+// unless Vadim marks them Trusted here, for example someone a client of his recommended (20261209100000_new_clients_pay_by_transfer.sql).
+function CashTrust({ clientId, api, version }) {
+  const [trust, setTrust] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  useEffect(() => {
+    if (!api.paymentTrust) return undefined
+    let live = true
+    api.paymentTrust(clientId).then(row => { if (live) setTrust(row || null) }, () => { if (live) setTrust(null) })
+    return () => { live = false }
+  }, [api, clientId, version])
+  if (!trust) return null
+  async function toggle() {
+    setBusy(true); setError('')
+    try { await api.setCashTrusted(clientId, !trust.trusted); setTrust({ ...trust, trusted: !trust.trusted }) } catch (failure) { setError(failure.message) } finally { setBusy(false) }
+  }
+  const sentence = trust.has_paid_visit ? 'Returning client: can pay by bank transfer or cash.'
+    : trust.trusted ? 'Trusted: can pay cash, even before their first visit.'
+      : 'New client: pays by bank transfer to secure their first visit. Cash is offered from their second visit.'
+  return <section aria-labelledby="cash-title"><h2 id="cash-title">Paying</h2>
+    <p>{sentence}</p>
+    {!trust.has_paid_visit && <button className="btn--small" disabled={busy} aria-pressed={Boolean(trust.trusted)} onClick={toggle}>{trust.trusted ? 'Not trusted: bank transfer first' : 'Trusted, allow cash'}</button>}
+    {error && <p role="alert">{error}</p>}
+  </section>
+}
+
 export default function ClientProfile({ id, back, backLabel = 'Clients', openBooking, newBooking, openCombine, onDeleted, api = clientsApi }) {
   const [client, setClient] = useState(null)
   const [error, setError] = useState('')
@@ -190,6 +217,7 @@ export default function ClientProfile({ id, back, backLabel = 'Clients', openBoo
       <p>{client.no_minimum_booking ? 'No minimum booking: this client can book any length in any area.' : 'This client keeps to each area\'s minimum booking (More > Areas).'}</p>
       <button className="btn--small" disabled={busy} aria-pressed={Boolean(client.no_minimum_booking)} onClick={toggleMinimum}>{client.no_minimum_booking ? 'Use the area minimums again' : 'No minimum booking for this client'}</button>
     </section>
+    <CashTrust key={client.id} clientId={id} api={api} version={version} />
     {openCombine && <section aria-labelledby="same-title"><h2 id="same-title">Same person twice?</h2>
       <p className="admin-detail-hint">If this client also appears as another entry, for example one made when they booked as a guest, you can look at the two side by side and combine them.</p>
       {combining

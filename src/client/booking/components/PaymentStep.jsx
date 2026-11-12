@@ -10,15 +10,19 @@ import { payAfterChoice, sessionDay, shortDay } from '../payAfter.js'
 
 // The two ways to pay sit side by side near the top of the page, so cash is as easy to find as a bank transfer.
 // For a later session (`after` is the earlier one), the bank transfer is made after that session.
-function MethodChoice({ cash, locked, choose, after }) {
+// Cash is for returning clients and clients Vadim trusts (`cashOk` true); a new client (false) sees only the bank transfer, and why.
+// While that is still being asked (null), only the bank transfer is shown.
+function MethodChoice({ cash, locked, choose, after, cashOk = true }) {
   return <section aria-labelledby="method-title">
     <h2 className="section-title" id="method-title">{after ? 'How would you like to pay for it?' : 'How would you like to pay?'}</h2>
     <div className="tiles tiles--methods">
       <button type="button" className="tile" aria-pressed={!cash} disabled={locked} onClick={() => cash && choose()}><span className="tile-title">Bank transfer</span><span className="tile-note">{after ? `After your ${shortDay(after.date)} session` : 'Pay now with your reference'}</span></button>
-      <button type="button" className="tile" aria-pressed={cash} disabled={locked} onClick={() => !cash && choose()}><span className="tile-title">Cash</span><span className="tile-note">{after ? 'At this appointment' : 'Pay at your appointment'}</span></button>
+      {cashOk === true && <button type="button" className="tile" aria-pressed={cash} disabled={locked} onClick={() => !cash && choose()}><span className="tile-title">Cash</span><span className="tile-note">{after ? 'At this appointment' : 'Pay at your appointment'}</span></button>}
     </div>
+    {cashOk === false && <p className="fine">{FIRST_VISIT_NOTE}</p>}
   </section>
 }
+const FIRST_VISIT_NOTE = "For your first visit, please pay by bank transfer to secure your booking. I'll confirm it as soon as the money arrives. Cash is welcome from your second visit."
 
 export default function PaymentStep({ rules, draft, quote, quoteError, bank, api, store, finalize, held, error, chooseTimeAgain }) {
   const [acknowledged, setAcknowledged] = useState(false)
@@ -29,6 +33,18 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
   const [attempt, setAttempt] = useState(0)
   // A later session can still be paid now, the usual way, if the client would rather.
   const [payNow, setPayNow] = useState(false)
+  // May this client pay cash? Unknown (null) until asked; if the question fails, cash is offered as before and the database decides.
+  const [cashOk, setCashOk] = useState(() => (api.cashAllowed ? null : true))
+  useEffect(() => {
+    if (!api.cashAllowed) return undefined
+    let live = true
+    api.cashAllowed().then(allowed => { if (live) setCashOk(allowed !== false) }, () => { if (live) setCashOk(true) })
+    return () => { live = false }
+  }, [api])
+  // A new client who had picked cash before (a saved draft) is moved back to the bank transfer.
+  useEffect(() => {
+    if (cashOk === false && draft.paymentMethod === 'cash' && !draft.paymentPending) store.setPaymentMethod('bank_transfer')
+  }, [cashOk, draft.paymentMethod, draft.paymentPending, store])
   useEffect(() => {
     if (!draft.bookingId) return
     let live = true
@@ -56,7 +72,7 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
     <h1 tabIndex={-1}>I've <em>received</em> your request</h1>
     <p role="status" className="reserved"><span className="reserved-dot" aria-hidden="true" />Your appointment time is reserved for you.</p>
     <p className="lede">{areaNote} Please don't make a transfer yet. Once your appointment is confirmed, I'll email you the amount and the bank details.</p>
-    <MethodChoice cash={cash} locked={Boolean(draft.paymentPending)} choose={switchMethod} />
+    <MethodChoice cash={cash} locked={Boolean(draft.paymentPending)} choose={switchMethod} cashOk={cash || cashOk} />
     <BookingSummary booking={booking} quote={quote} />
     <a className="btn btn--quiet btn--block" href={`/account?booking=${booking.id}`}>Change the time or cancel this booking</a>
     <p className="fine"><a href="https://vadmassage.com">Contact Vadim</a></p>
@@ -98,7 +114,7 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
         <h2 id="pay-after-title">You pay for one session at a time</h2>
         <p>You already have a session with me on <strong>{sessionDay(earlier.date)}</strong>. Pay for this one after that session. I'll send you the amount and bank details then.</p>
       </section>
-      <MethodChoice cash={cash} locked={Boolean(draft.paymentPending)} choose={switchMethod} after={earlier} />
+      <MethodChoice cash={cash} locked={Boolean(draft.paymentPending)} choose={switchMethod} after={earlier} cashOk={cash || cashOk} />
       <h2 className="section-title">What happens next</h2>
       <ol role="list" className="steps-list">
         <li>Press <strong>Book this session</strong>. {earlier.auto_confirm === false ? "I'll look at it and confirm it." : earlier.booking_status === 'confirmed' ? "It's confirmed straight away." : `It's confirmed as soon as your ${earlierDay} session is.`}</li>
@@ -118,7 +134,7 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
   return <>
     <h1 tabIndex={-1}>{cash ? <>Paying by <em>cash</em></> : <>One last <em>step</em></>}</h1>
     <p role="status" className="reserved"><span className="reserved-dot" aria-hidden="true" />Your appointment time is reserved for you.</p>
-    <MethodChoice cash={cash} locked={Boolean(draft.paymentPending)} choose={switchMethod} />
+    <MethodChoice cash={cash} locked={Boolean(draft.paymentPending)} choose={switchMethod} cashOk={cash || cashOk} />
     <p className="lede">{cash ? "Pay the full amount in cash at your appointment. Press the button below to send me your request, and I'll look at it and confirm your appointment." : 'Please make your bank transfer using the reference below, then let me know.'}</p>
     <section className="amount-card" aria-label={cash ? 'Amount to pay in cash' : 'Amount to transfer'}>
       <p className="eyebrow">{cash ? 'To pay in cash at your appointment' : 'Amount to transfer'}</p>

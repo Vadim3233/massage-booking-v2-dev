@@ -18,11 +18,13 @@ export const INSTRUCTIONS = `This connector books mobile massage appointments wi
 - Only offer times that find_free_times returned. Never guess a time, a price or an address.
 - Some areas have a minimum booking (minimum_booking in the areas list): only offer lengths that reach it, counting both people's times together.
 - Before book_appointment, always show the client a summary (day, time, address, people and lengths, total price, payment method, cancellation terms) and wait for a clear yes.
-- Prices are in pounds (GBP). Payment is by bank transfer or cash; you never take a payment yourself.
+- Prices are in pounds (GBP). Payment is by bank transfer or cash (cash only where payment_methods lists it); you never take a payment yourself.
 - Do not send health or medical details through this connector. Vadim asks about health separately.
 - New addresses, bookings for three or more people, extras, and moving or cancelling are done in the app at the client's account page.`
 
 export class ToolProblem extends Error {}
+// A new client (no completed, paid visit) pays by bank transfer unless Vadim marked them Trusted (20261209100000_new_clients_pay_by_transfer.sql).
+const FIRST_VISIT_CASH = 'For a first visit Vadim asks for a bank transfer to secure the booking. Cash is welcome from the second visit. Offer the bank transfer.'
 
 const pad = number => String(number).padStart(2, '0')
 const clock = minutes => `${pad(Math.floor(minutes / 60) % 24)}:${pad(minutes % 60)}`
@@ -133,6 +135,11 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
   async function addresses() { return api.addresses() }
 
   // Whether Vadim let this client off the areas' minimum booking. If it cannot be read, the minimum applies (the database decides either way).
+  // Whether the client may pay cash. If it cannot be asked, cash is offered and the database decides.
+  async function cashAllowed() {
+    try { return (await rpc('my_cash_allowed')) !== false } catch { return true }
+  }
+
   async function noMinimum() {
     try {
       const { data } = await client.from('clients').select('no_minimum_booking').eq('auth_user_id', userId)
@@ -231,7 +238,7 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
       inputSchema: { type: 'object', properties: {}, additionalProperties: false },
       annotations: { readOnlyHint: true },
       async run() {
-        const [me, all, saved, row, history, minimumOff] = await Promise.all([profile(), catalogue(), addresses(), rules(), rpc('list_my_bookings'), noMinimum()])
+        const [me, all, saved, row, history, minimumOff, cashOk] = await Promise.all([profile(), catalogue(), addresses(), rules(), rpc('list_my_bookings'), noMinimum(), cashAllowed()])
         // Vadim can let a client off the travel fee; the prices quoted then leave it out, so the list of areas does too.
         let freeTravel = false
         try {
@@ -271,7 +278,8 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
             minimum_notice_hours: row.minimum_notice_hours ?? undefined,
             cancellation: terms(row),
           },
-          payment_methods: ['bank_transfer', 'cash'],
+          payment_methods: cashOk ? ['bank_transfer', 'cash'] : ['bank_transfer'],
+          ...(cashOk ? {} : { payment_note: FIRST_VISIT_CASH }),
           ...(places.length ? {} : { note: `No saved address yet. The client adds one in the app: ${accountLink}.` }),
         }
       },
@@ -355,6 +363,7 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
         if (input.client_confirmed !== true) throw new ToolProblem('Show the client the summary and ask for a clear yes first.')
         if (!DATE.test(input.date || '')) throw new ToolProblem('The date is YYYY-MM-DD, for example 2026-11-04.')
         if (!['bank_transfer', 'cash'].includes(input.payment_method)) throw new ToolProblem('payment_method is bank_transfer or cash.')
+        if (input.payment_method === 'cash' && !(await cashAllowed())) throw new ToolProblem(FIRST_VISIT_CASH)
         const start = parseTime(input.time)
         await profile()
         const chosen = await selection(input)
