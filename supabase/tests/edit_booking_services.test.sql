@@ -56,11 +56,15 @@ select pg_temp.client_change('00000000-0000-4000-8000-000000000b01', jsonb_build
 select ok(pg_temp.st('00000000-0000-4000-8000-000000000b01') = 'total=90.00 amount=90.00 refund=90.00 balance=0.00 mins=60 status=paid', 'E1 refund £90');
 
 -- E2: same, today evening (inside 24 h), paid
-select pg_temp.mk('00000000-0000-4000-8000-000000000b02', 0, 1200, 'paid');
+-- (E2 and E3 follow the clock like E5, so the test passes at any hour: this evening while there is still the usual notice before it;
+-- from 17:30 London time, tomorrow afternoon instead, which is still inside 24 h and clear of E5's tomorrow morning.)
+create function pg_temp.late() returns boolean language sql as $$
+  select (extract(hour from clock_timestamp() at time zone 'Europe/London') * 60 + extract(minute from clock_timestamp() at time zone 'Europe/London')) >= 1050 $$;
+select pg_temp.mk('00000000-0000-4000-8000-000000000b02', case when pg_temp.late() then 1 else 0 end, case when pg_temp.late() then 780 else 1200 end, 'paid');
 select pg_temp.client_change('00000000-0000-4000-8000-000000000b02', jsonb_build_array(pg_temp.ses('00000000-0000-4000-8000-000000000b02',1,60))) is not null;
 select ok(pg_temp.st('00000000-0000-4000-8000-000000000b02') = 'total=180.00 amount=180.00 refund=0.00 balance=0.00 mins=60 status=paid', 'E2 price stays £180, no refund');
 -- E3: inside 24 h, cash
-select pg_temp.mk('00000000-0000-4000-8000-000000000b03', 0, 1260, 'approved', 2, 'cash');
+select pg_temp.mk('00000000-0000-4000-8000-000000000b03', case when pg_temp.late() then 1 else 0 end, case when pg_temp.late() then 1020 else 1260 end, 'approved', 2, 'cash');
 select pg_temp.client_change('00000000-0000-4000-8000-000000000b03', jsonb_build_array(pg_temp.ses('00000000-0000-4000-8000-000000000b03',1,60))) is not null;
 select ok(pg_temp.st('00000000-0000-4000-8000-000000000b03') = 'total=180.00 amount=180.00 refund=0.00 balance=0.00 mins=60 status=approved', 'E3 cash: still £180');
 select ok(pg_temp.mail('00000000-0000-4000-8000-000000000b03') like '%price stays £180.00.%full £180.00 ready in cash%', 'E3 message');
