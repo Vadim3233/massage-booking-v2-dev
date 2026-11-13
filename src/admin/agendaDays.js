@@ -97,7 +97,7 @@ export function agendaDays({ bookings, blocks = [], hours = [], start, end, day,
     }
     const special = specials.get(date)
     const blocked = timed.get(date) || []
-    if (special) raw.push(quiet(date, special.available ? 'special' : 'off', specialLine(special)))
+    if (special) raw.push({ ...quiet(date, special.available ? 'special' : 'off', specialLine(special)), note: special.note || '' })
     for (const row of blocked) raw.push(quiet(date, 'block', timedLine(row), row))
     const own = hoursOn.get(date)
     if (showEvery && !special && !blocked.length) raw.push(own && !own.available ? quiet(date, 'closed', 'usual day off') : quiet(date, 'free', own ? `free · ${hoursLine(own)}` : 'free'))
