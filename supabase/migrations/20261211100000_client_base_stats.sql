@@ -12,12 +12,14 @@
 -- Anyone else (one or two visits a while ago, or no visit yet) has no tag.
 -- Active means a visit in the last 90 days, or something booked.
 --
+-- Safe to run again: each function is created or replaced, and the grants are set again.
+--
 -- To take this back: drop function public.admin_client_base(); drop function public.admin_client_rhythm(uuid); drop function public.client_visit_stats(date);
 
 -- ---------------------------------------------------------------------------------------------
 -- One row per client with their visit numbers and tag. Internal: only the two Admin functions below call it.
 -- ---------------------------------------------------------------------------------------------
-create function public.client_visit_stats(p_today date)
+create or replace function public.client_visit_stats(p_today date)
 returns table(client_id uuid, visits integer, first_visit date, last_visit date, gap_days integer, next_date date, paid_gbp numeric,
   tag text, overdue_days integer)
 language sql stable security definer set search_path = '' as $$
@@ -54,7 +56,7 @@ revoke all on function public.client_visit_stats(date) from public, anon, authen
 -- ---------------------------------------------------------------------------------------------
 -- The Clients page: four numbers at the top and one row per client (name, contact and stats) for the tags, filters and lists.
 -- ---------------------------------------------------------------------------------------------
-create function public.admin_client_base()
+create or replace function public.admin_client_base()
 returns jsonb
 language plpgsql stable security definer set search_path = '' as $$
 declare
@@ -87,7 +89,7 @@ $$;
 -- ---------------------------------------------------------------------------------------------
 -- One client's card: their tag and rhythm, visits in each of the last 12 months, and their place among all clients by visits.
 -- ---------------------------------------------------------------------------------------------
-create function public.admin_client_rhythm(p_client_id uuid)
+create or replace function public.admin_client_rhythm(p_client_id uuid)
 returns jsonb
 language plpgsql stable security definer set search_path = '' as $$
 declare
