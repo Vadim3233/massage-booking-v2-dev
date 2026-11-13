@@ -358,7 +358,7 @@ These are the things that are written for Vadim today. In a general therapist ap
 ### A cheerful day off in the Agenda
 - **What it does:** A day off (the usual day off, or a special day off) shows in the Agenda as a warm sunrise card with a smiling sun and "Day off!", instead of a grey line. A special day off shows its reason too. Each card has a short happy line ("Your hands have earned a rest.") that changes with the date, so a weekly day off says something different every week. Tapping it opens that day, as before.
 - **Why:** Vadim said the grey "usual day off" line felt sad and didn't look like a day off.
-- **Built in:** PR #NUMBER (no SQL). Lines in `src/admin/dayOffCheer.js`.
+- **Built in:** PR #128 (no SQL). Lines in `src/admin/dayOffCheer.js`.
 - **For a general app:** let each therapist edit the happy lines (or switch them off), and use their own name and colours.
 
 ### Working hours, special days and blocked time
