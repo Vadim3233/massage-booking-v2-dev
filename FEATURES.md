@@ -1,6 +1,6 @@
 # VadMassage booking app: feature catalogue
 
-Last updated: 12 November 2026 (new clients pay by bank transfer; cash from their second visit).
+Last updated: 12 November 2026 (client base stats on the Clients page).
 
 This is a plain-English list of everything the app does today, grouped by area. Each entry says what the feature does, why it was built, where it was built (the pull request, or "PR", and any database change, called a "migration"), and what would need to become a **setting** if the same feature were offered to other therapists in a general app.
 
@@ -447,6 +447,13 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **Built in:** PR #8 (`20261015100000_admin_clients.sql`, ADR-025), PR #51 (`20261101100000_client_name_only.sql`, ADR-056).
 - **For a general app:** nothing specific.
 
+### Client base stats: numbers, tags and "Worth a look"
+- **What it does:** The top of Clients shows four numbers: how many clients (and how many were active in the last 90 days), new clients this month compared with last month, how many first-timers came back for a second visit, and the usual gap between visits for regulars. Search and the client list come straight after, so finding someone needs no scrolling. Every client in the list gets a tag and a short line (visits, how often, last and next visit). Buttons above the list show only **Regular**, **New**, **Quiet** or **Lapsed** clients. Further down, "Worth a look" has three lists: **Gone quiet** (regulars well past their usual gap, most overdue first, with a WhatsApp Message button), **New, not back yet** (first visit in the last two months and nothing booked since) and **Most loyal** (top five by visits or by money spent). A client's own page shows their tag, a note when they have gone quiet ("About 8 weeks overdue… usually books every ~3 weeks") with a Send a message button, their usual gap, time since the last visit, their rank by visits, visits in the last 12 months, and a small bar for each month.
+- **How the tags are decided (all automatic):** New = first visit in the last 60 days. Lapsed = no visit for 6 months and nothing booked. Quiet = 3 or more visits, nothing booked, and more than twice their usual gap (at least 4 weeks) since the last visit. Regular = 3 or more visits otherwise. A visit is a completed booking, or a confirmed one whose day has passed; cancelled and no-show bookings don't count, and a booking for two people is one visit.
+- **Why:** Vadim wanted to see his client base at a glance and know whom to message, without scrolling past it to search.
+- **Built in:** PR (this one), `20261211100000_client_base_stats.sql` (ADR-099). Nothing is stored: the numbers are worked out from the bookings each time.
+- **For a general app:** the tag thresholds (60 days for New, 6 months for Lapsed, twice the usual gap for Quiet) and the 90 days for Active could become settings.
+
 ### Phone number checks (booking and Admin)
 - **What it does:** When a client types their phone number on the booking details step, the app checks its length as they leave the box: a UK mobile has 11 digits starting 07 (other UK numbers 10 or 11), and a number from another country starts with + (or 00) and its country code. If it looks wrong, a gentle note says what (for example "one digit too many") and asks them to double-check, but **never stops the booking**: Vadim corrects the number later if needed. Only something that cannot be a phone number at all (fewer than 7 or more than 20 digits) stops the step, as before. A short hint sits under the box. In the Admin's own client forms the same check must pass before saving. A client page whose saved number looks wrong says so in red and points to Edit details.
 - **Why:** A client registered with one extra digit, so Vadim could not reach him. Vadim did not want a new obstacle in the booking journey.
@@ -555,6 +562,5 @@ These are the things that are written for Vadim today. In a general therapist ap
 
 - Half-hour sessions for extra people in a group booking (for example 1.5 h + 30 min).
 - A "next booking" alert with one-tap directions after a session ends.
-- Client statistics on the Clients page.
 - Clients setting up repeating bookings themselves.
 - Open PRs not merged: #7 (admin audit plan), #74 (slow sign-in way out), #90 (security fixes), #95 (session needed to hold a time).

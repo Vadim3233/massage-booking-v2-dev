@@ -60,6 +60,9 @@ export function createClientsApi(client) {
     search: query => run(client.rpc('admin_search_clients', { p_query: query || '' })),
     get: id => run(client.from('clients').select('id,first_name,last_name,email,phone,auth_user_id,online_booking_enabled,no_travel_fee,no_minimum_booking,created_at').eq('id', id).maybeSingle()),
     summary: id => run(client.rpc('admin_client_summary', { p_client_id: id })),
+    // Client base stats (20261211100000_client_base_stats.sql): the Clients page's numbers, tags and lists, and one client's rhythm.
+    base: () => run(client.rpc('admin_client_base')),
+    rhythm: id => run(client.rpc('admin_client_rhythm', { p_client_id: id })),
     create: (details, requestId) => one(client.rpc('admin_create_client', { p_details: details, p_request_id: requestId })),
     update: (id, details) => one(client.rpc('admin_update_client', { p_client_id: id, p_details: details })),
     setOnlineBooking: (id, enabled) => run(client.from('clients').update({ online_booking_enabled: enabled }).eq('id', id)),
