@@ -79,12 +79,31 @@
 .admin-agenda-quiet-day .what { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .admin-agenda-quiet-day svg { flex: 0 0 auto; color: var(--primary); }
 .admin-agenda-quiet-button { justify-content: flex-start; min-height: 44px; margin: -3px 0 -3px -8px; padding: 4px 8px; border: 0; background: transparent; color: var(--ink-soft); font-size: 13px; font-weight: 400; text-align: left; }
+/* A day off is a sunrise card with a smiling sun, so a free Saturday looks like one. */
+.admin-agenda-quiet li.is-day-off { display: block; padding: 8px 0; }
+.admin-day-off { position: relative; display: grid; justify-items: start; gap: 4px; width: 100%; margin: 0; padding: 14px 16px 16px; overflow: hidden; border: 1px solid var(--sunrise-line); border-radius: var(--radius); background: linear-gradient(160deg, var(--sunrise-top) 0%, var(--sunrise-mid) 45%, var(--sunrise-low) 100%); color: var(--sunrise-ink); font: inherit; text-align: left; }
+.admin-day-off > span, .admin-day-off > strong { position: relative; z-index: 1; }
+.admin-day-off-top { display: flex; justify-content: space-between; align-items: center; width: 100%; }
+.admin-day-off-date { font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.admin-day-off-title { font-family: var(--font-display); font-size: 30px; font-weight: 700; line-height: 1.05; }
+.admin-day-off-note { font-size: 14px; font-weight: 600; max-width: 62%; overflow-wrap: anywhere; }
+.admin-day-off-line { font-size: 14px; line-height: 1.4; color: var(--sunrise-ink-soft); max-width: 62%; }
+.admin-day-off-sun { position: absolute; right: -22px; bottom: -30px; width: 150px; height: 150px; }
+.admin-day-off-sun .rays line { stroke: var(--sun-ray); stroke-width: 5; stroke-linecap: round; opacity: .75; }
+.admin-day-off-sun .face { fill: var(--sun-face); }
+.admin-day-off-sun .cheek { fill: var(--sun-cheek); opacity: .55; }
+.admin-day-off-sun .eye { fill: var(--sun-features); }
+.admin-day-off-sun .smile { fill: none; stroke: var(--sun-features); stroke-width: 3.4; stroke-linecap: round; }
+.admin-day-off:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.admin-day-off:active { transform: scale(.99); }
 @media (hover: hover) {
   .admin-agenda-away > button:hover { background: var(--primary-line); }
   .admin-agenda-quiet-button:hover, .admin-agenda-quiet-date:hover, .admin-agenda-quiet-day:hover { background: var(--primary-soft); }
+  .admin-day-off:hover { border-color: var(--sun-ray); }
 }
 @media (prefers-reduced-motion: reduce) {
   .admin-agenda-switch input::before { transition: none; }
+  .admin-day-off:active { transform: none; }
 }
 
 @media (min-width: 768px) {
