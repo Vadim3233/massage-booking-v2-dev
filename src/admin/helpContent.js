@@ -39,10 +39,15 @@ export const ADMIN_HELP = [
     { q: 'What do the numbers and tags on Clients mean?', a: ['The four numbers at the top: all your clients (and how many came or booked in the last 90 days), new clients this month, how many first-timers came back for a second visit, and the usual gap between visits for your regulars.',
       'Each client has a tag, worked out by itself: New (first visit in the last 60 days), Regular (3 or more visits), Quiet (a regular with nothing booked and more than twice their usual gap since the last visit) or Lapsed (no visit for 6 months). Tap Regular, New, Quiet or Lapsed above the list to see only those.',
       'Further down, Worth a look lists who has gone quiet, new clients who have not come back yet, and your most loyal clients. Message opens WhatsApp. A client\'s page shows their tag, how often they come and their visits month by month.'] },
+    { q: 'What is "When … books" on a client\'s page?', a: ['Their usual day and time of day, from their past visits: for example "Usually Monday mornings, around 10:00". The circles show how many visits fell on each day of the week, and the three boxes show morning (before 12:00), afternoon and evening (from 17:00). After about a year of visits it also names the months they come most.',
+      'With a usual day and nothing booked, Book their usual opens New booking for them on the next one. With fewer than 3 visits it shows one line only.'] },
     { q: 'The same person is in Clients twice', a: ['Open "Same person?" from Clients to combine the two into one.'] },
   ] },
   { title: 'Money and receipts', items: [
     { q: 'Where do I see my income?', a: ['More › Income. The month calendar shows each day, and "Your hour" shows what you earn per hour, counting travel.'] },
+    { q: 'What is Busiest times on Income?', a: ['It looks at all your visits since the first one, whatever month is on screen. At the top: your best and quietest day, your busiest time of day and your best month. The tabs rank Days, Times, Months and Holidays, by bookings or by income. A day with no bookings at all (usually a day off) is never called the quietest.',
+      'Ideas to act on: your quietest day, with a button to open the next one so you can tap a Free gap and send a special price offer; times people wanted on the booking page when you were full (from Visitors, last 90 days), so you can open more hours then; and the next bank holiday, so you can decide whether to work.',
+      'Holidays compares each bank holiday in England and Wales with a normal day of the same weekday. Months and holidays get more useful after your first full year.'] },
     { q: 'How do receipts work?', a: ['A receipt is made automatically when you mark a booking paid. Clients download the PDF from their booking page. Change the details printed on it in More › Receipt details.'] },
   ] },
   { title: 'Settings in More', items: [

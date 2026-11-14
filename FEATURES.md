@@ -466,6 +466,12 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **Built in:** PR (this one), `20261211100000_client_base_stats.sql` (ADR-099). Nothing is stored: the numbers are worked out from the bookings each time.
 - **For a general app:** the tag thresholds (60 days for New, 6 months for Lapsed, twice the usual gap for Quiet) and the 90 days for Active could become settings.
 
+### When a client books (client page)
+- **What it does:** A card on each client's page, under the visits chart: one sentence ("Usually Monday mornings, around 10:00"), circles for each day of the week with the number of visits, and morning / afternoon / evening boxes. After about a year it names the months they come most. When they have a usual day and nothing booked, **Book their usual** opens New booking for them on the next one. With 1 or 2 visits it shows one line only ("Both visits so far were on a Friday evening").
+- **Why:** Vadim wanted to know each client's habits, to offer them their usual slot and message them at the right moment. It works with the Quiet note above it: send a message, then book their usual day.
+- **Built in:** PR (this one), `20261213100000_busy_times.sql` (ADR-101).
+- **For a general app:** where morning ends (12:00) and evening starts (17:00).
+
 ### Phone number checks (booking and Admin)
 - **What it does:** When a client types their phone number on the booking details step, the app checks its length as they leave the box: a UK mobile has 11 digits starting 07 (other UK numbers 10 or 11), and a number from another country starts with + (or 00) and its country code. If it looks wrong, a gentle note says what (for example "one digit too many") and asks them to double-check, but **never stops the booking**: Vadim corrects the number later if needed. Only something that cannot be a phone number at all (fewer than 7 or more than 20 digits) stops the step, as before. A short hint sits under the box. In the Admin's own client forms the same check must pass before saving. A client page whose saved number looks wrong says so in red and points to Edit details.
 - **Why:** A client registered with one extra digit, so Vadim could not reach him. Vadim did not want a new obstacle in the booking journey.
@@ -528,6 +534,12 @@ These are the things that are written for Vadim today. In a general therapist ap
 
 ### Income
 - See section 3.
+
+### Busiest times (Income)
+- **What it does:** A section at the bottom of More › Income that looks at every visit since the first one. Four answers at the top (best day, quietest day, busiest time of day, best month), then ideas to act on: the **quietest day** with a button to open the next one and fill a free gap with a special price offer; **times people wanted when full** (from Visitors, last 90 days) with a button to open that day and add hours; and the **next bank holiday** with a hint based on how busy past ones were. Tabs rank **Days**, **Times** (morning, afternoon, evening, plus the most popular start time), **Months** and **Holidays** (each bank holiday against a normal day of the same weekday), by bookings or by income. Days with no bookings at all are never called the quietest. Early on, it says plainly that months and holidays need a full year.
+- **Why:** Vadim wanted to know when he is busiest, to decide when to work, take days off and send special offers. Booking apps such as Fresha or Square show busy-time and occupancy reports; this one adds the demand that got away (wanted times), bank holidays, and a one-tap way to act on each idea.
+- **Built in:** PR (this one), `20261213100000_busy_times.sql` (ADR-101). Bank holidays are worked out from the rules (New Year, Easter, May, August, Christmas, with substitute days), so they never need typing in; one-off royal holidays are not included.
+- **For a general app:** the country's public holidays; where morning ends and evening starts.
 
 ---
 

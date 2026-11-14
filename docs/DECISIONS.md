@@ -972,3 +972,11 @@ The page stays where the Admin needs it:
 
 **How it was built:** PR #129, migration `20261212100000_paid_visit_counts_without_complete.sql` (replaces `client_has_paid_visit` and `finalize_client_booking`, copied from `20261210100000_offer_travel_fee.sql` with only the returning check changed). Tests: `supabase/tests/paid_visit_counts_without_complete.test.sql` (8 checks).
 
+
+## ADR-101 — Busiest times on Income and "When … books" on a client's page (2026-11-14)
+
+**Why:** Vadim asked for rankings of his busiest days, months and bank holidays, and each client's usual days and times, and asked for them to connect with the rest of the app.
+
+**Decision:** the database only lists visits (`admin_busy_times(p_client_id uuid default null)`: date, start minutes, net money received from `income_lines`) and, for the whole business, the "wanted" and "asked" times from the Visitors log in the last 90 days (once per visit, day and time; empty if that table is missing). A visit is the ADR-099 rule: completed, or confirmed with the day passed. All counting is in `src/admin/busyTimes.js` (tested): weekday, part of the day (before 12:00, 12:00 to 17:00, from 17:00), month, bank holidays of England and Wales computed from the rules (Easter by the Gregorian computus; weekend Christmas, Boxing Day and New Year move to the next free weekday), and each past bank holiday against the average of the same weekday on ordinary days since the first visit (busier at 1.3 times or more, quieter at 0.7 or less). Weekdays with no bookings at all are left out of the quietest. A client's usual day needs more than half their visits (or two days with 70%), a part of the day 60%, and a start hour 40%; below 3 visits the card shows one line. Ideas link to the existing day view (special price offers, Edit hours, day off) and to New booking with the client and date filled in.
+
+**How it was built:** migration `20261213100000_busy_times.sql` (read only); `busyTimes.js`, `BusiestTimes.jsx`, `ClientTimes.jsx`, `Income.jsx`, `ClientRhythm.jsx`, `ClientProfile.jsx`, `AdminWorkspace.jsx`, `incomeApi.js`, `clientsApi.js`, `admin.css`, `helpContent.js`. Tests: `src/admin/busyTimes.test.js`.

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { whatsappNumber } from './contactLinks.js'
 import { ClientTag } from './Clients.jsx'
+import ClientTimes from './ClientTimes.jsx'
 import { agoWords, daysBetween, gapWords, monthYear, overdueWeeks, shortDate } from './clientStats.js'
 
 const monthLetter = iso => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'narrow' })
@@ -8,7 +9,7 @@ const monthName = iso => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB'
 
 // A client's rhythm on their card (ADR-099): their tag, a note when they have gone quiet, how often they come, and their visits month by month.
 // If the stats cannot be read (for example before the database change is applied) nothing shows and the card works as before.
-export default function ClientRhythm({ client, api, version }) {
+export default function ClientRhythm({ client, api, version, newBooking }) {
   const [rhythm, setRhythm] = useState(null)
   useEffect(() => {
     let live = true
@@ -41,5 +42,6 @@ export default function ClientRhythm({ client, api, version }) {
         <span aria-hidden="true">{monthLetter(month.month)}</span>
       </li>)}</ol>
     </figure>}
+    {rhythm.visits > 0 && <ClientTimes client={client} api={api} version={version} nextDate={rhythm.next_date} newBooking={newBooking} />}
   </section>
 }

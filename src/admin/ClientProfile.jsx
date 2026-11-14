@@ -200,7 +200,7 @@ export default function ClientProfile({ id, back, backLabel = 'Clients', openBoo
     {editing && <section aria-label="Edit details"><ClientForm initial={client} submitLabel="Save details" onCancel={() => setEditing(false)} onSubmit={async details => { await api.update(id, details); setEditing(false); changed() }} /></section>}
     {error && <p role="alert">{error}</p>}
     <Summary clientId={id} api={api} version={version} />
-    <ClientRhythm client={client} api={api} version={version} />
+    <ClientRhythm client={client} api={api} version={version} newBooking={newBooking} />
     <ClientPaymentReminder key={client.id} client={client} api={api} version={version} />
     <History clientId={id} api={api} openBooking={openBooking} version={version} />
     <Notes clientId={id} api={api} />
