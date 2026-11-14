@@ -215,7 +215,7 @@ These are the things that are written for Vadim today. In a general therapist ap
 ### Regular clients count as returning without pressing Complete
 - **What it does:** A client counts as returning (allowed up to 5 upcoming bookings instead of 1, and cash at the payment step) as soon as they have had one paid visit whose time has passed. Vadim no longer has to press "Mark completed" for that to happen; a completed visit still counts too.
 - **Why:** Vadim rarely presses Complete, so every past visit stayed "confirmed" and the app treated even regulars as new. Jeannie, a regular with one session already booked, could not book two more Sundays: the last step said her first appointment was already reserved. Cash was hidden from regulars for the same reason.
-- **PR / migration:** PR #<to fill>, migration `20261212100000_paid_visit_counts_without_complete.sql` (one shared check, `client_has_paid_visit`, now also used by booking).
+- **PR / migration:** PR #129, migration `20261212100000_paid_visit_counts_without_complete.sql` (one shared check, `client_has_paid_visit`, now also used by booking).
 - **For a general app:** what makes a client "returning" (a paid visit in the past, not a manual Complete step).
 ### Bookings wait for Vadim, never for a timer
 - **What it does:** A booking waiting for payment keeps its time until Vadim confirms it or removes it. Nothing is cancelled automatically.

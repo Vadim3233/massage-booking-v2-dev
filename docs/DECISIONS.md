@@ -970,5 +970,5 @@ The page stays where the Admin needs it:
 
 **Decision:** a paid visit is a booking whose payment is `paid` and which is either `completed`, or `confirmed` with its start time passed (in London time). This matches how client stats count a visit (ADR-099). `client_has_paid_visit` is the one place this is decided, and `finalize_client_booking` now calls it instead of its own query.
 
-**How it was built:** migration `20261212100000_paid_visit_counts_without_complete.sql` (replaces `client_has_paid_visit` and `finalize_client_booking`, copied from `20261210100000_offer_travel_fee.sql` with only the returning check changed). Tests: `supabase/tests/paid_visit_counts_without_complete.test.sql` (8 checks).
+**How it was built:** PR #129, migration `20261212100000_paid_visit_counts_without_complete.sql` (replaces `client_has_paid_visit` and `finalize_client_booking`, copied from `20261210100000_offer_travel_fee.sql` with only the returning check changed). Tests: `supabase/tests/paid_visit_counts_without_complete.test.sql` (8 checks).
 
