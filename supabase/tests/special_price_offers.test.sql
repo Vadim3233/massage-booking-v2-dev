@@ -53,7 +53,7 @@ select ok(not has_function_privilege('anon', 'public.admin_create_slot_offer(dat
 select ok(has_function_privilege('anon', 'public.get_slot_offer(text,text)', 'EXECUTE'), 'Anyone with the link can see the offer');
 select ok(has_function_privilege('anon', 'public.create_offer_hold(text,text)', 'EXECUTE'), 'and hold its time before signing in');
 select ok(not has_table_privilege('anon', 'public.slot_offers', 'SELECT'), 'Visitors cannot list offers');
-select ok(to_regprocedure('public.finalize_client_booking(uuid,uuid,text,uuid,jsonb,uuid[],uuid,text,text,text,text,text,text,text,text,text,text)') is not null, 'Finalize takes an offer code');
+select ok(to_regprocedure('public.finalize_client_booking(uuid,uuid,text,uuid,jsonb,uuid[],uuid,text,text,text,text,text,text,text,text,text,text,text)') is not null, 'Finalize takes an offer code (and, since 20261214100000, a gift voucher code)');
 
 select pg_temp.as_user('00000000-0000-0000-0000-00000000c502');
 select throws_ok($$select public.admin_create_slot_offer(pg_temp.day(2), 1020, 60, 55, pg_temp.offer_closes())$$, '42501', 'Admin authorization required', 'A client cannot make an offer');
