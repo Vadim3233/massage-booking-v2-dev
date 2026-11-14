@@ -83,6 +83,12 @@ export function clientFaq({ rules, areas = [] }) {
     { title: 'Receipts and insurance', items: [
       { q: 'Can I get a receipt for my health insurance?', a: ['Yes. Once your appointment is paid, a PDF receipt is ready on your booking page. It shows the treatment, the date, what you paid (with travel and congestion as separate lines), and my details: Vadim Susarin, Level 5 Soft Tissue Therapist, member of the Institute for Soft Tissue Therapists (ISRM), membership number 9555.'] },
     ] },
+    { title: 'Gift vouchers', items: [
+      { q: 'Can I give a massage as a present?', a: ['Yes. Go to the Gift vouchers page (/gift), choose the massage, a design and a message, and pay by bank transfer. As soon as your transfer arrives I email you the voucher to print, save as a PDF or send on WhatsApp. Or I can email it to them on a day you choose, in a red envelope they open and scratch to reveal.'] },
+      { q: 'What about the travel fee and congestion charge?', a: ['If you know where they live, choose their area and its charges are included. If you are not sure, choose "Everything included" (one price that covers any of my areas, so they never pay extra; it is a flat amount and isn\'t refunded if their area has no charge) or "Just the massage" (they pay only their area\'s charges when they book).'] },
+      { q: 'How do I use a gift voucher I was given?', a: ['Open the voucher and press Choose my day, scan its code, or press "Have a gift voucher?" on the booking page and enter the code. Choose your area, the treatment and a time. When the voucher pays for everything there is nothing to pay, and your appointment is confirmed straight away. You can choose a longer massage and pay only the difference.'] },
+      { q: 'How long is a gift voucher valid?', a: ['12 months from when it is paid for. I send a reminder a month before it ends. If a booking made with a voucher is cancelled, the voucher can be used again.'] },
+    ] },
     { title: 'Updates', items: [
       { q: 'How will you keep me updated?', a: ['By email, always. You can also turn on Telegram messages when you book: I\'ll message you when your appointment is confirmed, moved or cancelled. Send /stop in the chat to turn them off.', 'You can also add the appointment to your phone\'s calendar with one tap, from your booking page or from the "Add it to your calendar" link in my message. It works with iPhone, Google Calendar, Outlook and most others.'] },
     ] },
