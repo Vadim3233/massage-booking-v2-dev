@@ -99,6 +99,25 @@
   /* Motion: small, and switched off for anyone who asks for less. */
   --ease: cubic-bezier(.2, .8, .2, 1);
   --dur-fast: 120ms; --dur: 220ms;
+  /* Gift vouchers (ADR-101): the artwork's own colours (dark green, Christmas red, gold, cream). They stay the same in every theme, like a printed card. */
+  --gift-0-0-0-35: rgba(0, 0, 0, .35); --gift-0-0-0-6: rgba(0, 0, 0, .6); --gift-0-0-0-7: rgba(0, 0, 0, .7); --gift-141414: #141414;
+  --gift-145-93-67-8: rgba(145, 93, 67, .8); --gift-1d3b2e: #1d3b2e; --gift-20-30-25-55: rgba(20, 30, 25, .55); --gift-217-178-92-55: rgba(217, 178, 92, .55);
+  --gift-233a2d: #233a2d; --gift-243-217-164-35: rgba(243, 217, 164, .35); --gift-24324a: #24324a; --gift-251-243-228-75: rgba(251, 243, 228, .75);
+  --gift-255-244-228-92: rgba(255, 244, 228, .92); --gift-255-251-247-94: rgba(255, 251, 247, .94); --gift-255-255-255-12: rgba(255, 255, 255, .12); --gift-255-255-255-18: rgba(255, 255, 255, .18);
+  --gift-2a1712: #2a1712; --gift-2f4a3a: #2f4a3a; --gift-3d5a73: #3d5a73; --gift-40-10-5-55: rgba(40, 10, 5, .55);
+  --gift-4a4a42: #4a4a42; --gift-5a5160: #5a5160; --gift-5c3a30: #5c3a30; --gift-5c4210: #5c4210;
+  --gift-5d6b62: #5d6b62; --gift-6a6470: #6a6470; --gift-7a2a24: #7a2a24; --gift-7b7466: #7b7466;
+  --gift-7b8794: #7b8794; --gift-7f9e78: #7f9e78; --gift-7fb38a: #7fb38a; --gift-8a6a2c: #8a6a2c;
+  --gift-90-40-30-45: rgba(90, 40, 30, .45); --gift-9a8f78: #9a8f78; --gift-a06f22: #a06f22; --gift-a66a4d: #a66a4d;
+  --gift-a8782a: #a8782a; --gift-b23a33: #b23a33; --gift-b4593f: #b4593f; --gift-b8302c: #b8302c;
+  --gift-b8883a: #b8883a; --gift-b8913f: #b8913f; --gift-bfb39a: #bfb39a; --gift-c9302c: #c9302c;
+  --gift-c9a052: #c9a052; --gift-c9a463: #c9a463; --gift-c9a95e: #c9a95e; --gift-c9b88e: #c9b88e;
+  --gift-d8c08a: #d8c08a; --gift-d9b25c: #d9b25c; --gift-e2c27a: #e2c27a; --gift-e2cc96: #e2cc96;
+  --gift-e3c983: #e3c983; --gift-e6c47a: #e6c47a; --gift-e6e3df: #e6e3df; --gift-e9b9a4: #e9b9a4;
+  --gift-e9dcc0: #e9dcc0; --gift-f0d68c: #f0d68c; --gift-f0dfb8: #f0dfb8; --gift-f2c6b4: #f2c6b4;
+  --gift-f3d9a4: #f3d9a4; --gift-f3ead6: #f3ead6; --gift-f6dfe0: #f6dfe0; --gift-f6e2a6: #f6e2a6;
+  --gift-f6efe0: #f6efe0; --gift-fbf3e4: #fbf3e4; --gift-fdfbf6: #fdfbf6; --gift-fff: #fff;
+  --gift-fff7ea: #fff7ea; --gift-fffaf1: #fffaf1;
 }
 * { box-sizing: border-box; }
 /* Something focused or jumped to is never hidden behind a sticky bar. */

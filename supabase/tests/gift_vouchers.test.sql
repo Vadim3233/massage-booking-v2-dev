@@ -164,6 +164,9 @@ select lives_ok($$select public.client_change_check((select b from public.bookin
 select is((select (public.booking_change_plan(b, p, pg_temp.sessions(90), false, now()))->>'balance_due_gbp' from public.bookings b join public.booking_payments p on p.booking_id = b.id
   where b.id = (select id from booked1)), '35.00', 'Making it 90 minutes leaves £35 to pay');
 
+-- An area's minimum booking does not stop a voucher's booking.
+update public.service_areas set minimum_booking_minutes = 90 where id = '00000000-0000-4000-8000-00000000d531';
+
 -- A cancelled booking gives the voucher back.
 update public.bookings set booking_status = 'cancelled', cancelled_at = now() where id = (select id from booked1);
 select is((select (status, booking_id) from public.gift_vouchers where id = (select id from v1)), ('ready'::text, null::uuid), 'Cancelled: the voucher can be used again');
@@ -181,7 +184,7 @@ select pg_temp.as_user('00000000-0000-0000-0000-00000000d502');
 select throws_ok($$select * from pg_temp.book((select code from v2), '00000000-0000-4000-8000-00000000d531', pg_temp.sessions(60), 5, 600, 'single')$$,
   '22023', 'This gift voucher is for two people, so please book for two.', 'It must be booked for two');
 create temp table booked2 as select * from pg_temp.book((select code from v2), '00000000-0000-4000-8000-00000000d531', pg_temp.sessions(60, 2), 5, 600, 'two');
-select is((select (total, status, pay) from booked2), (35.00::numeric, 'awaiting_transfer'::text, 'awaiting_transfer'::text), 'In Chelsea they pay the £35 travel and congestion, as usual');
+select is((select (total, status, pay) from booked2), (35.00::numeric, 'awaiting_transfer'::text, 'awaiting_transfer'::text), 'In Chelsea they pay the £35 travel and congestion, as usual, and Chelsea''s 90-minute minimum does not apply');
 reset role;
 select is((select amount_gbp from public.booking_payments where booking_id = (select id from booked2)), 35.00, 'The payment asked for is £35');
 select is((select title from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id

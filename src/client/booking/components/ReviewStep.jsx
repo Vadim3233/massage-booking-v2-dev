@@ -5,6 +5,8 @@ import { quoteParams } from '../bookingApi.js'
 import { dayParts } from '../dateStrip.js'
 import { guestLabel } from '../../../booking/guestNames.js'
 import { bookingSentence, peopleSentence, treatmentNoun } from '../../../booking/bookingWords.js'
+import { giftLines } from '../giftCode.js'
+import { GiftPriceLines } from './GiftPanel.jsx'
 
 const PREFERENCE_GROUPS = [
   { title: 'Focus on', aliases: ['Focus on', 'Focus area', 'Focus'] },
@@ -122,9 +124,10 @@ export default function ReviewStep({ draft, catalogue, quote, quoteError, edit, 
     <label className="field-note">Anything I should know? (optional)<textarea maxLength={4000} rows={3} value={draft.note} onChange={(event) => edit({ note: event.target.value })} /></label>
     <p className="fine">If anything medical affects your treatment, it's best to tell me directly rather than write it here.</p>
     <PriceSummary quote={quote} quoteError={quoteError} retry={retryQuote} />
-    <p className="sr-only" role="status">{quote ? `Total ${money(quote.total_gbp)}` : ''}</p>
+    {draft.gift && <GiftPriceLines lines={giftLines(quote)} from={draft.gift.from} />}
+    <p className="sr-only" role="status">{quote ? `${draft.gift ? 'To pay' : 'Total'} ${money(quote.to_pay_gbp ?? quote.total_gbp)}` : ''}</p>
     <div className="action-bar">
-      <p className="action-summary"><span>Total</span><b className="figure" key={quote?.total_gbp ?? 'none'}>{quote ? <RollingFigure text={money(quote.total_gbp)} /> : '–'}</b></p>
+      <p className="action-summary"><span>{draft.gift ? 'To pay' : 'Total'}</span><b className="figure" key={quote?.to_pay_gbp ?? quote?.total_gbp ?? 'none'}>{quote ? <RollingFigure text={money(quote.to_pay_gbp ?? quote.total_gbp)} /> : '–'}</b></p>
       <button className="btn--primary btn--lg" onClick={next}>Continue to your details</button>
     </div>
   </>

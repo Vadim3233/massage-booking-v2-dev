@@ -1492,3 +1492,65 @@ begin
 end;
 $$;
 revoke all on function public.booking_change_plan(public.bookings, public.booking_payments, jsonb, boolean, timestamptz) from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------------------------
+-- 9. The client's booking page: what a gift voucher paid, and from whom (20261204100000's get_my_booking with two more keys).
+-- ---------------------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.get_my_booking(p_booking_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+declare v_result jsonb;
+begin
+ if auth.uid() is null then raise exception 'Authentication required' using errcode='42501'; end if;
+ select jsonb_build_object(
+  'id',b.id,'booking_reference',b.booking_reference,'booking_status',b.booking_status,
+  'booking_email_snapshot',b.booking_email_snapshot,'date',b.date,'start_minutes',b.start_minutes,
+  'treatment_duration_minutes',b.treatment_duration_minutes,'total_gbp',b.total_gbp,
+  'service_area_name_snapshot',b.service_area_name_snapshot,
+  'address_line_1_snapshot',b.address_line_1_snapshot,'address_line_2_snapshot',b.address_line_2_snapshot,
+  'city_snapshot',b.city_snapshot,'postcode_snapshot',b.postcode_snapshot,'address_snapshot',b.address_snapshot,'area_check',b.area_check,
+  'late_fee_status',b.late_fee_status,'late_fee_due_gbp',b.late_fee_due_gbp,'refund_due_gbp',b.refund_due_gbp,'balance_due_gbp',b.balance_due_gbp,
+  'cancelled_at',b.cancelled_at,
+  'gift_covered_gbp',b.gift_covered_gbp,'gift_from',(select g.from_name from public.gift_vouchers g where g.id=b.gift_voucher_id),
+  'booking_sessions',(select coalesce(jsonb_agg(jsonb_build_object('id',s.id,'service_id',s.service_id,'position',s.position,'duration_minutes',s.duration_minutes,
+    'recipient_name',s.recipient_name,'service_name_snapshot',s.service_name_snapshot,'unit_price_gbp',s.unit_price_gbp) order by s.position),'[]'::jsonb)
+    from public.booking_sessions s where s.booking_id=b.id),
+  'booking_payments',jsonb_build_object('method',p.method,'status',p.status,'payment_reference',p.payment_reference,
+    'transfer_declared_at',p.transfer_declared_at,'amount_gbp',p.amount_gbp),
+  'pay_after_session',(select jsonb_build_object('id',e.id,'date',e.date,'start_minutes',e.start_minutes,'booking_status',e.booking_status,
+      'auto_confirm',public.auto_confirm_later_sessions())
+    from public.bookings e where e.id=b.pay_after_booking_id),
+  'earlier_session',case when b.pay_after_booking_id is null and b.booking_status='awaiting_transfer' and p.status='awaiting_transfer'
+      and p.method='bank_transfer' and b.area_check is null then
+    (select jsonb_build_object('id',e.id,'date',e.date,'start_minutes',e.start_minutes,'booking_status',e.booking_status,
+      'auto_confirm',public.auto_confirm_later_sessions())
+      from public.bookings e where e.id=public.earlier_session_to_pay_first(b.id)) end
+ ) into v_result from public.bookings b join public.clients c on c.id=b.client_id
+ join public.booking_payments p on p.booking_id=b.id
+ where b.id=p_booking_id and (c.auth_user_id=auth.uid()
+   or (c.id::text=coalesce(auth.jwt()->>'link_client','') and b.id::text=coalesce(auth.jwt()->>'link_booking','')));
+ if v_result is null then raise exception 'Booking is not available to this client' using errcode='42501'; end if;
+ return v_result;
+end; $function$;
+
+-- ---------------------------------------------------------------------------------------------
+-- 10. An area's minimum booking does not apply to a gift voucher's booking: the voucher was sold for its length
+--     (20261124100000's check_booking_minimum, with that one line added).
+-- ---------------------------------------------------------------------------------------------
+create or replace function public.check_booking_minimum()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare v_area public.service_areas%rowtype;
+begin
+  if new.created_by_actor_type is distinct from 'client' then return new; end if;
+  if new.gift_voucher_id is not null then return new; end if;
+  select * into v_area from public.service_areas where id = new.service_area_id;
+  if v_area.minimum_booking_minutes is null or new.treatment_duration_minutes >= v_area.minimum_booking_minutes then return new; end if;
+  if exists (select 1 from public.clients c where c.id = new.client_id and c.no_minimum_booking) then return new; end if;
+  raise exception '%', format('In %s the minimum booking is %s in total (two people''s times add up). Please choose a longer time.',
+      v_area.name, public.minimum_booking_words(v_area.minimum_booking_minutes))
+    using errcode = '22023';
+end; $$;
+revoke all on function public.check_booking_minimum() from public, anon, authenticated;

@@ -873,3 +873,9 @@
 .client-rhythm-bar.is-empty { height: 4px; background: var(--hairline); }
 .admin-client-list .admin-client-text { flex: 1 1 auto; width: 100%; }
 .admin-client-text .client-stat-line { font-size: 13px; color: var(--muted); }
+
+/* More › Gift vouchers (ADR-101) */
+.admin-gift-list { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 10px; }
+.admin-gift { padding: 14px 16px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); }
+.admin-gift-title { margin: 0 0 4px; }
+.admin-gift .admin-detail-hint { margin: 2px 0; }

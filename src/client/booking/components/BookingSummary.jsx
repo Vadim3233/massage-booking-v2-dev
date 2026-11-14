@@ -22,6 +22,7 @@ export default function BookingSummary({ booking, paymentLabel, quote, emailHint
     {emailHint && booking.booking_email_snapshot && <p className="summary-hint">My emails come from <strong>{EMAIL_SENDER}</strong>. Can't find one? Look in your spam folder and press “Not spam”.</p>}
     <ol className="summary-sessions">{booking.booking_sessions.map((session) => <li key={session.position}>{session.service_name_snapshot} · {session.duration_minutes} minutes{session.recipient_name ? ` · ${session.recipient_name}` : ''}</li>)}</ol>
     {parts ? <PriceSummary quote={quote} /> : <p className="summary-total">Total: <strong className="figure">{money(booking.total_gbp)}</strong></p>}
+    {Number(booking.gift_covered_gbp) > 0 && <p className="summary-line">Gift voucher{booking.gift_from ? ` from ${booking.gift_from}` : ''}: <strong>−{money(booking.gift_covered_gbp)}</strong>, to pay: <strong>{money(booking.booking_payments?.amount_gbp ?? 0)}</strong></p>}
     <p className="summary-line">Payment: {paymentLabel || paymentStatus(booking)}</p>
   </section>
 }

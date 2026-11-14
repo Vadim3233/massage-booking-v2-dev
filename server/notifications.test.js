@@ -19,6 +19,7 @@ function fakeClient(rows, failRepeats = false, failReminders = false, mint = nul
     if (name === 'plan_day_of_reminders') return failReminders ? { data: null, error: { message: 'boom' } } : { data: 2, error: null }
     if (name === 'plan_next_session_payments') return failReminders ? { data: null, error: { message: 'boom' } } : { data: 1, error: null }
     if (name === 'plan_review_requests') return failReminders ? { data: null, error: { message: 'boom' } } : { data: 3, error: null }
+    if (name === 'plan_gift_messages') return failReminders ? { data: null, error: { message: 'boom' } } : { data: 1, error: null }
     throw new Error(`unexpected ${name}`)
   } }
 }
@@ -284,7 +285,7 @@ describe('the endpoint', () => {
   it('runs for the right caller and returns only counts', async () => {
     const response = reply(); await handle(request(), response, deps)
     expect(response.out.statusCode).toBe(200)
-    expect(JSON.parse(response.out.body)).toEqual({ claimed: 1, sent: 1, failed: 0, channels: ['telegram', 'email'], repeats: { made: 2, clashes: 0, ended: 0 }, reminders: { made: 2 }, nextPayments: { made: 1 }, reviews: { made: 3 } })
+    expect(JSON.parse(response.out.body)).toEqual({ claimed: 1, sent: 1, failed: 0, channels: ['telegram', 'email'], repeats: { made: 2, clashes: 0, ended: 0 }, reminders: { made: 2 }, nextPayments: { made: 1 }, reviews: { made: 3 }, gifts: { made: 1 } })
     expect(response.out.body).not.toMatch(/SECRET|service-key/)
   })
   it('still sends messages when the repeating-bookings job fails, without saying why', async () => {
@@ -327,6 +328,16 @@ describe('the endpoint', () => {
     expect(order.indexOf('plan_review_requests')).toBeGreaterThan(-1)
     expect(order.indexOf('plan_review_requests')).toBeLessThan(order.indexOf('claim_notification_deliveries'))
     expect(JSON.parse(response.out.body)).toMatchObject({ sent: 1, reviews: { made: 3 } })
+  })
+  it('plans the gift vouchers\' waiting emails before it sends, and says how many', async () => {
+    const order = []
+    const client = fakeClient([row()])
+    const original = client.rpc.bind(client)
+    client.rpc = async (name, args) => { order.push(name); return original(name, args) }
+    const response = reply(); await handle(request(), response, { ...deps, createServiceClient: () => client })
+    expect(order.indexOf('plan_gift_messages')).toBeGreaterThan(-1)
+    expect(order.indexOf('plan_gift_messages')).toBeLessThan(order.indexOf('claim_notification_deliveries'))
+    expect(JSON.parse(response.out.body)).toMatchObject({ sent: 1, gifts: { made: 1 } })
   })
   it('still sends messages when the review step fails (or is not applied yet), without saying why', async () => {
     const response = reply(); await handle(request(), response, { ...deps, createServiceClient: () => fakeClient([row()], false, true) })
