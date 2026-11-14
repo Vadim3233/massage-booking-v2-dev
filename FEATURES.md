@@ -206,11 +206,17 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **For a general app:** payment methods offered, bank details format, whether cash needs approval.
 
 ### New clients pay by bank transfer; cash from their second visit
-- **What it does:** A client who has not yet had a completed, paid visit sees only Bank transfer at the payment step, with the line "For your first visit, please pay by bank transfer to secure your booking. I'll confirm it as soon as the money arrives. Cash is welcome from your second visit." The database refuses their switch to cash too (in the app, through an offer or through their AI assistant, which is told to offer the transfer). Returning clients see both, as before. On a client's page, "Paying" says whether they are new or returning, and "Trusted, allow cash" lets a new client pay cash (say, a friend of a regular). When Vadim presses "Confirm, pay later" or "Approve" (cash) on a client's first booking, the confirmation says nothing has been paid yet and the button reads "Confirm anyway". It never stops him, and he can still book or change anyone to cash himself.
+- **What it does:** A client who has not yet had a paid visit sees only Bank transfer at the payment step, with the line "For your first visit, please pay by bank transfer to secure your booking. I'll confirm it as soon as the money arrives. Cash is welcome from your second visit." The database refuses their switch to cash too (in the app, through an offer or through their AI assistant, which is told to offer the transfer). Returning clients see both, as before. On a client's page, "Paying" says whether they are new or returning, and "Trusted, allow cash" lets a new client pay cash (say, a friend of a regular). When Vadim presses "Confirm, pay later" or "Approve" (cash) on a client's first booking, the confirmation says nothing has been paid yet and the button reads "Confirm anyway". It never stops him, and he can still book or change anyone to cash himself.
 - **Why:** As new clients start to come from Google, cash from a stranger means travelling to their home with nothing paid, and a late fee that can't be collected if they don't open the door.
 - **Built in:** PR (this one), `20261209100000_new_clients_pay_by_transfer.sql`.
-- **For a general app:** whether new clients may pay cash (on or off), what counts as returning (a completed, paid visit), the Trusted switch, and the wording of the first-visit line.
+- **For a general app:** whether new clients may pay cash (on or off), what counts as returning (a paid visit whose time has passed, whether or not it was marked Completed), the Trusted switch, and the wording of the first-visit line.
 
+
+### Regular clients count as returning without pressing Complete
+- **What it does:** A client counts as returning (allowed up to 5 upcoming bookings instead of 1, and cash at the payment step) as soon as they have had one paid visit whose time has passed. Vadim no longer has to press "Mark completed" for that to happen; a completed visit still counts too.
+- **Why:** Vadim rarely presses Complete, so every past visit stayed "confirmed" and the app treated even regulars as new. Jeannie, a regular with one session already booked, could not book two more Sundays: the last step said her first appointment was already reserved. Cash was hidden from regulars for the same reason.
+- **PR / migration:** PR #<to fill>, migration `20261212100000_paid_visit_counts_without_complete.sql` (one shared check, `client_has_paid_visit`, now also used by booking).
+- **For a general app:** what makes a client "returning" (a paid visit in the past, not a manual Complete step).
 ### Bookings wait for Vadim, never for a timer
 - **What it does:** A booking waiting for payment keeps its time until Vadim confirms it or removes it. Nothing is cancelled automatically.
 - **Why:** The business runs on loyalty; a client paying late must not lose their time.

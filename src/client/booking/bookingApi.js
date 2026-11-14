@@ -101,7 +101,7 @@ export function createBookingApi(client) {
     booking: (id) => unwrap(client.rpc('get_my_booking', { p_booking_id: id })),
     declareTransfer: (id) => unwrap(client.rpc('declare_my_bank_transfer', { p_booking_id: id })),
     confirmCash: (id) => unwrap(client.rpc('confirm_my_cash_booking', { p_booking_id: id })),
-    // Cash is for returning clients (a completed, paid visit) and clients Vadim marks Trusted; a new client pays by transfer.
+    // Cash is for returning clients (a paid visit whose time has passed) and clients Vadim marks Trusted; a new client pays by transfer.
     cashAllowed: () => unwrap(client.rpc('my_cash_allowed')),
     // A later session: nothing to pay yet, it is paid after the client's earlier session (book_my_session_pay_later).
     payAfter: (id) => unwrap(client.rpc('book_my_session_pay_later', { p_booking_id: id })),
