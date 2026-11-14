@@ -963,3 +963,12 @@ The page stays where the Admin needs it:
 - **Client page:** tag, a quiet banner with a WhatsApp link, usual gap, since last visit, rank by visits, last 12 months, and twelve monthly bars (no chart library).
 
 **How it was built:** migration `20261211100000_client_base_stats.sql` (`client_visit_stats` internal; `admin_client_base()`, `admin_client_rhythm(uuid)` Admin-only); `src/admin/clientStats.js`, `Clients.jsx`, `ClientRhythm.jsx`, `ClientProfile.jsx`, `clientsApi.js`, `admin.css`, `helpContent.js`. Tests: `supabase/tests/client_base_stats.test.sql` (22 checks), `src/admin/clientStats.test.js`, one e2e in `tests/e2e/adminClients.spec.js`.
+
+## ADR-100 — A paid visit counts without pressing Complete (2026-11-14)
+
+**Why:** A regular client (one past paid visit, one upcoming booking) could not book a third session: `finalize_client_booking` decided "returning" from bookings with status `completed` only. Vadim rarely presses Complete (no booking in the live database had ever reached `completed`), so every client counted as new and the new-client limit of one upcoming booking applied. `client_has_paid_visit` (cash for returning clients, ADR for new clients paying by transfer) had the same gap.
+
+**Decision:** a paid visit is a booking whose payment is `paid` and which is either `completed`, or `confirmed` with its start time passed (in London time). This matches how client stats count a visit (ADR-099). `client_has_paid_visit` is the one place this is decided, and `finalize_client_booking` now calls it instead of its own query.
+
+**How it was built:** PR #129, migration `20261212100000_paid_visit_counts_without_complete.sql` (replaces `client_has_paid_visit` and `finalize_client_booking`, copied from `20261210100000_offer_travel_fee.sql` with only the returning check changed). Tests: `supabase/tests/paid_visit_counts_without_complete.test.sql` (8 checks).
+
