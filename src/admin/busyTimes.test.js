@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bankHolidays, busySummary, clientTimes, headline, nextWeekday, quietDayTip, ranked, verdictWords, wantedTip, weekday } from './busyTimes.js'
+import { bankHolidays, busySummary, clientTimes, clientWanted, dueRegulars, fullness, headline, nextWeekday, quietDayTip, ranked, verdictWords, wantedTip, weekday, weeklyText } from './busyTimes.js'
 
 const v = (date, start = '10:00', gbp = 90) => {
   const [h, m] = start.split(':').map(Number)
@@ -63,7 +63,7 @@ describe('busiest times on Income', () => {
     expect(busySummary({ today: '2026-10-01', visits }).upcoming).toBeNull()
   })
   it('suggests the next quiet day for a special offer', () => {
-    expect(quietDayTip(summary)).toEqual({ day: 'Tuesday', date: '2026-11-17' })
+    expect(quietDayTip(summary)).toMatchObject({ day: 'Tuesday', date: '2026-11-17', freeMinutes: null, regulars: [] })
   })
   it('finds when people wanted a time that was full', () => {
     const wanted = [{ date: '2026-11-07', start_minutes: 1080 }, { date: '2026-10-31', start_minutes: 1110 }, { date: '2026-11-05', start_minutes: 600 }]
@@ -96,5 +96,48 @@ describe('when a client books', () => {
     expect(clientTimes([v('2026-11-06', '19:00')], today).sentence).toBe('The only visit so far was on a Friday evening.')
     expect(clientTimes([v('2026-10-30', '19:00'), v('2026-11-06', '18:00')], today).sentence).toBe('Both visits so far were on a Friday evening.')
     expect(clientTimes([], today).count).toBe(0)
+  })
+})
+
+describe('how full and the quiet-day idea', () => {
+  const today = '2026-11-16' // a Monday
+  const days = [
+    { date: '2026-11-03', open: 480, booked: 120 }, { date: '2026-11-10', open: 480, booked: 0 }, // Tuesdays
+    { date: '2026-11-07', open: 480, booked: 480 }, { date: '2026-11-14', open: 480, booked: 600 }, // Saturdays, one over-booked
+    { date: '2026-11-08', open: 0, booked: 0 }, // a Sunday off
+    { date: '2026-11-17', open: 480, booked: 450 }, { date: '2026-11-24', open: 480, booked: 60 }, // the next two Tuesdays
+  ]
+  it('works out each weekday and the last 4 weeks, ignoring days off and the future', () => {
+    const fill = fullness(days, today)
+    expect(fill.weekdays[1]).toBe(13)
+    expect(fill.weekdays[5]).toBe(100)
+    expect(fill.weekdays[6]).toBeNull()
+    expect(fill.last4).toBe(56)
+  })
+  it('finds the regulars who usually come that day and are due', () => {
+    const regulars = [
+      { first_name: 'Priya', weekdays: [0, 4, 1, 0, 0, 0, 0], gap_days: 21, last_visit: '2026-10-20' },
+      { first_name: 'Tom', weekdays: [0, 3, 0, 0, 0, 0, 0], gap_days: 28, last_visit: '2026-11-03' },
+      { first_name: 'Ana', weekdays: [2, 2, 0, 0, 0, 0, 0], gap_days: 14, last_visit: '2026-10-01' },
+    ]
+    expect(dueRegulars(regulars, 1, today).map(row => row.first_name)).toEqual(['Priya'])
+  })
+  it('skips a full next quiet day and offers the one after, with the free time', () => {
+    const visits = []
+    for (let i = 0; i < 6; i += 1) visits.push(v(`2026-10-${String(10 + i * 3).padStart(2, '0')}`))
+    visits.push(v('2026-11-03'), v('2026-11-07'), v('2026-11-14'), v('2026-11-07', '14:00'), v('2026-11-14', '14:00'), v('2026-11-12'))
+    const summary = busySummary({ today, visits, days })
+    const tip = quietDayTip(summary)
+    expect(tip).toMatchObject({ day: 'Tuesday', date: '2026-11-24', freeMinutes: 420 })
+    const text = weeklyText({ today, visits, days })
+    expect(text).toMatch(/^Your week\n/)
+    expect(text).toMatch(/Quietest day: Tue 24 Nov, 7 free hours/)
+  })
+})
+
+describe('times a client wanted when full', () => {
+  it('says the most wanted day and time in words', () => {
+    expect(clientWanted([{ date: '2026-10-24', start_minutes: 600 }, { date: '2026-10-31', start_minutes: 600 }, { date: '2026-11-06', start_minutes: 1080 }])).toBe('Sat 10:00 twice and Fri 18:00')
+    expect(clientWanted([])).toBeNull()
   })
 })

@@ -13,6 +13,7 @@ export function createIncomeApi(client) {
     owed: () => run(client.rpc('admin_money_owed'), 'money owed'),
     // Busiest times (20261213100000_busy_times.sql): every visit with its start time and money, and the times people wanted when full.
     busy: () => run(client.rpc('admin_busy_times'), 'busiest times'),
+    saveWeekly: on => run(client.rpc('admin_save_weekly_summary', { p_on: on }), 'the setting'),
   }
 }
 export const incomeApi = createIncomeApi(supabase)

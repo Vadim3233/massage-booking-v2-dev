@@ -88,8 +88,9 @@ function tally(visits, keyOf, size) {
 }
 // Best first. Rows with no bookings at all go to the end and are never called the quietest: they are usually days off.
 export function ranked(rows, by = 'bookings') {
-  const value = row => by === 'gbp' ? row.gbp : row.bookings
-  const busy = rows.filter(row => row.bookings > 0).sort((a, b) => value(b) - value(a) || b.bookings - a.bookings || a.index - b.index)
+  const value = row => by === 'gbp' ? row.gbp : by === 'full' ? (row.full ?? -1) : row.bookings
+  // By How full, a weekday with no working hours set has nothing to rank and is left out.
+  const busy = rows.filter(row => row.bookings > 0 && (by !== 'full' || (row.full !== null && row.full !== undefined))).sort((a, b) => value(b) - value(a) || b.bookings - a.bookings || a.index - b.index)
   return {
     busy: busy.map((row, position) => ({ ...row, best: position === 0 && busy.length > 1, quietest: busy.length > 2 && position === busy.length - 1 })),
     empty: rows.filter(row => row.bookings === 0),
@@ -146,14 +147,20 @@ export function busySummary(data) {
   const months = tally(visits, visit => parse(visit.date).getUTCMonth(), 12)
   const thisMonth = parse(data.today).getUTCMonth()
   const upcoming = bankHolidaysBetween(data.today, addDays(data.today, 45))[0] || null
+  const fill = fullness(data.days, data.today)
   return {
     count: visits.length,
     since,
     span,
     enough: span >= ENOUGH_DAYS,
     fullYear: span >= 365,
-    days: tally(visits, visit => weekday(visit.date), 7),
+    days: tally(visits, visit => weekday(visit.date), 7).map((row, index) => ({ ...row, full: fill.weekdays[index] })),
     parts: tally(visits, visit => partOf(visit.start_minutes), 3),
+    grid: grid(visits),
+    fullLast4: fill.last4,
+    hasFull: fill.weekdays.some(value => value !== null),
+    calendar: data.days || [],
+    regulars: data.regulars || [],
     topHour,
     months: months.map(row => ({ ...row, soFar: row.index === thisMonth && row.bookings > 0 })),
     monthsWithData: months.filter(row => row.bookings > 0).length,
@@ -164,18 +171,40 @@ export function busySummary(data) {
   }
 }
 
+// How full: booked minutes out of working minutes (the database counts both, in half hours, from the hours set for each day). Per weekday over
+// all past days, and for the last 4 weeks. A weekday with no working time at all gives null, never 0%.
+export function fullness(days, today) {
+  const per = Array.from({ length: 7 }, () => ({ open: 0, booked: 0 }))
+  let open = 0, booked = 0
+  const from = addDays(today, -28)
+  for (const day of days || []) {
+    if (day.date >= today || !day.open) continue
+    const slot = per[weekday(day.date)]
+    slot.open += day.open; slot.booked += Math.min(day.booked, day.open)
+    if (day.date >= from) { open += day.open; booked += Math.min(day.booked, day.open) }
+  }
+  const pct = (part, whole) => whole ? Math.round(100 * part / whole) : null
+  return { weekdays: per.map(slot => pct(slot.booked, slot.open)), last4: pct(booked, open) }
+}
+// Visits by weekday (columns) and part of the day (rows), for the week grid.
+export function grid(visits) {
+  const cells = Array.from({ length: 3 }, () => Array(7).fill(0))
+  for (const visit of visits) cells[partOf(visit.start_minutes)][weekday(visit.date)] += 1
+  return cells
+}
+
 // Wanted times (from the Visitors log, last 90 days): times people tapped on the booking page although they were taken. Demand that got away.
 export function wantedSummary(wanted) {
   const list = wanted || []
-  const days = Array(7).fill(0), parts = Array(3).fill(0), pairs = new Map()
+  const days = Array(7).fill(0), parts = Array(3).fill(0), pairs = new Map(), cells = Array.from({ length: 3 }, () => Array(7).fill(0))
   for (const item of list) {
     const day = weekday(item.date), part = partOf(item.start_minutes)
-    days[day] += 1; parts[part] += 1
+    days[day] += 1; parts[part] += 1; cells[part][day] += 1
     const key = `${day}:${part}`
     pairs.set(key, (pairs.get(key) || 0) + 1)
   }
   const top = [...pairs.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]
-  return { count: list.length, days, parts, top: top ? { day: Number(top[0][0]), part: Number(top[0][2]), count: top[1] } : null }
+  return { count: list.length, days, parts, cells, top: top ? { day: Number(top[0][0]), part: Number(top[0][2]), count: top[1] } : null }
 }
 // The "more hours?" idea: the day and part of the day people most often wanted when it was full, at least twice.
 export function wantedTip(summary) {
@@ -184,14 +213,57 @@ export function wantedTip(summary) {
   return { day: DAYS[top.day], part: PARTS[top.part], count: top.count, date: nextWeekday(summary.today, top.day) }
 }
 
-// The quiet-day idea: the quietest day that does get bookings, and the next one coming, to open and offer a special price for a free gap.
+// The quiet-day idea: the quietest weekday that does get bookings (by How full when the hours are known, otherwise by bookings), its next
+// date in the coming two weeks with at least an hour free, and the regulars who usually come on that weekday and are due.
 export function quietDayTip(summary) {
   if (!summary?.enough || summary.count < 10) return null
-  const { busy } = ranked(summary.days, 'bookings')
-  const quiet = busy.find(row => row.quietest)
-  if (!quiet) return null
-  return { day: DAYS[quiet.index], date: nextWeekday(summary.today, quiet.index) }
+  // Only days that get bookings and, when the hours are known, have working time.
+  const candidates = summary.days.filter(row => row.bookings > 0 && (!summary.hasFull || row.full !== null))
+  if (candidates.length < 2) return null
+  const value = row => summary.hasFull ? row.full : row.bookings
+  const quiet = candidates.reduce((low, row) => value(row) < value(low) ? row : low)
+  const ahead = summary.calendar.filter(day => day.date > summary.today && weekday(day.date) === quiet.index)
+  const next = ahead.find(day => day.open - Math.min(day.booked, day.open) >= 60)
+  if (summary.calendar.length && !next) return null
+  return {
+    day: DAYS[quiet.index],
+    date: next ? next.date : nextWeekday(summary.today, quiet.index),
+    freeMinutes: next ? next.open - Math.min(next.booked, next.open) : null,
+    regulars: dueRegulars(summary.regulars, quiet.index, summary.today),
+  }
 }
+// Regulars (3 or more visits, nothing booked) whose most usual weekday is this one and who are due within a week, most overdue first.
+export function dueRegulars(regulars, day, today, limit = 3) {
+  return (regulars || []).filter(row => {
+    const counts = row.weekdays || []
+    const most = Math.max(0, ...counts)
+    if (!most || counts[day] !== most || counts.filter(value => value === most).length > 1) return false
+    if (row.gap_days == null || !row.last_visit) return false
+    return daysBetween(row.last_visit, today) >= row.gap_days - 7
+  }).map(row => ({ ...row, since: daysBetween(row.last_visit, today), overdue: daysBetween(row.last_visit, today) - row.gap_days }))
+    .sort((a, b) => b.overdue - a.overdue).slice(0, limit)
+}
+export const freeWords = minutes => minutes >= 60 ? `${Math.floor(minutes / 60)}${minutes % 60 ? '½' : ''} free ${minutes >= 120 ? 'hours' : 'hour'}` : `${minutes} free minutes`
+
+// The Monday "Your week" message: the same ideas as the page, in a few lines. Null when there is nothing worth sending.
+export function weeklyText(data) {
+  const summary = busySummary(data)
+  if (!summary.count) return null
+  const lines = ['Your week']
+  if (summary.fullLast4 !== null && summary.fullLast4 !== undefined) lines.push(`Last 4 weeks: ${summary.fullLast4}% of your working hours were booked.`)
+  const tip = quietDayTip(summary)
+  if (tip) {
+    lines.push(`Quietest day: ${shortDay(tip.date)}${tip.freeMinutes ? `, ${freeWords(tip.freeMinutes)}` : ''}. A special price offer could fill it.`)
+    if (tip.regulars.length) lines.push(`${listWords(tip.regulars.map(row => row.first_name || 'A client'))} usually ${tip.regulars.length === 1 ? 'books' : 'book'} on ${tip.day}s and ${tip.regulars.length === 1 ? 'is' : 'are'} due.`)
+  }
+  const want = wantedTip(summary)
+  if (want) lines.push(`${plural(want.count, 'person')} wanted a ${want.day} ${want.part.name.toLowerCase()} when you were full (last 90 days).`.replace('persons', 'people'))
+  if (summary.upcoming && summary.upcoming.inDays <= 14) lines.push(`${summary.upcoming.name}: ${shortDay(summary.upcoming.date)}. Are you working?`)
+  if (lines.length === 1) return null
+  lines.push('More in Income › Busiest times.')
+  return lines.join('\n')
+}
+const listWords = names => names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`
 
 // One sentence on top of each ranking.
 export function headline(view, summary, by) {
@@ -199,7 +271,8 @@ export function headline(view, summary, by) {
     const { busy } = ranked(summary.days, by)
     if (busy.length < 2) return `All your bookings so far were on a ${DAYS[busy[0].index]}.`
     const quiet = busy.find(row => row.quietest)
-    return `${DAYS[busy[0].index]} is your best day${quiet ? `, ${DAYS[quiet.index]} your quietest` : ''}.`
+    const word = by === 'full' ? 'fullest' : 'best'
+    return `${DAYS[busy[0].index]} is your ${word} day${quiet ? `, ${DAYS[quiet.index]} your quietest` : ''}.`
   }
   if (view === 'times') {
     const { busy } = ranked(summary.parts, by)
@@ -277,4 +350,20 @@ export function clientTimes(visits, today) {
     }
   }
   return result
+}
+
+// The times one client tried to book when they were full (Visitors, last 90 days), in words: "Sat 10:00 twice", or "Sat 10:00 and Fri 18:00".
+export function clientWanted(wanted) {
+  const counts = new Map()
+  for (const item of wanted || []) {
+    const key = `${weekday(item.date)}:${item.start_minutes}`
+    counts.set(key, (counts.get(key) || 0) + 1)
+  }
+  const top = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 2)
+  if (!top.length) return null
+  const words = ([key, count]) => {
+    const [day, minutes] = key.split(':').map(Number)
+    return `${DAYS[day].slice(0, 3)} ${clock(minutes)}${count === 2 ? ' twice' : count > 2 ? ` ${count} times` : ''}`
+  }
+  return top.map(words).join(' and ')
 }

@@ -220,7 +220,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {surface === '/admin/settings/rules' && <RulesSettings />}
       {surface === '/admin/settings/welcome' && <WelcomeSettings />}
       {surface === '/admin/settings/link' && <ShareLink />}
-      {surface === '/admin/income' && <Income openBooking={openBooking} openDay={day => navigate(`/admin?date=${day}`)} />}
+      {surface === '/admin/income' && <Income openBooking={openBooking} openDay={day => navigate(`/admin?date=${day}`)} openHours={openDayHours} />}
       {surface === '/admin/settings/share-message' && <ShareMessageSettings />}
       {surface === '/admin/settings/google-reviews' && <ReviewSettings />}
       {surface === '/admin/help' && <HelpPage />}

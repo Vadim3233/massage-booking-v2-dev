@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { DAYS, ENOUGH_CLIENT_VISITS, PARTS, clientTimes, nextWeekday, plural, shortDay } from './busyTimes.js'
+import { DAYS, ENOUGH_CLIENT_VISITS, PARTS, clientTimes, clientWanted, nextWeekday, plural, shortDay } from './busyTimes.js'
 
-// A client's card › When … books (ADR-101): their usual day and time of day, from their visits. With a usual day and nothing booked, one tap
-// starts a new booking for them on the next one. Hidden if the database change is not applied yet.
+// A client's card › When … books (ADR-101): their usual day and time of day, from their visits, and any time they tried to book when it was
+// full (Visitors). With a usual day and nothing booked, one tap starts a new booking for them on the next one. Hidden if the database change
+// is not applied yet.
 export default function ClientTimes({ client, api, version, nextDate, newBooking }) {
   const [data, setData] = useState(null)
   useEffect(() => {
@@ -14,6 +15,7 @@ export default function ClientTimes({ client, api, version, nextDate, newBooking
   if (!data) return null
   const times = clientTimes(data.visits, data.today)
   if (!times.count) return null
+  const wanted = clientWanted(data.wanted)
   const name = client.first_name || 'this client'
   const most = Math.max(...times.days)
   const partMost = Math.max(...times.parts)
@@ -34,8 +36,12 @@ export default function ClientTimes({ client, api, version, nextDate, newBooking
           <strong>{count}</strong>{PARTS[index].name}
         </li>)}
       </ul>
+      {wanted && <p className="client-times-wanted">{client.first_name || 'They'} tried <strong>{wanted}</strong> when it was full (last 90 days, from Visitors).</p>}
       {usualDate && <button type="button" className="btn--tonal btn--small client-times-book" onClick={() => newBooking(client.id, usualDate)}>Book their usual: {shortDay(usualDate)}</button>}
       <p className="client-times-note">From {plural(times.count, 'visit')}. Morning is before 12:00, evening from 17:00.</p>
-    </> : <p className="client-times-note">A full picture shows after {ENOUGH_CLIENT_VISITS} visits.</p>}
+    </> : <>
+      {wanted && <p className="client-times-wanted">{client.first_name || 'They'} tried <strong>{wanted}</strong> when it was full (last 90 days, from Visitors).</p>}
+      <p className="client-times-note">A full picture shows after {ENOUGH_CLIENT_VISITS} visits.</p>
+    </>}
   </section>
 }
