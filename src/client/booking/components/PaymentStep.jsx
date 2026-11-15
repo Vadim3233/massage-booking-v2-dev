@@ -3,6 +3,8 @@ import { money } from '../bookingDraft.js'
 import { cancellationNote } from '../../bookingRules.js'
 import { friendlyError } from '../friendlyError.js'
 import { PriceSummary } from './ReviewStep.jsx'
+import { giftLines } from '../giftCode.js'
+import { GiftPriceLines } from './GiftPanel.jsx'
 import BankDetails from './BankDetails.jsx'
 import BookingSummary from './BookingSummary.jsx'
 import { postcodeOf } from '../../../lib/address.js'
@@ -57,10 +59,15 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
   useEffect(() => { if (error) errorBox.current?.scrollIntoView({ block: 'center' }) }, [error])
   // Coming back to this step before the reservation exists (a reload, say) still shows the price.
   useEffect(() => { if (!draft.bookingId && !quote && !quoteError) store.refreshQuote() }, [draft.bookingId, quote, quoteError, store])
+  // With a gift voucher that pays it all, there is nothing to pay: the booking is confirmed as soon as it is made.
+  const freeGift = Boolean(draft.gift) && quote && Number(quote.to_pay_gbp) === 0
   if (!draft.bookingId) return <><h1 tabIndex={-1}>One last <em>step</em></h1><PriceSummary quote={quote} quoteError={quoteError} retry={store.retryQuote} />
-    <p>{draft.pending ? "The connection dropped before I could tell whether your appointment was reserved. Please try again; you won't be booked twice." : 'Reserve your appointment to receive the payment reference before making a transfer.'}</p>
+    {draft.gift && <GiftPriceLines lines={giftLines(quote)} from={draft.gift.from} />}
+    <p>{draft.pending ? "The connection dropped before I could tell whether your appointment was reserved. Please try again; you won't be booked twice."
+      : freeGift ? `Your gift voucher from ${draft.gift.from} pays for it all, so there is nothing to pay. Press the button and your appointment is confirmed.`
+        : 'Reserve your appointment to receive the payment reference before making a transfer.'}</p>
     {error && <p role="alert" className="error">{error}</p>}
-    {held || draft.pending ? <><div className="action-bar"><button className="btn--primary btn--lg btn--block" onClick={finalize}>{draft.pending ? 'Try again' : 'Reserve appointment'}</button></div><button className="btn--quiet" onClick={store.retryQuote}>Refresh price</button></> : <button className="btn--primary btn--lg btn--block" onClick={chooseTimeAgain}>Choose a new time</button>}
+    {held || draft.pending ? <><div className="action-bar"><button className="btn--primary btn--lg btn--block" onClick={finalize}>{draft.pending ? 'Try again' : freeGift ? 'Book my appointment' : 'Reserve appointment'}</button></div><button className="btn--quiet" onClick={store.retryQuote}>Refresh price</button></> : <button className="btn--primary btn--lg btn--block" onClick={chooseTimeAgain}>Choose a new time</button>}
   </>
   const booking = view.booking
   if (!booking) return <><h1 tabIndex={-1}>One last <em>step</em></h1><p role="status">Loading your payment reservation…</p>{view.error && <p role="alert" className="error">{view.error}</p>}<button onClick={() => setAttempt(attempt + 1)}>Refresh reservation</button></>
@@ -138,7 +145,8 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
     <p className="lede">{cash ? "Pay the full amount in cash at your appointment. Press the button below to send me your request, and I'll look at it and confirm your appointment." : 'Please make your bank transfer using the reference below, then let me know.'}</p>
     <section className="amount-card" aria-label={cash ? 'Amount to pay in cash' : 'Amount to transfer'}>
       <p className="eyebrow">{cash ? 'To pay in cash at your appointment' : 'Amount to transfer'}</p>
-      <p className="amount figure">{money(booking.total_gbp)}</p>
+      {/* What is left to pay: the whole price, or what a gift voucher did not pay. */}
+      <p className="amount figure">{money(booking.booking_payments.amount_gbp ?? booking.total_gbp)}</p>
     </section>
     {!cash && <section className="panel bank-card">
       <h2>Bank transfer</h2>

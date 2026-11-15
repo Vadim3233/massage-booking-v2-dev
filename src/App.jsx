@@ -3,6 +3,7 @@ import BookingFlow from './client/booking/BookingFlow.jsx'
 import { supabase } from './lib/supabase.js'
 import ErrorBoundary from './shared/ErrorBoundary.jsx'
 import { recoveryLinkError } from './admin/recoverySession.js'
+import { codeFromPath } from './client/gift/giftWords.js'
 // Listens for a client's password reset link as soon as the page opens, before the page itself has loaded.
 import './client/reset/recoverySession.js'
 
@@ -14,12 +15,18 @@ const AccountApp = lazy(() => import('./client/account/AccountApp.jsx'))
 const ConsentPage = lazy(() => import('./client/ai/ConsentPage.jsx'))
 const BookWithAi = lazy(() => import('./client/ai/BookWithAi.jsx'))
 const FaqPage = lazy(() => import('./client/faq/FaqPage.jsx'))
+const GiftShop = lazy(() => import('./client/gift/GiftShop.jsx'))
+const GiftOpen = lazy(() => import('./client/gift/GiftOpen.jsx'))
 
 export default function App() {
   const path = window.location.pathname.replace(/\/$/, '')
   // Booking through a client's own AI assistant: where it sends them to allow it, and how to connect one.
   if (supabase && path === '/oauth/consent') return <ErrorBoundary><Suspense fallback={<p role="status">Loading…</p>}><ConsentPage /></Suspense></ErrorBoundary>
   if (supabase && path === '/book-with-ai') return <ErrorBoundary><Suspense fallback={<p role="status">Loading…</p>}><BookWithAi /></Suspense></ErrorBoundary>
+  // Gift vouchers: buying one (/gift), and a voucher's own page (/gift/<code>).
+  const giftCode = codeFromPath(path)
+  if (supabase && path === '/gift') return <ErrorBoundary><Suspense fallback={<p role="status">Loading…</p>}><GiftShop /></Suspense></ErrorBoundary>
+  if (supabase && giftCode) return <ErrorBoundary><Suspense fallback={<p role="status">Opening your gift…</p>}><GiftOpen code={giftCode} /></Suspense></ErrorBoundary>
   if (supabase && path === '/faq') return <ErrorBoundary><Suspense fallback={<p role="status">Loading…</p>}><FaqPage /></Suspense></ErrorBoundary>
   if (supabase && /^\/account(?:\/|$)/.test(window.location.pathname)) return <ErrorBoundary><Suspense fallback={<p role="status">Loading your bookings…</p>}><AccountApp /></Suspense></ErrorBoundary>
   if (supabase && window.location.pathname.replace(/\/$/, '') === '/reset-password') return <ErrorBoundary><Suspense fallback={<p role="status">Loading…</p>}><ClientResetPassword /></Suspense></ErrorBoundary>

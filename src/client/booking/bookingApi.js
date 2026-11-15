@@ -44,6 +44,8 @@ export function finalizeParams(draft, clientKey, idempotencyKey) {
     p_idempotency_key: idempotencyKey,
     // A booking from a special-price offer's link carries its code (the database then holds the offer's price). Others send nothing new.
     ...(draft.offer ? { p_offer_code: draft.offer.code } : {}),
+    // A booking with a gift voucher carries its code: the database works out what the voucher pays (ADR-101).
+    ...(draft.gift ? { p_gift_code: draft.gift.code } : {}),
   }
 }
 
@@ -79,7 +81,10 @@ export function createBookingApi(client) {
     })),
     quote: (draft) => one(draft.offer
       ? client.rpc('quote_offer_booking', { p_offer_code: draft.offer.code, ...quoteParams(draft) })
-      : client.rpc('quote_client_booking', quoteParams(draft))),
+      : draft.gift ? client.rpc('quote_gift_booking', { p_gift_code: draft.gift.code, ...quoteParams(draft) })
+        : client.rpc('quote_client_booking', quoteParams(draft))),
+    // A gift voucher's code: what it gives, or why it cannot be used.
+    checkGift: (code) => unwrap(client.rpc('check_gift_code', { p_code: code })),
     // A special-price offer's link (/offer/<code>): what it offers and whether it can still be booked, and holding its time.
     offer: (code, key = null) => one(client.rpc('get_slot_offer', { p_code: code, p_client_key: key })),
     offerHold: (code, key) => one(client.rpc('create_offer_hold', { p_code: code, p_client_key: key })),
