@@ -73,4 +73,12 @@ describe('the payment line under a booking in Your bookings', () => {
     expect(paymentLine(row({ total_gbp: 0, payment_status: 'paid' }))).toBeNull()
     expect(paymentLine(row({ payment_status: 'something_new' }))).toBeNull()
   })
+
+  it('with a gift voucher, names only what is left to pay (20261216100000)', () => {
+    const gift = { total_gbp: 125, gift_covered_gbp: 90, amount_gbp: 35 }
+    expect(paymentLine(row({ ...gift, booking_status: 'awaiting_transfer', payment_status: 'awaiting_transfer' }))).toEqual({ text: '£35.00 to pay by bank transfer', tone: 'due' })
+    expect(paymentLine(row({ ...gift, payment_method: 'cash', payment_status: 'approved' }), { upcoming: true })).toEqual({ text: '£35.00 · Pay in cash at your appointment', tone: 'due' })
+    expect(paymentLine(row(gift))).toEqual({ text: 'Gift voucher + £35.00 · Paid', tone: 'ok' })
+    expect(paymentLine(row({ total_gbp: 90, gift_covered_gbp: 90, amount_gbp: 0 }))).toEqual({ text: 'Paid by gift voucher', tone: 'ok' })
+  })
 })

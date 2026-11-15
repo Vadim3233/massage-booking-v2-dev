@@ -3,10 +3,53 @@ import { giftAdminApi, giftCsv, giftGroups, giftHistory, matchesSearch } from '.
 import { codeShown, DESIGNS, giftLink, giftWords, londonDate, whatsappHref, whatsappText, whole } from '../client/gift/giftWords.js'
 import { toast } from '../ui/toast.js'
 import GiftShopLink from './GiftShopLink.jsx'
+import { sendAtFor } from '../client/gift/giftApi.js'
+
+// A London day (YYYY-MM-DD) for a date input.
+const londonDay = iso => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London' }).format(iso ? new Date(iso) : new Date())
+const addMonths = (day, months) => {
+  const [y, m, d] = day.split('-').map(Number)
+  const next = new Date(Date.UTC(y, m - 1 + months, d))
+  return next.toISOString().slice(0, 10)
+}
+
+// Give a voucher more time: it can then be used until the end of the day chosen. Shown under a ready (or ended) voucher.
+function MoreTime({ voucher, busy, act, close }) {
+  const today = londonDay()
+  const ends = londonDay(voucher.expires_at)
+  const [day, setDay] = useState(addMonths(ends < today ? today : ends, 3))
+  return <form className="admin-gift-edit" onSubmit={event => { event.preventDefault(); act(() => giftAdminApi.extend(voucher.id, day), `It can be used until ${londonDate(`${day}T12:00:00Z`)}.`).then(done => { if (done) close() }) }}>
+    <label className="admin-field">Can be used until<input type="date" required min={today} value={day} onChange={e => setDay(e.target.value)} /></label>
+    <div className="admin-payment-buttons"><button type="submit" className="btn--primary btn--small" disabled={busy || !day}>Save</button><button type="button" className="btn--quiet btn--small" onClick={close}>Close</button></div>
+  </form>
+}
+
+// Correct a voucher's words, or (until it has been emailed) the person's email and the day it goes.
+function EditVoucher({ voucher, busy, act, close }) {
+  const canResend = voucher.delivery === 'email' && !voucher.recipient_sent_at
+  const [form, setForm] = useState({ to: voucher.recipient_name, from: voucher.from_name, message: voucher.message || '',
+    email: voucher.recipient_email || '', day: voucher.send_at ? londonDay(voucher.send_at) : '' })
+  const change = patch => setForm(current => ({ ...current, ...patch }))
+  function save(event) {
+    event.preventDefault()
+    act(() => giftAdminApi.update(voucher.id, { to: form.to, from: form.from, message: form.message, email: canResend ? form.email : null, sendAt: canResend ? sendAtFor(form.day) : null }), 'Voucher changed.').then(done => { if (done) close() })
+  }
+  return <form className="admin-gift-edit" onSubmit={save}>
+    <label className="admin-field">For<input required value={form.to} maxLength={60} onChange={e => change({ to: e.target.value })} /></label>
+    <label className="admin-field">From<input required value={form.from} maxLength={60} onChange={e => change({ from: e.target.value })} /></label>
+    <label className="admin-field">Message<textarea rows={3} maxLength={400} value={form.message} onChange={e => change({ message: e.target.value })} /></label>
+    {canResend && <>
+      <label className="admin-field">Their email<input type="email" required value={form.email} onChange={e => change({ email: e.target.value })} /></label>
+      <label className="admin-field">Day it is emailed<input type="date" required value={form.day} onChange={e => change({ day: e.target.value })} /><span className="admin-detail-hint">It goes at 8 in the morning. A day already past sends it within a minute.</span></label>
+    </>}
+    <div className="admin-payment-buttons"><button type="submit" className="btn--primary btn--small" disabled={busy}>Save</button><button type="button" className="btn--quiet btn--small" onClick={close}>Close</button></div>
+  </form>
+}
 
 const blankForm = { key: '60x1', design: 'gold_foil', to: '', from: '', message: '', buyerName: '', buyerEmail: '', method: 'cash', travel: 'none', areaId: '', price: '' }
 
 function VoucherRow({ voucher, busy, act, openBooking }) {
+  const [open, setOpen] = useState('')
   const origin = window.location.origin
   const what = giftWords(voucher.minutes, voucher.people)
   const travelOnly = voucher.travel_choice === 'all' ? `travel and congestion for any area (${whole(voucher.travel_cover_gbp)})`
@@ -33,10 +76,15 @@ function VoucherRow({ voucher, busy, act, openBooking }) {
         <a className="btn btn--tonal btn--small" href={link} target="_blank" rel="noopener noreferrer">Open voucher</a>
         <button type="button" className="btn--tonal btn--small" onClick={copy}>Copy link</button>
         <a className="btn btn--tonal btn--small" href={whatsappHref(whatsappText(voucher, origin))} target="_blank" rel="noopener noreferrer">WhatsApp</a>
-        <button type="button" className="btn--quiet btn--small" disabled={busy} onClick={() => act(() => giftAdminApi.markUsed(voucher.id, true), 'Marked used.')}>Mark used</button>
+        <button type="button" className="btn--quiet btn--small" disabled={busy} onClick={() => { if (window.confirm(`Mark the voucher for ${voucher.recipient_name} as used? Do this when it was used without an online booking.`)) act(() => giftAdminApi.markUsed(voucher.id, true), 'Marked used.') }}>Mark used</button>
+        <button type="button" className="btn--quiet btn--small" aria-expanded={open === 'time'} onClick={() => setOpen(open === 'time' ? '' : 'time')}>{voucher.expired ? 'Give more time' : 'More time'}</button>
+        <button type="button" className="btn--quiet btn--small" disabled={busy} onClick={() => { if (window.confirm(`Cancel the voucher for ${voucher.recipient_name}? Do this after you have refunded ${voucher.buyer_name || 'the buyer'}. Its code will stop working.`)) act(() => giftAdminApi.cancel(voucher.id), 'Cancelled. The code no longer works.') }}>Refunded, cancel it</button>
       </>}
+      {voucher.status !== 'cancelled' && <button type="button" className="btn--quiet btn--small" aria-expanded={open === 'edit'} onClick={() => setOpen(open === 'edit' ? '' : 'edit')}>Change details</button>}
       {voucher.status === 'used' && (!voucher.booking_id || voucher.booking?.status === 'cancelled') && <button type="button" className="btn--quiet btn--small" disabled={busy} onClick={() => act(() => giftAdminApi.markUsed(voucher.id, false), 'It can be used again.')}>Not used after all</button>}
     </div>
+    {open === 'time' && voucher.status === 'ready' && <MoreTime voucher={voucher} busy={busy} act={act} close={() => setOpen('')} />}
+    {open === 'edit' && <EditVoucher voucher={voucher} busy={busy} act={act} close={() => setOpen('')} />}
     <details className="admin-gift-history">
       <summary>History</summary>
       <ol>{giftHistory(voucher).map((step, index) => <li key={index}><span className="admin-gift-history-day">{step.day}</span> {step.text}</li>)}</ol>
@@ -98,9 +146,10 @@ export default function GiftVouchers({ openBooking }) {
       failure => { if (live) setError(failure.message) })
     return () => { live = false }
   }, [attempt])
+  // Says whether it worked, so the small forms close once the change is made (and stay open when it is not).
   async function act(action, message) {
     setBusy(true)
-    try { await action(); toast(message); setAttempt(value => value + 1) } catch (failure) { toast(failure.message) } finally { setBusy(false) }
+    try { await action(); toast(message); setAttempt(value => value + 1); return true } catch (failure) { toast(failure.message); return false } finally { setBusy(false) }
   }
   if (error && !list) return <section className="admin-review"><h1>Gift vouchers</h1><p role="alert">{error}</p><button onClick={() => setAttempt(value => value + 1)}>Try again</button></section>
   if (!list || !options) return <section className="admin-review"><p role="status">Loading…</p></section>

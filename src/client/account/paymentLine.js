@@ -11,6 +11,9 @@ import { shortDay } from '../booking/payAfter.js'
 // then it is simply still to pay.
 export function paymentLine(row, { upcoming = false, today = '' } = {}) {
   const total = Number(row.total_gbp) > 0 ? money(row.total_gbp) : ''
+  // A gift voucher paid part or all of it (ADR-101): what the client still owes is only the rest (20261216100000).
+  const gift = Number(row.gift_covered_gbp) > 0
+  const owed = gift && row.amount_gbp != null ? money(row.amount_gbp) : total
   const parts = []
   let tone = ''
   const add = (text, kind = '') => {
@@ -23,12 +26,13 @@ export function paymentLine(row, { upcoming = false, today = '' } = {}) {
   } else if (total) {
     // Paid, then made longer: what is still to come in shows until Vadim has it.
     if (row.payment_status === 'paid' && Number(row.balance_due_gbp) > 0) add(`${total} · ${money(row.balance_due_gbp)} still to pay`, 'due')
+    else if (row.payment_status === 'paid' && gift) add(Number(row.amount_gbp) > 0 ? `Gift voucher + ${owed} · Paid` : 'Paid by gift voucher', 'ok')
     else if (row.payment_status === 'paid') add(`${total} · Paid`, 'ok')
-    else if (row.payment_status === 'approved' && upcoming) add(`${total} · Pay in cash at your appointment`, 'due')
-    else if (row.payment_status === 'approved' || row.payment_status === 'awaiting_approval') add(`${total} · Cash`)
-    else if (row.payment_status === 'awaiting_transfer' && upcoming && row.pay_after_date && row.pay_after_date >= today) add(`${total} · Pay after your ${shortDay(row.pay_after_date)} session`)
-    else if (row.payment_status === 'awaiting_transfer') add(`${total} to pay by bank transfer`, 'due')
-    else if (row.payment_status === 'awaiting_verification') add(total)
+    else if (row.payment_status === 'approved' && upcoming) add(`${owed} · Pay in cash at your appointment`, 'due')
+    else if (row.payment_status === 'approved' || row.payment_status === 'awaiting_approval') add(`${owed} · Cash`)
+    else if (row.payment_status === 'awaiting_transfer' && upcoming && row.pay_after_date && row.pay_after_date >= today) add(`${owed} · Pay after your ${shortDay(row.pay_after_date)} session`)
+    else if (row.payment_status === 'awaiting_transfer') add(`${owed} to pay by bank transfer`, 'due')
+    else if (row.payment_status === 'awaiting_verification') add(owed)
     else if (row.payment_status === 'refunded') add('Refunded')
   }
   if (row.late_fee_status === 'due' && Number(row.late_fee_due_gbp) > 0) add(`Late fee of ${money(row.late_fee_due_gbp)} due`, 'due')
