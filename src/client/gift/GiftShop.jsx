@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { createGiftApi, sendAtFor } from './giftApi.js'
-import { designsInOrder, giftChoices, isChristmasTime, MESSAGE_LIMIT, occasionsInOrder, REFUND_DAYS, travelTiers, whole, withLove } from './giftWords.js'
+import { designsInOrder, giftChoices, isChristmasTime, MESSAGE_LIMIT, occasionsInOrder, REFUND_DAYS, renameSignOff, travelTiers, whole, withLove } from './giftWords.js'
 import VoucherCard from './VoucherCard.jsx'
 import BankDetails from '../booking/components/BankDetails.jsx'
 import { bankFromSettings, chooseBank, paymentConfig } from '../booking/paymentConfig.js'
@@ -141,7 +141,7 @@ export default function GiftShop({ client = supabase }) {
   if (!options) return shell(<div className="skeleton-rows" role="status"><span className="sr-only">Loading…</span><span className="skeleton" /><span className="skeleton" /></div>)
   if (!options.on || !chosen) return shell(<><h1 tabIndex={-1}>Gift vouchers are <em>resting</em></h1><p className="lede">They aren't on sale right now. Please message Vadim and he'll help.</p></>)
 
-  const preview = { code: null, minutes: chosen.minutes, people: chosen.people, extras: extrasChosen.map(item => item.name), recipient_name: to.trim() || 'Mum', from_name: from.trim() || 'Anna', message, design, expires_at: null }
+  const preview = { code: null, minutes: chosen.minutes, people: chosen.people, extras: extrasChosen.map(item => item.name), recipient_name: to.trim() || 'Mum', from_name: from.trim(), message, design, expires_at: null }
   return shell(<form onSubmit={buy} noValidate>
     <section className="gift-hero">
       <div className="gift-snow" aria-hidden="true" />
@@ -164,7 +164,7 @@ export default function GiftShop({ client = supabase }) {
     <section className="gift-step" aria-labelledby="gift-s3"><h2 id="gift-s3"><span>3</span>Add a personal message</h2>
       <div className="gift-names">
         <label className="field">For<input id="gift-to" value={to} maxLength={60} autoComplete="off" placeholder="Mum" aria-invalid={Boolean(tried && problems.to) || undefined} onChange={e => setTo(e.target.value)} />{show('to')}</label>
-        <label className="field">From<input id="gift-from" value={from} maxLength={60} autoComplete="given-name" placeholder="Anna" aria-invalid={Boolean(tried && problems.from) || undefined} onChange={e => setFrom(e.target.value)} />{show('from')}</label>
+        <label className="field">From<input id="gift-from" value={from} maxLength={60} autoComplete="given-name" placeholder="Anna" aria-invalid={Boolean(tried && problems.from) || undefined} onChange={e => { const next = e.target.value; setCustom(text => (text === null ? null : renameSignOff(text, from, next))); setFrom(next) }} />{show('from')}</label>
       </div>
       <p className="gift-label" id="gift-occasion-label">Pick a ready message, or write your own</p>
       <div className="gift-chips" role="group" aria-labelledby="gift-occasion-label">{occasions.map((item, index) => <button type="button" key={item.name} className="gift-chip" aria-pressed={index === occasion} onClick={() => { setOccasion(index); setLine(0); setCustom(null) }}>{item.name}</button>)}</div>

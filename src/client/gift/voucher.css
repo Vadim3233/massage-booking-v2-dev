@@ -9,6 +9,7 @@
 .v-name { font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 600; line-height: 1; overflow-wrap: anywhere; }
 .v-what { font-weight: 500; }
 .v-msg { font-family: 'Playfair Display', Georgia, serif; font-style: italic; line-height: 1.5; }
+.v-from { margin-top: calc(4 * var(--u)); font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-size: calc(14 * var(--u)); color: inherit; opacity: .9; }
 .v-small { font-size: calc(10.5 * var(--u)); line-height: 1.6; }
 .v-text { display: flex; flex-direction: column; gap: calc(8 * var(--u)); }
 .v-scan { display: flex; flex-direction: column; align-items: center; gap: calc(8 * var(--u)); text-align: center; font-size: calc(11.5 * var(--u)); }
@@ -75,6 +76,7 @@
 .voucher--gold_foil .v-name { font-family: 'Great Vibes', 'Playfair Display', cursive; font-style: normal; font-weight: 400; font-size: calc(62 * var(--u)); line-height: 1.1; padding-bottom: calc(4 * var(--u)); }
 .voucher--gold_foil .v-what { font-family: 'Playfair Display', Georgia, serif; font-size: calc(18 * var(--u)); font-weight: 600; }
 .voucher--gold_foil .v-sub { font-size: calc(12.5 * var(--u)); color: var(--gift-5d6b62); }
+.voucher--gold_foil .v-stub .v-from { margin: calc(-4 * var(--u)) 0 calc(6 * var(--u)); font-size: calc(13 * var(--u)); color: var(--gift-4a4a42); text-align: center; overflow-wrap: anywhere; }
 .voucher--gold_foil .v-msg { margin-top: calc(8 * var(--u)); font-size: calc(13.5 * var(--u)); color: var(--gift-4a4a42); }
 .voucher--gold_foil .v-small { left: calc(30 * var(--u)); bottom: calc(24 * var(--u)); width: calc(350 * var(--u)); font-size: calc(9.5 * var(--u)); color: var(--gift-7b7466); }
 .voucher--gold_foil .v-stub { left: calc(400 * var(--u)); top: calc(34 * var(--u)); width: calc(130 * var(--u)); display: flex; flex-direction: column; align-items: center; gap: calc(6 * var(--u)); text-align: center; font-size: calc(10.5 * var(--u)); color: var(--gift-5d6b62); }
