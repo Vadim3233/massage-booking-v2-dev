@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { catalogueApi, DURATIONS, MINIMUM_CHOICES, postcodesText, priceText, validateArea, validateExtra, validateService } from './catalogueApi.js'
 import { money } from './calendarPresentation.js'
 import { hoursWords } from '../booking/bookingWords.js'
+import { extendApi, suggestedPrice } from './extendApi.js'
 
 // Shared by the three lists: load, add, edit in place, hide or show, and move up or down.
 function useList(load, key) {
@@ -87,7 +88,42 @@ function ServiceForm({ initial, busy, onSave, onCancel, label }) {
   </form>
 }
 
-export function ServicesSettings({ api = catalogueApi }) {
+// More › Services and prices › Extra time: what a client pays when they stay longer, per hour, worked out pro rata (Add extra time, ExtendDialog.jsx).
+// Left empty, each treatment's own 1-hour price is used.
+export function ExtraTimeRate({ api = extendApi }) {
+  const [saved, setSaved] = useState(undefined)
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  useEffect(() => {
+    let live = true
+    api.rate().then(value => { if (live) { setSaved(value); setText(value ? priceText(value) : '') } }, failure => { if (live) { setSaved(null); setError(failure.message) } })
+    return () => { live = false }
+  }, [api])
+  const value = text.trim() === '' ? null : Number(text)
+  const problem = value !== null && (!Number.isFinite(value) || value < 1 || value > 1000) ? 'Enter an hourly price between £1 and £1,000, or leave it empty.' : ''
+  async function save(next) {
+    setBusy(true); setMessage(''); setError('')
+    try { await api.saveRate(next); setSaved(next); setText(next ? priceText(next) : ''); setMessage(next ? 'Saved.' : 'Cleared. Each treatment\'s 1-hour price is used.') } catch (failure) { setError(failure.message) }
+    setBusy(false)
+  }
+  const example = value && !problem ? value : saved
+  return <section aria-labelledby="extra-time-title" className="admin-setting-extra-time">
+    <h2 id="extra-time-title">Extra time</h2>
+    <p>What a client pays when they stay longer, per hour. Add extra time works it out per minute and rounds to the nearest £1. You can still change it each time.</p>
+    {saved === undefined ? <p role="status">Loading…</p> : <form className="admin-client-form" onSubmit={event => { event.preventDefault(); if (!problem && !busy) save(value) }}>
+      <label className="admin-field">Price per hour (£)<input id="extra-time-rate" inputMode="decimal" value={text} placeholder="Each treatment's 1-hour price" disabled={busy} onChange={event => { setText(event.target.value); setMessage('') }} /></label>
+      <p className="admin-detail-hint">{example ? `+15 min ${money(suggestedPrice(example, 15))} · +30 min ${money(suggestedPrice(example, 30))} · +60 min ${money(suggestedPrice(example, 60))}` : 'Empty: each treatment\'s own 1-hour price is used, for example +30 min of a £90 treatment is £45.'}</p>
+      {problem && <p role="alert" className="admin-field-error">{problem}</p>}
+      {error && <p role="alert">{error}</p>}
+      {message && <p role="status">{message}</p>}
+      <div className="admin-payment-buttons"><button type="submit" className="btn--primary" disabled={busy || Boolean(problem) || value === saved}>{busy ? 'Saving…' : 'Save'}</button></div>
+    </form>}
+  </section>
+}
+
+export function ServicesSettings({ api = catalogueApi, showRate = true }) {
   const list = useList(api.services, 'services')
   const saver = useSaver(list)
   const [editing, setEditing] = useState(null)
@@ -102,6 +138,7 @@ export function ServicesSettings({ api = catalogueApi }) {
       onToggle={() => saver.run(() => api.saveService({ ...item, active: !item.active }, DURATIONS.map(duration => { const found = item.service_duration_prices.find(price => price.duration_minutes === duration); return { duration_minutes: duration, offered: Boolean(found?.active), price: found ? priceText(found.price_gbp) : '0' } })), item.active ? 'Hidden from clients.' : 'Shown to clients.')}>
       <ServiceForm initial={item} busy={saver.busy} label="Save changes" onCancel={done} onSave={async (service, prices) => { if (await saver.run(() => api.saveService({ ...service, id: item.id }, prices))) done() }} />
     </Row>)}</ul>
+    {showRate && <ExtraTimeRate />}
   </Frame>
 }
 

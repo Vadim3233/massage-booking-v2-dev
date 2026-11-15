@@ -3,7 +3,7 @@ import { shiftDate } from './calendarPresentation.js'
 // All requests use the signed-in user's JWT; table RLS remains authoritative.
 const bookingFields = `*,clients!bookings_client_id_fkey(id,first_name,last_name,email,phone,no_travel_fee),
 booking_sessions(*,booking_session_preferences(*),booking_session_enhancements(*)),
-booking_payments(*),booking_enhancements(*)`
+booking_payments(*),booking_enhancements(*),booking_extensions(*)`
 async function read(query) {
   const { data, error, count } = await query
   if (error) throw error

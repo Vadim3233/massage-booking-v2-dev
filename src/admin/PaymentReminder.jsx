@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import Icon from '../ui/icons.jsx'
 import { bankFromSettings, chooseBank, paymentConfig } from '../client/booking/paymentConfig.js'
-import { combinedReminderText, owedTotal, reminderText, whatsappShareLink } from './shareBooking.js'
+import { combinedReminderText, extraDue, owedTotal, reminderText, whatsappShareLink } from './shareBooking.js'
 import { money } from './calendarPresentation.js'
 
 const fallbackBank = paymentConfig(import.meta.env)
@@ -52,7 +52,7 @@ export function ReminderBox({ makeText, phone, label = 'Payment reminder', getBa
 export default function PaymentReminder({ booking, owing = [], getBank }) {
   const phone = booking.clients?.phone
   const single = bank => reminderText(booking, bank)
-  if (owing.length < 2) return <section aria-label="Payment reminder"><ReminderBox makeText={single} phone={phone} getBank={getBank} /></section>
+  if (owing.length < 2) return <section aria-label="Payment reminder"><ReminderBox makeText={single} phone={phone} getBank={getBank} label={extraDue(booking) ? 'Ask for the extra' : undefined} /></section>
   const first = booking.clients?.first_name?.trim()
   return <section aria-label="Payment reminder" className="admin-owed-reminder">
     <p className="admin-detail-hint">{first || 'This client'} owes for {owing.length} bookings · {money(owedTotal(owing))}. One message lists them all and the total.</p>

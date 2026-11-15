@@ -21,6 +21,8 @@ export default function BookingSummary({ booking, paymentLabel, quote, emailHint
     {/* A new sender's first email can land in spam, and one "Not spam" teaches the inbox. */}
     {emailHint && booking.booking_email_snapshot && <p className="summary-hint">My emails come from <strong>{EMAIL_SENDER}</strong>. Can't find one? Look in your spam folder and press “Not spam”.</p>}
     <ol className="summary-sessions">{booking.booking_sessions.map((session) => <li key={session.position}>{session.service_name_snapshot} · {session.duration_minutes} minutes{session.recipient_name ? ` · ${session.recipient_name}` : ''}</li>)}</ol>
+    {/* Extra time added on the day (the client stayed longer): a line each, with what it cost. */}
+    {booking.booking_extensions?.length > 0 && <ul className="summary-sessions summary-extra">{booking.booking_extensions.map((extra) => <li key={extra.id}>Extra time · {extra.minutes} minutes{extra.recipient_name && booking.booking_sessions.length > 1 ? ` · ${extra.recipient_name}` : ''} · {Number(extra.price_gbp) > 0 ? money(extra.price_gbp) : 'no charge'}</li>)}</ul>}
     {parts ? <PriceSummary quote={quote} /> : <p className="summary-total">Total: <strong className="figure">{money(booking.total_gbp)}</strong></p>}
     {Number(booking.gift_covered_gbp) > 0 && <p className="summary-line">Gift voucher{booking.gift_from ? ` from ${booking.gift_from}` : ''}: <strong>−{money(booking.gift_covered_gbp)}</strong>, to pay: <strong>{money(booking.booking_payments?.amount_gbp ?? 0)}</strong></p>}
     <p className="summary-line">Payment: {paymentLabel || paymentStatus(booking)}</p>

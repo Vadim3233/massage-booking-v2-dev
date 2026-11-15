@@ -984,3 +984,18 @@
 .client-gift-bought { margin: 8px 0 0; padding-left: 18px; }
 .gift-shop-link input { font-size: 15px; text-overflow: ellipsis; }
 .admin-gift-refund { color: var(--danger); }
+
+/* Extra time (ExtendDialog.jsx, BookingActions.jsx, BookingCard.jsx) */
+.admin-card-extra { color: var(--primary); font-weight: 700; }
+.admin-extend-ends { display: flex; justify-content: space-between; gap: 8px; margin: 6px 0 2px; padding-top: 8px; border-top: 1px solid var(--hairline); }
+.admin-extend-ends b { font-variant-numeric: tabular-nums; }
+.admin-extend-warn { display: grid; gap: 8px; justify-items: start; margin: 8px 0; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--needs-bg); color: var(--needs-ink); }
+.admin-extend-warn p { margin: 0; }
+.admin-extend-pay { border: 0; padding: 0; margin: 8px 0; display: grid; gap: 2px; }
+.admin-extend-pay legend { padding: 0 0 4px; font: 600 14px/1.3 var(--font-ui); }
+.admin-extra-time { margin: 8px 0; }
+.admin-extra-time h4 { margin: 0 0 4px; font: 600 14px/1.3 var(--font-ui); }
+.admin-extra-time ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.admin-extra-time li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.admin-extra-time li .admin-payment-buttons { margin: 0; }
+.admin-stayed-longer { margin: 4px 0 0; color: var(--ink-soft); }

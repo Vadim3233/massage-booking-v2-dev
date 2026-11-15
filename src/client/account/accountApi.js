@@ -71,6 +71,8 @@ export function createAccountApi(client, link = null) {
         const rows = await by('change_times_by_key', { p_date: date, p_minutes: minutes })
         return rows.map(row => row.start_minutes)
       },
+      // "I've sent the extra": an extra still to pay after extra time (or a change that cost more).
+      reportExtraSent: () => by('extra_sent_by_key'),
       change: (id, requestId, people, date, start, total) => by('change_by_key', { p_request_id: requestId, p_sessions: sessionsPayload(people), p_new_date: date, p_new_start_minutes: start, p_acknowledged_total: total }),
     }
   }
@@ -92,6 +94,7 @@ export function createAccountApi(client, link = null) {
       const rows = await call('my_booking_change_times', { p_booking_id: id, p_date: date, p_minutes: minutes })
       return rows.map(row => row.start_minutes)
     },
+    reportExtraSent: id => call('report_extra_sent', { p_booking_id: id }),
     change: (id, requestId, people, date, start, total) => call('change_my_booking', { p_booking_id: id, p_request_id: requestId, p_sessions: sessionsPayload(people), p_new_date: date, p_new_start_minutes: start, p_acknowledged_total: total }),
   }
 }
