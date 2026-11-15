@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { codeFromPath, codeShown, designsInOrder, giftChoices, giftWords, kicker, occasionsInOrder, travelChoice, travelPart, whatsappText, whole, withLove } from './giftWords.js'
+import { codeFromPath, codeShown, designsInOrder, giftChoices, giftWords, kicker, occasionsInOrder, shopLink, shopMessage, travelChoice, travelPart, whatsappText, whole, withLove } from './giftWords.js'
 
 const options = { all_areas_cover: 35, areas: [{ id: 'c', name: 'Chelsea', travel: 20, congestion: 15 }, { id: 'n', name: 'Nearby', travel: 0, congestion: 0 }] }
 
@@ -44,5 +44,15 @@ describe('gift words', () => {
     expect(whatsappText({ from_name: 'Anna', minutes: 60, people: 1, code: '7K3MQX9P' }, 'https://x.test')).toBe('Anna has sent you a gift: a 60-minute massage at your home 🎁\n\nOpen it here: https://x.test/gift/7K3M-QX9P')
     expect(whole(125)).toBe('£125')
     expect(whole(12.5)).toBe('£12.50')
+  })
+
+  it('invites someone to buy a voucher, by first name, with Christmas wording in November and December', () => {
+    const link = shopLink('https://booking.vadmassage.com')
+    expect(link).toBe('https://booking.vadmassage.com/gift')
+    const christmas = shopMessage(link, ' Sarah ', new Date('2026-12-01T12:00:00Z'))
+    expect(christmas.startsWith('Hi Sarah! Looking for a Christmas present?')).toBe(true)
+    expect(christmas).toContain('\nhttps://booking.vadmassage.com/gift\n')
+    expect(christmas.endsWith('Warm wishes,\nVadim')).toBe(true)
+    expect(shopMessage(link, '', new Date('2026-05-01T12:00:00Z')).startsWith('Hi! Looking for a present for someone special?')).toBe(true)
   })
 })

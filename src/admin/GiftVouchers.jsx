@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { giftAdminApi, giftGroups } from './giftApi.js'
 import { codeShown, DESIGNS, giftLink, giftWords, londonDate, whatsappHref, whatsappText, whole } from '../client/gift/giftWords.js'
 import { toast } from '../ui/toast.js'
+import GiftShopLink from './GiftShopLink.jsx'
 
 const blankForm = { key: '60x1', design: 'gold_foil', to: '', from: '', message: '', buyerName: '', buyerEmail: '', method: 'cash', travel: 'none', areaId: '', price: '' }
 
@@ -101,7 +102,8 @@ export default function GiftVouchers({ openBooking }) {
     {items.length ? <ul role="list" className="admin-gift-list">{items.map(v => <VoucherRow key={v.id} voucher={v} busy={busy} act={act} openBooking={openBooking} />)}</ul> : <p className="admin-detail-hint">{empty}</p>}</section>
   return <section className="admin-review" aria-labelledby="gifts-title">
     <header className="admin-review-heading"><div><h1 id="gifts-title" tabIndex={-1}>Gift vouchers</h1>
-      <p>Sold in the last 12 months: {groups.soldCount} {groups.soldCount === 1 ? 'voucher' : 'vouchers'}, {whole(groups.soldTotal)}. Clients buy them at <a href="/gift" target="_blank" rel="noopener noreferrer">{window.location.host}/gift</a>.</p></div></header>
+      <p>Sold in the last 12 months: {groups.soldCount} {groups.soldCount === 1 ? 'voucher' : 'vouchers'}, {whole(groups.soldTotal)}. Clients buy them at the link below.</p></div></header>
+    <GiftShopLink />
     {group('Waiting for payment', groups.waiting, 'Nothing waiting. When someone buys a voucher, it shows here until you mark it paid.')}
     {group('Ready to use', groups.ready, 'None at the moment.')}
     {group('Used', groups.used, 'None yet.')}

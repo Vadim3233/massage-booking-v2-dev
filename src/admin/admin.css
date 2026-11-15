@@ -879,3 +879,7 @@
 .admin-gift { padding: 14px 16px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); }
 .admin-gift-title { margin: 0 0 4px; }
 .admin-gift .admin-detail-hint { margin: 2px 0; }
+.gift-shop-link { margin: 4px 0 22px; padding: 14px 16px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); }
+.gift-shop-link h2, .gift-shop-link h3 { margin: 0 0 4px; }
+.client-gift-bought { margin: 8px 0 0; padding-left: 18px; }
+.gift-shop-link input { font-size: 15px; text-overflow: ellipsis; }

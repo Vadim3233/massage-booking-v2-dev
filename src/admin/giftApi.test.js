@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createGiftAdminApi, giftGroups, NOT_SWITCHED_ON } from './giftApi.js'
+import { boughtBy, createGiftAdminApi, giftGroups, NOT_SWITCHED_ON } from './giftApi.js'
 
 const client = result => ({ rpc: async (name, args) => (typeof result === 'function' ? result(name, args) : result) })
 
@@ -31,5 +31,12 @@ describe('More › Gift vouchers', () => {
     await api.make({ minutes: 60, people: 1, travel: 'none', areaId: '', design: 'gold_foil', to: ' Sam ', from: '', message: '', buyerName: 'Jo', buyerEmail: '', method: 'cash', price: '' })
     expect(sent[0]).toBe('admin_make_gift_voucher')
     expect(sent[1]).toMatchObject({ p_recipient_name: 'Sam', p_from_name: null, p_method: 'cash', p_price_gbp: null, p_service_area_id: null })
+  })
+
+  it('finds the vouchers a client bought by their email, leaving out cancelled ones', () => {
+    const list = [{ id: 1, buyer_email: 'Ana@Example.test', status: 'ready' }, { id: 2, buyer_email: 'ana@example.test', status: 'cancelled' },
+      { id: 3, buyer_email: 'bo@example.test', status: 'ready' }, { id: 4, buyer_email: null, status: 'used' }]
+    expect(boughtBy(list, ' ana@example.test ').map(v => v.id)).toEqual([1])
+    expect(boughtBy(list, '')).toEqual([])
   })
 })

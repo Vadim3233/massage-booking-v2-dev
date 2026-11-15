@@ -18,7 +18,7 @@ export function GiftCard({ gift, remove }) {
   </section>
 }
 
-// Under the areas: a way in for someone who has a code but not the link.
+// Under the areas: a way in for someone who has a code but not the link, and the way to buy one as a present.
 export function GiftCodeBox() {
   const [open, setOpen] = useState(false)
   const [code, setCode] = useState('')
@@ -29,6 +29,7 @@ export function GiftCodeBox() {
         <label className="field">Gift voucher code<input autoFocus value={code} maxLength={12} autoCapitalize="characters" autoComplete="off" placeholder="7K3M-QX9P" onChange={event => setCode(event.target.value)} /></label>
         <button type="submit" className="btn--tonal" disabled={clean.length !== 8}>Use this code</button>
       </form>}
+    <p className="gift-give">Looking for a present? <a href="/gift">Give a massage as a gift voucher</a></p>
   </section>
 }
 

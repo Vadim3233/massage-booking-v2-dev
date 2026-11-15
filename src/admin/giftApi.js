@@ -41,3 +41,10 @@ export function giftGroups(list, now = Date.now()) {
   const sold = list.filter(v => v.paid_at && Date.parse(v.paid_at) > yearAgo && v.status !== 'cancelled')
   return { waiting, ready, used, soldCount: sold.length, soldTotal: sold.reduce((sum, v) => sum + Number(v.price_gbp), 0) }
 }
+
+// On a client's page: the vouchers this client bought (matched by their email), newest first, leaving out cancelled ones.
+export function boughtBy(list, email) {
+  const wanted = String(email || '').trim().toLowerCase()
+  if (!wanted) return []
+  return (list || []).filter(v => v.status !== 'cancelled' && String(v.buyer_email || '').trim().toLowerCase() === wanted)
+}
