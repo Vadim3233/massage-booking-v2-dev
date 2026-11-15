@@ -3,12 +3,14 @@ import Icon from '../ui/icons.jsx'
 import { ActionDialog } from './BookingActions.jsx'
 import { DONE, lifecycleActions, lifecycleApi } from './bookingLifecycleApi.js'
 import { toast } from '../ui/toast.js'
-import { bookingEnd, bookingState, canNavigateTo, clientName, extrasList, hasStarted, money, time, treatmentName } from './calendarPresentation.js'
+import { bookingEnd, bookingState, canNavigateTo, clientName, extrasList, hasStarted, money, time, today, treatmentName } from './calendarPresentation.js'
 import { paymentActions, paymentReviewApi } from './paymentReviewApi.js'
 import { shortWhere } from '../lib/address.js'
 import { cancelledNote, moneyToSort } from './cancelledBookings.js'
 import { directionsLink } from './contactLinks.js'
 import { peopleShort } from '../booking/bookingWords.js'
+import ExtendDialog from './ExtendDialog.jsx'
+import { canExtend, extraBadge } from './extendApi.js'
 
 // One appointment as a card, as wide as the screen allows. Its time is at the top of the card, so a list of cards needs no column of times
 // beside it: when the treatment starts and ends, then how long it is. Tapping the card opens the details. An appointment still to come also
@@ -47,18 +49,31 @@ export default function BookingCard({ booking, open, now, tag, changed }) {
   const state = bookingState(booking)
   const owed = moneyToSort(booking)
   const cancelled = cancelledNote(booking)
-  const directions = canNavigateTo(booking, now) ? directionsLink(booking) : null
+  // Once a session has started he is there, so today's card offers Extra time in place of Directions.
+  const extendCandidate = Boolean(changed) && booking.date === today() && canExtend(booking, now || new Date())
+  const directions = canNavigateTo(booking, now) && !extendCandidate ? directionsLink(booking) : null
   // Before the appointment ends the foot of the card holds Directions, so Mark paid is then on the booking itself.
-  const transferDue = Boolean(changed) && !directions && paymentActions(booking).includes('receiveBank')
+  const transferDue = Boolean(changed) && !(canNavigateTo(booking, now) && directionsLink(booking)) && paymentActions(booking).includes('receiveBank')
+  // The client stayed longer: on today's card, once the session has started. While it is still running it takes the place of Cash received
+  // (cash is usually taken at the end); once it is over, Cash received comes back and Extra time stays on the booking itself.
+  const [extending, setExtending] = useState(false)
+  const extendable = extendCandidate && !refundable && !transferDue && (!cashDue || canNavigateTo(booking, now))
+  const cashShown = cashDue && !extendable
+  const extra = extraBadge(booking)
+  async function extended(text, isError = false) {
+    setExtending(false)
+    toast(isError ? text : `Extra time added · ${clientName(booking)}`)
+    await changed()
+  }
   const where = shortWhere(booking.address_snapshot)
   const extras = booking.booking_status === 'cancelled' ? [] : extrasList(booking)
-  return <div className={`admin-card-wrap ${directions ? 'has-directions' : ''} ${refundable || cashDue || transferDue ? 'has-card-action' : ''}`}>
+  return <div className={`admin-card-wrap ${directions ? 'has-directions' : ''} ${refundable || cashShown || transferDue || extendable ? 'has-card-action' : ''}`}>
     <button className={`admin-card ${booking.booking_status === 'cancelled' ? 'cancelled' : ''}`} data-chip={state.chip} data-variant={state.variant} onClick={open}>
       <span className="admin-card-when">
         <span className="admin-card-times">{time(booking.start_minutes)}<span aria-hidden="true"> – </span><span className="admin-sr-only"> to </span>{time(bookingEnd(booking))}</span>
         {tag && <em className="admin-next-tag">{tag}</em>}
         {/* How many people and how long each ("1 person · 120 min", "3 people · 3 × 60 min"), so a group can never be mistaken for one long session. */}
-        <span className="admin-card-length">{booking.booking_sessions?.length ? peopleShort([...booking.booking_sessions].sort((a, b) => a.position - b.position).map(session => session.duration_minutes)) : `${booking.treatment_duration_minutes} min`}</span>
+        <span className="admin-card-length">{booking.booking_sessions?.length ? peopleShort([...booking.booking_sessions].sort((a, b) => a.position - b.position).map(session => session.duration_minutes)) : `${booking.treatment_duration_minutes} min`}{extra && <span className="admin-card-extra"> {extra}</span>}</span>
       </span>
       <span className="admin-card-heading"><strong>{clientName(booking)}</strong><span className="admin-card-price">{money(booking.total_gbp)}</span></span>
       <span className="admin-card-meta">
@@ -77,8 +92,10 @@ export default function BookingCard({ booking, open, now, tag, changed }) {
       </span>
     </button>
     {refundable && <button type="button" className="admin-card-refund" aria-label={`Record refund sent to ${clientName(booking)}`} onClick={() => setRefunding(true)}><Icon name="check" size={15} />Record refund</button>}
-    {cashDue && <button type="button" className="admin-card-refund admin-card-cash" disabled={receiving} aria-label={`Mark ${cashAmount} cash received from ${clientName(booking)}`} onClick={receiveCash}><Icon name="check" size={15} />Cash received</button>}
+    {cashShown && <button type="button" className="admin-card-refund admin-card-cash" disabled={receiving} aria-label={`Mark ${cashAmount} cash received from ${clientName(booking)}`} onClick={receiveCash}><Icon name="check" size={15} />Cash received</button>}
     {transferDue && <button type="button" className="admin-card-refund admin-card-cash" disabled={receiving} aria-label={`Mark ${cashAmount} from ${clientName(booking)} paid`} onClick={receiveCash}><Icon name="check" size={15} />Mark paid</button>}
+    {extendable && <button type="button" className="admin-card-refund admin-card-extend" aria-label={`Add extra time for ${clientName(booking)}`} onClick={() => setExtending(true)}><Icon name="plus" size={15} />Extra time</button>}
+    {extending && <ExtendDialog booking={booking} close={() => setExtending(false)} done={extended} />}
     {refunding && <ActionDialog kind="refund" booking={booking} api={lifecycleApi} close={() => setRefunding(false)} done={refunded} />}
     {directions && <a className="admin-card-directions" href={directions.href} target="_blank" rel="noopener noreferrer" aria-label={`Directions to ${clientName(booking)}`}><Icon name="pin" size={15} />Directions</a>}
   </div>

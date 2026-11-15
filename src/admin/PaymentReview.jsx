@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { clientName, money, sessionSummary, time } from './calendarPresentation.js'
 import { groupByAppointmentDay } from './reviewDays.js'
-import { loadReviewResource, needsYou, paymentOverdue, paymentReviewApi } from './paymentReviewApi.js'
+import { extraOwed, loadReviewResource, needsYou, paymentOverdue, paymentReviewApi } from './paymentReviewApi.js'
+import { ActionDialog } from './BookingActions.jsx'
+import { lifecycleApi } from './bookingLifecycleApi.js'
+import { minutesWords, owedExtraMinutes } from './extendApi.js'
 import { activeReminder, reminderWhen, useReminders } from './paymentReminders.js'
 import PaymentActions from './PaymentActions.jsx'
 import PaymentReminder from './PaymentReminder.jsx'
@@ -15,12 +18,18 @@ function Item({ booking, openBooking, refresh, reminder, owing }) {
   const needs = needsYou(booking) && !reminder
   const cash = booking.booking_payments.method === 'cash'
   const overdue = paymentOverdue(booking)
+  // The booking is paid, with an extra still to come (extra time, or a change that cost more).
+  const extra = extraOwed(booking)
+  const [receiving, setReceiving] = useState(false)
+  const extraWords = owedExtraMinutes(booking) ? `the extra ${minutesWords(owedExtraMinutes(booking))}` : 'the extra'
   return <li className={`admin-review-item ${needs ? '' : 'wait'}`} data-variant="sand">
-    <p className={`chip ${needs ? 'chip--needs' : 'chip--wait'} admin-status pending`}>{reminder ? `Reminder set · back ${reminderWhen(reminder.until)}` : overdue ? (cash ? 'Session done · cash not marked received' : booking.booking_payments.status === 'awaiting_verification' ? 'Session done · client says paid, check your bank' : 'Session done · not paid yet') : cash ? 'Cash request to decide' : booking.booking_payments.status === 'awaiting_transfer' ? 'Transfer not yet declared by the client' : 'Bank transfer to verify'}</p>
-    <div className="admin-card-heading"><h3>{clientName(booking)}</h3><strong className="admin-card-price">{money(booking.total_gbp)}</strong></div>
+    <p className={`chip ${needs ? 'chip--needs' : 'chip--wait'} admin-status pending`}>{reminder ? `Reminder set · back ${reminderWhen(reminder.until)}` : extra ? (booking.balance_reported_at ? `Client says ${extraWords} is paid, check your bank` : `Session done · ${extraWords} not paid yet`) : overdue ? (cash ? 'Session done · cash not marked received' : booking.booking_payments.status === 'awaiting_verification' ? 'Session done · client says paid, check your bank' : 'Session done · not paid yet') : cash ? 'Cash request to decide' : booking.booking_payments.status === 'awaiting_transfer' ? 'Transfer not yet declared by the client' : 'Bank transfer to verify'}</p>
+    <div className="admin-card-heading"><h3>{clientName(booking)}</h3><strong className="admin-card-price">{extra ? `${money(booking.balance_due_gbp)} extra` : money(booking.total_gbp)}</strong></div>
     <p className="admin-review-when">{time(booking.start_minutes)} · {sessionSummary(booking)}</p>
     <p className="admin-review-reference">Booked {new Date(booking.created_at).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })} · {booking.booking_reference}</p>
-    <PaymentActions booking={booking} refresh={refresh} short later />
+    {extra ? <div className="admin-payment-buttons"><button className="btn--primary" onClick={() => setReceiving(true)}>Mark extra received</button></div>
+      : <PaymentActions booking={booking} refresh={refresh} short later />}
+    {receiving && <ActionDialog kind="balance" booking={booking} api={lifecycleApi} close={() => setReceiving(false)} done={async () => { setReceiving(false); await refresh() }} />}
     {reminderDue(booking) && <PaymentReminder booking={booking} owing={owing} />}
     <a href={`/admin/bookings/${booking.id}`} onClick={event => { if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0) { event.preventDefault(); openBooking(booking.id) } }}>View booking <Icon name="right" size={18} /></a>
   </li>

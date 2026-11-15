@@ -121,7 +121,7 @@ describe('the Telegram link for a client', () => {
 })
 
 describe('the bank transfers a client has not yet paid', () => {
-  it('asks only for the unpaid bank transfers of that one client, oldest first', async () => {
+  it('asks only for the unpaid bank transfers and extras still to pay of that one client, once each', async () => {
     const calls = []
     const chain = new Proxy({}, { get: (_, name) => name === 'then' ? resolve => resolve({ data: [{ id: 'b1' }], error: null }) : (...args) => { calls.push([name, ...args]); return chain } })
     const rows = await createClientsApi({ from: table => { calls.push(['from', table]); return chain } }).outstandingPayments('c1')
@@ -130,5 +130,8 @@ describe('the bank transfers a client has not yet paid', () => {
     expect(calls).toContainEqual(['eq', 'client_id', 'c1'])
     expect(calls).toContainEqual(['eq', 'booking_payments.method', 'bank_transfer'])
     expect(calls).toContainEqual(['in', 'booking_payments.status', ['awaiting_transfer', 'awaiting_verification']])
+    // and a paid booking with an extra still to pay (extra time, or a change that cost more)
+    expect(calls).toContainEqual(['eq', 'booking_payments.status', 'paid'])
+    expect(calls).toContainEqual(['gt', 'balance_due_gbp', 0])
   })
 })

@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase.js'
 import { money, today } from './calendarPresentation.js'
+import { canExtend, extensionsOf } from './extendApi.js'
 
 const PENDING = ['awaiting_transfer', 'awaiting_payment_verification', 'awaiting_cash_approval']
 const CONFLICT_CODES = ['PT409', '40001']
@@ -15,6 +16,8 @@ const SAFE_MESSAGES = new Set([
   'That time is in the past. Choose another time.',
   'That appointment would run past midnight. Choose an earlier time.',
   'A client is in the middle of booking that day. Try again in a few minutes.',
+  // A booking with extra time took place (20261219100000_extend_session.sql).
+  'This booking has extra time. Remove the extra time first.',
 ])
 const TIMES_UNAVAILABLE = "I couldn't load all the times just now. Please try again in a moment."
 
@@ -22,8 +25,13 @@ export const lifecycleActions = booking => {
   const status = booking.booking_status
   const payment = booking.booking_payments
   const actions = []
-  if (status === 'confirmed' && booking.date <= today()) actions.push('complete', 'noShow')
-  if (PENDING.includes(status) || status === 'confirmed') actions.push('edit', 'reschedule', 'cancel')
+  // The client stayed longer: once the session has started, and for 7 days after (extendApi.js).
+  if (canExtend(booking)) actions.push('extend')
+  // A booking with extra time took place: it is not a no-show, and it is not edited, moved or cancelled until the extra time is removed
+  // (the server says the same).
+  const extended = extensionsOf(booking).length > 0
+  if (status === 'confirmed' && booking.date <= today()) actions.push('complete', ...(extended ? [] : ['noShow']))
+  if ((PENDING.includes(status) || status === 'confirmed') && !extended) actions.push('edit', 'reschedule', 'cancel')
   // A refund to send: after a cancellation, or after a paid booking was changed to cost less (Edit booking).
   if (Number(booking.refund_due_gbp) > 0 && (status === 'cancelled' ? payment?.status === 'paid'
     : status !== 'no_show' && ['paid', 'awaiting_verification'].includes(payment?.status))) actions.push('refund')
@@ -33,7 +41,7 @@ export const lifecycleActions = booking => {
   return actions
 }
 export const lifecycleLabels = {
-  complete: 'Mark completed', noShow: 'Mark no-show', edit: 'Edit booking', reschedule: 'Reschedule', balance: 'Mark extra received', cancel: 'Cancel booking',
+  extend: 'Add extra time', complete: 'Mark completed', noShow: 'Mark no-show', edit: 'Edit booking', reschedule: 'Reschedule', balance: 'Mark extra received', cancel: 'Cancel booking',
   refund: 'Record refund sent', feeReceived: 'Mark fee received', feeWaive: 'Waive fee',
 }
 
@@ -108,4 +116,4 @@ export function createLifecycleApi(client) {
 export const lifecycleApi = createLifecycleApi(supabase)
 
 // What the sheet and the toast say once it is done: the outcome, not the name of the button that was pressed.
-export const DONE = { edit: 'Booking changed', balance: 'Extra payment recorded', complete: 'Marked completed', noShow: 'Marked no-show', reschedule: 'Booking moved', cancel: 'Booking cancelled', refund: 'Refund recorded', feeReceived: 'Fee recorded as received', feeWaive: 'Fee waived' }
+export const DONE = { extend: 'Extra time added', removeExtra: 'Extra time removed', edit: 'Booking changed', balance: 'Extra payment recorded', complete: 'Marked completed', noShow: 'Marked no-show', reschedule: 'Booking moved', cancel: 'Booking cancelled', refund: 'Refund recorded', feeReceived: 'Fee recorded as received', feeWaive: 'Fee waived' }

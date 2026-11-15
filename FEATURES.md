@@ -1,6 +1,6 @@
 # VadMassage booking app: feature catalogue
 
-Last updated: 12 November 2026 (client base stats on the Clients page).
+Last updated: 15 November 2026 (extra time when a client stays longer).
 
 This is a plain-English list of everything the app does today, grouped by area. Each entry says what the feature does, why it was built, where it was built (the pull request, or "PR", and any database change, called a "migration"), and what would need to become a **setting** if the same feature were offered to other therapists in a general app.
 
@@ -432,6 +432,12 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **Why:** A booking for two where one person can't come had to be cancelled and rebooked.
 - **Built in:** this PR (`20261204100000_edit_booking_services.sql`, `src/admin/EditBooking.jsx`, rules in the Claude Doc "Changing a booking: the rules").
 - **For a general app:** nothing specific.
+
+### Extra time when a client stays longer
+- **What it does:** Once a session has started (and for up to 7 days after), "Add extra time" adds +15, +30, +45, +60, +90 or +120 minutes (up to 2 hours in all) for one person of the booking. Today's card shows an "Extra time" button in place of Directions (and in place of Cash received while the session is still running). The price is suggested from an hourly extra-time rate (More › Services and prices › Extra time, empty = each treatment's own 1-hour price), pro rata and rounded to £1, and can be changed or set to no charge. The booking's own price (offers, gift voucher part, travel) never changes: the extra is its own line on the bill, the client's page and the receipt. Not paid yet: it is added to what they pay. Paid: "Cash now, received", or "Ask for it by bank transfer", which emails the client the bill with the bank details, shows "£X still to pay" with an "Ask for the extra" WhatsApp button, puts it in To check once the session is over, and lets the client press "I've sent it" (Vadim gets an alert). If it runs into the next booking, a warning offers a "running late" WhatsApp to the next client. "Remove" undoes it unless its money already came in (cash, a received transfer, a bill paid). A booking with extra time cannot be edited, moved, cancelled or marked no-show until the extra time is removed. A bank transfer the client says they sent is checked first, and a refund to send is recorded first, before extra time can be added. The client page notes "Stayed longer N times".
+- **Why:** Clients often ask to stay longer on the day, and there was no quick way to record the time and the money.
+- **Built in:** this PR (`20261219100000_extend_session.sql`, `src/admin/ExtendDialog.jsx`, `src/admin/extendApi.js`, ADR-106; rules page https://claude.ai/artifact/HGN5X9hhYLp47QgBTYpuCQ).
+- **For a general app:** the hourly rate, the 15-minute steps, the 2-hour and 7-day limits, and whether the next client gets a running-late message should be settings.
 
 ### Edit address on a booking
 - **What it does:** Vadim can change the address of a booking still to come. A different area brings its fees and a new total, which is refused once money has been paid or a transfer declared. The client is emailed.

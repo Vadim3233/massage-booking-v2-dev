@@ -78,6 +78,7 @@ export function clientFaq({ rules, areas = [] }) {
         free === 0 ? 'The price follows your change: if it goes down after you have paid, I send the difference back; if it goes up, you pay the extra.'
           : `More than ${plural(free, 'hour')} before your appointment, the price follows your change: if it goes down after you have paid, I send the difference back; if it goes up, you pay the extra. Within ${plural(free, 'hour')}, you can still make changes, but the price does not go down and there is no refund. If you pay in cash, I still expect the full amount.`,
       ], link: { href: '/account', text: 'Your bookings' } },
+      { q: 'Can I stay a little longer on the day?', a: ['Just ask me during your session. If my next appointment allows, I add the extra time, and your booking page shows it as its own line with the price, and the new total. If you have already paid, you can pay the extra in cash there and then, or by bank transfer: the bank details are on your booking page, with an "I\'ve sent it" button for when it is done.'], link: { href: '/account', text: 'Your bookings' } },
       { q: 'What happens to my payment if I cancel?', a: ['If you have paid and a refund is due, your booking shows "Refund on its way". If a late fee applies, your booking shows that too.'] },
     ] },
     { title: 'Receipts and insurance', items: [

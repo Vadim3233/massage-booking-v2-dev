@@ -10,6 +10,7 @@ import ClientRhythm from './ClientRhythm.jsx'
 import ClientTelegram from './ClientTelegram.jsx'
 import ClientGiftVoucher from './ClientGiftVoucher.jsx'
 import ClientPaymentReminder from './ClientPaymentReminder.jsx'
+import { stayedLongerCount } from './extendApi.js'
 import CombinePicker from './CombinePicker.jsx'
 import DeleteClient from './DeleteClient.jsx'
 import { deletedMessage } from './clientDelete.js'
@@ -162,6 +163,19 @@ function CashTrust({ clientId, api, version }) {
   </section>
 }
 
+// "Stayed longer 3 times": a client who often asks for extra time may like a longer session next time. Nothing shows until it has happened twice.
+function StayedLonger({ clientId, api, version }) {
+  const [count, setCount] = useState(0)
+  useEffect(() => {
+    let live = true
+    if (!api.stayedLonger) return undefined
+    api.stayedLonger(clientId).then(rows => { if (live) setCount(stayedLongerCount((rows || []).filter(row => !['cancelled', 'no_show'].includes(row.bookings?.booking_status)))) }, () => { if (live) setCount(0) })
+    return () => { live = false }
+  }, [api, clientId, version])
+  if (count < 2) return null
+  return <p className="admin-stayed-longer" role="status">Stayed longer {count} times. Next time, you could offer a longer session.</p>
+}
+
 export default function ClientProfile({ id, back, backLabel = 'Clients', openBooking, newBooking, openCombine, onDeleted, api = clientsApi }) {
   const [client, setClient] = useState(null)
   const [error, setError] = useState('')
@@ -202,6 +216,7 @@ export default function ClientProfile({ id, back, backLabel = 'Clients', openBoo
     {error && <p role="alert">{error}</p>}
     <Summary clientId={id} api={api} version={version} />
     <ClientRhythm client={client} api={api} version={version} newBooking={newBooking} />
+    <StayedLonger clientId={id} api={api} version={version} />
     <ClientPaymentReminder key={`reminder-${client.id}`} client={client} api={api} version={version} />
     <History clientId={id} api={api} openBooking={openBooking} version={version} />
     <Notes clientId={id} api={api} />

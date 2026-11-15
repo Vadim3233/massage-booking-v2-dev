@@ -91,8 +91,18 @@ export function createClientsApi(client) {
     telegramStatus: id => run(client.rpc('admin_client_telegram_status', { p_client_id: id })),
     createTelegramLink: id => run(client.rpc('admin_create_client_telegram_link', { p_client_id: id })),
     // A client's bank transfers not yet received (for the combined payment reminder); which of them are due is decided in shareBooking.js.
-    outstandingPayments: id => run(client.from('bookings').select('id,booking_reference,date,start_minutes,treatment_duration_minutes,total_gbp,booking_status,booking_payments!inner(method,status,amount_gbp,payment_reference)')
-      .eq('client_id', id).eq('booking_payments.method', 'bank_transfer').in('booking_payments.status', ['awaiting_transfer', 'awaiting_verification']).order('date').order('start_minutes').limit(50)),
+    // Also a paid booking with an extra still to pay (extra time, or a change that cost more).
+    async outstandingPayments(id) {
+      const fields = 'id,booking_reference,date,start_minutes,treatment_duration_minutes,total_gbp,balance_due_gbp,booking_status,booking_payments!inner(method,status,amount_gbp,payment_reference),booking_extensions(minutes,pay_by,received_at)'
+      const [unpaid, extras] = await Promise.all([
+        run(client.from('bookings').select(fields).eq('client_id', id).eq('booking_payments.method', 'bank_transfer').in('booking_payments.status', ['awaiting_transfer', 'awaiting_verification']).order('date').order('start_minutes').limit(50)),
+        run(client.from('bookings').select(fields).eq('client_id', id).eq('booking_payments.status', 'paid').gt('balance_due_gbp', 0).order('date').order('start_minutes').limit(50)),
+      ])
+      const rows = new Map([...(unpaid || []), ...(extras || [])].map(row => [row.id, row]))
+      return [...rows.values()].sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || (a.start_minutes || 0) - (b.start_minutes || 0))
+    },
+    // The client's bookings that had extra time (they stayed longer), for the "Stayed longer" note on their page.
+    stayedLonger: id => run(client.from('booking_extensions').select('booking_id,minutes,bookings!inner(client_id,booking_status)').eq('bookings.client_id', id).limit(200)),
     notes: id => run(client.from('client_notes').select('id,note,created_at').eq('client_id', id).order('created_at', { ascending: false }).limit(100)),
     async addNote(id, note) {
       const { data: user } = await client.auth.getUser()
