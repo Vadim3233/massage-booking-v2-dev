@@ -26,6 +26,8 @@ import { minimumFor } from '../../booking/bookingWords.js'
 import { createVisitLog, STEP_KINDS } from './visitLog.js'
 import { catalogueForOffer, offerCodeFromPath, offerFromRow } from './slotOffer.js'
 import { OfferCard, OfferGone, OfferTimeStep } from './components/OfferPanel.jsx'
+import { giftCodeFromSearch, giftFromRow, giftSessions } from './giftCode.js'
+import { GiftCard, GiftCodeBox } from './components/GiftPanel.jsx'
 import './booking.css'
 
 const api = createBookingApi(supabase)
@@ -82,6 +84,21 @@ export default function BookingFlow() {
     }, (err) => { if (live) { setOfferState('closed'); store.setError(friendlyError(err)) } })
     return () => { live = false }
   }, [offerCode, bookedHere, store])
+  // A gift voucher's link (/?gift=<code>, ADR-101): check the code, then the booking carries it. Its length and people are set with the treatment.
+  const [giftCode] = useState(() => giftCodeFromSearch(window.location.search))
+  useEffect(() => {
+    const mine = store.getSnapshot().draft
+    if (!giftCode || offerCode || mine.bookingId || mine.gift?.code === giftCode) return undefined
+    let live = true
+    api.checkGift(giftCode).then(row => { if (live) store.startGift(giftFromRow(giftCode, row)) }, err => { if (live) store.setError(friendlyError(err)) })
+    return () => { live = false }
+  }, [giftCode, offerCode, store])
+  function bookWithoutGift() {
+    store.removeGift()
+    const url = new URL(window.location.href)
+    url.searchParams.delete('gift')
+    window.history.replaceState(window.history.state, '', url)
+  }
   // The test-client helper exists only in development builds: the live page and its previews never offer it.
   const testMode = import.meta.env.DEV
   useEffect(() => {
@@ -120,7 +137,8 @@ export default function BookingFlow() {
     return () => { live = false }
   }, [signedInUser])
   const freeTravel = Boolean(signedInUser) && travelFee.user === signedInUser && travelFee.free
-  const noMinimum = Boolean(signedInUser) && minimumOff.user === signedInUser && minimumOff.off
+  // A gift voucher was sold for its length, so an area's minimum booking does not apply to it (the database agrees).
+  const noMinimum = Boolean(draft.gift) || (Boolean(signedInUser) && minimumOff.user === signedInUser && minimumOff.off)
   const plainCatalogue = useMemo(() => (loadedCatalogue && freeTravel
     ? { ...loadedCatalogue, areas: loadedCatalogue.areas.map(area => ({ ...area, travel_surcharge_gbp: 0 })) }
     : loadedCatalogue), [loadedCatalogue, freeTravel])
@@ -251,7 +269,7 @@ export default function BookingFlow() {
     <main className={`booking-main ${settling ? 'is-settling' : ''} ${step <= 3 ? 'is-banded' : ''}`}>
       <nav className="stepper" aria-label="Booking progress">
         <div className="stepper-row">
-          {catalogue && canGoBack ? <button className="btn--quiet btn--small back" disabled={busy} onClick={() => navigate(offer && step === 3 ? 1 : step - 1)}><Icon name="left" size={20} />Back</button> : <span />}
+          {catalogue && canGoBack ? <button className="btn--quiet btn--small back" disabled={busy} onClick={() => navigate((offer || draft.gift) && step === 3 ? 1 : step - 1)}><Icon name="left" size={20} />Back</button> : <span />}
           <p className="progress-summary">Step {shown + 1} of {STEPS.length} · {STEPS[shown]}</p>
         </div>
         <div className="progress-bar" aria-hidden="true">{STEPS.map((label, index) => <span key={label} className={index < shown ? 'done' : index === shown ? 'current' : ''} />)}</div>
@@ -271,12 +289,15 @@ export default function BookingFlow() {
         {!held && step >= 4 && step < 7 && !draft.pending && !draft.bookingId && <button className="btn--tonal" onClick={() => navigate(3)}>Choose a time again</button>}
         {/* Details and Payment: what is being booked, always in sight, so nobody pays without seeing it. */}
         {(step === 5 || step === 6) && draft.date && draft.start != null && <p className="trip-pill" aria-label="Your booking">
-          <span>{(({ weekday, day, month }) => `${weekday} ${day} ${month}`)(dayParts(draft.date))}</span><span>{timeLabel(draft.start)}</span>{quote && <b>{money(quote.total_gbp)}</b>}</p>}
+          <span>{(({ weekday, day, month }) => `${weekday} ${day} ${month}`)(dayParts(draft.date))}</span><span>{timeLabel(draft.start)}</span>{quote && <b>{money(quote.to_pay_gbp ?? quote.total_gbp)}</b>}</p>}
         <fieldset className={`screen enter ${busy ? 'is-busy' : ''}`} key={step}>
-          {step === 0 && <AreaStep welcome={welcome} rules={rules} catalogue={catalogue} usual={usual} bookUsual={bookUsual} intro={offer ? <OfferCard offer={offer} busy={offerState === 'busy'} /> : null} choose={async (areaId) => { if (areaId === draft.areaId || await store.changeSelection({ areaId })) navigate(1) }} />}
+          {step === 0 && <AreaStep welcome={welcome} rules={rules} catalogue={catalogue} usual={usual} bookUsual={bookUsual} intro={offer ? <OfferCard offer={offer} busy={offerState === 'busy'} /> : draft.gift ? <GiftCard gift={draft.gift} remove={bookWithoutGift} /> : null} choose={async (areaId) => { if (areaId === draft.areaId || await store.changeSelection({ areaId })) navigate(1) }} />}
+          {step === 0 && !offer && !draft.gift && <GiftCodeBox />}
           {step === 1 && <TreatmentStep catalogue={catalogue} choose={async (serviceId) => {
             // An offer's length is fixed, so the people-and-length step is skipped.
             if (offer) { if ((serviceId === draft.serviceId && draft.sessions.length) || await store.changeSelection({ serviceId, sessions: [newSession(offer.minutes)], enhancementIds: [] })) navigate(3); return }
+            // A gift voucher sets the people and the length too (a longer time can still be chosen from the review screen).
+            if (draft.gift) { if ((serviceId === draft.serviceId && draft.sessions.length === draft.gift.people) || await store.changeSelection({ serviceId, sessions: giftSessions(draft.gift, newSession), enhancementIds: draft.gift.extraIds || [] })) navigate(3); return }
             if (serviceId === draft.serviceId || await store.changeSelection({ serviceId, sessions: [], enhancementIds: [] })) navigate(2)
           }} />}
           {offer && (step === 2 || step === 3) && <OfferTimeStep offer={offer} busy={busy} hold={async () => { if (await store.holdOffer()) await goWithQuote(4) }} />}

@@ -1,4 +1,4 @@
-// Busiest times (ADR-101): the rankings on the Income page and the "When … books" card on a client's page.
+// Busiest times (ADR-103): the rankings on the Income page and the "When … books" card on a client's page.
 // The database only lists the visits (admin_busy_times in 20261213100000_busy_times.sql); this file does the counting and the plain words,
 // so it can be tested without a database.
 //

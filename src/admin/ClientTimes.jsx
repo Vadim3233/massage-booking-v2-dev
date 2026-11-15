@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { DAYS, ENOUGH_CLIENT_VISITS, PARTS, clientTimes, clientWanted, nextWeekday, plural, shortDay } from './busyTimes.js'
 
-// A client's card › When … books (ADR-101): their usual day and time of day, from their visits, and any time they tried to book when it was
+// A client's card › When … books (ADR-103): their usual day and time of day, from their visits, and any time they tried to book when it was
 // full (Visitors). With a usual day and nothing booked, one tap starts a new booking for them on the next one. Hidden if the database change
 // is not applied yet.
 export default function ClientTimes({ client, api, version, nextDate, newBooking }) {

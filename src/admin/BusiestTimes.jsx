@@ -6,7 +6,7 @@ const VIEWS = [['days', 'Days'], ['times', 'Times'], ['months', 'Months'], ['hol
 const monthYear = iso => new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'short', year: 'numeric' })
 const fullWords = row => row.full === null || row.full === undefined ? '' : ` · ${row.full}% full`
 
-// Income › Busiest times (ADR-101): every visit since the first one, whatever period the page above shows. Four answers at a glance, ideas
+// Income › Busiest times (ADR-103): every visit since the first one, whatever period the page above shows. Four answers at a glance, ideas
 // to act on this week (the quietest day with the regulars who usually come then and are due, times people wanted when full, a bank holiday
 // coming up), a ranking for each question, and the Monday "Your week" Telegram switch.
 // If the database change is not applied yet, the section stays hidden and the page works as before.

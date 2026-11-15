@@ -44,13 +44,15 @@ export async function handle(request, response, { env = process.env, createServi
     const reviews = await client.rpc('plan_review_requests').then(({ data, error }) => (error ? { failed: true } : { made: data }), () => ({ failed: true }))
     // Then the Monday "Your week" message for the Admin, when switched on (Income › Busiest times). Once a week, never twice.
     const weekly = await planWeeklySummary({ client }).catch(() => ({ failed: true }))
+    // Then the gift vouchers' emails that wait for a day: a voucher sent to its person on the day the buyer chose, and a reminder a month before one ends.
+    const gifts = await client.rpc('plan_gift_messages').then(({ data, error }) => (error ? { failed: true } : { made: data }), () => ({ failed: true }))
     // The Google Calendar copy runs beside the messages, once its Google codes are set, with its own time limit. A problem with Google never stops them.
     const calendarConfig = readCalendarConfig(env)
     const calendar = calendarConfigured(calendarConfig)
       ? createCalendarSync({ client, config: calendarConfig, fetchImpl }).run().catch(() => ({ failed: true }))
       : null
     const config = readConfig(env)
-    const summary = { ...(await sendAll(createDispatcher({ client, config, fetchImpl }))), repeats, reminders, nextPayments, reviews, weekly, ...(calendar ? { calendar: await calendar } : {}) }
+    const summary = { ...(await sendAll(createDispatcher({ client, config, fetchImpl }))), repeats, reminders, nextPayments, reviews, weekly, gifts, ...(calendar ? { calendar: await calendar } : {}) }
     // The family alerts go out with the clients' bot, once it is set up. A problem with them never stops the rest.
     if (config.telegramClient.token) summary.family = await createFamilySender({ client, token: config.telegramClient.token, fetchImpl }).run().catch(() => ({ failed: true }))
     response.statusCode = 200

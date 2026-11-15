@@ -145,6 +145,19 @@ export function createBookingStore({ api, storage, clientKey, uuid = () => crypt
       publish({ quote: null, quoteError: '', result: null, step: 0 })
       return true
     }) },
+    // A gift voucher's code was checked: the booking carries it from now on. Its people and length are set when the treatment is chosen.
+    startGift(gift) { return run(async () => {
+      if (state.draft.bookingId || state.draft.pending) return false
+      save({ ...state.draft, gift, offer: null })
+      publish({ quote: null, quoteError: '' })
+      return true
+    }) },
+    removeGift() { return run(async () => {
+      if (state.draft.bookingId || state.draft.pending) return false
+      save({ ...state.draft, gift: null })
+      publish({ quote: null, quoteError: '' })
+      return true
+    }) },
     // Hold the offer's time, as choosing a usual time does.
     holdOffer() { return run(async () => {
       const { offer } = state.draft

@@ -54,6 +54,10 @@ function servicesLabel(text) {
 function Terms({ terms, action }) {
   if (!terms) return <p role="status">Checking your options…</p>
   if (!terms.can_change) return <p>This appointment can no longer be changed online. Please contact Vadim.</p>
+  // A booking paid with a gift voucher, inside the late window: cancelling uses the voucher up, and it can't be moved online.
+  if (terms.gift_late) return action === 'cancel'
+    ? <p className="account-note account-note--fee" role="status">This is inside {terms.free_cancellation_hours ?? 24} hours of your appointment, so cancelling now uses up your gift voucher.</p>
+    : <p className="account-note" role="status">This appointment was paid with a gift voucher. Within {terms.free_cancellation_hours ?? 24} hours of it, it can't be moved online. Please message Vadim.</p>
   const fee = Number(action === 'cancel' ? terms.cancel_fee_gbp : terms.reschedule_fee_gbp)
   return fee > 0
     ? <p className="account-note account-note--fee" role="status">This is inside {terms.free_cancellation_hours ?? 24} hours of your appointment, so a late fee of <strong>{money(fee)}</strong> applies. I can still make this change for you now.</p>
@@ -67,9 +71,10 @@ function CancelPanel({ booking, terms, done, back, refresh, api }) {
   const [error, setError] = useState('')
   const request = useRef(null)
   const fee = Number(terms.cancel_fee_gbp)
+  const mustAgree = fee > 0 || Boolean(terms.gift_late)
   async function submit(event) {
     event.preventDefault()
-    if (busy) return
+    if (busy || (mustAgree && !agreed)) return
     setBusy(true); setError('')
     const key = JSON.stringify([booking.id, fee, reason])
     if (request.current?.key !== key) request.current = { key, id: crypto.randomUUID() }
@@ -81,11 +86,12 @@ function CancelPanel({ booking, terms, done, back, refresh, api }) {
     <h2 tabIndex={-1}>Cancel this appointment?</h2>
     <Terms terms={terms} action="cancel" />
     <label>Anything you would like me to know? (optional)<textarea maxLength={500} value={reason} disabled={busy} onChange={event => setReason(event.target.value)} /></label>
-    {fee > 0 && <label className="check"><input type="checkbox" checked={agreed} disabled={busy} onChange={event => setAgreed(event.target.checked)} />I understand a late fee of {money(fee)} will apply.</label>}
+    {mustAgree && <label className="check"><input type="checkbox" checked={agreed} disabled={busy} onChange={event => setAgreed(event.target.checked)} />{terms.gift_late
+      ? `I understand my gift voucher will be used up${fee > 0 ? ` and a late fee of ${money(fee)} will apply` : ''}.` : `I understand a late fee of ${money(fee)} will apply.`}</label>}
     {error && <p role="alert" className="error">{error}</p>}
     <div className="actions">
       <button type="button" className="btn--primary" disabled={busy} onClick={back}>Keep my appointment</button>
-      <button type="submit" className="btn--danger" disabled={busy || (fee > 0 && !agreed)}>{busy ? 'Cancelling…' : 'Cancel appointment'}</button>
+      <button type="submit" className="btn--danger" disabled={busy || (mustAgree && !agreed)}>{busy ? 'Cancelling…' : 'Cancel appointment'}</button>
     </div>
   </form>
 }
@@ -110,6 +116,7 @@ function ReschedulePanel({ booking, terms, rules, done, back, refresh, api }) {
   return <form className="panel" onSubmit={submit}>
     <h2 tabIndex={-1}>Choose a new time</h2>
     <Terms terms={terms} action="reschedule" />
+    {terms.gift_ends && <p className="account-note">Your gift voucher ends on {new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'long' }).format(new Date(terms.gift_ends))}, so please choose a day before then.</p>}
     <DayTimePicker key={booking.id} horizonDays={rules.horizonDays} dateLabel="New date" loadDay={(date) => api.availability(booking.id, date)}
       selected={chosen} onPick={(date, start) => { setChosen({ date, start }); setError('') }} emptyMessage="There are no times on that day. Please try another date." />
     {chosen && <p className="account-note" role="status">New time: <strong>{dayParts(chosen.date).long}, {timeLabel(chosen.start)}–{timeLabel(chosen.start + booking.treatment_duration_minutes)}</strong></p>}
@@ -211,7 +218,7 @@ function Manage({ id, rules, close, changed, api, linked = false }) {
         : `After your change, ${money(booking.balance_due_gbp)} more is to pay by bank transfer. The details are in the email I sent you.`}</p>}
       {open && terms?.can_change && <>
         <Terms terms={terms} action="reschedule" />
-        <div className="actions"><button className="btn--primary" onClick={() => setMode('reschedule')}>Change the time</button><button className="btn--danger" onClick={() => setMode('cancel')}>Cancel appointment</button></div>
+        <div className="actions">{!terms.gift_late && <button className="btn--primary" onClick={() => setMode('reschedule')}>Change the time</button>}<button className="btn--danger" onClick={() => setMode('cancel')}>Cancel appointment</button></div>
         <button className="btn--tonal btn--block" onClick={() => setMode('change')}>Change who's coming, treatment or length</button>
       </>}
       {open && terms && !terms.can_change && <p>This appointment can no longer be changed online. Please contact Vadim.</p>}

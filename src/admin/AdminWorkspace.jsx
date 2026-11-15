@@ -34,11 +34,12 @@ const ClientProfile = lazy(() => import('./ClientProfile.jsx'))
 const CombineClients = lazy(() => import('./CombineClients.jsx'))
 const BookingDestination = lazy(() => import('./BookingDestination.jsx'))
 const AdminNewBooking = lazy(() => import('./AdminNewBooking.jsx'))
+const GiftVouchers = lazy(() => import('./GiftVouchers.jsx'))
 
 // The More menu, grouped by what she is doing. Each pair is a route and the words on the link.
 const MORE_GROUPS = [
   ['Every day', [['/admin/visitors', 'Visitors'], ['/admin/waitlist', 'Waitlist'], ['/admin/schedule', 'Working hours and special days'], ['/admin/settings/link', 'Your booking link'], ['/admin/settings/google-calendar', 'Google Calendar'], ['/admin/settings/family-alerts', 'Family alerts']]],
-  ['Money', [['/admin/income', 'Income']]],
+  ['Money', [['/admin/income', 'Income'], ['/admin/gifts', 'Gift vouchers']]],
   ['What you offer', [['/admin/settings/services', 'Services and prices'], ['/admin/settings/extras', 'Extras'], ['/admin/settings/areas', 'Areas and travel fees']]],
   ['Payments and rules', [['/admin/settings/bank', 'Bank transfer details'], ['/admin/settings/receipts', 'Receipt details'], ['/admin/settings/rules', 'Booking rules']]],
   ['What clients read', [['/admin/settings/welcome', 'Welcome message'], ['/admin/settings/share-message', 'Share message'], ['/admin/settings/google-reviews', 'Google reviews']]],
@@ -221,6 +222,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {surface === '/admin/settings/welcome' && <WelcomeSettings />}
       {surface === '/admin/settings/link' && <ShareLink />}
       {surface === '/admin/income' && <Income openBooking={openBooking} openDay={day => navigate(`/admin?date=${day}`)} openHours={openDayHours} />}
+      {surface === '/admin/gifts' && <GiftVouchers openBooking={openBooking} />}
       {surface === '/admin/settings/share-message' && <ShareMessageSettings />}
       {surface === '/admin/settings/google-reviews' && <ReviewSettings />}
       {surface === '/admin/help' && <HelpPage />}

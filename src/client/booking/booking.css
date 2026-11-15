@@ -541,3 +541,16 @@
 .offer-card--gone { border-color: var(--line); background: var(--surface); color: var(--ink); }
 .offer-card--gone .btn { width: fit-content; }
 .offer-card--gone h1 { font-size: 26px; line-height: 1.25; }
+
+/* Booking with a gift voucher (ADR-101) */
+.gift-card { margin: 4px 0 18px; padding: 20px 18px; border-radius: 20px; background: var(--gift-1d3b2e); color: var(--gift-fbf3e4); }
+.gift-card h1 { color: var(--gift-fbf3e4); margin: 6px 0 8px; }
+.gift-card h1 em { color: var(--gift-e6c47a); }
+.gift-card p { margin: 0 0 8px; color: var(--gift-e9dcc0); }
+.gift-card .fine { color: var(--gift-c9b88e); }
+.gift-card-tag { font-size: 12px; letter-spacing: 2.5px; text-transform: uppercase; font-weight: 600; color: var(--gift-e6c47a) !important; }
+.booking-shell .gift-card .btn--quiet { color: var(--gift-e6c47a); padding-inline: 0; }
+.gift-code-box { margin: 14px 0 4px; }
+.gift-code-box form { display: grid; gap: 8px; }
+.gift-give { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+.gift-prices { margin-top: 8px; }

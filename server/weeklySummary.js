@@ -1,4 +1,4 @@
-// The Monday "Your week" message (ADR-101, supabase/migrations/20261213100000_busy_times.sql). When it is switched on, the database says from
+// The Monday "Your week" message (ADR-103, supabase/migrations/20261213100000_busy_times.sql). When it is switched on, the database says from
 // 08:00 London time on a Monday that the week's message is due and hands over the facts; this writes the text with the same counting as the
 // Income page's Busiest times (src/admin/busyTimes.js) and queues it once. The usual sender then delivers it to the Admin's Telegram.
 import { weeklyText } from '../src/admin/busyTimes.js'

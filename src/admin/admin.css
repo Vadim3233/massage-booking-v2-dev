@@ -874,7 +874,7 @@
 .admin-client-list .admin-client-text { flex: 1 1 auto; width: 100%; }
 .admin-client-text .client-stat-line { font-size: 13px; color: var(--muted); }
 
-/* ---------- Busiest times on Income and "When … books" on a client's card (ADR-101) ---------- */
+/* ---------- Busiest times on Income and "When … books" on a client's card (ADR-103) ---------- */
 .busy { display: grid; gap: 10px; margin-top: 8px; }
 .busy > .admin-income-subhead { margin-bottom: 0; }
 .admin-review .busy-sub { margin: -6px 0 0; font-size: 14px; color: var(--ink-soft); }
@@ -950,3 +950,19 @@
 .busy-cell.is-wanted { box-shadow: inset 0 0 0 2px var(--needs-rail); }
 .busy-weekly { margin: 4px 0 0; }
 .admin-review .client-times-wanted { margin: 0; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--primary-soft); color: var(--primary); font-size: 14px; }
+
+/* More › Gift vouchers (ADR-101) */
+.admin-gift-list { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 10px; }
+.admin-gift { padding: 14px 16px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); }
+.admin-gift-title { margin: 0 0 4px; }
+.admin-gift .admin-detail-hint { margin: 2px 0; }
+.gift-shop-link { margin: 4px 0 22px; padding: 14px 16px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); }
+.gift-shop-link h2, .gift-shop-link h3 { margin: 0 0 4px; }
+.admin-gift-find { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 12px; margin: 0 0 14px; }
+.admin-gift-find .admin-field { flex: 1 1 240px; margin: 0; }
+.admin-gift-history { margin-top: 8px; font-size: 14px; }
+.admin-gift-history summary { cursor: pointer; color: var(--muted); }
+.admin-gift-history ol { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 2px; }
+.admin-gift-history-day { color: var(--muted); }
+.client-gift-bought { margin: 8px 0 0; padding-left: 18px; }
+.gift-shop-link input { font-size: 15px; text-overflow: ellipsis; }

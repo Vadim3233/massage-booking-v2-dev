@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { adminNewBookingApi } from './newBookingApi.js'
 import { bookingLink } from '../client/booking/deepLink.js'
 import Icon from '../ui/icons.jsx'
+import GiftShopLink from './GiftShopLink.jsx'
 
 // The address of the booking page, ready to paste into a message or a profile, with an optional way to start part-way through.
 export default function ShareLink({ api = adminNewBookingApi }) {
@@ -48,5 +49,6 @@ export default function ShareLink({ api = adminNewBookingApi }) {
         {service && !area && <p className="admin-detail-hint">Choose an area as well. A treatment on its own does not skip any steps.</p>}
       </div>
     </details>}
+    <GiftShopLink title="Gift voucher link" />
   </section>
 }
