@@ -1538,14 +1538,13 @@ end; $function$;
 
 -- ---------------------------------------------------------------------------------------------
 -- 10. An area's minimum booking does not apply to a gift voucher's booking: the voucher was sold for its length
---     (20261124100000's check_booking_minimum, with that one line added).
+--     (20261207100000's check_booking_minimum, which skips special-price offers, with the gift voucher added).
 -- ---------------------------------------------------------------------------------------------
 create or replace function public.check_booking_minimum()
 returns trigger language plpgsql security definer set search_path = '' as $$
 declare v_area public.service_areas%rowtype;
 begin
-  if new.created_by_actor_type is distinct from 'client' then return new; end if;
-  if new.gift_voucher_id is not null then return new; end if;
+  if new.created_by_actor_type is distinct from 'client' or new.slot_offer_id is not null or new.gift_voucher_id is not null then return new; end if;
   select * into v_area from public.service_areas where id = new.service_area_id;
   if v_area.minimum_booking_minutes is null or new.treatment_duration_minutes >= v_area.minimum_booking_minutes then return new; end if;
   if exists (select 1 from public.clients c where c.id = new.client_id and c.no_minimum_booking) then return new; end if;
