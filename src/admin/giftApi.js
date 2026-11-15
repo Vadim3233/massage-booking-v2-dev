@@ -21,6 +21,8 @@ export function createGiftAdminApi(client) {
     options: () => call(client.rpc('get_gift_options')),
     markPaid: (id, method) => call(client.rpc('admin_mark_gift_paid', { p_voucher_id: id, p_method: method })),
     cancel: id => call(client.rpc('admin_cancel_gift_voucher', { p_voucher_id: id })),
+    // The buyer asked for their money back from their gift page (20261217100000): sent, or the money never came.
+    refundSent: (id, moneyCame = true) => call(client.rpc('admin_gift_refund_sent', { p_voucher_id: id, p_money_came: moneyCame })),
     markUsed: (id, used) => call(client.rpc('admin_mark_gift_used', { p_voucher_id: id, p_used: used })),
     // More time (until the end of a London day, YYYY-MM-DD), and changing its words or where and when it is emailed (20261216100000).
     extend: (id, day) => call(client.rpc('admin_extend_gift_voucher', { p_voucher_id: id, p_until: day })),
@@ -40,13 +42,15 @@ export const giftAdminApi = createGiftAdminApi(supabase)
 
 // The groups on the page, in the order Vadim deals with them.
 export function giftGroups(list, now = Date.now()) {
+  // Buyers who cancelled and are owed their money back (20261217100000).
+  const refunds = list.filter(v => v.refund_to_send)
   const waiting = list.filter(v => v.status === 'awaiting_payment')
   const ready = list.filter(v => v.status === 'ready' && !v.expired)
   const ended = list.filter(v => v.status === 'ready' && v.expired)
   const used = list.filter(v => v.status === 'used')
   const yearAgo = now - 365 * 86400000
   const sold = list.filter(v => v.paid_at && Date.parse(v.paid_at) > yearAgo && v.status !== 'cancelled')
-  return { waiting, ready, ended, used, soldCount: sold.length, soldTotal: sold.reduce((sum, v) => sum + Number(v.price_gbp), 0) }
+  return { refunds, waiting, ready, ended, used, soldCount: sold.length, soldTotal: sold.reduce((sum, v) => sum + Number(v.price_gbp), 0) }
 }
 
 // On a client's page: the vouchers this client bought (matched by their email), newest first, leaving out cancelled ones.

@@ -184,6 +184,7 @@ export default function GiftVouchers({ openBooking }) {
       {found.length ? <ul role="list" className="admin-gift-list">{found.map(v => <VoucherRow key={v.id} voucher={v} busy={busy} act={act} openBooking={openBooking} />)}</ul>
         : <p className="admin-detail-hint">{typedCode.length === 8 ? 'No voucher has this code. Check it was typed right: if it still isn\'t found, the voucher is not one of yours.' : 'Nothing matches. Try the code, or part of a name or email.'}</p>}
     </section> : <>
+      {groups.refunds.length > 0 && group('Refunds to send', groups.refunds, '')}
       {group('Waiting for payment', groups.waiting, 'Nothing waiting. When someone buys a voucher, it shows here until you mark it paid.')}
       {group('Ready to use', groups.ready, 'None at the moment.')}
       {groups.ended.length > 0 && group('Ended unused', groups.ended, '')}

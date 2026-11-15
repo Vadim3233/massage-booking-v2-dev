@@ -17,6 +17,14 @@ describe('More › Gift vouchers', () => {
     expect([groups.waiting.length, groups.ready.length, groups.ended.length, groups.used.length]).toEqual([1, 1, 1, 2])
     expect([groups.soldCount, groups.soldTotal]).toEqual([2, 305])
   })
+  it('lists buyers who cancelled and are owed their money back, and records the refund', async () => {
+    const groups = giftGroups([{ status: 'cancelled', refund_to_send: true, price_gbp: 90, paid_at: '2026-11-20T10:00:00Z' }, { status: 'cancelled', refund_to_send: false }], Date.parse('2026-12-01T12:00:00Z'))
+    expect(groups.refunds).toHaveLength(1)
+    expect(groups.soldCount).toBe(0)
+    let sent
+    await createGiftAdminApi(client((name, args) => { sent = [name, args]; return { data: {}, error: null } })).refundSent('v1', false)
+    expect(sent).toEqual(['admin_gift_refund_sent', { p_voucher_id: 'v1', p_money_came: false }])
+  })
   it('says plainly when the database update is not applied yet', async () => {
     const api = createGiftAdminApi(client({ data: null, error: { code: 'PGRST202', message: 'Could not find the function public.admin_gift_vouchers' } }))
     await expect(api.list()).rejects.toThrow(NOT_SWITCHED_ON)
