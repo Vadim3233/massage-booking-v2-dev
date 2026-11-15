@@ -28,11 +28,25 @@ export function comparisonText(summary) {
   return `${Number(change) > 0 ? '+' : ''}${Number(change)}% vs ${PREVIOUS_WORDS[summary.kind]}`
 }
 
-const STILL_WORDS = { week: 'this week', month: 'this month', year: 'this year', tax_year: 'this tax year' }
-// "£520.00 still to come this month", only for a period not yet over and only when there is something.
-export function stillToComeText(summary) {
-  const amount = Number(summary.still_to_come_gbp)
-  return summary.still_to_come_gbp === null || summary.still_to_come_gbp === undefined || !(amount > 0) ? '' : `${money(amount)} still to come ${STILL_WORDS[summary.kind]}`
+
+// Money owed (admin_money_owed: sessions that went ahead and are not paid, late fees not paid), added up per appointment day:
+// Map { '2026-11-15' => 350 }. The calendar shows it, in the overdue colour, on a day with nothing paid yet.
+export function owedByDay(rows) {
+  const days = new Map()
+  for (const row of rows || []) days.set(row.date, (days.get(row.date) || 0) + (Number(row.amount_gbp) || 0))
+  return days
+}
+const EXPECTED_WORDS = { week: 'Expected this week', month: 'Expected this month', year: 'Expected this year', tax_year: 'Expected this tax year' }
+// The statement under the big figure, like a bank's: Paid (the period's total), Overdue (owed for appointments inside the period: sessions
+// that went ahead and are not paid, late fees not paid), Upcoming (still to come: not started yet, not paid) and what that adds up to.
+// Overdue and upcoming are never part of the total. null when nothing is overdue or upcoming, so the statement would only repeat the total.
+export function incomeStatement(summary, owedRows) {
+  const overdue = Math.round((owedRows || []).filter(row => row.date >= summary.from && row.date <= summary.to)
+    .reduce((sum, row) => sum + (Number(row.amount_gbp) || 0), 0) * 100) / 100
+  const upcoming = Number(summary.still_to_come_gbp) > 0 ? Number(summary.still_to_come_gbp) : 0
+  if (!(overdue > 0) && !(upcoming > 0)) return null
+  const paid = Number(summary.total_gbp) || 0
+  return { paid, overdue, upcoming, expected: Math.round((paid + overdue + upcoming) * 100) / 100, expectedLabel: EXPECTED_WORDS[summary.kind] }
 }
 
 // Each bar's short name: Mon (a week's days), 19 Oct (a month's weeks, by their first day), Jan (a year's months).
@@ -95,12 +109,12 @@ export function shortMoney(value) {
   const amount = Math.round(Number(value))
   return amount >= 1000 ? `£${(amount / 1000).toFixed(1).replace(/\.0$/, '')}k` : `£${amount}`
 }
-// What a screen reader says for a day: "Sun 1 Nov: £433.00 received, £178.00 booked, money owed".
+// What a screen reader says for a day: "Sun 1 Nov: £433.00 paid, £90.00 overdue, £178.00 upcoming".
 export function dayDescription(day, owed) {
   const parts = []
-  if (Number(day.received_gbp) > 0) parts.push(`${money(Number(day.received_gbp))} received`)
-  if (Number(day.to_come_gbp) > 0) parts.push(`${money(Number(day.to_come_gbp))} booked`)
-  if (owed) parts.push('money owed')
+  if (Number(day.received_gbp) > 0) parts.push(`${money(Number(day.received_gbp))} paid`)
+  if (Number(owed) > 0) parts.push(`${money(Number(owed))} overdue`)
+  if (Number(day.to_come_gbp) > 0) parts.push(`${money(Number(day.to_come_gbp))} upcoming`)
   return `${dateLabel(day.date)}: ${parts.length ? parts.join(', ') : 'nothing'}`
 }
 

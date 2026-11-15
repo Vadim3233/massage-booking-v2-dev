@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { money, today } from './calendarPresentation.js'
 import { incomeApi } from './incomeApi.js'
 import BusiestTimes from './BusiestTimes.jsx'
-import { barDescription, barLabel, calendarWeeks, comparisonText, csvFileName, dateLabelShort, dayDescription, dayShade, duration, hourSentence, incomeCsv, methodName, monthlyRates, nextAnchor, periodLabel, previousAnchor, rowNote, rowWhen, shortMoney, stillToComeText, workShare } from './incomePresentation.js'
+import { barDescription, barLabel, calendarWeeks, comparisonText, csvFileName, dateLabelShort, dayDescription, dayShade, duration, hourSentence, incomeCsv, incomeStatement, methodName, monthlyRates, nextAnchor, owedByDay, periodLabel, previousAnchor, rowNote, rowWhen, shortMoney, workShare } from './incomePresentation.js'
 
 const TABS = [['week', 'Week'], ['month', 'Month'], ['year', 'Year']]
 const REMEMBER = 'vad-admin-income-view'
@@ -17,7 +17,7 @@ export default function Income({ openBooking, openDay, openHours, api = incomeAp
   const [view, setView] = useState(remembered)
   const [anchor, setAnchor] = useState(today)
   const [state, setState] = useState({ key: '', summary: null, rows: [], error: '' })
-  const [owed, setOwed] = useState(null)
+  const [owedState, setOwed] = useState({ key: '', rows: null })
   const [attempt, setAttempt] = useState(0)
   const [picked, setPicked] = useState({ key: '', date: '' })
   const kind = view.tab === 'year' && view.tax ? 'tax_year' : view.tab
@@ -30,16 +30,19 @@ export default function Income({ openBooking, openDay, openHours, api = incomeAp
       .then(({ summary, rows }) => { if (live) setState({ key, summary, rows: rows || [], error: '' }) }, failure => { if (live) setState({ key, summary: null, rows: [], error: failure.message }) })
     return () => { live = false }
   }, [api, kind, anchor, key])
+  // Reloaded with every period, like the summary, so a session that has just started moves from Upcoming to Overdue (and one just paid
+  // leaves Overdue) without a gap or a double count between the two.
   useEffect(() => {
     let live = true
-    api.owed().then(rows => { if (live) setOwed(rows || []) }, () => { if (live) setOwed([]) })
+    api.owed().then(rows => { if (live) setOwed({ key, rows: rows || [] }) }, () => { if (live) setOwed({ key, rows: [] }) })
     return () => { live = false }
-  }, [api, attempt])
+  }, [api, key])
   const loading = state.key !== key
   // A day tapped on the calendar narrows the list to that day; moving to another period forgets it.
   const day = picked.key === key ? picked.date : ''
   const shownRows = day ? state.rows.filter(row => row.date === day) : state.rows
-  const owedDays = new Set((owed || []).map(row => row.date))
+  const owed = owedState.rows
+  const owedDays = owedByDay(owed)
   function pick(date) { setPicked(current => ({ key, date: current.key === key && current.date === date ? '' : date })) }
   const summary = loading ? null : state.summary
   function choose(tab) { setView(current => ({ ...current, tab })); setAnchor(today()) }
@@ -66,7 +69,8 @@ export default function Income({ openBooking, openDay, openHours, api = incomeAp
   const hours = summary?.hours
   const rates = summary && (kind === 'year' || kind === 'tax_year') ? monthlyRates(summary.bars) : []
   const now = today()
-  const still = summary ? stillToComeText(summary) : ''
+  // Overdue needs the owed list; until it arrives the statement waits rather than show a wrong "Expected".
+  const statement = summary && owedState.key === key ? incomeStatement(summary, owed) : null
   return <section className="admin-review admin-income" aria-labelledby="income-title">
     <header className="admin-review-heading"><div><h1 id="income-title">Income</h1><p>Money received, by the date of the appointment.</p></div></header>
     <div className="admin-tabs admin-income-tabs" role="tablist" aria-label="Income periods" onKeyDown={move}>
@@ -85,10 +89,16 @@ export default function Income({ openBooking, openDay, openHours, api = incomeAp
       {loading && <p role="status">Loading income…</p>}
       {summary && <>
         <div className="admin-income-total">
+          <span className="admin-income-total-label">{summary.to < now ? 'Paid' : 'Paid so far'}</span>
           <strong className="figure">{money(Number(summary.total_gbp))}</strong>
           <span className="admin-income-compare">{comparisonText(summary)}</span>
         </div>
-        {still && <p className="admin-income-still">{still}</p>}
+        {statement && <dl className="admin-income-statement" aria-label="Paid, overdue and upcoming">
+          <div className="is-paid"><dt>Paid<small>In the bank or cash in hand</small></dt><dd>{money(statement.paid)}</dd></div>
+          {statement.overdue > 0 && <div className="is-overdue"><dt>Overdue<small>Done, not paid yet (or a late fee)</small></dt><dd>{money(statement.overdue)}</dd></div>}
+          {statement.upcoming > 0 && <div className="is-upcoming"><dt>Upcoming<small>Booked, not paid yet</small></dt><dd>{money(statement.upcoming)}</dd></div>}
+          <div className="is-expected"><dt>{statement.expectedLabel}<small>If everyone pays</small></dt><dd className="figure">{money(statement.expected)}</dd></div>
+        </dl>}
         <dl className="admin-income-facts">
           <div><dt>Bank transfer</dt><dd>{money(Number(summary.bank_gbp))}</dd></div>
           <div><dt>Cash</dt><dd>{money(Number(summary.cash_gbp))}</dd></div>
@@ -100,15 +110,16 @@ export default function Income({ openBooking, openDay, openHours, api = incomeAp
           <table className="admin-income-cal">
             <thead><tr>{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(name => <th key={name} scope="col" abbr={name}>{name[0]}</th>)}</tr></thead>
             <tbody>{calendarWeeks(summary.days).map(week => <tr key={week.find(Boolean).date}>{week.map((item, index) => <td key={item?.date || `empty-${index}`}>
-              {item && <button type="button" aria-pressed={day === item.date} aria-label={dayDescription(item, owedDays.has(item.date))} onClick={() => pick(item.date)}
-                className={`admin-income-day shade-${dayShade(item.received_gbp, bestDay)}${Number(item.to_come_gbp) > 0 ? ' is-booked' : ''}${item.date === now ? ' is-today' : ''}${owedDays.has(item.date) ? ' is-owed' : ''}`}>
+              {item && <button type="button" aria-pressed={day === item.date} aria-label={dayDescription(item, owedDays.get(item.date))} onClick={() => pick(item.date)}
+                className={`admin-income-day shade-${dayShade(item.received_gbp, bestDay)}${Number(item.to_come_gbp) > 0 ? ' is-booked' : ''}${item.date === now ? ' is-today' : ''}${owedDays.get(item.date) > 0 ? ' is-owed' : ''}${owedDays.get(item.date) > 0 && !(Number(item.received_gbp) > 0) ? ' is-waiting' : ''}`}>
                 <span className="admin-income-day-number">{Number(item.date.slice(8))}</span>
                 {Number(item.received_gbp) > 0 ? <span className="admin-income-day-money">{shortMoney(item.received_gbp)}</span>
+                  : owedDays.get(item.date) > 0 ? <span className="admin-income-day-money">{shortMoney(owedDays.get(item.date))}</span>
                   : Number(item.to_come_gbp) > 0 ? <span className="admin-income-day-money">{shortMoney(item.to_come_gbp)}</span> : null}
               </button>}
             </td>)}</tr>)}</tbody>
           </table>
-          <p className="admin-income-key" aria-hidden="true"><span className="key-received">Received</span><span className="key-booked">Booked, not paid yet</span><span className="key-owed">Money owed</span></p>
+          <p className="admin-income-key" aria-hidden="true"><span className="key-received">Paid</span><span className="key-owed">Overdue</span><span className="key-booked">Upcoming</span><span className="key-dot">Part not paid</span></p>
         </section> : <ol className={`admin-income-bars is-${kind}`} aria-label="Income in each part of the period">
           {(summary.bars || []).map(bar => <li key={bar.from} aria-label={barDescription(kind, bar)}>
             <span className="admin-income-bar" style={{ '--share': highest > 0 ? Number(bar.total_gbp) / highest : 0 }} aria-hidden="true" />
@@ -137,7 +148,7 @@ export default function Income({ openBooking, openDay, openHours, api = incomeAp
       </>}
       {openDay && <BusiestTimes api={api} openDay={openDay} openHours={openHours} />}
       {owed && owed.length > 0 && <details className="admin-income-owed">
-        <summary><span>Money owed to you</span><span className="admin-income-count" aria-label={`${owed.length} appointments`}>{owed.length}</span></summary>
+        <summary><span>Overdue payments, all months</span><span className="admin-income-count" aria-label={`${owed.length} appointments`}>{owed.length}</span></summary>
         <p className="admin-detail-hint">Appointments that have happened with money still missing. Open one to mark it paid or received.</p>
         <ul role="list" className="admin-income-list">
           {owed.map(row => <li key={`${row.booking_id}:${row.reason}`}><button type="button" onClick={() => openBooking(row.booking_id)}>

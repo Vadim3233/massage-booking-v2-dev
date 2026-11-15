@@ -1,6 +1,6 @@
 # VadMassage booking app: feature catalogue
 
-Last updated: 15 November 2026 (extra time when a client stays longer).
+Last updated: 15 November 2026 (Income: Paid / Overdue / Upcoming statement; extra time when a client stays longer).
 
 This is a plain-English list of everything the app does today, grouped by area. Each entry says what the feature does, why it was built, where it was built (the pull request, or "PR", and any database change, called a "migration"), and what would need to become a **setting** if the same feature were offered to other therapists in a general app.
 
@@ -270,9 +270,9 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **For a general app:** professional body, membership number and title; receipt number prefix; VAT registration; business address.
 
 ### Income
-- **What it does:** More › Income shows money received by week, month, year or UK tax year, money owed and still to come, with a CSV download. The month is a calendar shaded by income, and "Your hour" shows what each working hour earned, counting travel time, by area and by month.
+- **What it does:** More › Income shows money received by week, month, year or UK tax year, with a CSV download. Under the big "Paid so far" figure, a short statement like a bank's splits the period into **Paid** (in the bank or cash in hand), **Overdue** (sessions done, or late fees, not paid yet), **Upcoming** (booked, not paid yet) and **Expected** (what it all adds up to if everyone pays); it only appears when something is overdue or upcoming. The month is a calendar in the same three colours: green shaded by income for paid, terracotta with the amount for overdue, dashed green for upcoming. A list of all overdue payments opens each booking. "Your hour" shows what each working hour earned, counting travel time, by area and by month.
 - **Why:** Vadim wanted to see what he earns, and what his time is really worth once travel is counted.
-- **Built in:** PR #66 (`20261109100000_income.sql`, ADR-071), PR #104 (`20261129100000_income_calendar_hourly.sql`, ADR-094).
+- **Built in:** PR #66 (`20261109100000_income.sql`, ADR-071), PR #104 (`20261129100000_income_calendar_hourly.sql`, ADR-094), Paid / Overdue / Upcoming statement and overdue days on the calendar (PR #137, 15 Nov 2026), with `20261218100000_income_owed_gaps.sql` so extra still to pay after an edit, a gift voucher booking part paid, and a late fee on an early cancellation each land in the right bucket.
 - **For a general app:** tax year start, currency; travel counting only for mobile therapists.
 
 ### No travel fee for a chosen client
