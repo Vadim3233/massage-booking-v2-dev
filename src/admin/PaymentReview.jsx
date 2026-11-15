@@ -4,7 +4,7 @@ import { groupByAppointmentDay } from './reviewDays.js'
 import { extraOwed, loadReviewResource, needsYou, paymentOverdue, paymentReviewApi } from './paymentReviewApi.js'
 import { ActionDialog } from './BookingActions.jsx'
 import { lifecycleApi } from './bookingLifecycleApi.js'
-import { extraMinutes, minutesWords } from './extendApi.js'
+import { minutesWords, owedExtraMinutes } from './extendApi.js'
 import { activeReminder, reminderWhen, useReminders } from './paymentReminders.js'
 import PaymentActions from './PaymentActions.jsx'
 import PaymentReminder from './PaymentReminder.jsx'
@@ -21,7 +21,7 @@ function Item({ booking, openBooking, refresh, reminder, owing }) {
   // The booking is paid, with an extra still to come (extra time, or a change that cost more).
   const extra = extraOwed(booking)
   const [receiving, setReceiving] = useState(false)
-  const extraWords = extraMinutes(booking) ? `the extra ${minutesWords(extraMinutes(booking))}` : 'the extra'
+  const extraWords = owedExtraMinutes(booking) ? `the extra ${minutesWords(owedExtraMinutes(booking))}` : 'the extra'
   return <li className={`admin-review-item ${needs ? '' : 'wait'}`} data-variant="sand">
     <p className={`chip ${needs ? 'chip--needs' : 'chip--wait'} admin-status pending`}>{reminder ? `Reminder set · back ${reminderWhen(reminder.until)}` : extra ? (booking.balance_reported_at ? `Client says ${extraWords} is paid, check your bank` : `Session done · ${extraWords} not paid yet`) : overdue ? (cash ? 'Session done · cash not marked received' : booking.booking_payments.status === 'awaiting_verification' ? 'Session done · client says paid, check your bank' : 'Session done · not paid yet') : cash ? 'Cash request to decide' : booking.booking_payments.status === 'awaiting_transfer' ? 'Transfer not yet declared by the client' : 'Bank transfer to verify'}</p>
     <div className="admin-card-heading"><h3>{clientName(booking)}</h3><strong className="admin-card-price">{extra ? `${money(booking.balance_due_gbp)} extra` : money(booking.total_gbp)}</strong></div>

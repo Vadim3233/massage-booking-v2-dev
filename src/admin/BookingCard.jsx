@@ -53,10 +53,12 @@ export default function BookingCard({ booking, open, now, tag, changed }) {
   const extendCandidate = Boolean(changed) && booking.date === today() && canExtend(booking, now || new Date())
   const directions = canNavigateTo(booking, now) && !extendCandidate ? directionsLink(booking) : null
   // Before the appointment ends the foot of the card holds Directions, so Mark paid is then on the booking itself.
-  const transferDue = Boolean(changed) && !canNavigateTo(booking, now) && paymentActions(booking).includes('receiveBank')
-  // The client stayed longer: on today's card, once the session has started, when the card has no other action to offer.
+  const transferDue = Boolean(changed) && !(canNavigateTo(booking, now) && directionsLink(booking)) && paymentActions(booking).includes('receiveBank')
+  // The client stayed longer: on today's card, once the session has started. While it is still running it takes the place of Cash received
+  // (cash is usually taken at the end); once it is over, Cash received comes back and Extra time stays on the booking itself.
   const [extending, setExtending] = useState(false)
-  const extendable = extendCandidate && !refundable && !cashDue && !transferDue
+  const extendable = extendCandidate && !refundable && !transferDue && (!cashDue || canNavigateTo(booking, now))
+  const cashShown = cashDue && !extendable
   const extra = extraBadge(booking)
   async function extended(text, isError = false) {
     setExtending(false)
@@ -65,7 +67,7 @@ export default function BookingCard({ booking, open, now, tag, changed }) {
   }
   const where = shortWhere(booking.address_snapshot)
   const extras = booking.booking_status === 'cancelled' ? [] : extrasList(booking)
-  return <div className={`admin-card-wrap ${directions ? 'has-directions' : ''} ${refundable || cashDue || transferDue || extendable ? 'has-card-action' : ''}`}>
+  return <div className={`admin-card-wrap ${directions ? 'has-directions' : ''} ${refundable || cashShown || transferDue || extendable ? 'has-card-action' : ''}`}>
     <button className={`admin-card ${booking.booking_status === 'cancelled' ? 'cancelled' : ''}`} data-chip={state.chip} data-variant={state.variant} onClick={open}>
       <span className="admin-card-when">
         <span className="admin-card-times">{time(booking.start_minutes)}<span aria-hidden="true"> – </span><span className="admin-sr-only"> to </span>{time(bookingEnd(booking))}</span>
@@ -90,7 +92,7 @@ export default function BookingCard({ booking, open, now, tag, changed }) {
       </span>
     </button>
     {refundable && <button type="button" className="admin-card-refund" aria-label={`Record refund sent to ${clientName(booking)}`} onClick={() => setRefunding(true)}><Icon name="check" size={15} />Record refund</button>}
-    {cashDue && <button type="button" className="admin-card-refund admin-card-cash" disabled={receiving} aria-label={`Mark ${cashAmount} cash received from ${clientName(booking)}`} onClick={receiveCash}><Icon name="check" size={15} />Cash received</button>}
+    {cashShown && <button type="button" className="admin-card-refund admin-card-cash" disabled={receiving} aria-label={`Mark ${cashAmount} cash received from ${clientName(booking)}`} onClick={receiveCash}><Icon name="check" size={15} />Cash received</button>}
     {transferDue && <button type="button" className="admin-card-refund admin-card-cash" disabled={receiving} aria-label={`Mark ${cashAmount} from ${clientName(booking)} paid`} onClick={receiveCash}><Icon name="check" size={15} />Mark paid</button>}
     {extendable && <button type="button" className="admin-card-refund admin-card-extend" aria-label={`Add extra time for ${clientName(booking)}`} onClick={() => setExtending(true)}><Icon name="plus" size={15} />Extra time</button>}
     {extending && <ExtendDialog booking={booking} close={() => setExtending(false)} done={extended} />}

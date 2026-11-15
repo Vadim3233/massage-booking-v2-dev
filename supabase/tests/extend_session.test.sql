@@ -65,7 +65,7 @@ select is(public.admin_extend_preview('00000000-0000-4000-8000-000000000b01')->>
 select is(public.admin_extend_preview('00000000-0000-4000-8000-000000000b01')->'pay_by', '["cash", "transfer", "free"]'::jsonb, 'paid: cash, transfer or free');
 select is((public.admin_extend_preview('00000000-0000-4000-8000-000000000b01')->'next'->>'start_minutes')::integer, 1170, 'the next booking that day is named');
 select is(public.admin_extend_preview('00000000-0000-4000-8000-000000000b02')->'pay_by', '["bill", "free"]'::jsonb, 'not paid yet: on the bill, or free');
-select is(public.admin_extend_preview('00000000-0000-4000-8000-000000000b07')->'pay_by', '["transfer", "free"]'::jsonb, 'transfer to check: transfer or free');
+select is(public.admin_extend_preview('00000000-0000-4000-8000-000000000b07')->>'refusal', 'Check the client''s payment first (Mark received in To check), then add the extra time.', 'a transfer to check is checked first');
 select lives_ok($$ select public.admin_save_extra_time_rate(100) $$, 'he saves £100 an hour');
 select is((public.admin_extend_preview('00000000-0000-4000-8000-000000000b01')->'sessions'->0->>'hour_price')::numeric, 100.00, 'the saved rate is used');
 select lives_ok($$ select public.admin_save_extra_time_rate(null) $$, 'he clears it');
@@ -101,6 +101,14 @@ select is((pg_temp.b('00000000-0000-4000-8000-000000000b01')).total_gbp, 135.00,
 select is((select pay_by from public.booking_extensions where booking_id = '00000000-0000-4000-8000-000000000b01' and minutes = 60), 'free', 'any price with "free" is recorded as £0');
 select is((select price_gbp from public.booking_extensions where booking_id = '00000000-0000-4000-8000-000000000b01' and minutes = 60), 0.00, 'no charge is £0, whatever was typed');
 select throws_ok($$ select pg_temp.ext('00000000-0000-4000-8000-000000000b01', 45, 45, 'cash') $$, '22023', 'A booking can have up to 2 hours of extra time in all.', 'not more than 2 hours in all');
+select throws_ok($$ select public.admin_remove_extension((select id from public.booking_extensions where booking_id = '00000000-0000-4000-8000-000000000b01' and pay_by = 'cash'), gen_random_uuid(), pg_temp.bv('00000000-0000-4000-8000-000000000b01')) $$,
+  '22023', 'This extra was paid in cash, so it cannot be removed.', 'cash already received cannot be removed');
+
+-- A booking with extra time took place: not cancelled, no-show or moved.
+select throws_ok($$ update public.bookings set booking_status = 'no_show' where id = '00000000-0000-4000-8000-000000000b01' $$, '22023', 'This booking has extra time. Remove the extra time first.', 'no no-show');
+select throws_ok($$ update public.bookings set booking_status = 'cancelled', cancelled_at = now(), cancelled_by_actor_type = 'admin' where id = '00000000-0000-4000-8000-000000000b01' $$, '22023', 'This booking has extra time. Remove the extra time first.', 'no cancelling');
+select throws_ok($$ update public.bookings set date = date + 5 where id = '00000000-0000-4000-8000-000000000b01' $$, '22023', 'This booking has extra time. Remove the extra time first.', 'no moving');
+select lives_ok($$ update public.bookings set booking_status = 'completed' where id = '00000000-0000-4000-8000-000000000b01' $$, 'Mark completed still works');
 
 -- Edit booking asks for the extra time to be removed first.
 select throws_ok($$ select public.admin_preview_booking_change('00000000-0000-4000-8000-000000000b01', '[{"service_id":"00000000-0000-4000-8000-0000000000e1","duration_minutes":90}]', false) $$,
@@ -131,6 +139,17 @@ select is((pg_temp.b('00000000-0000-4000-8000-000000000b06')).balance_reported_a
 select ok(not exists (select 1 from public.admin_payment_review_queue(0) q where q.id = '00000000-0000-4000-8000-000000000b06'), 'off To check');
 select throws_ok($$ select public.admin_remove_extension((select id from public.booking_extensions where booking_id = '00000000-0000-4000-8000-000000000b06'), gen_random_uuid(), pg_temp.bv('00000000-0000-4000-8000-000000000b06')) $$,
   '22023', 'The extra has already been received, so this extra time cannot be removed.', 'received extra time cannot be removed');
+-- A second extra by transfer: the first one, received, still cannot be removed; the new one can.
+select lives_ok($$ select pg_temp.ext('00000000-0000-4000-8000-000000000b06', 15, 45, 'transfer') $$, 'another +15 min by transfer');
+select throws_ok($$ select public.admin_remove_extension((select id from public.booking_extensions where booking_id = '00000000-0000-4000-8000-000000000b06' and minutes = 30), gen_random_uuid(), pg_temp.bv('00000000-0000-4000-8000-000000000b06')) $$,
+  '22023', 'The extra has already been received, so this extra time cannot be removed.', 'the received one stays, whatever is owed now');
+select lives_ok($$ select public.admin_remove_extension((select id from public.booking_extensions where booking_id = '00000000-0000-4000-8000-000000000b06' and minutes = 15), gen_random_uuid(), pg_temp.bv('00000000-0000-4000-8000-000000000b06')) $$, 'the new one can be removed');
+select is((pg_temp.b('00000000-0000-4000-8000-000000000b06')).balance_due_gbp, 0.00, 'nothing owed again');
+select pg_temp.as_ann();
+set local role authenticated;
+select is((select count(*)::integer from public.booking_extensions), 0, 'clients do not read the table itself (only through their booking)');
+reset role;
+select pg_temp.as_admin();
 
 -- Not paid yet, bank transfer: on the bill, one payment covers it; removed again.
 select lives_ok($$ select pg_temp.ext('00000000-0000-4000-8000-000000000b02', 30, 45, 'bill', true) $$, 'unpaid booking, +30 min on the bill, thank-you ticked');
@@ -146,10 +165,11 @@ select is((pg_temp.b('00000000-0000-4000-8000-000000000b02')).treatment_duration
 select lives_ok($$ select pg_temp.ext('00000000-0000-4000-8000-000000000b03', 15, 23, 'bill') $$, 'cash booking, +15 min £23 on the bill');
 select is((pg_temp.pay('00000000-0000-4000-8000-000000000b03')).amount_gbp, 113.00, 'cash to collect: £113');
 
--- A transfer the client says they sent: the extra is separate.
-select lives_ok($$ select pg_temp.ext('00000000-0000-4000-8000-000000000b07', 30, 45, 'transfer') $$, 'transfer to check, +30 min by transfer');
-select is((pg_temp.pay('00000000-0000-4000-8000-000000000b07')).amount_gbp, 90.00, 'the transfer to check is still £90');
-select is((pg_temp.b('00000000-0000-4000-8000-000000000b07')).balance_due_gbp, 45.00, 'the extra is £45 still to pay');
+-- A transfer the client says they sent is checked first, so the amount checked is the amount sent.
+select throws_ok($$ select pg_temp.ext('00000000-0000-4000-8000-000000000b07', 30, 45, 'transfer') $$, '22023', 'Check the client''s payment first (Mark received in To check), then add the extra time.', 'transfer to check: not yet');
+-- A refund to send comes first.
+update public.bookings set refund_due_gbp = 30 where id = '00000000-0000-4000-8000-000000000b09';
+select is(public.admin_extend_preview('00000000-0000-4000-8000-000000000b09')->>'refusal', 'This booking has a refund to send. Record the refund first, then add the extra time.', 'a refund to send comes first');
 
 -- Idempotent.
 create temp table req as select gen_random_uuid() as id, pg_temp.bv('00000000-0000-4000-8000-000000000b10') as v;

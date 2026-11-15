@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { canExtend, createExtendApi, extraBadge, minutesWords, nextClash, runningLateLink, runningLateText, stayedLongerCount, suggestedPrice } from './extendApi.js'
+import { canExtend, canRemoveExtension, createExtendApi, extraBadge, minutesWords, nextClash, owedExtraMinutes, runningLateLink, runningLateText, stayedLongerCount, suggestedPrice } from './extendApi.js'
 import { lifecycleActions } from './bookingLifecycleApi.js'
 import { extraOwed, needsYou } from './paymentReviewApi.js'
 import { combinedReminderText, owed, owedLine, reminderDue, reminderText } from './shareBooking.js'
@@ -89,5 +89,25 @@ describe('the Extend calls', () => {
   })
   it('counts the bookings a client stayed longer on', () => {
     expect(stayedLongerCount([{ booking_id: 'a' }, { booking_id: 'a' }, { booking_id: 'b' }])).toBe(2)
+  })
+})
+
+describe('what can be undone and what is owed', () => {
+  const paid = { booking_status: 'completed', balance_due_gbp: 45, booking_payments: { status: 'paid' } }
+  it('keeps extra time whose money came in', () => {
+    expect(canRemoveExtension(paid, { pay_by: 'cash', price_gbp: 45 })).toBe(false)
+    expect(canRemoveExtension(paid, { pay_by: 'transfer', price_gbp: 45, received_at: '2026-11-15T18:00:00Z' })).toBe(false)
+    expect(canRemoveExtension(paid, { pay_by: 'transfer', price_gbp: 45 })).toBe(true)
+    expect(canRemoveExtension(paid, { pay_by: 'free', price_gbp: 0 })).toBe(true)
+    expect(canRemoveExtension(paid, { pay_by: 'bill', price_gbp: 45 })).toBe(false)
+    expect(canRemoveExtension({ ...paid, booking_payments: { status: 'awaiting_transfer' } }, { pay_by: 'bill', price_gbp: 45 })).toBe(true)
+  })
+  it('names only the extra time still to pay', () => {
+    expect(owedExtraMinutes({ booking_extensions: [{ minutes: 30, pay_by: 'cash' }, { minutes: 15, pay_by: 'transfer' }, { minutes: 30, pay_by: 'transfer', received_at: 'x' }] })).toBe(15)
+  })
+  it('a booking with extra time is not a no-show, and is not edited, moved or cancelled', () => {
+    const actions = lifecycleActions({ booking_status: 'confirmed', date: '2026-11-15', start_minutes: 600, booking_payments: { status: 'paid' }, booking_extensions: [{ minutes: 30, pay_by: 'free' }] })
+    for (const kind of ['noShow', 'edit', 'reschedule', 'cancel']) expect(actions).not.toContain(kind)
+    expect(actions).toContain('complete')
   })
 })

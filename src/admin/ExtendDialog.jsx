@@ -13,7 +13,7 @@ export default function ExtendDialog({ booking, close, done, api = extendApi }) 
   const [preview, setPreview] = useState(null)
   const [loadError, setLoadError] = useState('')
   const [sessionId, setSessionId] = useState(null)
-  const [minutes, setMinutes] = useState(30)
+  const [chosen, setMinutes] = useState(30)
   // The price he typed, or null while it follows the suggested one (the time and the person).
   const [typed, setTyped] = useState(null)
   const [payBy, setPayBy] = useState(null)
@@ -44,6 +44,8 @@ export default function ExtendDialog({ booking, close, done, api = extendApi }) 
   const session = sessions.find(item => item.id === sessionId) || sessions[0]
   const left = MAX_EXTRA - Number(preview?.extended_minutes || 0)
   const steps = STEPS.filter(step => step <= left)
+  // 30 minutes to start with, or the most that is still allowed.
+  const minutes = steps.includes(chosen) ? chosen : steps.filter(step => step < chosen).at(-1) ?? steps[0] ?? 0
   const suggested = suggestedPrice(session?.hour_price, minutes)
   const price = typed ?? String(suggested)
   const amount = payBy === 'free' ? 0 : Number(price)
@@ -83,7 +85,7 @@ export default function ExtendDialog({ booking, close, done, api = extendApi }) 
           {sessions.map((item, index) => <label key={item.id}><input type="radio" name="extend-who" checked={session?.id === item.id} disabled={busy} onChange={() => { setSessionId(item.id); setTyped(null) }} /> {item.recipient_name || `Person ${index + 1}`} · {item.service_name}</label>)}
         </fieldset>}
         {steps.length === 0 ? <p role="status">This booking already has {minutesWords(MAX_EXTRA)} of extra time, the most it can have.</p> : <>
-          <fieldset className="admin-who admin-fee-choices" style={{ '--choices': steps.length }}><legend>How much longer?</legend>
+          <fieldset className="admin-who admin-fee-choices" style={{ '--choices': Math.min(steps.length, 3) }}><legend>How much longer?</legend>
             {steps.map(step => <label key={step}><input type="radio" name="extend-minutes" checked={minutes === step} disabled={busy} onChange={() => { setMinutes(step); setTyped(null) }} /> +{step}</label>)}
           </fieldset>
           <p className="admin-extend-ends" role="status"><span>Now ends</span><b>{time(Number(preview.end_minutes))} → {newEnd(preview, minutes)}</b></p>

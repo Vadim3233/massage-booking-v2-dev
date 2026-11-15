@@ -6,7 +6,7 @@ booking_sessions(*,booking_session_preferences(*),booking_session_enhancements(*
 booking_payments(*),booking_enhancements(*),booking_extensions(*)`
 const queueFields = `id,client_id,booking_reference,date,start_minutes,treatment_duration_minutes,total_gbp,balance_due_gbp,balance_reported_at,booking_status,created_at,updated_at,
 clients!bookings_client_id_fkey(id,first_name,last_name,phone),booking_sessions(service_name_snapshot,duration_minutes),
-booking_payments(method,status,updated_at,amount_gbp,payment_reference),booking_extensions(minutes,price_gbp,pay_by)`
+booking_payments(method,status,updated_at,amount_gbp,payment_reference),booking_extensions(minutes,price_gbp,pay_by,received_at)`
 // What needs the Admin right now: transfers the client says they made, cash requests to decide, and an appointment that has happened
 // without the payment being received yet.
 export const NEEDS_YOU = ['awaiting_verification', 'awaiting_approval']

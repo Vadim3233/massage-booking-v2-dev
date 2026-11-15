@@ -4,7 +4,7 @@ import { whatsappNumber } from './contactLinks.js'
 
 // Extra time: a client asks to stay longer (20261219100000_extend_session.sql). Only the Admin adds it, from the session's start until 7 days after.
 
-export const STEPS = [15, 30, 45, 60]
+export const STEPS = [15, 30, 45, 60, 90, 120]
 export const MAX_EXTRA = 120
 export const PAY_LABELS = {
   cash: 'Cash now, received',
@@ -15,6 +15,17 @@ export const PAY_LABELS = {
 
 export const extensionsOf = booking => booking?.booking_extensions || []
 export const extraMinutes = booking => extensionsOf(booking).reduce((sum, item) => sum + Number(item.minutes || 0), 0)
+// The extra time still to be paid by transfer (not the cash, free or received ones): what a reminder or To check names.
+export const owedExtraMinutes = booking => extensionsOf(booking).filter(item => item.pay_by === 'transfer' && !item.received_at)
+  .reduce((sum, item) => sum + Number(item.minutes || 0), 0)
+// Whether "Remove" can undo this extra time: not once its money came in (cash, a received transfer, a bill paid or sent), and only on a session that went ahead.
+export function canRemoveExtension(booking, extension) {
+  if (!['confirmed', 'completed'].includes(booking?.booking_status) || extension.received_at || extension.pay_by === 'cash') return false
+  const payment = Array.isArray(booking.booking_payments) ? booking.booking_payments[0] : booking.booking_payments
+  if (extension.pay_by === 'bill' && Number(extension.price_gbp) > 0) return ['awaiting_transfer', 'approved', 'awaiting_approval'].includes(payment?.status)
+  if (extension.pay_by === 'transfer') return Number(booking.balance_due_gbp) >= Number(extension.price_gbp)
+  return true
+}
 
 // Whether the booking card and the booking offer "Add extra time": a session that went ahead, once it has started, for up to 7 days.
 export function canExtend(booking, now = new Date()) {
@@ -88,7 +99,11 @@ const SAFE = new Set([
   'That would run past midnight. Choose less extra time.',
   'Extra time can only be changed on a session that went ahead.',
   'The extra has already been received, so this extra time cannot be removed.',
-  'The bill with this extra time has already been paid, so it cannot be removed.',
+  'The bill with this extra time has already been paid or sent, so it cannot be removed.',
+  'This extra was paid in cash, so it cannot be removed.',
+  'Confirm the booking first, then add the extra time.',
+  "Check the client's payment first (Mark received in To check), then add the extra time.",
+  'This booking has a refund to send. Record the refund first, then add the extra time.',
   'Enter an hourly price between £1 and £1,000',
 ])
 function failure(error) {

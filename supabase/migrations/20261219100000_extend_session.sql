@@ -41,15 +41,17 @@ create table if not exists public.booking_extensions (
   price_gbp numeric(10,2) not null constraint booking_extensions_price_valid check (price_gbp >= 0 and price_gbp <= 1000),
   pay_by text not null constraint booking_extensions_pay_by_valid check (pay_by in ('bill', 'cash', 'transfer', 'free')),
   created_at timestamptz not null default now(),
-  created_by uuid references auth.users(id) on delete set null
+  created_by uuid references auth.users(id) on delete set null,
+  -- When the money for this extra came in (cash there and then, or Mark extra received). Received extra time cannot be removed.
+  received_at timestamptz
 );
+alter table public.booking_extensions add column if not exists received_at timestamptz;
 create index if not exists booking_extensions_booking_idx on public.booking_extensions (booking_id, created_at);
 alter table public.booking_extensions enable row level security;
 drop policy if exists "admins can read booking extensions" on public.booking_extensions;
 create policy "admins can read booking extensions" on public.booking_extensions for select to authenticated using (public.is_booking_admin());
+-- Clients see their extra time only through get_my_booking (which leaves out who added it), never by reading the table.
 drop policy if exists "clients can read own booking extensions" on public.booking_extensions;
-create policy "clients can read own booking extensions" on public.booking_extensions for select to authenticated using (
-  exists (select 1 from public.bookings b join public.clients c on c.id = b.client_id where b.id = booking_extensions.booking_id and c.auth_user_id = auth.uid()));
 -- Written only through the functions below.
 revoke all on table public.booking_extensions from public, anon, authenticated;
 grant select on table public.booking_extensions to authenticated;
@@ -161,16 +163,20 @@ stable
 set search_path = ''
 as $$
   select case
+    when b.booking_status in ('awaiting_transfer', 'awaiting_payment_verification', 'awaiting_cash_approval') then 'Confirm the booking first, then add the extra time.'
     when b.booking_status not in ('confirmed', 'completed') then 'Extra time can only be added to a session that went ahead.'
     when ((b.date + make_interval(mins => b.start_minutes)) at time zone 'Europe/London') > p_now then 'The session has not started yet. To make it longer before then, use Edit booking.'
     when b.date < p_today - 7 then 'Extra time can be added up to 7 days after the session.'
     when p.id is null or p.status in ('rejected', 'refunded') then 'This booking has no payment to add extra time to.'
+    -- The amount the client says they sent is checked as it is; the extra comes after (otherwise the two would never match).
+    when p.status = 'awaiting_verification' then 'Check the client''s payment first (Mark received in To check), then add the extra time.'
+    when coalesce(b.refund_due_gbp, 0) > 0 then 'This booking has a refund to send. Record the refund first, then add the extra time.'
   end;
 $$;
 revoke all on function public.extension_refusal(public.bookings, public.booking_payments, timestamptz, date) from public, anon, authenticated;
 
--- How the extra can be paid: not paid yet, it goes on the bill; paid, cash there and then or a transfer still to come; a transfer the
--- client says they sent (not checked yet), a transfer still to come. Always free.
+-- How the extra can be paid: not paid yet, it goes on the bill; paid, cash there and then or a transfer still to come. Always free.
+-- (A transfer the client says they sent is checked first: extension_refusal.)
 create or replace function public.extension_pay_choices(p public.booking_payments)
 returns jsonb
 language sql
@@ -179,7 +185,6 @@ set search_path = ''
 as $$
   select case
     when p.status = 'paid' then '["cash", "transfer", "free"]'::jsonb
-    when p.status = 'awaiting_verification' then '["transfer", "free"]'::jsonb
     when p.status in ('awaiting_transfer', 'approved', 'awaiting_approval') then '["bill", "free"]'::jsonb
     else '[]'::jsonb
   end;
@@ -229,15 +234,11 @@ declare
   v_first text;
   v_lines text;
   v_body text;
-  v_length text;
 begin
   select * into b from public.bookings where id = p_booking_id;
   select * into p from public.booking_payments where booking_id = b.id;
   if nullif(btrim(b.booking_email_snapshot), '') is null then return; end if;
   select nullif(btrim(c.first_name), '') into v_first from public.clients c where c.id = b.client_id;
-  v_length := case when b.treatment_duration_minutes % 60 = 0 then (b.treatment_duration_minutes / 60) || case when b.treatment_duration_minutes = 60 then ' hour' else ' hours' end
-    when b.treatment_duration_minutes > 60 then (b.treatment_duration_minutes / 60) || ' h ' || (b.treatment_duration_minutes % 60) || ' min'
-    else b.treatment_duration_minutes || ' minutes' end;
   -- The bill: each treatment, each extra time, then extras, travel and congestion as one line when there are any, and the total.
   v_lines := (select string_agg(l.line, E'\n' order by l.sort, l.pos) from (
       select 1 as sort, s.position as pos, format('%s, %s minutes%s: %s', s.service_name_snapshot, s.duration_minutes,
@@ -253,7 +254,7 @@ begin
     ) l) || E'\n' || 'Total: ' || public.notification_money(b.total_gbp)
     || case when coalesce(b.gift_covered_gbp, 0) > 0 then E'\n' || 'Gift voucher: -' || public.notification_money(b.gift_covered_gbp) else '' end;
 
-  v_body := format('%s Thank you for staying a little longer today. Your session was %s.', coalesce('Hi ' || v_first || '!', 'Hello!'), v_length)
+  v_body := format('%s Thank you for staying a little longer today (an extra %s minutes).', coalesce('Hi ' || v_first || '!', 'Hello!'), e.minutes)
     || E'\n\n' || v_lines;
   if e.pay_by = 'transfer' then
     v_body := v_body || format(E'\n\nThere is %s still to pay for the extra time. Please pay it by bank transfer, using the reference %s.',
@@ -344,8 +345,8 @@ begin
   end if;
 
   v_command := public.admin_finish_command('admin_extend_booking', p_request_id, v_fingerprint, b.id);
-  insert into public.booking_extensions(booking_id, booking_session_id, service_name_snapshot, recipient_name, minutes, price_gbp, pay_by, created_by)
-  values (b.id, s.id, s.service_name_snapshot, s.recipient_name, p_minutes, v_price, v_pay_by, auth.uid())
+  insert into public.booking_extensions(booking_id, booking_session_id, service_name_snapshot, recipient_name, minutes, price_gbp, pay_by, created_by, received_at)
+  values (b.id, s.id, s.service_name_snapshot, s.recipient_name, p_minutes, v_price, v_pay_by, auth.uid(), case when v_pay_by = 'cash' then v_now end)
   returning * into e;
   update public.bookings set treatment_duration_minutes = treatment_duration_minutes + p_minutes,
     total_gbp = total_gbp + v_price,
@@ -401,11 +402,14 @@ begin
   if b.booking_status not in ('confirmed', 'completed') then
     raise exception 'Extra time can only be changed on a session that went ahead.' using errcode = '22023';
   end if;
-  if e.pay_by = 'transfer' and b.balance_due_gbp < e.price_gbp then
+  if e.pay_by = 'cash' then
+    raise exception 'This extra was paid in cash, so it cannot be removed.' using errcode = '22023';
+  end if;
+  if e.pay_by = 'transfer' and (e.received_at is not null or b.balance_due_gbp < e.price_gbp) then
     raise exception 'The extra has already been received, so this extra time cannot be removed.' using errcode = '22023';
   end if;
   if e.pay_by = 'bill' and e.price_gbp > 0 and p.status not in ('awaiting_transfer', 'approved', 'awaiting_approval') then
-    raise exception 'The bill with this extra time has already been paid, so it cannot be removed.' using errcode = '22023';
+    raise exception 'The bill with this extra time has already been paid or sent, so it cannot be removed.' using errcode = '22023';
   end if;
   v_command := public.admin_finish_command('admin_remove_extension', p_request_id, v_fingerprint, b.id);
   delete from public.booking_extensions where id = e.id;
@@ -617,7 +621,7 @@ begin
 end;
 $function$;
 
--- 9. Mark extra received also clears "I've sent it".
+-- 9. Mark extra received also clears "I've sent it", and marks each extra time it paid for as received.
 CREATE OR REPLACE FUNCTION public.admin_record_balance_received(p_booking_id uuid, p_request_id uuid, p_booking_updated_at timestamp with time zone)
  RETURNS uuid
  LANGUAGE plpgsql
@@ -650,6 +654,7 @@ begin
   v_command := public.admin_finish_command('admin_record_balance_received', p_request_id, v_fingerprint, b.id);
   update public.booking_payments set amount_gbp = amount_gbp + b.balance_due_gbp where id = p.id;
   update public.bookings set balance_due_gbp = 0, balance_reported_at = null where id = b.id;
+  update public.booking_extensions set received_at = clock_timestamp() where booking_id = b.id and pay_by = 'transfer' and received_at is null;
   select * into r from public.booking_receipts x where x.booking_id = b.id for update;
   if found then
     v_fresh := public.build_receipt_snapshot(b.id);
@@ -827,3 +832,26 @@ begin
     'payment', jsonb_build_object('method', p.method, 'paid_at', p.paid_at, 'amount', p.amount_gbp));
 end;
 $function$;
+
+-- ---------------------------------------------------------------------------------------------
+-- 13. A booking with extra time took place: it is not cancelled, marked no-show or moved to another time (whoever tries). Remove the
+--     extra time first (a received one stays, so that booking stays as it was).
+-- ---------------------------------------------------------------------------------------------
+create or replace function public.booking_extensions_guard()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if (new.booking_status in ('cancelled', 'no_show') and new.booking_status is distinct from old.booking_status
+      or new.date is distinct from old.date or new.start_minutes is distinct from old.start_minutes)
+     and exists (select 1 from public.booking_extensions x where x.booking_id = new.id) then
+    raise exception 'This booking has extra time. Remove the extra time first.' using errcode = '22023';
+  end if;
+  return new;
+end;
+$$;
+revoke all on function public.booking_extensions_guard() from public, anon, authenticated;
+drop trigger if exists booking_extensions_guard on public.bookings;
+create trigger booking_extensions_guard before update of booking_status, date, start_minutes on public.bookings
+  for each row execute function public.booking_extensions_guard();

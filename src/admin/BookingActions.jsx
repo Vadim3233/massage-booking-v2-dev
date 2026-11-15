@@ -8,7 +8,7 @@ import DayTimePicker from '../client/booking/components/DayTimePicker.jsx'
 import AllTimes from './newBooking/AllTimes.jsx'
 import EditBooking from './EditBooking.jsx'
 import ExtendDialog from './ExtendDialog.jsx'
-import { PAY_SHORT, extendApi, extensionsOf, minutesWords } from './extendApi.js'
+import { PAY_SHORT, canRemoveExtension, extendApi, extensionsOf, minutesWords } from './extendApi.js'
 
 const ACTION_STYLE = { extend: 'btn--tonal', complete: 'btn--primary', feeReceived: 'btn--primary', refund: 'btn--primary', balance: 'btn--primary', cancel: 'btn--danger', feeWaive: 'btn--quiet', noShow: '', edit: '', reschedule: '' }
 
@@ -191,7 +191,8 @@ function History({ booking, api }) {
   </details>
 }
 
-// The extra time on a booking, each with Remove (asked once, on the spot). Money already received by transfer, or a bill already paid, cannot be undone here.
+// The extra time on a booking, each with Remove (asked once, on the spot) while it can still be undone: not once its money came in (cash, a
+// transfer received, a bill paid or sent).
 function ExtraTime({ booking, done, api = extendApi }) {
   const [asking, setAsking] = useState(null)
   const [busy, setBusy] = useState(false)
@@ -213,8 +214,9 @@ function ExtraTime({ booking, done, api = extendApi }) {
       <span>+{minutesWords(item.minutes)}{item.recipient_name && booking.booking_sessions?.length > 1 ? ` · ${item.recipient_name}` : ''} · {Number(item.price_gbp) > 0 ? money(item.price_gbp) : 'no charge'} · {PAY_SHORT[item.pay_by]}</span>
       {asking === item.id
         ? <span className="admin-payment-buttons"><button className="btn--danger btn--small" disabled={busy} onClick={() => remove(item)}>{busy ? 'Removing…' : 'Yes, remove it'}</button><button className="btn--quiet btn--small" disabled={busy} onClick={() => setAsking(null)}>Keep it</button></span>
-        : <button className="btn--quiet btn--small" onClick={() => { setError(''); setAsking(item.id) }}>Remove</button>}
+        : canRemoveExtension(booking, item) && <button className="btn--quiet btn--small" onClick={() => { setError(''); setAsking(item.id) }}>Remove</button>}
     </li>)}</ul>
+    {['confirmed', 'completed'].includes(booking.booking_status) && <p className="admin-detail-hint">A booking with extra time cannot be edited, moved or cancelled. Remove the extra time first{items.some(item => !canRemoveExtension(booking, item)) ? ' (extra time already paid stays)' : ''}.</p>}
     {error && <p role="alert">{error}</p>}
   </div>
 }

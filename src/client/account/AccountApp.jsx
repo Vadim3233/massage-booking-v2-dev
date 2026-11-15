@@ -176,7 +176,7 @@ function ExtraToPay({ booking, api, id, done }) {
       <CopyValue label="Sort code" value={bank.sort_code} />
       <CopyValue label="Account number" value={bank.account_number} />
       <CopyValue label="Payment reference" value={reference} />
-    </dl> : <p className="fine">The bank details are in the email I sent you. Use the reference {reference}.</p>}
+    </dl> : <p className="fine">If you need my bank details, just ask me. Use the reference {reference}.</p>}
     {booking.balance_reported_at
       ? <p className="account-note" role="status">Thank you. I'll check my bank and let you know if anything is missing.</p>
       : <button className="btn--primary" disabled={busy} onClick={sent}>{busy ? 'Saving…' : `I've sent the ${money(booking.balance_due_gbp)}`}</button>}

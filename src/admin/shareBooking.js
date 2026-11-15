@@ -1,6 +1,7 @@
 import { dateLabel, hasStarted, money, time } from './calendarPresentation.js'
 import { whatsappNumber } from './contactLinks.js'
 import { bookingSentence, treatmentNoun } from '../booking/bookingWords.js'
+import { owedExtraMinutes } from './extendApi.js'
 
 // The booking details the Admin sends a client, as plain text WhatsApp shows well (*bold* with single asterisks, no headings or HTML). This is the only
 // place the message is made: "WhatsApp client" and "Share…" both use it. It never says the Admin's notes, the client's own phone or email, internal
@@ -134,7 +135,6 @@ export const reminderDue = (booking, now = new Date()) => {
   return ((payment?.method === 'bank_transfer' && ['awaiting_transfer', 'awaiting_verification'].includes(payment.status)) || extraDue(booking))
     && !['cancelled', 'no_show'].includes(booking.booking_status) && hasStarted(booking, now)
 }
-const extraMinutesOf = booking => (booking.booking_extensions || []).reduce((sum, item) => sum + Number(item.minutes || 0), 0)
 // How long a session was, the way a client would say it: "1 hour", "2 hours", "90 min".
 export function sessionLength(minutes) {
   const value = Number(minutes)
@@ -145,7 +145,7 @@ export function sessionLength(minutes) {
 // For an extra still to pay it names the extra: "Sat 15 Nov, 18:00 · extra 30 min - £45.00".
 export function owedLine(booking) {
   const extra = extraDue(booking)
-  const length = extra ? (extraMinutesOf(booking) ? `extra ${sessionLength(extraMinutesOf(booking))}` : 'extra') : sessionLength(booking.treatment_duration_minutes)
+  const length = extra ? (owedExtraMinutes(booking) ? `extra ${sessionLength(owedExtraMinutes(booking))}` : 'extra') : sessionLength(booking.treatment_duration_minutes)
   return `${dateLabel(booking.date).replace(',', '')}, ${time(booking.start_minutes)}${length ? ` · ${length}` : ''} - ${money(owed(booking))}`
 }
 export function reminderText(booking, bank) {
@@ -155,9 +155,10 @@ export function reminderText(booking, bank) {
     ? [`Sort code: ${bank.sortCode}`, `Account number: ${bank.accountNumber}`, `Reference: ${payment?.payment_reference || booking.booking_reference}`].join('\n')
     : 'Let me know if you would like my bank details again.'
   return [
-    extraDue(booking)
+    extraDue(booking) && owedExtraMinutes(booking)
       ? `${first ? `Hi ${first}, thank` : 'Hi, thank'} you for staying a little longer! Just a quick note that payment for the extra time is still outstanding:`
-      : `${first ? `Hi ${first}, hope` : 'Hi, hope'} you're feeling good after your session! Just a quick reminder that payment for this session is still outstanding:`,
+      : extraDue(booking) ? `${first ? `Hi ${first}, hope` : 'Hi, hope'} you're feeling good after your session! Just a quick reminder that the extra for your booking is still outstanding:`
+        : `${first ? `Hi ${first}, hope` : 'Hi, hope'} you're feeling good after your session! Just a quick reminder that payment for this session is still outstanding:`,
     '',
     owedLine(booking),
     '',

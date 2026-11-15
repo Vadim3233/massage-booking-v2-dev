@@ -16,6 +16,8 @@ const SAFE_MESSAGES = new Set([
   'That time is in the past. Choose another time.',
   'That appointment would run past midnight. Choose an earlier time.',
   'A client is in the middle of booking that day. Try again in a few minutes.',
+  // A booking with extra time took place (20261219100000_extend_session.sql).
+  'This booking has extra time. Remove the extra time first.',
 ])
 const TIMES_UNAVAILABLE = "I couldn't load all the times just now. Please try again in a moment."
 
@@ -25,9 +27,11 @@ export const lifecycleActions = booking => {
   const actions = []
   // The client stayed longer: once the session has started, and for 7 days after (extendApi.js).
   if (canExtend(booking)) actions.push('extend')
-  if (status === 'confirmed' && booking.date <= today()) actions.push('complete', 'noShow')
-  // Edit booking counts the people and lengths again, so a booking with extra time asks for it to be removed first (the server says the same).
-  if (PENDING.includes(status) || status === 'confirmed') actions.push(...(extensionsOf(booking).length ? [] : ['edit']), 'reschedule', 'cancel')
+  // A booking with extra time took place: it is not a no-show, and it is not edited, moved or cancelled until the extra time is removed
+  // (the server says the same).
+  const extended = extensionsOf(booking).length > 0
+  if (status === 'confirmed' && booking.date <= today()) actions.push('complete', ...(extended ? [] : ['noShow']))
+  if ((PENDING.includes(status) || status === 'confirmed') && !extended) actions.push('edit', 'reschedule', 'cancel')
   // A refund to send: after a cancellation, or after a paid booking was changed to cost less (Edit booking).
   if (Number(booking.refund_due_gbp) > 0 && (status === 'cancelled' ? payment?.status === 'paid'
     : status !== 'no_show' && ['paid', 'awaiting_verification'].includes(payment?.status))) actions.push('refund')
