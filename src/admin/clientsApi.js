@@ -63,6 +63,8 @@ export function createClientsApi(client) {
     // Client base stats (20261211100000_client_base_stats.sql): the Clients page's numbers, tags and lists, and one client's rhythm.
     base: () => run(client.rpc('admin_client_base')),
     rhythm: id => run(client.rpc('admin_client_rhythm', { p_client_id: id })),
+    // When a client usually books (20261213100000_busy_times.sql): their visits with start times.
+    times: id => run(client.rpc('admin_busy_times', { p_client_id: id })),
     create: (details, requestId) => one(client.rpc('admin_create_client', { p_details: details, p_request_id: requestId })),
     update: (id, details) => one(client.rpc('admin_update_client', { p_client_id: id, p_details: details })),
     setOnlineBooking: (id, enabled) => run(client.from('clients').update({ online_booking_enabled: enabled }).eq('id', id)),

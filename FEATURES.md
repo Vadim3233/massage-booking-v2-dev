@@ -472,6 +472,12 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **Built in:** PR (this one), `20261211100000_client_base_stats.sql` (ADR-099). Nothing is stored: the numbers are worked out from the bookings each time.
 - **For a general app:** the tag thresholds (60 days for New, 6 months for Lapsed, twice the usual gap for Quiet) and the 90 days for Active could become settings.
 
+### When a client books (client page)
+- **What it does:** A card on each client's page, under the visits chart: one sentence ("Usually Monday mornings, around 10:00"), circles for each day of the week with the number of visits, and morning / afternoon / evening boxes. After about a year it names the months they come most. If they tried to book a time that was full, it says which (from Visitors). When they have a usual day and nothing booked, **Book their usual** opens New booking for them on the next one. With 1 or 2 visits it shows one line only ("Both visits so far were on a Friday evening").
+- **Why:** Vadim wanted to know each client's habits, to offer them their usual slot and message them at the right moment. It works with the Quiet note above it: send a message, then book their usual day.
+- **Built in:** PR #130, `20261213100000_busy_times.sql` (ADR-103).
+- **For a general app:** where morning ends (12:00) and evening starts (17:00).
+
 ### Phone number checks (booking and Admin)
 - **What it does:** When a client types their phone number on the booking details step, the app checks its length as they leave the box: a UK mobile has 11 digits starting 07 (other UK numbers 10 or 11), and a number from another country starts with + (or 00) and its country code. If it looks wrong, a gentle note says what (for example "one digit too many") and asks them to double-check, but **never stops the booking**: Vadim corrects the number later if needed. Only something that cannot be a phone number at all (fewer than 7 or more than 20 digits) stops the step, as before. A short hint sits under the box. In the Admin's own client forms the same check must pass before saving. A client page whose saved number looks wrong says so in red and points to Edit details.
 - **Why:** A client registered with one extra digit, so Vadim could not reach him. Vadim did not want a new obstacle in the booking journey.
@@ -534,6 +540,12 @@ These are the things that are written for Vadim today. In a general therapist ap
 
 ### Income
 - See section 3.
+
+### Busiest times (Income)
+- **What it does:** A section at the bottom of More › Income that looks at every visit since the first one. Four answers at the top: best day, quietest day, busiest time of day, and **How full** (how much of the working hours were booked in the last 4 weeks: treatment plus the travel before it, out of the hours set for each day). Then **Ideas for this week**, each with a button: the next **quiet day** with its free time, the regulars who usually book on that weekday and are due (with a WhatsApp Message button), and a way to open the day to send a special price offer; **times people wanted when full** (from Visitors, last 90 days) with Edit hours for that day; and the **next bank holiday**. Tabs rank **Days**, **Times** (with a week grid of mornings, afternoons and evenings, marking times wanted when full), **Months** and **Holidays** (each bank holiday against a normal day of the same weekday), by bookings, income or How full. Days with no bookings at all are never called the quietest. Early on, it says plainly that months and holidays need a full year. A switch sends **"Your week"** to Vadim's Telegram at about 8:00 every Monday with the same ideas (off until he switches it on).
+- **Why:** Vadim wanted to know when he is busiest, to decide when to work, take days off and send special offers, and asked for it to work with the rest of the app. Booking apps show similar reports (SalonIQ's utilisation gave "How full"; Fresha's off-peak offers and Booksy's slow-day messages led to the quiet-day idea); this one adds the demand that got away (wanted times), bank holidays, each regular's usual day, and a one-tap way to act on each idea.
+- **Built in:** PR #130, `20261213100000_busy_times.sql` (ADR-103). Bank holidays are worked out from the rules (New Year, Easter, May, August, Christmas, with substitute days), so they never need typing in; one-off royal holidays are not included.
+- **For a general app:** the country's public holidays; where morning ends and evening starts; the Monday message time.
 
 ---
 

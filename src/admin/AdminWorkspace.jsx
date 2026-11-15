@@ -204,7 +204,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {creating && <AdminNewBooking initialDate={date} initialClientId={clientParam} ownerId={ownerId} registerGuard={registerGuard} onCancel={() => navigate(route.returnTo || '/admin')} onCreated={created} openClient={openClientFromBooking} />}
       {surface === '/admin/review' && <PaymentReview openBooking={openBooking} revision={revision} changed={refreshToCheck} />}
       {surface === '/admin/clients' && <Clients openClient={id => navigate(`/admin/clients/${id}`)} openCombine={openCombine} />}
-      {profile && <ClientProfile key={profile[1]} id={profile[1]} back={route.fromBooking ? () => window.history.back() : () => navigate('/admin/clients')} backLabel={route.fromBooking ? 'Back to the booking' : 'Clients'} openBooking={openBooking} newBooking={clientId => newBooking(today(), clientId)} openCombine={openCombine} onDeleted={deletedId => { forgetDraftFor(ownerId, deletedId); refreshAlerts() }} />}
+      {profile && <ClientProfile key={profile[1]} id={profile[1]} back={route.fromBooking ? () => window.history.back() : () => navigate('/admin/clients')} backLabel={route.fromBooking ? 'Back to the booking' : 'Clients'} openBooking={openBooking} newBooking={(clientId, day) => newBooking(day || today(), clientId)} openCombine={openCombine} onDeleted={deletedId => { forgetDraftFor(ownerId, deletedId); refreshAlerts() }} />}
       {combining && <CombineClients key={`${pairA}:${pairB}`} a={pairA} b={pairB} back={() => navigate('/admin/clients')} openClient={id => navigate(`/admin/clients/${id}`)} resolved={refreshAlerts} />}
       {surface === '/admin/alerts' && <Alerts openBooking={openBooking} openPage={path => navigate(path)} changed={refreshAlerts} />}
       {surface === '/admin/more' && <section className="admin-review"><h1>More</h1>
@@ -221,7 +221,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {surface === '/admin/settings/rules' && <RulesSettings />}
       {surface === '/admin/settings/welcome' && <WelcomeSettings />}
       {surface === '/admin/settings/link' && <ShareLink />}
-      {surface === '/admin/income' && <Income openBooking={openBooking} />}
+      {surface === '/admin/income' && <Income openBooking={openBooking} openDay={day => navigate(`/admin?date=${day}`)} openHours={openDayHours} />}
       {surface === '/admin/gifts' && <GiftVouchers openBooking={openBooking} />}
       {surface === '/admin/settings/share-message' && <ShareMessageSettings />}
       {surface === '/admin/settings/google-reviews' && <ReviewSettings />}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { money, today } from './calendarPresentation.js'
 import { incomeApi } from './incomeApi.js'
+import BusiestTimes from './BusiestTimes.jsx'
 import { barDescription, barLabel, calendarWeeks, comparisonText, csvFileName, dateLabelShort, dayDescription, dayShade, duration, hourSentence, incomeCsv, methodName, monthlyRates, nextAnchor, periodLabel, previousAnchor, rowNote, rowWhen, shortMoney, stillToComeText, workShare } from './incomePresentation.js'
 
 const TABS = [['week', 'Week'], ['month', 'Month'], ['year', 'Year']]
@@ -12,7 +13,7 @@ function remembered() {
 
 // More › Income: money actually received, by the date of the appointment (Vadim's change requests 3 and 4). The database works out every figure
 // (admin_income_summary, admin_income_rows, admin_money_owed); this page shows them, moves between periods and saves the accountant's file.
-export default function Income({ openBooking, api = incomeApi }) {
+export default function Income({ openBooking, openDay, openHours, api = incomeApi }) {
   const [view, setView] = useState(remembered)
   const [anchor, setAnchor] = useState(today)
   const [state, setState] = useState({ key: '', summary: null, rows: [], error: '' })
@@ -134,6 +135,7 @@ export default function Income({ openBooking, api = incomeApi }) {
           </>}
         </section>}
       </>}
+      {openDay && <BusiestTimes api={api} openDay={openDay} openHours={openHours} />}
       {owed && owed.length > 0 && <details className="admin-income-owed">
         <summary><span>Money owed to you</span><span className="admin-income-count" aria-label={`${owed.length} appointments`}>{owed.length}</span></summary>
         <p className="admin-detail-hint">Appointments that have happened with money still missing. Open one to mark it paid or received.</p>

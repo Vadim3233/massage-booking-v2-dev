@@ -874,6 +874,83 @@
 .admin-client-list .admin-client-text { flex: 1 1 auto; width: 100%; }
 .admin-client-text .client-stat-line { font-size: 13px; color: var(--muted); }
 
+/* ---------- Busiest times on Income and "When … books" on a client's card (ADR-103) ---------- */
+.busy { display: grid; gap: 10px; margin-top: 8px; }
+.busy > .admin-income-subhead { margin-bottom: 0; }
+.admin-review .busy-sub { margin: -6px 0 0; font-size: 14px; color: var(--ink-soft); }
+.admin-review .busy-thin { margin: 0; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--needs-bg); color: var(--needs-ink); font-size: 14px; line-height: 1.45; }
+.busy-facts { margin: 0; }
+.busy-facts dd.busy-fact-note { margin: 2px 0 0; font: 400 13px/1.35 var(--font-ui); color: var(--ink-soft); }
+.busy-ideas { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.busy-ideas li { display: grid; gap: 10px; justify-items: start; padding: 12px 14px; border-radius: var(--radius); background: var(--primary-soft); box-shadow: 0 0 0 1px var(--primary-line); }
+.admin-review .busy-ideas p { margin: 0; font-size: 14px; line-height: 1.45; color: var(--ink); }
+.busy-views { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: var(--radius); background: var(--primary-soft); }
+.admin-shell .busy-views button { min-height: 44px; padding: 0 4px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--ink-soft); font: 600 14px/1.2 var(--font-ui); }
+.admin-shell .busy-views button[aria-pressed="true"] { background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow-1); }
+.busy .admin-income-yeartype { margin: 0; }
+.busy-card { display: grid; gap: 12px; padding: 14px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); }
+.admin-review .busy-headline { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.4; color: var(--ink); }
+.busy-rank { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.busy-rank li { display: grid; grid-template-columns: 18px 92px minmax(0, 1fr); gap: 8px; align-items: center; font-variant-numeric: tabular-nums; }
+.busy-rank-pos { font-size: 13px; color: var(--muted); text-align: right; }
+.busy-rank-name { font-weight: 600; color: var(--ink); }
+.busy-rank-bar { display: grid; gap: 3px; min-width: 0; }
+.busy-bar { display: block; width: calc(6% + 94% * var(--share)); height: 12px; border-radius: 6px; background: var(--primary-mid); }
+.busy-bar.is-strong, .busy-rank li.is-best .busy-bar { background: var(--primary); }
+.busy-rank li.is-quiet .busy-bar { background: var(--line); }
+.busy-rank-meta { font-size: 13px; color: var(--ink-soft); line-height: 1.35; }
+.busy-wanted { color: var(--needs-ink); }
+.busy-tag { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: var(--radius-pill); font-size: 11.5px; font-weight: 700; vertical-align: 1px; }
+.busy-tag.is-best { background: var(--ok-bg); color: var(--ok-ink); }
+.busy-tag.is-quiet { background: var(--paper); color: var(--ink-soft); box-shadow: inset 0 0 0 1px var(--line); }
+.busy-tag.is-sofar { background: var(--primary-soft); color: var(--primary); }
+.busy-hols { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.busy-hols li { display: grid; gap: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--hairline); }
+.busy-hols li:last-child { padding-bottom: 0; border-bottom: 0; }
+.admin-review .busy-hol-name { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 10px; margin: 0; }
+.busy-hol-name span { font-size: 13px; color: var(--muted); }
+.busy-compare { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 6px 8px; align-items: center; font-size: 13px; color: var(--ink-soft); }
+.busy-compare .busy-bar { height: 10px; }
+.admin-review .busy-verdict { margin: 0; font-size: 14px; font-weight: 600; color: var(--ink-soft); }
+.admin-review .busy-verdict.is-busier { color: var(--ok-ink); }
+
+.client-times { display: grid; gap: 12px; padding: 14px 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); }
+.client-times-title { margin: 0; font: 600 11px/1.2 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.admin-review .client-times-sentence { margin: 0; font-size: 16px; line-height: 1.45; color: var(--ink); }
+.client-times-days { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.client-times-days li { display: grid; justify-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.client-times-dot { display: grid; place-items: center; width: 34px; height: 34px; max-width: 100%; border-radius: 50%; background: var(--hairline); color: var(--on-primary); font: 700 12px/1 var(--font-ui); }
+.client-times-dot.is-some { background: var(--primary-line); color: var(--primary); }
+.client-times-dot.is-most { background: var(--primary); }
+.client-times-parts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.client-times-parts li { padding: 8px 6px; border-radius: var(--radius-sm); background: var(--hairline); color: var(--ink-soft); font-size: 13px; text-align: center; }
+.client-times-parts li strong { display: block; font-size: 16px; }
+.client-times-parts li.is-some { background: var(--primary-soft); color: var(--primary); }
+.client-times-parts li.is-most { background: var(--primary); color: var(--on-primary); }
+.client-times-book { justify-self: start; }
+.admin-review .client-times-note { margin: 0; font-size: 13px; color: var(--muted); }
+.busy-kicker { font: 700 11.5px/1.2 var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--primary); }
+.busy-who { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; width: 100%; }
+.busy-who li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; border-radius: var(--radius-sm); background: var(--surface); }
+.busy-who li > span { display: grid; min-width: 0; font-size: 14px; }
+.busy-who small { font-size: 12.5px; color: var(--muted); }
+.busy-facts dd.busy-meter { margin: 6px 0 0; height: 8px; border-radius: 4px; background: var(--hairline); overflow: hidden; }
+.busy-meter span { display: block; height: 100%; width: calc(100% * var(--share)); border-radius: 4px; background: var(--ok-rail); }
+.busy-grid { margin: 4px 0 0; display: grid; gap: 6px; }
+.busy-grid table { width: 100%; border-collapse: separate; border-spacing: 4px; table-layout: fixed; }
+.busy-grid caption { text-align: left; font-size: 13px; color: var(--muted); padding-bottom: 2px; }
+.busy-grid th { font-size: 12px; font-weight: 600; color: var(--muted); }
+.busy-grid thead td { width: 80px; }
+.busy-grid tbody th { text-align: left; font-size: 12.5px; color: var(--ink-soft); }
+.busy-grid td { padding: 0; }
+.busy-cell { display: grid; place-items: center; aspect-ratio: 1; max-width: 100%; border-radius: 7px; background: var(--hairline); font: 700 11px/1 var(--font-ui); color: var(--on-primary); font-variant-numeric: tabular-nums; }
+.busy-cell.is-1 { background: var(--primary-line); color: var(--primary); }
+.busy-cell.is-2 { background: var(--primary-mid); }
+.busy-cell.is-3 { background: var(--primary); }
+.busy-cell.is-wanted { box-shadow: inset 0 0 0 2px var(--needs-rail); }
+.busy-weekly { margin: 4px 0 0; }
+.admin-review .client-times-wanted { margin: 0; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--primary-soft); color: var(--primary); font-size: 14px; }
+
 /* More › Gift vouchers (ADR-101) */
 .admin-gift-list { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 10px; }
 .admin-gift { padding: 14px 16px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); }
