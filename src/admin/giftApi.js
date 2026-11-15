@@ -22,6 +22,12 @@ export function createGiftAdminApi(client) {
     markPaid: (id, method) => call(client.rpc('admin_mark_gift_paid', { p_voucher_id: id, p_method: method })),
     cancel: id => call(client.rpc('admin_cancel_gift_voucher', { p_voucher_id: id })),
     markUsed: (id, used) => call(client.rpc('admin_mark_gift_used', { p_voucher_id: id, p_used: used })),
+    // More time (until the end of a London day, YYYY-MM-DD), and changing its words or where and when it is emailed (20261216100000).
+    extend: (id, day) => call(client.rpc('admin_extend_gift_voucher', { p_voucher_id: id, p_until: day })),
+    update: (id, form) => call(client.rpc('admin_update_gift_voucher', {
+      p_voucher_id: id, p_recipient_name: form.to.trim(), p_from_name: form.from.trim(), p_message: form.message.trim() || null,
+      p_recipient_email: form.email ? form.email.trim() : null, p_send_at: form.sendAt || null,
+    })),
     make: form => call(client.rpc('admin_make_gift_voucher', {
       p_minutes: form.minutes, p_people: form.people, p_travel_choice: form.travel, p_service_area_id: form.areaId || null, p_design: form.design,
       p_recipient_name: form.to.trim(), p_from_name: form.from.trim() || null, p_message: form.message.trim() || null,

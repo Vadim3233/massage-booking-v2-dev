@@ -112,7 +112,7 @@ select is((select status from public.admin_mark_gift_paid((select id from v1))),
 select is((select jsonb_array_length(public.admin_gift_vouchers())), 1, 'He sees it in More › Gift vouchers');
 select ok(not (public.admin_gift_vouchers()->0 ? 'buyer_token'), 'without the buyer''s private link');
 reset role;
-select ok((select expires_at between now() + interval '12 months' - interval '1 minute' and now() + interval '12 months' + interval '1 minute' from public.gift_vouchers where id = (select id from v1)), 'It is valid for 12 months');
+select ok((select expires_at = public.gift_end_of_day(paid_at + interval '12 months') from public.gift_vouchers where id = (select id from v1)), 'It is valid for 12 months, to the end of that day (20261216100000)');
 select is((select count(*)::int from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id
   where e.event_type = 'gift.ready' and d.recipient = 'anna@example.test' and d.title = 'Your gift voucher for Mum is ready' and d.link_path like '/gift/____-____'), 1, 'The buyer is sent the voucher''s link');
 
@@ -147,7 +147,7 @@ select is((select (method, status, amount_gbp, paid_at is not null) from public.
 select is((select (status, booking_id) from public.gift_vouchers where id = (select id from v1)), ('used'::text, (select id from booked1)), 'The voucher is now used');
 select is((select title from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id
   where e.aggregate_id = (select id from booked1) and e.event_type = 'booking.created' and d.channel = 'telegram' and d.audience = 'admin'), 'New booking with a gift voucher', 'Vadim is told it is a gift booking');
-select ok((select body like '%Nothing to pay, it is confirmed.' from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id
+select ok((select body like '%Nothing to pay, it is confirmed.%' from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id
   where e.aggregate_id = (select id from booked1) and e.event_type = 'booking.created' and d.channel = 'telegram' and d.audience = 'admin'), 'with nothing to pay');
 select is((select count(*)::int from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id
   where e.aggregate_id = (select id from booked1) and d.audience = 'client' and d.recipient = 'gift-mum@example.test' and d.title = 'Your appointment is booked'

@@ -142,7 +142,7 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
     <h1 tabIndex={-1}>{cash ? <>Paying by <em>cash</em></> : <>One last <em>step</em></>}</h1>
     <p role="status" className="reserved"><span className="reserved-dot" aria-hidden="true" />Your appointment time is reserved for you.</p>
     <MethodChoice cash={cash} locked={Boolean(draft.paymentPending)} choose={switchMethod} cashOk={cash || cashOk} />
-    <p className="lede">{cash ? "Pay the full amount in cash at your appointment. Press the button below to send me your request, and I'll look at it and confirm your appointment." : 'Please make your bank transfer using the reference below, then let me know.'}</p>
+    <p className="lede">{cash ? `${draft.gift ? 'Pay what your gift voucher does not cover' : 'Pay the full amount'} in cash at your appointment. Press the button below to send me your request, and I'll look at it and confirm your appointment.` : 'Please make your bank transfer using the reference below, then let me know.'}</p>
     <section className="amount-card" aria-label={cash ? 'Amount to pay in cash' : 'Amount to transfer'}>
       <p className="eyebrow">{cash ? 'To pay in cash at your appointment' : 'Amount to transfer'}</p>
       {/* What is left to pay: the whole price, or what a gift voucher did not pay. */}
@@ -154,7 +154,7 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
     </section>}
     {cash && <section className="panel">
       <h2>Cash on arrival</h2>
-      <p>You can pay the full amount in cash at your appointment.</p>
+      <p>{draft.gift ? `Your gift voucher pays the rest, so you pay just ${money(booking.booking_payments.amount_gbp ?? booking.total_gbp)} in cash at your appointment.` : 'You can pay the full amount in cash at your appointment.'}</p>
       {areaNote && <p>{areaNote}</p>}
     </section>}
     {terms}
