@@ -54,9 +54,9 @@ export default function BookingDestination({ id, close, changed, returnFocus, op
   return <BookingDetails booking={booking} close={close} returnFocus={returnFocus} payment={<>
     <p className="admin-next-status">{label(booking.booking_payments?.method)} · {label(booking.booking_payments?.status)}</p>
     {error ? <p role="alert">{error}</p> : <PaymentActions booking={booking} refresh={refresh} switchMethod />}
-    {!error && reminderDue(booking, new Date()) && <BookingPaymentReminder key={booking.id} booking={booking} />}
-    {!error && canHaveReceipt && <ReceiptPanel key={booking.id} booking={booking} openPage={openPage} />}
-    {!error && !canHaveReceipt && receiptClosed && <ReceiptNote key={booking.id} booking={booking} />}
+    {!error && reminderDue(booking, new Date()) && <BookingPaymentReminder key={`reminder-${booking.id}`} booking={booking} />}
+    {!error && canHaveReceipt && <ReceiptPanel key={`receipt-${booking.id}`} booking={booking} openPage={openPage} />}
+    {!error && !canHaveReceipt && receiptClosed && <ReceiptNote key={`receipt-note-${booking.id}`} booking={booking} />}
     <button className="btn--quiet btn--small" onClick={() => setAttempt(value => value + 1)}>Check for changes</button>
   </>} lifecycle={error ? null : <BookingActions booking={booking} refresh={refresh} />}
     review={error ? null : <ReviewInvite key={booking.id} booking={booking} openSettings={openPage && (() => openPage('/admin/settings/google-reviews'))} />} address={error ? null : <AddressEdit key={booking.updated_at} booking={booking} refresh={refresh} />}
