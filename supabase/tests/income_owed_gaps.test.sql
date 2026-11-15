@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions, pg_temp;
-select plan(9);
+select plan(11);
 
 -- 20261218100000_income_owed_gaps.sql: Paid, Overdue and Upcoming never miss money. Dates in 2034 (to come) and 2021 (gone).
 insert into auth.users(id, aud, role, email, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -41,6 +41,13 @@ select is(pg_temp.owed(1), null, 'and not Overdue before the session');
 select is(pg_temp.owed(2), 'extra not received 30.00', 'Once the session has started, the extra is Overdue');
 select is(pg_temp.to_come(2), null, 'and no longer Upcoming');
 select is((select net_gbp from public.income_lines('2021-05-03', '2021-05-03')), 100.00, 'Paid stays what was paid, until the extra is marked received');
+
+-- A transfer sent but not verified yet, then the booking made £30 dearer: the extra is counted with it.
+select pg_temp.b(6, '2034-05-07', 'confirmed', 'bank_transfer', 'awaiting_verification');
+select pg_temp.b(7, '2021-05-07', 'confirmed', 'bank_transfer', 'awaiting_verification');
+update public.bookings set balance_due_gbp = 30 where id in ('00000000-0000-4000-8000-0000000b0006', '00000000-0000-4000-8000-0000000b0007');
+select is(pg_temp.to_come(6), 130.00, 'A transfer not verified yet plus its extra is Upcoming in full');
+select is(pg_temp.owed(7), 'transfer not received 130.00', 'and Overdue in full once the session has started');
 
 -- 2. Part paid by gift voucher: £100 booking, £85 from the voucher, £15 for the client to pay.
 select pg_temp.b(3, '2034-05-04', 'confirmed', 'bank_transfer', 'awaiting_transfer');

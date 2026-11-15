@@ -1,18 +1,20 @@
 -- Income: three gaps between Paid, Overdue and Upcoming closed (Vadim, 15 Nov 2026). Read-only, Admin only. Nothing here changes a booking or
 -- a payment. Applies after 20261129100000_income_calendar_hourly.sql (this replaces admin_income_summary again, keeping all of it).
 --
--- 1. Extra still to pay after a paid booking was changed to cost more (bookings.balance_due_gbp, from Edit booking): it was in no bucket.
+-- 1. Extra still to pay after a paid booking (or one whose transfer was sent, not yet verified) was changed to cost more
+--    (bookings.balance_due_gbp, from Edit booking): it was in no bucket.
 --    Now it is Upcoming before the session starts and Overdue ("extra not received") once it has started, until Vadim marks it received.
 -- 2. A booking part paid by gift voucher: Upcoming counted the full price, while Paid and Overdue count only what the client pays. Upcoming
 --    now counts the client's part too (the voucher money was taken when the voucher was bought).
 -- 3. A late fee due on a booking cancelled early only showed as Overdue once the original appointment time had passed. A late fee is due
 --    as soon as it is set, so it is Overdue straight away (still on the appointment's day).
 --
--- To take this back: run money_owed_lines from 20261109100000_income.sql and admin_income_summary from 20261129100000_income_calendar_hourly.sql
--- again, then drop function public.income_to_come_lines(date, date).
+-- To take this back: run money_owed_lines from 20261109100000_income.sql (with "create function" changed to "create or replace function")
+-- and admin_income_summary from 20261129100000_income_calendar_hourly.sql again, then drop function public.income_to_come_lines(date, date).
 
 -- Money still to come: one line per booking from p_from to p_to whose appointment has not started yet, going ahead, with money not paid
--- yet: what the client still pays (a voucher's part is not counted), or the extra still to pay on a booking already paid.
+-- yet: what the client still pays (a voucher's part is not counted) plus any extra still to pay (also on a transfer sent but not yet
+-- verified when the booking was changed), or only the extra on a booking already paid.
 -- Internal: only admin_income_summary calls it.
 create or replace function public.income_to_come_lines(p_from date, p_to date)
 returns table (booking_id uuid, date date, to_come_gbp numeric)
@@ -23,7 +25,7 @@ set search_path = ''
 as $$
   select b.id, b.date,
     case when p.status = 'paid' then b.balance_due_gbp
-      else coalesce(p.amount_gbp, b.total_gbp - coalesce(b.gift_covered_gbp, 0)) end
+      else coalesce(p.amount_gbp, b.total_gbp - coalesce(b.gift_covered_gbp, 0)) + b.balance_due_gbp end
   from public.bookings b
   left join public.booking_payments p on p.booking_id = b.id
   where b.date between p_from and p_to
@@ -48,7 +50,7 @@ as $$
     case
       when b.booking_status in ('cancelled', 'no_show') then b.late_fee_due_gbp
       when p.status = 'paid' then b.balance_due_gbp
-      else coalesce(p.amount_gbp, b.total_gbp)
+      else coalesce(p.amount_gbp, b.total_gbp) + b.balance_due_gbp
     end,
     case
       when b.booking_status in ('cancelled', 'no_show') then 'late fee unpaid'
