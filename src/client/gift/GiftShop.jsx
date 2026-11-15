@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { createGiftApi, sendAtFor } from './giftApi.js'
-import { designsInOrder, giftChoices, isChristmasTime, MESSAGE_LIMIT, occasionsInOrder, travelChoice, travelPart, whole, withLove } from './giftWords.js'
+import { designsInOrder, giftChoices, isChristmasTime, MESSAGE_LIMIT, occasionsInOrder, REFUND_DAYS, travelTiers, whole, withLove } from './giftWords.js'
 import VoucherCard from './VoucherCard.jsx'
 import BankDetails from '../booking/components/BankDetails.jsx'
 import { bankFromSettings, chooseBank, paymentConfig } from '../booking/paymentConfig.js'
@@ -35,8 +35,9 @@ export default function GiftShop({ client = supabase }) {
   const [occasion, setOccasion] = useState(0)
   const [line, setLine] = useState(0)
   const [custom, setCustom] = useState(null)
-  const [area, setArea] = useState('unsure')
-  const [cover, setCover] = useState('all')
+  const [tierKey, setTierKey] = useState('all')
+  const [extras, setExtras] = useState([])
+  const [terms, setTerms] = useState(false)
   const [delivery, setDelivery] = useState('self')
   const [recipientEmail, setRecipientEmail] = useState('')
   const [sendDay, setSendDay] = useState('')
@@ -63,9 +64,13 @@ export default function GiftShop({ client = supabase }) {
   const choices = useMemo(() => (options ? giftChoices(options.lengths) : []), [options])
   const chosen = choices.find(item => item.key === pick) || choices.find(item => item.loved) || choices[0]
   const message = custom ?? withLove(occasions[occasion].messages[line], from || '…')
-  const travel = options ? travelPart(options, { area, cover }) : 0
-  const total = chosen ? chosen.price + travel : 0
-  const areaRow = options?.areas.find(item => item.id === area)
+  const tiers = useMemo(() => (options ? travelTiers(options) : []), [options])
+  const tier = tiers.find(item => item.key === tierKey) || tiers[tiers.length - 1] || { choice: 'none', cover: 0 }
+  const travel = tier.cover
+  const enhancements = options?.enhancements || []
+  const extrasChosen = enhancements.filter(item => extras.includes(item.id))
+  const extrasPrice = extrasChosen.reduce((sum, item) => sum + Number(item.price) * (chosen?.people || 1), 0)
+  const total = chosen ? chosen.price + travel + extrasPrice : 0
   const problems = {
     to: !to.trim() && 'Who is the voucher for?',
     from: !from.trim() && 'Who is it from?',
@@ -74,6 +79,7 @@ export default function GiftShop({ client = supabase }) {
     sendDay: delivery === 'email' && !sendDay && 'Choose the day it should arrive.',
     buyerName: !buyer.name.trim() && 'Please add your name.',
     buyerEmail: !emailOk(buyer.email) && 'Please add your email, so I can send you the voucher.',
+    terms: !terms && 'Please tick the box to say you understand the voucher terms.',
   }
   const firstProblem = Object.entries(problems).find(([, text]) => text)
   const show = key => tried && problems[key] ? <p className="gift-problem" id={`gift-${key}-problem`}>{problems[key]}</p> : null
@@ -84,7 +90,7 @@ export default function GiftShop({ client = supabase }) {
     if (firstProblem) { document.getElementById(`gift-${firstProblem[0]}`)?.focus(); return }
     setBusy(true); setError('')
     try {
-      const result = await api.buy({ minutes: chosen.minutes, people: chosen.people, travelChoice: travelChoice({ area, cover }), areaId: area === 'unsure' ? null : area,
+      const result = await api.buy({ minutes: chosen.minutes, people: chosen.people, travelChoice: tier.choice, travelCover: tier.choice === 'upto' ? tier.cover : null, enhancementIds: extras, terms,
         design, to, from, message, delivery, recipientEmail, sendAt: sendAtFor(sendDay), buyerName: buyer.name, buyerEmail: buyer.email, buyerPhone: buyer.phone })
       const url = new URL(window.location.href)
       url.searchParams.set('t', result.token)
@@ -135,7 +141,7 @@ export default function GiftShop({ client = supabase }) {
   if (!options) return shell(<div className="skeleton-rows" role="status"><span className="sr-only">Loading…</span><span className="skeleton" /><span className="skeleton" /></div>)
   if (!options.on || !chosen) return shell(<><h1 tabIndex={-1}>Gift vouchers are <em>resting</em></h1><p className="lede">They aren't on sale right now. Please message Vadim and he'll help.</p></>)
 
-  const preview = { code: null, minutes: chosen.minutes, people: chosen.people, recipient_name: to.trim() || 'Mum', from_name: from.trim() || 'Anna', message, design, expires_at: null }
+  const preview = { code: null, minutes: chosen.minutes, people: chosen.people, extras: extrasChosen.map(item => item.name), recipient_name: to.trim() || 'Mum', from_name: from.trim() || 'Anna', message, design, expires_at: null }
   return shell(<form onSubmit={buy} noValidate>
     <section className="gift-hero">
       <div className="gift-snow" aria-hidden="true" />
@@ -167,21 +173,28 @@ export default function GiftShop({ client = supabase }) {
     </section>
 
     <section className="gift-step" aria-labelledby="gift-s4"><h2 id="gift-s4"><span>4</span>Where do they live?</h2>
-      <p className="gift-hint">So the travel fee and congestion charge can be included.</p>
-      <div className="gift-chips">
-        <button type="button" className="gift-chip" aria-pressed={area === 'unsure'} onClick={() => setArea('unsure')}>Not sure yet</button>
-        {options.areas.map(item => { const extra = Number(item.travel) + Number(item.congestion); return <button type="button" key={item.id} className="gift-chip" aria-pressed={area === item.id} onClick={() => setArea(item.id)}>{item.name}{extra > 0 ? ` · +${whole(extra)}` : ''}</button> })}
+      <p className="gift-hint">I only visit the areas below. Please don't buy a voucher for someone who lives elsewhere.</p>
+      <div className="gift-stack" role="group" aria-labelledby="gift-s4">
+        {tiers.map((item, index) => <Choice key={item.key} className="gift-tier" pressed={tier.key === item.key} onClick={() => setTierKey(item.key)}
+          title={<>{item.key === 'all' && tiers.length > 1 && <span className="gift-tier-tag">Not sure? Choose this</span>}<span className="gift-tier-top"><span>{item.title}</span><span className="gift-tier-price">+{whole(item.cover)}</span></span></>}
+          note={item.key === 'none'
+            ? <>Nothing more to pay in <b>{item.names.join(', ')}</b>.{tiers.length > 1 && ' Anywhere else in my areas they pay just that area\'s charge when they book.'}</>
+            : item.key === 'all'
+              ? <>Any of my areas, including {item.charged.map((group, i) => <span key={group.label}>{i > 0 && '; '}<b>{group.names.join(', ')}</b> ({group.label.toLowerCase()})</span>)}. They never pay extra. One flat amount, not refunded if their area has no charge.</>
+              : <>For <b>{item.or}</b>, and every area {index === 1 ? 'in the first card' : 'in the cards above'}.</>} />)}
       </div>
-      {area === 'unsure' ? <div className="gift-stack">
-        <Choice pressed={cover === 'all'} onClick={() => setCover('all')} title="Everything included" note={`+${whole(options.all_areas_cover)}. Covers any travel fee or congestion charge, wherever they live in my areas. Nothing to pay when they book.`} />
-        <Choice pressed={cover === 'none'} onClick={() => setCover('none')} title="Just the massage" note="If they live where there is a travel fee or congestion charge, they pay only that when they book." />
-        {cover === 'all' && Number(options.all_areas_cover) > 0 && <p className="gift-hint">One simple price for anywhere in my areas, so they never pay extra. It is a flat amount and isn't refunded if their area has no charge.</p>}
-      </div> : <p className="gift-hint">{Number(areaRow?.travel) + Number(areaRow?.congestion) > 0
-        ? `The ${whole(Number(areaRow.travel) + Number(areaRow.congestion))} ${[Number(areaRow.travel) > 0 && 'travel fee', Number(areaRow.congestion) > 0 && 'congestion charge'].filter(Boolean).join(' and ')} ${Number(areaRow.travel) > 0 && Number(areaRow.congestion) > 0 ? 'are' : 'is'} included, so they pay nothing when they book.`
-        : `No travel fee in ${areaRow?.name}, so the voucher covers everything.`}</p>}
+      <p className="gift-hint">Not in these areas? <a href="https://vadmassage.com">Message Vadim</a> before buying.</p>
     </section>
 
-    <section className="gift-step" aria-labelledby="gift-s5"><h2 id="gift-s5"><span>5</span>How should it arrive?</h2>
+    {enhancements.length > 0 && <section className="gift-step" aria-labelledby="gift-sx"><h2 id="gift-sx"><span>5</span>Add something extra?</h2>
+      <p className="gift-hint">Optional. Paid now, so it is part of the gift{chosen?.people === 2 ? ', for both of them' : ''}.</p>
+      <div className="gift-stack">{enhancements.map(item => { const on = extras.includes(item.id); const price = Number(item.price) * (chosen?.people || 1)
+        return <button type="button" key={item.id} className="gift-choice gift-extra" aria-pressed={on} onClick={() => setExtras(on ? extras.filter(id => id !== item.id) : [...extras, item.id])}>
+          <span className="gift-check" aria-hidden="true" /><span className="gift-choice-text"><span className="gift-choice-title"><span className="gift-tier-top"><span>{item.name}</span><span className="gift-tier-price">{price > 0 ? `+${whole(price)}` : 'Free'}</span></span></span>
+            {item.description && <span className="gift-choice-note">{item.description}</span>}</span></button> })}</div>
+    </section>}
+
+    <section className="gift-step" aria-labelledby="gift-s5"><h2 id="gift-s5"><span>{enhancements.length ? 6 : 5}</span>How should it arrive?</h2>
       <div className="gift-stack">
         <Choice pressed={delivery === 'self'} onClick={() => setDelivery('self')} title="I'll give it myself" note="A voucher to print or save as a PDF, plus a button to send it on WhatsApp." />
         <Choice pressed={delivery === 'email'} onClick={() => setDelivery('email')} title="Surprise them by email" note="It arrives on the day you choose, in a red envelope they open and scratch to reveal." />
@@ -192,16 +205,18 @@ export default function GiftShop({ client = supabase }) {
       </div>}
     </section>
 
-    <section className="gift-step" aria-labelledby="gift-s6"><h2 id="gift-s6"><span>6</span>Your details</h2>
+    <section className="gift-step" aria-labelledby="gift-s6"><h2 id="gift-s6"><span>{enhancements.length ? 7 : 6}</span>Your details</h2>
       <p className="gift-hint">So I can send you the payment details and the voucher.</p>
       <label className="field">Your name<input id="gift-buyerName" autoComplete="name" value={buyer.name} aria-invalid={Boolean(tried && problems.buyerName) || undefined} onChange={e => setBuyer({ ...buyer, name: e.target.value })} />{show('buyerName')}</label>
       <label className="field">Your email<input id="gift-buyerEmail" type="email" inputMode="email" autoComplete="email" value={buyer.email} aria-invalid={Boolean(tried && problems.buyerEmail) || undefined} onChange={e => setBuyer({ ...buyer, email: e.target.value })} />{show('buyerEmail')}</label>
       <label className="field">Your phone (optional)<input id="gift-buyerPhone" type="tel" inputMode="tel" autoComplete="tel" value={buyer.phone} onChange={e => setBuyer({ ...buyer, phone: e.target.value })} /></label>
+      <label className="check gift-terms"><input id="gift-terms" type="checkbox" checked={terms} aria-invalid={Boolean(tried && problems.terms) || undefined} onChange={e => setTerms(e.target.checked)} />
+        <span>I understand the voucher is for a massage at home in Vadim's areas listed above, lasts {options.months || 12} months from payment, and can be refunded within {REFUND_DAYS} days of buying if it hasn't been used. After that it can't be refunded or exchanged for cash.</span></label>
     </section>
 
     <section className="gift-total" aria-live="polite">
       <div><p className="gift-total-label">Total</p><p className="gift-total-sum figure">{whole(total)}</p>
-        <p className="gift-hint">{chosen.title}{travel > 0 ? ` + ${whole(travel)} ${area === 'unsure' ? 'travel and congestion, any area' : 'travel and congestion'}` : ''}. Paid by bank transfer.</p></div>
+        <p className="gift-hint">{chosen.title}{travel > 0 ? ` + ${whole(travel)} ${tier.key === 'all' ? 'travel and congestion, any of my areas' : 'travel and congestion'}` : ''}{extrasChosen.map(item => ` + ${item.name.toLowerCase()}`).join('')}. Paid by bank transfer.</p></div>
       {error && <p role="alert" className="error">{error}</p>}
       {tried && firstProblem && <p role="alert" className="gift-problem">{firstProblem[1]}</p>}
       <button type="submit" className="btn--primary btn--lg btn--block" disabled={busy}>{busy ? 'Please wait…' : 'Continue to payment'}</button>

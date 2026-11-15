@@ -297,7 +297,7 @@ export default function BookingFlow() {
             // An offer's length is fixed, so the people-and-length step is skipped.
             if (offer) { if ((serviceId === draft.serviceId && draft.sessions.length) || await store.changeSelection({ serviceId, sessions: [newSession(offer.minutes)], enhancementIds: [] })) navigate(3); return }
             // A gift voucher sets the people and the length too (a longer time can still be chosen from the review screen).
-            if (draft.gift) { if ((serviceId === draft.serviceId && draft.sessions.length === draft.gift.people) || await store.changeSelection({ serviceId, sessions: giftSessions(draft.gift, newSession) })) navigate(3); return }
+            if (draft.gift) { if ((serviceId === draft.serviceId && draft.sessions.length === draft.gift.people) || await store.changeSelection({ serviceId, sessions: giftSessions(draft.gift, newSession), enhancementIds: draft.gift.extraIds || [] })) navigate(3); return }
             if (serviceId === draft.serviceId || await store.changeSelection({ serviceId, sessions: [], enhancementIds: [] })) navigate(2)
           }} />}
           {offer && (step === 2 || step === 3) && <OfferTimeStep offer={offer} busy={busy} hold={async () => { if (await store.holdOffer()) await goWithQuote(4) }} />}

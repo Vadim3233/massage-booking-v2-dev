@@ -13,6 +13,7 @@ export const cleanGiftCode = text => String(text || '').replace(/[^A-Za-z0-9]/g,
 export const giftFromRow = (code, row) => ({
   code, minutes: Number(row.minutes), people: Number(row.people), from: row.from_name, to: row.recipient_name,
   travel: row.travel_choice, area: row.area_name || null, cover: Number(row.travel_cover || 0), expires: row.expires_at,
+  extraIds: row.enhancement_ids || [], extras: row.extras || [],
 })
 
 // The voucher's sessions: its length for each of its people.
