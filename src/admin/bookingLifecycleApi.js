@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase.js'
 import { money, today } from './calendarPresentation.js'
+import { canExtend, extensionsOf } from './extendApi.js'
 
 const PENDING = ['awaiting_transfer', 'awaiting_payment_verification', 'awaiting_cash_approval']
 const CONFLICT_CODES = ['PT409', '40001']
@@ -22,8 +23,11 @@ export const lifecycleActions = booking => {
   const status = booking.booking_status
   const payment = booking.booking_payments
   const actions = []
+  // The client stayed longer: once the session has started, and for 7 days after (extendApi.js).
+  if (canExtend(booking)) actions.push('extend')
   if (status === 'confirmed' && booking.date <= today()) actions.push('complete', 'noShow')
-  if (PENDING.includes(status) || status === 'confirmed') actions.push('edit', 'reschedule', 'cancel')
+  // Edit booking counts the people and lengths again, so a booking with extra time asks for it to be removed first (the server says the same).
+  if (PENDING.includes(status) || status === 'confirmed') actions.push(...(extensionsOf(booking).length ? [] : ['edit']), 'reschedule', 'cancel')
   // A refund to send: after a cancellation, or after a paid booking was changed to cost less (Edit booking).
   if (Number(booking.refund_due_gbp) > 0 && (status === 'cancelled' ? payment?.status === 'paid'
     : status !== 'no_show' && ['paid', 'awaiting_verification'].includes(payment?.status))) actions.push('refund')
@@ -33,7 +37,7 @@ export const lifecycleActions = booking => {
   return actions
 }
 export const lifecycleLabels = {
-  complete: 'Mark completed', noShow: 'Mark no-show', edit: 'Edit booking', reschedule: 'Reschedule', balance: 'Mark extra received', cancel: 'Cancel booking',
+  extend: 'Add extra time', complete: 'Mark completed', noShow: 'Mark no-show', edit: 'Edit booking', reschedule: 'Reschedule', balance: 'Mark extra received', cancel: 'Cancel booking',
   refund: 'Record refund sent', feeReceived: 'Mark fee received', feeWaive: 'Waive fee',
 }
 
@@ -108,4 +112,4 @@ export function createLifecycleApi(client) {
 export const lifecycleApi = createLifecycleApi(supabase)
 
 // What the sheet and the toast say once it is done: the outcome, not the name of the button that was pressed.
-export const DONE = { edit: 'Booking changed', balance: 'Extra payment recorded', complete: 'Marked completed', noShow: 'Marked no-show', reschedule: 'Booking moved', cancel: 'Booking cancelled', refund: 'Refund recorded', feeReceived: 'Fee recorded as received', feeWaive: 'Fee waived' }
+export const DONE = { extend: 'Extra time added', removeExtra: 'Extra time removed', edit: 'Booking changed', balance: 'Extra payment recorded', complete: 'Marked completed', noShow: 'Marked no-show', reschedule: 'Booking moved', cancel: 'Booking cancelled', refund: 'Refund recorded', feeReceived: 'Fee recorded as received', feeWaive: 'Fee waived' }

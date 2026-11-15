@@ -125,11 +125,16 @@ export function shareText(booking, bank, wording = STANDARD_SHARE_MESSAGE, terms
 // to pay it to and the reference ("If you've already sent it, please ignore this"). It is for a bank transfer not yet received, whether the client has
 // said they sent it or not, once the appointment has started, and never for a cancelled or missed one. Nothing is sent by itself: it opens in
 // WhatsApp, or is copied.
+// It is also for an extra still to pay on a paid booking (extra time, or a change that cost more), once the session has started: it then asks
+// for the extra only.
+export const extraDue = booking => paymentOf(booking)?.status === 'paid' && Number(booking.balance_due_gbp) > 0
+  && ['confirmed', 'completed'].includes(booking.booking_status)
 export const reminderDue = (booking, now = new Date()) => {
   const payment = paymentOf(booking)
-  return payment?.method === 'bank_transfer' && ['awaiting_transfer', 'awaiting_verification'].includes(payment.status)
+  return ((payment?.method === 'bank_transfer' && ['awaiting_transfer', 'awaiting_verification'].includes(payment.status)) || extraDue(booking))
     && !['cancelled', 'no_show'].includes(booking.booking_status) && hasStarted(booking, now)
 }
+const extraMinutesOf = booking => (booking.booking_extensions || []).reduce((sum, item) => sum + Number(item.minutes || 0), 0)
 // How long a session was, the way a client would say it: "1 hour", "2 hours", "90 min".
 export function sessionLength(minutes) {
   const value = Number(minutes)
@@ -137,8 +142,10 @@ export function sessionLength(minutes) {
   return value % 60 === 0 ? `${value / 60} ${value === 60 ? 'hour' : 'hours'}` : `${value} min`
 }
 // One line naming a session so the client can recognise it and check their bank: "Fri 30 Oct, 15:30 · 1 hour - £90.00".
+// For an extra still to pay it names the extra: "Sat 15 Nov, 18:00 · extra 30 min - £45.00".
 export function owedLine(booking) {
-  const length = sessionLength(booking.treatment_duration_minutes)
+  const extra = extraDue(booking)
+  const length = extra ? (extraMinutesOf(booking) ? `extra ${sessionLength(extraMinutesOf(booking))}` : 'extra') : sessionLength(booking.treatment_duration_minutes)
   return `${dateLabel(booking.date).replace(',', '')}, ${time(booking.start_minutes)}${length ? ` · ${length}` : ''} - ${money(owed(booking))}`
 }
 export function reminderText(booking, bank) {
@@ -148,7 +155,9 @@ export function reminderText(booking, bank) {
     ? [`Sort code: ${bank.sortCode}`, `Account number: ${bank.accountNumber}`, `Reference: ${payment?.payment_reference || booking.booking_reference}`].join('\n')
     : 'Let me know if you would like my bank details again.'
   return [
-    `${first ? `Hi ${first}, hope` : 'Hi, hope'} you're feeling good after your session! Just a quick reminder that payment for this session is still outstanding:`,
+    extraDue(booking)
+      ? `${first ? `Hi ${first}, thank` : 'Hi, thank'} you for staying a little longer! Just a quick note that payment for the extra time is still outstanding:`
+      : `${first ? `Hi ${first}, hope` : 'Hi, hope'} you're feeling good after your session! Just a quick reminder that payment for this session is still outstanding:`,
     '',
     owedLine(booking),
     '',
@@ -164,7 +173,7 @@ export function reminderText(booking, bank) {
 
 // One reminder for a client who owes for more than one booking: each session's date, time and length with what it comes to, the total, and the details to
 // pay it all in one transfer, with the first booking's reference. The bookings are the ones reminderDue accepts; they are listed by date.
-export const owed = booking => Number(paymentOf(booking)?.amount_gbp ?? booking.total_gbp) || 0
+export const owed = booking => extraDue(booking) ? Number(booking.balance_due_gbp) : Number(paymentOf(booking)?.amount_gbp ?? booking.total_gbp) || 0
 export const owedTotal = bookings => bookings.reduce((sum, booking) => sum + owed(booking), 0)
 // The client's bookings that a reminder can be sent for, earliest first, from any list of bookings (each needs its client_id).
 export function dueForClient(bookings, clientId, now = new Date()) {

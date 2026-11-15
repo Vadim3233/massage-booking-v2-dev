@@ -7,8 +7,10 @@ import { cancelOutcome, REFUND_HINT } from './cancelOutcome.js'
 import DayTimePicker from '../client/booking/components/DayTimePicker.jsx'
 import AllTimes from './newBooking/AllTimes.jsx'
 import EditBooking from './EditBooking.jsx'
+import ExtendDialog from './ExtendDialog.jsx'
+import { PAY_SHORT, extendApi, extensionsOf, minutesWords } from './extendApi.js'
 
-const ACTION_STYLE = { complete: 'btn--primary', feeReceived: 'btn--primary', refund: 'btn--primary', balance: 'btn--primary', cancel: 'btn--danger', feeWaive: 'btn--quiet', noShow: '', edit: '', reschedule: '' }
+const ACTION_STYLE = { extend: 'btn--tonal', complete: 'btn--primary', feeReceived: 'btn--primary', refund: 'btn--primary', balance: 'btn--primary', cancel: 'btn--danger', feeWaive: 'btn--quiet', noShow: '', edit: '', reschedule: '' }
 
 const WHO = [['client', 'The client asked'], ['admin', 'It is my own decision']]
 // Some explanations depend on the booking: a refund after a cancellation, or after a price went down on a booking going ahead.
@@ -189,26 +191,56 @@ function History({ booking, api }) {
   </details>
 }
 
+// The extra time on a booking, each with Remove (asked once, on the spot). Money already received by transfer, or a bill already paid, cannot be undone here.
+function ExtraTime({ booking, done, api = extendApi }) {
+  const [asking, setAsking] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const request = useRef(null)
+  const items = extensionsOf(booking)
+  if (!items.length) return null
+  async function remove(item) {
+    if (busy) return
+    setBusy(true); setError('')
+    const key = `${item.id}|${booking.updated_at}`
+    if (request.current?.key !== key) request.current = { key, id: crypto.randomUUID() }
+    try { await api.remove(booking, item, request.current.id); setAsking(null); await done('Extra time removed.', false, 'removeExtra') } catch (failure) { setError(failure.message); if (failure.conflict) await done(failure.message, true) }
+    setBusy(false)
+  }
+  return <div className="admin-extra-time">
+    <h4>Extra time</h4>
+    <ul role="list">{items.map(item => <li key={item.id}>
+      <span>+{minutesWords(item.minutes)}{item.recipient_name && booking.booking_sessions?.length > 1 ? ` · ${item.recipient_name}` : ''} · {Number(item.price_gbp) > 0 ? money(item.price_gbp) : 'no charge'} · {PAY_SHORT[item.pay_by]}</span>
+      {asking === item.id
+        ? <span className="admin-payment-buttons"><button className="btn--danger btn--small" disabled={busy} onClick={() => remove(item)}>{busy ? 'Removing…' : 'Yes, remove it'}</button><button className="btn--quiet btn--small" disabled={busy} onClick={() => setAsking(null)}>Keep it</button></span>
+        : <button className="btn--quiet btn--small" onClick={() => { setError(''); setAsking(item.id) }}>Remove</button>}
+    </li>)}</ul>
+    {error && <p role="alert">{error}</p>}
+  </div>
+}
+
 export default function BookingActions({ booking, refresh, api = lifecycleApi }) {
   const [kind, setKind] = useState(null)
   const [message, setMessage] = useState(null)
   const actions = lifecycleActions(booking)
-  async function done(text, isError = false) {
+  async function done(text, isError = false, doneKind = kind) {
     setKind(null)
     setMessage({ text, error: isError })
-    if (!isError) toast(`${DONE[kind] || 'Saved'} · ${clientName(booking)}`)
+    if (!isError) toast(`${DONE[doneKind] || 'Saved'} · ${clientName(booking)}`)
     try { await refresh() } catch { setMessage({ error: true, text: 'The booking changed. Could not refresh its status; please refresh before another action.' }) }
   }
   const owed = []
   if (Number(booking.late_fee_due_gbp) > 0 || booking.late_fee_status === 'waived') owed.push(`Late fee: ${label(booking.late_fee_status)}${Number(booking.late_fee_due_gbp) > 0 ? ` · ${money(booking.late_fee_due_gbp)}` : ''}`)
   if (Number(booking.refund_due_gbp) > 0) owed.push(`Refund due: ${money(booking.refund_due_gbp)}`)
-  if (Number(booking.balance_due_gbp) > 0) owed.push(`Still to pay: ${money(booking.balance_due_gbp)}`)
+  if (Number(booking.balance_due_gbp) > 0) owed.push(`Still to pay: ${money(booking.balance_due_gbp)}${booking.balance_reported_at ? ' · client says sent' : ''}`)
   return <div className="admin-booking-actions">
     {owed.length > 0 && <ul role="list" className="admin-owed">{owed.map(line => <li key={line}>{line}</li>)}</ul>}
     {actions.length > 0 && <div className="admin-payment-buttons">{actions.map(action => <button key={action} className={ACTION_STYLE[action]} onClick={() => { setMessage(null); setKind(action) }}>{lifecycleLabels[action]}</button>)}</div>}
     {message && <p role={message.error ? 'alert' : 'status'}>{message.text}</p>}
+    <ExtraTime booking={booking} done={done} />
     {kind === 'edit' && <EditBooking booking={booking} close={() => setKind(null)} done={done} times={api} />}
-    {kind && kind !== 'edit' && <ActionDialog key={kind} kind={kind} booking={booking} api={api} close={() => setKind(null)} done={done} />}
+    {kind === 'extend' && <ExtendDialog booking={booking} close={() => setKind(null)} done={done} />}
+    {kind && kind !== 'edit' && kind !== 'extend' && <ActionDialog key={kind} kind={kind} booking={booking} api={api} close={() => setKind(null)} done={done} />}
     <History booking={booking} api={api} />
   </div>
 }

@@ -8,6 +8,7 @@ import AuthPanel from '../auth/AuthPanel.jsx'
 import { dateLabel, londonDate, money, timeLabel } from '../booking/bookingDraft.js'
 import DayTimePicker from '../booking/components/DayTimePicker.jsx'
 import BookingSummary from '../booking/components/BookingSummary.jsx'
+import { CopyValue } from '../booking/components/BankDetails.jsx'
 import TelegramBox from '../booking/components/TelegramBox.jsx'
 import { accountApi, createAccountApi, LINK_INVALID } from './accountApi.js'
 import { cancelledOn } from './cancelledOn.js'
@@ -154,6 +155,35 @@ function ReceiptDownload({ id, api }) {
   </section>
 }
 
+// An extra still to pay on a paid booking (extra time, or a change that cost more): how much, the bank details and reference to pay it, and
+// "I've sent it", which tells Vadim to check his bank. Once said, it says so instead.
+function ExtraToPay({ booking, api, id, done }) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const bank = booking.extra_bank
+  const reference = booking.booking_payments?.payment_reference || booking.booking_reference
+  async function sent() {
+    setBusy(true); setError('')
+    try { await api.reportExtraSent(id); done() } catch (failure) { setError(failure.message) }
+    setBusy(false)
+  }
+  return <section className="panel account-extra" aria-labelledby="extra-title">
+    <h2 id="extra-title">Still to pay: <span className="figure">{money(booking.balance_due_gbp)}</span></h2>
+    <p>{booking.booking_extensions?.length ? 'For your extra time. ' : ''}Please pay it by bank transfer, using the reference below.</p>
+    {bank?.sort_code && bank?.account_number ? <dl className="prices bank-list">
+      {bank.account_name && <CopyValue label="Account name" value={bank.account_name} />}
+      {bank.bank_name && <div><dt>Bank</dt><dd><span>{bank.bank_name}</span></dd></div>}
+      <CopyValue label="Sort code" value={bank.sort_code} />
+      <CopyValue label="Account number" value={bank.account_number} />
+      <CopyValue label="Payment reference" value={reference} />
+    </dl> : <p className="fine">The bank details are in the email I sent you. Use the reference {reference}.</p>}
+    {booking.balance_reported_at
+      ? <p className="account-note" role="status">Thank you. I'll check my bank and let you know if anything is missing.</p>
+      : <button className="btn--primary" disabled={busy} onClick={sent}>{busy ? 'Saving…' : `I've sent the ${money(booking.balance_due_gbp)}`}</button>}
+    {error && <p role="alert" className="error">{error}</p>}
+  </section>
+}
+
 // One booking, with what can be done to it. `linked` means it was opened from the private link in an email, with no sign-in: there is
 // no list of other bookings to go back to then.
 function Manage({ id, rules, close, changed, api, linked = false }) {
@@ -213,9 +243,11 @@ function Manage({ id, rules, close, changed, api, linked = false }) {
       {booking.booking_status === 'cancelled' && Number(booking.refund_due_gbp) > 0 && <p className="account-note">A refund of {money(booking.refund_due_gbp)} is due to you. I'll send it soon.</p>}
       {/* After a change to the booking: money back on its way, or a little more to pay. */}
       {booking.booking_status !== 'cancelled' && Number(booking.refund_due_gbp) > 0 && booking.booking_payments?.status === 'paid' && <p className="account-note">After your change, {money(booking.refund_due_gbp)} is on its way back to you.</p>}
-      {Number(booking.balance_due_gbp) > 0 && booking.booking_payments?.status === 'paid' && <p className="account-note account-note--fee">{booking.booking_payments.method === 'cash'
-        ? `After your change, please have the extra ${money(booking.balance_due_gbp)} ready in cash at your appointment.`
-        : `After your change, ${money(booking.balance_due_gbp)} more is to pay by bank transfer. The details are in the email I sent you.`}</p>}
+      {Number(booking.balance_due_gbp) > 0 && booking.booking_payments?.status === 'paid' && (booking.booking_extensions?.some(extra => extra.pay_by === 'transfer') || booking.booking_payments.method === 'bank_transfer'
+        ? <ExtraToPay booking={booking} api={api} id={id} done={load} />
+        : <p className="account-note account-note--fee">{booking.booking_payments.method === 'cash'
+          ? `After your change, please have the extra ${money(booking.balance_due_gbp)} ready in cash at your appointment.`
+          : `After your change, ${money(booking.balance_due_gbp)} more is to pay by bank transfer. The details are in the email I sent you.`}</p>)}
       {open && terms?.can_change && <>
         <Terms terms={terms} action="reschedule" />
         <div className="actions">{!terms.gift_late && <button className="btn--primary" onClick={() => setMode('reschedule')}>Change the time</button>}<button className="btn--danger" onClick={() => setMode('cancel')}>Cancel appointment</button></div>

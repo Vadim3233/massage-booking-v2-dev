@@ -3,10 +3,10 @@ import { createAdminGate } from './adminGate.js'
 
 const fields = `*,clients!bookings_client_id_fkey(id,first_name,last_name,email,phone),
 booking_sessions(*,booking_session_preferences(*),booking_session_enhancements(*)),
-booking_payments(*),booking_enhancements(*)`
-const queueFields = `id,client_id,booking_reference,date,start_minutes,treatment_duration_minutes,total_gbp,booking_status,created_at,updated_at,
+booking_payments(*),booking_enhancements(*),booking_extensions(*)`
+const queueFields = `id,client_id,booking_reference,date,start_minutes,treatment_duration_minutes,total_gbp,balance_due_gbp,balance_reported_at,booking_status,created_at,updated_at,
 clients!bookings_client_id_fkey(id,first_name,last_name,phone),booking_sessions(service_name_snapshot,duration_minutes),
-booking_payments(method,status,updated_at,amount_gbp,payment_reference)`
+booking_payments(method,status,updated_at,amount_gbp,payment_reference),booking_extensions(minutes,price_gbp,pay_by)`
 // What needs the Admin right now: transfers the client says they made, cash requests to decide, and an appointment that has happened
 // without the payment being received yet.
 export const NEEDS_YOU = ['awaiting_verification', 'awaiting_approval']
@@ -25,7 +25,16 @@ export function paymentOverdue(booking, now = Date.now()) {
   const ends = Number(booking.start_minutes) + Number(booking.treatment_duration_minutes || 0)
   return booking.date < clock.date || (booking.date === clock.date && ends <= clock.minutes)
 }
-export const needsYou = booking => NEEDS_YOU.includes(booking.booking_payments?.status) || paymentOverdue(booking)
+// An extra still to pay on a paid booking (extra time by transfer, or a change that cost more): once the client says they sent it, or the session is over.
+export function extraOwed(booking, now = Date.now()) {
+  const payment = booking.booking_payments
+  if (!['confirmed', 'completed'].includes(booking.booking_status) || payment?.status !== 'paid' || !(Number(booking.balance_due_gbp) > 0)) return false
+  if (booking.balance_reported_at) return true
+  const clock = londonNow(now)
+  const ends = Number(booking.start_minutes) + Number(booking.treatment_duration_minutes || 0)
+  return booking.date < clock.date || (booking.date === clock.date && ends <= clock.minutes)
+}
+export const needsYou = booking => NEEDS_YOU.includes(booking.booking_payments?.status) || paymentOverdue(booking) || extraOwed(booking)
 export const paymentActions = booking => {
   const payment = booking.booking_payments
   // A booking waiting for payment is never cancelled automatically: the Admin confirms the payment, confirms the booking with the payment
