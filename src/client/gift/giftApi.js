@@ -18,6 +18,8 @@ export function createGiftApi(client) {
     })),
     purchase: token => unwrap(client.rpc('get_my_gift_purchase', { p_token: token })),
     transferMade: token => unwrap(client.rpc('gift_transfer_made', { p_token: token })),
+    // Cancel before paying, or ask for the money back within 14 days while unused (20261217100000).
+    cancel: token => unwrap(client.rpc('gift_buyer_cancel', { p_token: token })),
     voucher: code => unwrap(client.rpc('get_gift_voucher', { p_code: code })),
   }
 }

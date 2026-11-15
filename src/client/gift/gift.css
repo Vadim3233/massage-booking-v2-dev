@@ -138,3 +138,8 @@
 .gift-choice[aria-pressed=true] .gift-check { border-color: var(--gift-pick); background: var(--gift-pick); box-shadow: inset 0 0 0 3px var(--surface); }
 .gift-terms { display: flex; gap: 10px; align-items: flex-start; margin: 14px 0 10px; font-size: 14px; line-height: 1.45; text-align: left; }
 .gift-terms input { flex: none; width: 20px; height: 20px; margin-top: 1px; }
+/* The buyer's own page: cancel before paying, or ask for the money back within 14 days. */
+.gift-shell .gift-cancel { margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--line); }
+.gift-shell .gift-cancel h2 { font-size: 1.1rem; margin: 0 0 6px; }
+.gift-shell .gift-cancel p { margin: 0 0 10px; }
+.gift-shell .gift-cancel-link { display: block; margin: 14px auto 0; }
