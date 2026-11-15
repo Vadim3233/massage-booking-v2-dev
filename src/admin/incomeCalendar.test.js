@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calendarWeeks, dayDescription, dayShade, duration, hourSentence, monthlyRates, shortMoney, workShare } from './incomePresentation.js'
+import { calendarWeeks, dayDescription, incomeStatement, owedByDay, dayShade, duration, hourSentence, monthlyRates, shortMoney, workShare } from './incomePresentation.js'
 
 const november = Array.from({ length: 30 }, (_, index) => ({ date: `2026-11-${String(index + 1).padStart(2, '0')}`, received_gbp: 0, to_come_gbp: 0 }))
 
@@ -26,7 +26,7 @@ describe('the month calendar', () => {
     expect(shortMoney(1240)).toBe('£1.2k')
   })
   it('describes a day for a screen reader', () => {
-    expect(dayDescription({ date: '2026-11-01', received_gbp: '433.00', to_come_gbp: '90.00' }, true)).toBe('Sun 1 Nov: £433.00 received, £90.00 booked, money owed')
+    expect(dayDescription({ date: '2026-11-01', received_gbp: '433.00', to_come_gbp: '90.00' }, 125)).toBe('Sun 1 Nov: £433.00 paid, £125.00 overdue, £90.00 upcoming')
     expect(dayDescription({ date: '2026-11-05', received_gbp: 0, to_come_gbp: 0 }, false)).toBe('Thu 5 Nov: nothing')
   })
 })
@@ -46,5 +46,37 @@ describe('your hour', () => {
   it('lists the months that had worked time, with their rate', () => {
     expect(monthlyRates([{ from: '2026-01-01', per_hour_gbp: '62.50' }, { from: '2026-02-01', per_hour_gbp: null }, { from: '2026-03-01', per_hour_gbp: 70 }]))
       .toEqual([{ from: '2026-01-01', name: 'January', per_hour_gbp: 62.5 }, { from: '2026-03-01', name: 'March', per_hour_gbp: 70 }])
+  })
+})
+
+describe('paid, overdue and upcoming', () => {
+  const rows = [
+    { booking_id: 'a', date: '2026-11-15', amount_gbp: '180.00' },
+    { booking_id: 'b', date: '2026-11-15', amount_gbp: '170.00' },
+    { booking_id: 'c', date: '2026-10-30', amount_gbp: '90.00' },
+  ]
+  it('adds up what is owed for each appointment day', () => {
+    const days = owedByDay(rows)
+    expect(days.get('2026-11-15')).toBe(350)
+    expect(days.get('2026-10-30')).toBe(90)
+    expect(days.get('2026-11-14')).toBeUndefined()
+    expect(owedByDay(null).size).toBe(0)
+  })
+  const month = (more = {}) => ({ kind: 'month', from: '2026-11-01', to: '2026-11-30', total_gbp: '2599.00', still_to_come_gbp: '375.00', ...more })
+  it('lays out paid, overdue (inside the period only) and upcoming, and what they add up to', () => {
+    expect(incomeStatement(month(), rows)).toEqual({ paid: 2599, overdue: 350, upcoming: 375, expected: 3324, expectedLabel: 'Expected this month' })
+    expect(incomeStatement(month({ kind: 'week', from: '2026-11-09', to: '2026-11-15' }), rows).expectedLabel).toBe('Expected this week')
+  })
+  it('a past month with something still owed shows only paid and overdue', () => {
+    expect(incomeStatement(month({ from: '2026-10-01', to: '2026-10-31', total_gbp: '920.00', still_to_come_gbp: null }), rows))
+      .toEqual({ paid: 920, overdue: 90, upcoming: 0, expected: 1010, expectedLabel: 'Expected this month' })
+  })
+  it('shows no statement when nothing is overdue or upcoming, as it would only repeat the total', () => {
+    expect(incomeStatement(month({ from: '2026-12-01', to: '2026-12-31', still_to_come_gbp: 0 }), rows)).toBeNull()
+    expect(incomeStatement(month({ still_to_come_gbp: null }), [])).toBeNull()
+    expect(incomeStatement(month({ still_to_come_gbp: '0.10' }), null)).toEqual({ paid: 2599, overdue: 0, upcoming: 0.1, expected: 2599.1, expectedLabel: 'Expected this month' })
+  })
+  it('a day that shows nothing else still names what is owed for screen readers', () => {
+    expect(dayDescription({ date: '2026-11-15', received_gbp: 0, to_come_gbp: 0 }, 350)).toBe('Sun 15 Nov: £350.00 overdue')
   })
 })

@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase.js'
 
-// The Income screen's reads. All of them are Admin-only database functions that do every sum; nothing is added up here.
+// The Income screen's reads. All of them are Admin-only database functions that do the sums (the screen only adds up money owed per day).
 export function createIncomeApi(client) {
   async function run(request, what) {
     const { data, error } = await request

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { barDescription, barLabel, comparisonText, csvFileName, incomeCsv, nextAnchor, periodLabel, previousAnchor, rowNote, rowWhen, stillToComeText } from './incomePresentation.js'
+import { barDescription, barLabel, comparisonText, csvFileName, incomeCsv, nextAnchor, periodLabel, previousAnchor, rowNote, rowWhen } from './incomePresentation.js'
 
 const summary = changes => ({ kind: 'month', from: '2026-10-01', to: '2026-10-31', change_percent: 12, still_to_come_gbp: 520, ...changes })
 
@@ -21,11 +21,6 @@ describe('the Income screen in words', () => {
     expect(comparisonText(summary({ kind: 'week', change_percent: -5 }))).toBe('-5% vs last week')
     expect(comparisonText(summary({ kind: 'tax_year', change_percent: 0 }))).toBe('0% vs last tax year')
     expect(comparisonText(summary({ change_percent: null }))).toBe('—')
-  })
-  it('says what is still to come only when there is some', () => {
-    expect(stillToComeText(summary())).toBe('£520.00 still to come this month')
-    expect(stillToComeText(summary({ still_to_come_gbp: 0 }))).toBe('')
-    expect(stillToComeText(summary({ still_to_come_gbp: null }))).toBe('')
   })
   it('names the bars, short on screen and in full for a screen reader', () => {
     expect(barLabel('week', { from: '2026-10-19' })).toBe('Mon')

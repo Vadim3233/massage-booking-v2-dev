@@ -576,7 +576,20 @@
 .admin-income-total { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; margin-top: 10px; }
 .admin-income-total strong { font: 600 40px/1.05 var(--font-display); color: var(--ink); }
 .admin-income-compare { color: var(--ink-soft); font-size: 15px; }
-.admin-review .admin-income-still { margin: 2px 0 8px; color: var(--sand-ink); font-weight: 600; }
+.admin-income-total-label { flex-basis: 100%; margin-bottom: -4px; font: 600 12px/1.2 var(--font-ui); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); }
+/* The statement under the big figure: Paid, Overdue, Upcoming, and what they add up to. Swatches match the calendar's squares. */
+.admin-income-statement { margin: 12px 0 4px; padding: 2px 14px; border-radius: var(--radius-sm); background: var(--surface); box-shadow: var(--shadow-card); }
+.admin-income-statement > div { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--hairline); }
+.admin-income-statement > div:not(.is-expected)::before { content: ""; flex: none; width: 12px; height: 12px; border-radius: 3px; }
+.admin-income-statement .is-paid::before { background: var(--sage-rail); }
+.admin-income-statement .is-overdue::before { border: 1.5px solid var(--accent); background: var(--accent-soft); }
+.admin-income-statement .is-upcoming::before { border: 1.5px dashed var(--sage-line); }
+.admin-income-statement dt { flex: 1; min-width: 0; font: 600 15px/1.25 var(--font-ui); color: var(--ink); }
+.admin-income-statement dt small { display: block; margin-top: 1px; font: 400 12.5px/1.3 var(--font-ui); color: var(--ink-soft); }
+.admin-income-statement dd { margin: 0; font: 600 16px/1.2 var(--font-ui); font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink); }
+.admin-income-statement .is-overdue dt, .admin-income-statement .is-overdue dd { color: var(--accent-ink); }
+.admin-income-statement .is-expected { margin-top: -1px; border-top: 1.5px solid var(--ink); border-bottom: 0; }
+.admin-income-statement .is-expected dd { font: 600 19px/1.2 var(--font-display); font-variant-numeric: lining-nums; }
 .admin-income-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 12px 0; }
 .admin-income-facts div { padding: 10px 12px; border-radius: var(--radius-sm); background: var(--surface); box-shadow: var(--shadow-card); }
 .admin-income-facts dt { color: var(--ink-soft); font-size: 13px; }
@@ -599,7 +612,7 @@
 .admin-income-list .figure { font-weight: 600; white-space: nowrap; }
 
 /* Income: the month's calendar and "Your hour". Sage = money received (deeper = more), dashed sage = booked and not paid yet,
-   an accent dot = money owed for that day, the primary ring = today. */
+   terracotta with its amount = overdue (sessions that went ahead, not paid yet) (the accent dot marks any day with money owed), the primary ring = today. */
 .admin-income-subhead { margin: 18px 0 8px; font: 600 18px/1.3 var(--font-display); color: var(--ink); }
 .admin-income-minor { margin: 14px 0 6px; font: 600 14px/1.3 var(--font-ui); color: var(--ink-soft); }
 .admin-income-cal { width: 100%; border-collapse: separate; border-spacing: 4px; table-layout: fixed; margin: 0 -4px; width: calc(100% + 8px); }
@@ -612,6 +625,7 @@
 .admin-shell .admin-income-day.shade-2 { background: var(--sage-chip); border-color: var(--sage-line); color: var(--sage-ink); }
 .admin-shell .admin-income-day.shade-3 { background: var(--sage-rail); border-color: var(--sage-rail); color: var(--surface); }
 .admin-shell .admin-income-day.is-booked.shade-0 { border: 1.5px dashed var(--sage-line); color: var(--sage-ink-soft); }
+.admin-shell .admin-income-day.is-waiting.shade-0 { border: 1.5px solid var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
 .admin-shell .admin-income-day.is-today { box-shadow: 0 0 0 2px var(--primary); }
 .admin-shell .admin-income-day[aria-pressed="true"] { outline: 3px solid var(--primary); outline-offset: 1px; }
 .admin-income-day.is-owed::after { content: ""; position: absolute; top: 4px; right: 4px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
@@ -619,7 +633,7 @@
 .admin-income-key span::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 3px; vertical-align: -1px; }
 .admin-income-key .key-received::before, .admin-income-key .key-work::before { background: var(--sage-rail); }
 .admin-income-key .key-booked::before { border: 1.5px dashed var(--sage-line); }
-.admin-income-key .key-owed::before { border-radius: 50%; background: var(--accent); }
+.admin-income-key .key-owed::before { border: 1.5px solid var(--accent); background: var(--accent-soft); }
 .admin-income-key .key-travel::before { background: var(--accent); }
 .admin-income-hour { margin-top: 8px; }
 .admin-review .admin-income-rate { display: grid; justify-items: center; gap: 2px; margin: 4px 0 12px; text-align: center; color: var(--ink-soft); font-size: 14px; }
