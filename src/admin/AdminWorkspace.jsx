@@ -198,8 +198,8 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       </nav>}
       {surface === '/admin' && <Calendar key={date || 'today'} initialDate={date} signOut={signOut} openBooking={openBooking} openDay={day => openDaySettings(day, `/admin?date=${day}`)} openHours={openDayHours} revision={revision} onDate={rememberDay} />}
       {daySettingsSurface && <AdminLink className="admin-back-link" href={daySettingsBack} navigate={navigate}>← {daySettingsBack === '/admin/agenda' ? 'Agenda' : 'Day'}</AdminLink>}
-      {daySettingsSurface && <DaySettings key={date} date={date} revision={revision} openBooking={openBooking} changed={() => setRevision(value => value + 1)} done={() => navigate(daySettingsBack)} />}
-      {dayHoursSurface && <DayHoursGrid key={date} date={date} changed={() => setRevision(value => value + 1)} done={() => navigate(daySettingsBack)} />}
+      {daySettingsSurface && <DaySettings key={`settings-${date}`} date={date} revision={revision} openBooking={openBooking} changed={() => setRevision(value => value + 1)} done={() => navigate(daySettingsBack)} />}
+      {dayHoursSurface && <DayHoursGrid key={`hours-${date}`} date={date} changed={() => setRevision(value => value + 1)} done={() => navigate(daySettingsBack)} />}
       {surface === '/admin/agenda' && <Agenda home={agendaHome} openBooking={openBooking} openDay={day => openDaySettings(day, '/admin/agenda')} revision={revision} toCheck={toCheck} checked={() => { setRevision(value => value + 1); refreshToCheck() }} seeAll={() => navigate('/admin/review')} />}
       {creating && <AdminNewBooking initialDate={date} initialClientId={clientParam} ownerId={ownerId} registerGuard={registerGuard} onCancel={() => navigate(route.returnTo || '/admin')} onCreated={created} openClient={openClientFromBooking} />}
       {surface === '/admin/review' && <PaymentReview openBooking={openBooking} revision={revision} changed={refreshToCheck} />}

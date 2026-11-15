@@ -202,12 +202,12 @@ export default function ClientProfile({ id, back, backLabel = 'Clients', openBoo
     {error && <p role="alert">{error}</p>}
     <Summary clientId={id} api={api} version={version} />
     <ClientRhythm client={client} api={api} version={version} newBooking={newBooking} />
-    <ClientPaymentReminder key={client.id} client={client} api={api} version={version} />
+    <ClientPaymentReminder key={`reminder-${client.id}`} client={client} api={api} version={version} />
     <History clientId={id} api={api} openBooking={openBooking} version={version} />
     <Notes clientId={id} api={api} />
     <ClientRepeats clientId={id} openBooking={openBooking} />
     <Addresses clientId={id} api={api} changed={changed} />
-    <ClientTelegram key={client.id} client={client} api={api} />
+    <ClientTelegram key={`telegram-${client.id}`} client={client} api={api} />
     <ClientGiftVoucher key={`gift-${client.id}`} client={client} />
     <section aria-labelledby="online-title"><h2 id="online-title">Online booking</h2>
       <p>{client.online_booking_enabled ? 'This client can book online.' : 'Online booking is switched off for this client. They cannot book on the website.'}</p>
@@ -221,7 +221,7 @@ export default function ClientProfile({ id, back, backLabel = 'Clients', openBoo
       <p>{client.no_minimum_booking ? 'No minimum booking: this client can book any length in any area.' : 'This client keeps to each area\'s minimum booking (More > Areas).'}</p>
       <button className="btn--small" disabled={busy} aria-pressed={Boolean(client.no_minimum_booking)} onClick={toggleMinimum}>{client.no_minimum_booking ? 'Use the area minimums again' : 'No minimum booking for this client'}</button>
     </section>
-    <CashTrust key={client.id} clientId={id} api={api} version={version} />
+    <CashTrust key={`cash-${client.id}`} clientId={id} api={api} version={version} />
     {openCombine && <section aria-labelledby="same-title"><h2 id="same-title">Same person twice?</h2>
       <p className="admin-detail-hint">If this client also appears as another entry, for example one made when they booked as a guest, you can look at the two side by side and combine them.</p>
       {combining
