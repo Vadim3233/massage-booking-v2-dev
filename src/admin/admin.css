@@ -968,3 +968,4 @@
 .admin-gift-edit .admin-field { margin: 0; }
 .client-gift-bought { margin: 8px 0 0; padding-left: 18px; }
 .gift-shop-link input { font-size: 15px; text-overflow: ellipsis; }
+.admin-gift-refund { color: var(--danger); }

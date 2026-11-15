@@ -53,6 +53,19 @@ export function occasionsInOrder(date = new Date()) {
   return isChristmasTime(date) ? OCCASIONS : [...OCCASIONS.filter(item => !item.christmas), ...OCCASIONS.filter(item => item.christmas)]
 }
 export const withLove = (message, from) => `${message.trim()} Love, ${from.trim() || '…'} x`
+
+// "From Anna" under the message, unless the message already names the sender (as "Love, Anna x" does).
+export function fromLine(from, message = '') {
+  const name = (from || '').trim()
+  if (!name) return ''
+  return (message || '').toLowerCase().includes(name.toLowerCase()) ? '' : `From ${name}`
+}
+
+// When the sender's name changes after the message was edited, keep "Love, <name> x" in step with it.
+export function renameSignOff(message, before, after) {
+  const old = `Love, ${(before || '').trim() || '…'} x`
+  return message.includes(old) ? message.replace(old, `Love, ${(after || '').trim() || '…'} x`) : message
+}
 export const MESSAGE_LIMIT = 400
 
 // The line above the name on the voucher: Christmas words only on a Christmas design with a Christmas message.

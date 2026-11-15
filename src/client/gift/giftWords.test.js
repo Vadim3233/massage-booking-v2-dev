@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { areaGroups, codeFromPath, codeShown, designsInOrder, giftChoices, giftWords, kicker, occasionsInOrder, shopLink, shopMessage, travelTiers, travelWords, whatsappText, whole, withLove } from './giftWords.js'
+import { areaGroups, codeFromPath, codeShown, designsInOrder, fromLine, giftChoices, giftWords, kicker, occasionsInOrder, renameSignOff, shopLink, shopMessage, travelTiers, travelWords, whatsappText, whole, withLove } from './giftWords.js'
 
 const options = { all_areas_cover: 35, areas: [{ id: 'c', name: 'Chelsea', travel: 20, congestion: 15 }, { id: 'n', name: 'Nearby', travel: 0, congestion: 0 }] }
 
@@ -72,5 +72,21 @@ describe('gift words', () => {
       { name: 'Fulham', travel: 0, congestion: 0 }, { name: 'Westminster', travel: 0, congestion: 18 }])
     expect(groups).toEqual([{ label: 'No extra charge', extra: 0, names: ['Chelsea', 'Fulham'] }, { label: 'Congestion charge £18', extra: 18, names: ['Mayfair', 'Westminster'] },
       { label: 'Travel fee £20', extra: 20, names: ['Clapham'] }])
+  })
+})
+
+describe('sender on the voucher', () => {
+  it('adds "From <name>" only when the message does not already name the sender', () => {
+    expect(fromLine('Anna', 'Happy birthday! Love, Anna x')).toBe('')
+    expect(fromLine('Anna', 'Happy birthday, enjoy it!')).toBe('From Anna')
+    expect(fromLine('  Anna ', '')).toBe('From Anna')
+    expect(fromLine('', 'Happy birthday!')).toBe('')
+    expect(fromLine('anna', 'Love, ANNA x')).toBe('')
+  })
+  it('keeps "Love, <name> x" in step when the name is typed after the message was edited', () => {
+    expect(renameSignOff('Enjoy it, Mum! Love, … x', '', 'Anna')).toBe('Enjoy it, Mum! Love, Anna x')
+    expect(renameSignOff('Enjoy! Love, Ann x', 'Ann', 'Anna')).toBe('Enjoy! Love, Anna x')
+    expect(renameSignOff('Enjoy! Love, Anna x', 'Anna', '')).toBe('Enjoy! Love, … x')
+    expect(renameSignOff('My own words, from me', 'Ann', 'Anna')).toBe('My own words, from me')
   })
 })

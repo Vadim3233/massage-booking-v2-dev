@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { qrMatrix } from '../../lib/qr.js'
-import { codeShown, giftWords, kicker, londonDate } from './giftWords.js'
+import { codeShown, fromLine, giftWords, kicker, londonDate } from './giftWords.js'
 
 // A QR code, drawn as one SVG path so it prints sharp at any size.
 export function QrCode({ text, label = 'QR code to book', color = '#1b1b1b' }) {
@@ -37,6 +37,7 @@ export default function VoucherCard({ voucher, qrText }) {
   const extras = (voucher.extras || []).map(name => `, ${name.toLowerCase()}`).join('')
   const what = `${giftWords(voucher.minutes, voucher.people)}${extras}, at your home`
   const message = voucher.message ? `“${voucher.message}”` : ''
+  const from = fromLine(voucher.from_name, voucher.message)
   const until = voucher.expires_at ? `Valid until ${londonDate(voucher.expires_at)}` : 'Valid for 12 months'
   const code = voucher.code ? codeShown(voucher.code) : 'XXXX-XXXX'
   const scan = <div className="v-scan"><div className="v-qr"><QrCode text={qrText} /></div><span>Scan to book</span><b className="v-code">{code}</b></div>
@@ -48,14 +49,14 @@ export default function VoucherCard({ voucher, qrText }) {
         <span className="v-frame" /><span className="v-frame v-frame--inner" />
         <span className="v-ribbon" />
         <Bow fill="#c9302c" stroke="#9e2220" tail="#b32826" />
-        <div className="v-text"><p className="v-kicker">{kicker(design, voucher.message)}</p><p className="v-name">{voucher.recipient_name}</p><span className="v-rule" /><p className="v-what">{what}</p>{message && <p className="v-msg">{message}</p>}</div>
+        <div className="v-text"><p className="v-kicker">{kicker(design, voucher.message)}</p><p className="v-name">{voucher.recipient_name}</p><span className="v-rule" /><p className="v-what">{what}</p>{message && <p className="v-msg">{message}</p>}{from && <p className="v-from">{from}</p>}</div>
         {small}{scan}
       </>}
       {design === 'wrapped_present' && <>
         {Array.from({ length: 60 }, (_, i) => <i key={i} className="v-dot" style={{ left: `${((i * 89) % 600) / 6}%`, top: `${((i * 53 + (i % 7) * 19) % 424) / 4.24}%` }} />)}
         <span className="v-band v-band--h" /><span className="v-band v-band--v" />
         <Bow fill="#f3d9a4" stroke="#c9a463" tail="#e9c98a" />
-        <div className="v-tag"><span className="v-hole" /><p className="v-kicker">{kicker(design, voucher.message)}</p><p className="v-name">{voucher.recipient_name}</p><p className="v-what">{what}</p>{message && <p className="v-msg">{message}</p>}</div>
+        <div className="v-tag"><span className="v-hole" /><p className="v-kicker">{kicker(design, voucher.message)}</p><p className="v-name">{voucher.recipient_name}</p><p className="v-what">{what}</p>{message && <p className="v-msg">{message}</p>}{from && <p className="v-from">{from}</p>}</div>
         {scan}{small}
       </>}
       {design === 'gold_foil' && <div className="v-ticket">
@@ -68,14 +69,14 @@ export default function VoucherCard({ voucher, qrText }) {
         </svg>
         <div className="v-text"><p className="v-kicker">{kicker(design, voucher.message)}</p><p className="v-name v-foil">{voucher.recipient_name}</p><p className="v-what">{giftWords(voucher.minutes, voucher.people).slice(2)}{extras}</p><p className="v-sub">at your home, on a day that suits you</p>{message && <p className="v-msg">{message}</p>}</div>
         <p className="v-small">{until} · Vadim Susarin · Level 5 Soft Tissue Therapist · ISRM 9555</p>
-        <div className="v-stub"><p className="v-foil v-greeting">{/christmas|xmas/i.test(voucher.message || '') ? 'Merry Christmas' : 'With love'}</p><div className="v-qr"><QrCode text={qrText} /></div><span>Scan to book</span><small>Code</small><b className="v-code">{code}</b></div>
+        <div className="v-stub"><p className="v-foil v-greeting">{/christmas|xmas/i.test(voucher.message || '') ? 'Merry Christmas' : 'With love'}</p>{from && <p className="v-from">{from.replace(/^From/, 'from')}</p>}<div className="v-qr"><QrCode text={qrText} /></div><span>Scan to book</span><small>Code</small><b className="v-code">{code}</b></div>
       </div>}
       {design === 'black_gold' && <>
         <span className="v-frame" />
         <Sprig className="v-sprig" gold />
         <span className="v-band" />
         <Bow fill="#e2cc96" stroke="#b8913f" tail="#d1b77c" />
-        <div className="v-text"><p className="v-kicker">{kicker(design, voucher.message)}</p><p className="v-name v-foil">{voucher.recipient_name}</p><p className="v-what">{what}</p>{message && <p className="v-msg">{message}</p>}</div>
+        <div className="v-text"><p className="v-kicker">{kicker(design, voucher.message)}</p><p className="v-name v-foil">{voucher.recipient_name}</p><p className="v-what">{what}</p>{message && <p className="v-msg">{message}</p>}{from && <p className="v-from">{from}</p>}</div>
         <p className="v-small">{until} · Vadim Susarin · Level 5 Soft Tissue Therapist · ISRM 9555</p>
         <div className="v-scan"><div className="v-qr"><QrCode text={qrText} /></div><span>Scan to book</span><b className="v-code v-foil">{code}</b></div>
       </>}
@@ -83,7 +84,7 @@ export default function VoucherCard({ voucher, qrText }) {
         <span className="v-blob v-blob--a" /><span className="v-blob v-blob--b" />
         <Sprig className="v-sprig v-sprig--a" /><Sprig className="v-sprig v-sprig--b" />
         <div className="v-panel">
-          <div className="v-text"><p className="v-kicker">A little gift of calm</p><p className="v-name">for {voucher.recipient_name}</p><p className="v-what">{what}</p>{message && <p className="v-msg">{message}</p>}{small}</div>
+          <div className="v-text"><p className="v-kicker">A little gift of calm</p><p className="v-name">for {voucher.recipient_name}</p><p className="v-what">{what}</p>{message && <p className="v-msg">{message}</p>}{from && <p className="v-from">{from}</p>}{small}</div>
           {scan}
         </div>
       </>}
