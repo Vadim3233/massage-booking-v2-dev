@@ -612,7 +612,7 @@
 .admin-income-list .figure { font-weight: 600; white-space: nowrap; }
 
 /* Income: the month's calendar and "Your hour". Sage = money received (deeper = more), dashed sage = booked and not paid yet,
-   terracotta with its amount = overdue (sessions that went ahead, not paid yet) (the accent dot marks any day with money owed), the primary ring = today. */
+   terracotta with its amount = overdue, the accent dot = some money for that day not paid yet, the primary ring = today. */
 .admin-income-subhead { margin: 18px 0 8px; font: 600 18px/1.3 var(--font-display); color: var(--ink); }
 .admin-income-minor { margin: 14px 0 6px; font: 600 14px/1.3 var(--font-ui); color: var(--ink-soft); }
 .admin-income-cal { width: 100%; border-collapse: separate; border-spacing: 4px; table-layout: fixed; margin: 0 -4px; width: calc(100% + 8px); }
@@ -634,6 +634,7 @@
 .admin-income-key .key-received::before, .admin-income-key .key-work::before { background: var(--sage-rail); }
 .admin-income-key .key-booked::before { border: 1.5px dashed var(--sage-line); }
 .admin-income-key .key-owed::before { border: 1.5px solid var(--accent); background: var(--accent-soft); }
+.admin-income-key .key-dot::before { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
 .admin-income-key .key-travel::before { background: var(--accent); }
 .admin-income-hour { margin-top: 8px; }
 .admin-review .admin-income-rate { display: grid; justify-items: center; gap: 2px; margin: 4px 0 12px; text-align: center; color: var(--ink-soft); font-size: 14px; }

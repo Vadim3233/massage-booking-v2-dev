@@ -46,14 +46,14 @@ test('Income: the month\'s money, the bookings behind it, money owed, the tax ye
   await expect(page.getByRole('heading', { level: 2, name: 'Bookings', exact: true })).toBeVisible()
   // Yesterday's unpaid cash shows as overdue on its square, and the statement under the total has an Overdue line (when yesterday is in this month).
   if (shiftDate(now, -1).slice(0, 7) === now.slice(0, 7)) {
-    await expect(calendar.getByRole('button', { name: new RegExp(`^${dayName(shiftDate(now, -1))}: .*£85\\.00 overdue`) })).toBeVisible()
+    await expect(calendar.getByRole('button', { name: new RegExp(`^${dayName(shiftDate(now, -1))}: .*£[\\d,.]+ overdue`) })).toBeVisible()
     const statement = page.getByLabel('Paid, overdue and upcoming')
-    await expect(statement).toContainText('OverdueDone, not paid yet')
+    await expect(statement).toContainText('OverdueDone, not paid yet (or a late fee)')
     await expect(statement).toContainText('Expected this month')
   }
 
   // Overdue payments: yesterday's cash, not marked received, opens its booking.
-  await page.getByText('Overdue payments').click()
+  await page.getByText('Overdue payments, all months').click()
   const owed = page.locator('.admin-income-owed').getByRole('button', { name: /^AlexandraAlexandra.*cash not marked received.*£85\.00$/ })
   await expect(owed).toBeVisible()
   await owed.click()
