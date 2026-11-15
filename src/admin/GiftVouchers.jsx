@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { giftAdminApi, giftGroups } from './giftApi.js'
+import { giftAdminApi, giftCsv, giftGroups, giftHistory, matchesSearch } from './giftApi.js'
 import { codeShown, DESIGNS, giftLink, giftWords, londonDate, whatsappHref, whatsappText, whole } from '../client/gift/giftWords.js'
 import { toast } from '../ui/toast.js'
 import GiftShopLink from './GiftShopLink.jsx'
@@ -35,6 +35,10 @@ function VoucherRow({ voucher, busy, act, openBooking }) {
       </>}
       {voucher.status === 'used' && !voucher.booking_id && <button type="button" className="btn--quiet btn--small" disabled={busy} onClick={() => act(() => giftAdminApi.markUsed(voucher.id, false), 'It can be used again.')}>Not used after all</button>}
     </div>
+    <details className="admin-gift-history">
+      <summary>History</summary>
+      <ol>{giftHistory(voucher).map((step, index) => <li key={index}><span className="admin-gift-history-day">{step.day}</span> {step.text}</li>)}</ol>
+    </details>
   </li>
 }
 
@@ -85,6 +89,7 @@ export default function GiftVouchers({ openBooking }) {
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
   const [busy, setBusy] = useState(false)
+  const [search, setSearch] = useState('')
   useEffect(() => {
     let live = true
     Promise.all([giftAdminApi.list(), giftAdminApi.options()]).then(([rows, opts]) => { if (live) { setList(rows || []); setOptions(opts); setError('') } },
@@ -98,15 +103,36 @@ export default function GiftVouchers({ openBooking }) {
   if (error && !list) return <section className="admin-review"><h1>Gift vouchers</h1><p role="alert">{error}</p><button onClick={() => setAttempt(value => value + 1)}>Try again</button></section>
   if (!list || !options) return <section className="admin-review"><p role="status">Loading…</p></section>
   const groups = giftGroups(list)
+  const found = search.trim() ? list.filter(v => matchesSearch(v, search)) : null
+  const typedCode = search.toUpperCase().replace(/[^A-Z0-9]/g, '')
+  function download() {
+    const blob = new Blob([giftCsv(list)], { type: 'text/csv;charset=utf-8' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `vadmassage-gift-vouchers-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(link.href)
+  }
   const group = (title, items, empty) => <section aria-label={title}><h2 className="admin-group-title">{title} {items.length > 0 && <span className="chip chip--info">{items.length}</span>}</h2>
     {items.length ? <ul role="list" className="admin-gift-list">{items.map(v => <VoucherRow key={v.id} voucher={v} busy={busy} act={act} openBooking={openBooking} />)}</ul> : <p className="admin-detail-hint">{empty}</p>}</section>
   return <section className="admin-review" aria-labelledby="gifts-title">
     <header className="admin-review-heading"><div><h1 id="gifts-title" tabIndex={-1}>Gift vouchers</h1>
       <p>Sold in the last 12 months: {groups.soldCount} {groups.soldCount === 1 ? 'voucher' : 'vouchers'}, {whole(groups.soldTotal)}. Clients buy them at the link below.</p></div></header>
     <GiftShopLink />
-    {group('Waiting for payment', groups.waiting, 'Nothing waiting. When someone buys a voucher, it shows here until you mark it paid.')}
-    {group('Ready to use', groups.ready, 'None at the moment.')}
-    {group('Used', groups.used, 'None yet.')}
+    <div className="admin-gift-find">
+      <label className="admin-field">Find a voucher<input type="search" value={search} autoComplete="off" placeholder="Code, name, email or GIFT- reference" onChange={e => setSearch(e.target.value)} /></label>
+      <button type="button" className="btn--quiet btn--small" disabled={!list.length} onClick={download}>Download the list</button>
+    </div>
+    {found ? <section aria-label="Found">
+      <h2 className="admin-group-title">{found.length === 1 ? '1 voucher found' : `${found.length} vouchers found`}</h2>
+      {found.length ? <ul role="list" className="admin-gift-list">{found.map(v => <VoucherRow key={v.id} voucher={v} busy={busy} act={act} openBooking={openBooking} />)}</ul>
+        : <p className="admin-detail-hint">{typedCode.length === 8 ? 'No voucher has this code. Check it was typed right: if it still isn\'t found, the voucher is not one of yours.' : 'Nothing matches. Try the code, or part of a name or email.'}</p>}
+    </section> : <>
+      {group('Waiting for payment', groups.waiting, 'Nothing waiting. When someone buys a voucher, it shows here until you mark it paid.')}
+      {group('Ready to use', groups.ready, 'None at the moment.')}
+      {groups.ended.length > 0 && group('Ended unused', groups.ended, '')}
+      {group('Used', groups.used, 'None yet.')}
+    </>}
     <MakeVoucher options={options} done={() => setAttempt(value => value + 1)} />
   </section>
 }
