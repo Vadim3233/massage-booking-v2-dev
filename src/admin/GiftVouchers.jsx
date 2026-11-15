@@ -9,8 +9,10 @@ const blankForm = { key: '60x1', design: 'gold_foil', to: '', from: '', message:
 function VoucherRow({ voucher, busy, act, openBooking }) {
   const origin = window.location.origin
   const what = giftWords(voucher.minutes, voucher.people)
-  const travel = voucher.travel_choice === 'all' ? `travel and congestion for any area (${whole(voucher.travel_cover_gbp)})`
-    : voucher.travel_choice === 'area' ? `travel to ${voucher.service_area_name} (${whole(voucher.travel_cover_gbp)})` : 'massage only'
+  const travelOnly = voucher.travel_choice === 'all' ? `travel and congestion for any area (${whole(voucher.travel_cover_gbp)})`
+    : voucher.travel_choice === 'upto' ? `travel and congestion up to ${whole(voucher.travel_cover_gbp)}`
+      : voucher.travel_choice === 'area' ? `travel to ${voucher.service_area_name} (${whole(voucher.travel_cover_gbp)})` : 'massage only'
+  const travel = `${travelOnly}${voucher.enhancement_names?.length ? `, plus ${voucher.enhancement_names.join(', ').toLowerCase()}` : ''}`
   const link = giftLink(origin, voucher.code)
   async function copy() {
     try { await navigator.clipboard.writeText(link); toast('Link copied') } catch { toast(link) }
@@ -33,7 +35,7 @@ function VoucherRow({ voucher, busy, act, openBooking }) {
         <a className="btn btn--tonal btn--small" href={whatsappHref(whatsappText(voucher, origin))} target="_blank" rel="noopener noreferrer">WhatsApp</a>
         <button type="button" className="btn--quiet btn--small" disabled={busy} onClick={() => act(() => giftAdminApi.markUsed(voucher.id, true), 'Marked used.')}>Mark used</button>
       </>}
-      {voucher.status === 'used' && !voucher.booking_id && <button type="button" className="btn--quiet btn--small" disabled={busy} onClick={() => act(() => giftAdminApi.markUsed(voucher.id, false), 'It can be used again.')}>Not used after all</button>}
+      {voucher.status === 'used' && (!voucher.booking_id || voucher.booking?.status === 'cancelled') && <button type="button" className="btn--quiet btn--small" disabled={busy} onClick={() => act(() => giftAdminApi.markUsed(voucher.id, false), 'It can be used again.')}>Not used after all</button>}
     </div>
     <details className="admin-gift-history">
       <summary>History</summary>

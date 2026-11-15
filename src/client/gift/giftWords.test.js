@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { codeFromPath, codeShown, designsInOrder, giftChoices, giftWords, kicker, occasionsInOrder, shopLink, shopMessage, travelChoice, travelPart, whatsappText, whole, withLove } from './giftWords.js'
+import { areaGroups, codeFromPath, codeShown, designsInOrder, giftChoices, giftWords, kicker, occasionsInOrder, shopLink, shopMessage, travelTiers, travelWords, whatsappText, whole, withLove } from './giftWords.js'
 
 const options = { all_areas_cover: 35, areas: [{ id: 'c', name: 'Chelsea', travel: 20, congestion: 15 }, { id: 'n', name: 'Nearby', travel: 0, congestion: 0 }] }
 
@@ -21,12 +21,23 @@ describe('gift words', () => {
     expect(list.map(item => [item.title, item.price])).toEqual([['60-minute massage', 90], ['90-minute massage', 125], ['2-hour massage', 170], ['Massage for two', 180]])
     expect(list.filter(item => item.loved).map(item => item.minutes)).toEqual([90])
   })
-  it('adds the travel part the buyer chose', () => {
-    expect(travelPart(options, { area: 'unsure', cover: 'all' })).toBe(35)
-    expect(travelPart(options, { area: 'unsure', cover: 'none' })).toBe(0)
-    expect(travelPart(options, { area: 'c', cover: 'all' })).toBe(35)
-    expect(travelPart(options, { area: 'n', cover: 'all' })).toBe(0)
-    expect([travelChoice({ area: 'unsure', cover: 'all' }), travelChoice({ area: 'unsure', cover: 'none' }), travelChoice({ area: 'c' })]).toEqual(['all', 'none', 'area'])
+  it('turns the areas into a few one-tap cards: free, each lower charge, and everything', () => {
+    const live = { all_areas_cover: 20, areas: [{ name: 'Chelsea', travel: 0, congestion: 0 }, { name: 'Mayfair', travel: 0, congestion: 18 }, { name: 'Westminster', travel: 0, congestion: 18 },
+      { name: 'Clapham', travel: 20, congestion: 0 }, { name: 'Fulham', travel: '0.00', congestion: '0.00' }] }
+    const tiers = travelTiers(live)
+    expect(tiers.map(t => [t.key, t.choice, t.cover, t.title])).toEqual([['none', 'none', 0, 'Just the massage'], ['upto-18', 'upto', 18, 'Congestion charge included'],
+      ['all', 'all', 20, 'Everything included']])
+    expect(tiers[0].names).toEqual(['Chelsea', 'Fulham'])
+    expect(tiers[1].or).toBe('Mayfair or Westminster')
+    expect(tiers[2].charged.map(g => g.label)).toEqual(['Congestion charge £18', 'Travel fee £20'])
+    expect(travelTiers({ all_areas_cover: 0, areas: [{ name: 'Chelsea', travel: 0, congestion: 0 }] }).map(t => t.key)).toEqual(['none'])
+    expect(travelTiers(options).map(t => t.key)).toEqual(['none', 'all'])
+  })
+  it('says what a voucher covers besides the massage', () => {
+    expect(travelWords({ travel_choice: 'all' })).toBe('Travel and congestion included, anywhere in my areas')
+    expect(travelWords({ travel_choice: 'upto', travel_cover: 18 })).toBe('Travel and congestion included up to £18')
+    expect(travelWords({ travel_choice: 'area', area_name: 'Clapham' })).toBe('Travel to Clapham included')
+    expect(travelWords({ travel_choice: 'none' })).toBe('')
   })
   it('puts Christmas first in November and December, and last the rest of the year', () => {
     expect(designsInOrder(new Date('2026-11-20'))[0].id).toBe('christmas_night')
@@ -54,5 +65,12 @@ describe('gift words', () => {
     expect(christmas).toContain('\nhttps://booking.vadmassage.com/gift\n')
     expect(christmas.endsWith('Warm wishes,\nVadim')).toBe(true)
     expect(shopMessage(link, '', new Date('2026-05-01T12:00:00Z')).startsWith('Hi! Looking for a present for someone special?')).toBe(true)
+  })
+
+  it('groups the areas by what they add, no charge first', () => {
+    const groups = areaGroups([{ name: 'Chelsea', travel: '0.00', congestion: '0.00' }, { name: 'Clapham', travel: 20, congestion: 0 }, { name: 'Mayfair', travel: 0, congestion: 18 },
+      { name: 'Fulham', travel: 0, congestion: 0 }, { name: 'Westminster', travel: 0, congestion: 18 }])
+    expect(groups).toEqual([{ label: 'No extra charge', extra: 0, names: ['Chelsea', 'Fulham'] }, { label: 'Congestion charge £18', extra: 18, names: ['Mayfair', 'Westminster'] },
+      { label: 'Travel fee £20', extra: 20, names: ['Clapham'] }])
   })
 })

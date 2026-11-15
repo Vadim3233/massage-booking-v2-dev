@@ -31,10 +31,11 @@ const Sprig = ({ className, gold = false }) => <svg aria-hidden="true" className
 </svg>
 
 // The voucher in one of its five designs. Drawn at 600 × 424 and scaled to fit its box, so it looks the same on a phone, on the page and printed.
-// `voucher`: code, minutes, people, recipient_name, from_name, message, design, expires_at. `qrText`: where the QR code leads.
+// `voucher`: code, minutes, people, extras (names of the extras paid for), recipient_name, from_name, message, design, expires_at. `qrText`: where the QR code leads.
 export default function VoucherCard({ voucher, qrText }) {
   const design = voucher.design || 'christmas_night'
-  const what = `${giftWords(voucher.minutes, voucher.people)}, at your home`
+  const extras = (voucher.extras || []).map(name => `, ${name.toLowerCase()}`).join('')
+  const what = `${giftWords(voucher.minutes, voucher.people)}${extras}, at your home`
   const message = voucher.message ? `“${voucher.message}”` : ''
   const until = voucher.expires_at ? `Valid until ${londonDate(voucher.expires_at)}` : 'Valid for 12 months'
   const code = voucher.code ? codeShown(voucher.code) : 'XXXX-XXXX'
@@ -65,7 +66,7 @@ export default function VoucherCard({ voucher, qrText }) {
           <path d="M46 40 C30 50, 62 54, 40 62 C20 70, 70 74, 34 84 C10 92, 82 96, 28 106 C4 112, 92 118, 20 128 C40 128, 70 130, 86 132" fill="none" stroke="url(#v-tree-gold)" strokeWidth="3.2" strokeLinecap="round" />
           <rect x="42" y="134" width="8" height="10" fill="url(#v-tree-gold)" />
         </svg>
-        <div className="v-text"><p className="v-kicker">{kicker(design, voucher.message)}</p><p className="v-name v-foil">{voucher.recipient_name}</p><p className="v-what">{giftWords(voucher.minutes, voucher.people).slice(2)}</p><p className="v-sub">at your home, on a day that suits you</p>{message && <p className="v-msg">{message}</p>}</div>
+        <div className="v-text"><p className="v-kicker">{kicker(design, voucher.message)}</p><p className="v-name v-foil">{voucher.recipient_name}</p><p className="v-what">{giftWords(voucher.minutes, voucher.people).slice(2)}{extras}</p><p className="v-sub">at your home, on a day that suits you</p>{message && <p className="v-msg">{message}</p>}</div>
         <p className="v-small">{until} · Vadim Susarin · Level 5 Soft Tissue Therapist · ISRM 9555</p>
         <div className="v-stub"><p className="v-foil v-greeting">{/christmas|xmas/i.test(voucher.message || '') ? 'Merry Christmas' : 'With love'}</p><div className="v-qr"><QrCode text={qrText} /></div><span>Scan to book</span><small>Code</small><b className="v-code">{code}</b></div>
       </div>}

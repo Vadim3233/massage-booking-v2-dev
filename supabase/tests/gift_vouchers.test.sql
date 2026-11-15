@@ -53,7 +53,7 @@ grant execute on function pg_temp.book(text, uuid, jsonb, integer, integer, text
 -- Who may do what
 -- ---------------------------------------------------------------------------------------------
 select ok(has_function_privilege('anon', 'public.get_gift_options()', 'EXECUTE'), 'Anyone can see what can be bought');
-select ok(has_function_privilege('anon', 'public.buy_gift_voucher(integer,integer,text,uuid,text,text,text,text,text,text,timestamptz,text,text,text)', 'EXECUTE'), 'and buy a voucher without an account');
+select ok(has_function_privilege('anon', 'public.buy_gift_voucher(integer,integer,text,uuid,text,text,text,text,text,text,timestamptz,text,text,text,numeric,uuid[],boolean)', 'EXECUTE'), 'and buy a voucher without an account');
 select ok(has_function_privilege('anon', 'public.get_gift_voucher(text)', 'EXECUTE'), 'and open a voucher with its code');
 select ok(not has_table_privilege('anon', 'public.gift_vouchers', 'SELECT'), 'Visitors cannot list vouchers');
 select ok(not has_function_privilege('anon', 'public.admin_mark_gift_paid(uuid,text)', 'EXECUTE'), 'A visitor cannot mark one paid');
@@ -68,17 +68,17 @@ select is((select public.get_gift_options()->'lengths'), '[{"price": 90, "minute
 select is((select (public.get_gift_options()->>'all_areas_cover')::numeric), 35.00, '"Everything included" adds the highest area charge, £35');
 select is((select jsonb_array_length(public.get_gift_options()->'areas')), 2, 'and the areas are listed with what they add');
 
-select throws_ok($$select public.buy_gift_voucher(75, 1, 'all', null, 'gold_foil', 'Mum', 'Anna', null, 'self', null, null, 'Anna Buyer', 'anna@example.test', null)$$,
+select throws_ok($$select public.buy_gift_voucher(75, 1, 'all', null, 'gold_foil', 'Mum', 'Anna', null, 'self', null, null, 'Anna Buyer', 'anna@example.test', null, p_terms := true)$$,
   '22023', 'There is no 75-minute massage to give. Please choose another length.', 'A length with no massage is refused');
-select throws_ok($$select public.buy_gift_voucher(60, 1, 'all', null, 'gold_foil', ' ', 'Anna', null, 'self', null, null, 'Anna Buyer', 'anna@example.test', null)$$,
+select throws_ok($$select public.buy_gift_voucher(60, 1, 'all', null, 'gold_foil', ' ', 'Anna', null, 'self', null, null, 'Anna Buyer', 'anna@example.test', null, p_terms := true)$$,
   '22023', 'Who is the voucher for?', 'It needs a name');
-select throws_ok($$select public.buy_gift_voucher(60, 1, 'all', null, 'gold_foil', 'Mum', 'Anna', null, 'self', null, null, 'Anna Buyer', 'not-an-email', null)$$,
+select throws_ok($$select public.buy_gift_voucher(60, 1, 'all', null, 'gold_foil', 'Mum', 'Anna', null, 'self', null, null, 'Anna Buyer', 'not-an-email', null, p_terms := true)$$,
   '22023', 'Please add your email, so I can send you the voucher.', 'and the buyer''s email');
-select throws_ok($$select public.buy_gift_voucher(60, 1, 'all', null, 'gold_foil', 'Mum', 'Anna', null, 'email', null, now() + interval '1 day', 'Anna Buyer', 'anna@example.test', null)$$,
+select throws_ok($$select public.buy_gift_voucher(60, 1, 'all', null, 'gold_foil', 'Mum', 'Anna', null, 'email', null, now() + interval '1 day', 'Anna Buyer', 'anna@example.test', null, p_terms := true)$$,
   '22023', 'Please add their email, so the voucher can reach them.', 'Sending by email needs their email');
 
 create temp table bought as select public.buy_gift_voucher(60, 1, 'all', null, 'christmas_night', 'Mum', 'Anna', 'Happy Christmas! Love, Anna x', 'self', null, null,
-  'Anna Buyer', 'Anna@Example.test', '07700 900000') as r;
+  'Anna Buyer', 'Anna@Example.test', '07700 900000', p_terms := true) as r;
 grant select on bought to anon, authenticated;
 select is((select (r->>'amount')::numeric from bought), 125.00, 'A 60-minute massage with everything included is £90 + £35');
 select ok((select r->>'reference' ~ '^GIFT-[A-Z0-9]{5}$' from bought), 'with a GIFT- reference to pay with');
@@ -195,7 +195,7 @@ select is((select title from public.notification_deliveries d join public.event_
 -- ---------------------------------------------------------------------------------------------
 set local role anon;
 create temp table bought3 as select public.buy_gift_voucher(90, 1, 'area', '00000000-0000-4000-8000-00000000d532', 'gold_foil', 'Dad', 'Ben', null, 'email',
-  'dad@example.test', now() + interval '2 days', 'Ben Buyer', 'ben@example.test', null) as r;
+  'dad@example.test', now() + interval '2 days', 'Ben Buyer', 'ben@example.test', null, p_terms := true) as r;
 reset role;
 select is((select (r->>'amount')::numeric from bought3), 125.00, 'A 90-minute massage in an area with nothing extra is £125');
 select pg_temp.as_user('00000000-0000-0000-0000-00000000d501');
@@ -220,7 +220,7 @@ select is((select public.get_gift_voucher((select code from public.gift_vouchers
 -- Turned off: nothing can be bought.
 insert into public.business_settings(key, value) values ('gift_vouchers_on', 'false') on conflict (key) do update set value = excluded.value;
 set local role anon;
-select throws_ok($$select public.buy_gift_voucher(60, 1, 'none', null, 'gold_foil', 'Mum', 'Anna', null, 'self', null, null, 'Anna Buyer', 'anna@example.test', null)$$,
+select throws_ok($$select public.buy_gift_voucher(60, 1, 'none', null, 'gold_foil', 'Mum', 'Anna', null, 'self', null, null, 'Anna Buyer', 'anna@example.test', null, p_terms := true)$$,
   '22023', 'Gift vouchers are not on sale right now. Please message Vadim.', 'When turned off, vouchers cannot be bought');
 reset role;
 

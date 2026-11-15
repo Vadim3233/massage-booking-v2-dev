@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { createGiftApi } from './giftApi.js'
-import { bookingLink, codeShown, giftWords, londonDate, whatsappHref, whatsappText } from './giftWords.js'
+import { bookingLink, codeShown, giftWords, londonDate, whatsappHref, whatsappText, whole } from './giftWords.js'
 import VoucherCard from './VoucherCard.jsx'
 import { friendlyError } from '../booking/friendlyError.js'
 import '../booking/booking.css'
@@ -21,12 +21,19 @@ export default function GiftOpen({ code, client = supabase }) {
   const [attempt, setAttempt] = useState(0)
   const [stage, setStage] = useState('envelope')
   const [scratches, setScratches] = useState(0)
+  const [areas, setAreas] = useState([])
   useEffect(() => { document.title = 'Your gift · VadMassage' }, [])
   useEffect(() => {
     let live = true
     api.voucher(code).then(row => { if (live) { setVoucher(row?.state ? row : { state: 'missing' }); setError('') } }, failure => { if (live) setError(friendlyError(failure)) })
     return () => { live = false }
   }, [api, code, attempt])
+  // The areas Vadim visits, named on the voucher page so the person knows where it can be used.
+  useEffect(() => {
+    let live = true
+    api.options().then(data => { if (live) setAreas(data?.areas || []) }, () => { /* the list is simply left out */ })
+    return () => { live = false }
+  }, [api])
   useEffect(() => {
     if (scratches < SCRATCHES) return undefined
     const timer = setTimeout(() => setStage('card'), 500)
@@ -48,7 +55,7 @@ export default function GiftOpen({ code, client = supabase }) {
   if (voucher.state === 'used') return page(<><h1 tabIndex={-1}>This gift has been <em>used</em></h1><p className="lede">The massage has been booked. Need to change it? Look in <a href="/account">Your bookings</a>, or message Vadim.</p></>)
   if (voucher.state === 'expired') return page(<><h1 tabIndex={-1}>This gift has <em>ended</em></h1><p className="lede">It could be used until {londonDate(voucher.expires_at)}. Please message Vadim and he'll see what he can do.</p><a className="btn btn--tonal" href="https://vadmassage.com">Contact Vadim</a></>)
 
-  const what = `${giftWords(voucher.minutes, voucher.people)}, at your home`
+  const what = `${giftWords(voucher.minutes, voucher.people)}${(voucher.extras || []).map(name => `, ${name.toLowerCase()}`).join('')}, at your home`
   if (stage === 'envelope') return page(<section className="gift-unwrap">
     <p className="gift-eyebrow">{voucher.from_name} sent you a gift</p>
     <h1 tabIndex={-1} className="sr-only">A gift for {voucher.recipient_name}</h1>
@@ -78,7 +85,9 @@ export default function GiftOpen({ code, client = supabase }) {
     <p className="lede">From {voucher.from_name}, already paid for. Choose any day that suits you, any time before {londonDate(voucher.expires_at)}.
       {voucher.travel_choice === 'none' && ' The voucher pays for the massage. If you live where there is a travel fee or congestion charge, you pay just that when you book.'}
       {voucher.travel_choice === 'area' && voucher.area_name && ` The travel to ${voucher.area_name} is included too.`}
-      {voucher.travel_choice === 'all' && ' Any travel fee or congestion charge is included too.'}</p>
+      {voucher.travel_choice === 'all' && ' Any travel fee or congestion charge in my areas is included too.'}
+      {voucher.travel_choice === 'upto' && ` Travel and congestion are included up to ${whole(voucher.travel_cover)}.`}</p>
+    {voucher.travel_choice !== 'area' && areas.length > 0 && <p className="fine">Vadim comes to your home in {areas.map(item => item.name).join(', ')}.</p>}
     <a className="btn btn--primary btn--lg btn--block gift-book" href={bookingLink(origin, code)}>Choose my day</a>
     <div className="gift-print-area"><VoucherCard voucher={{ ...voucher, code }} qrText={bookingLink(origin, code)} /></div>
     <div className="gift-actions">

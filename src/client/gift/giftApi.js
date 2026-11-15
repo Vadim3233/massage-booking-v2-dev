@@ -9,7 +9,8 @@ export function createGiftApi(client) {
   return {
     options: () => unwrap(client.rpc('get_gift_options')),
     buy: form => unwrap(client.rpc('buy_gift_voucher', {
-      p_minutes: form.minutes, p_people: form.people, p_travel_choice: form.travelChoice, p_service_area_id: form.areaId || null,
+      p_minutes: form.minutes, p_people: form.people, p_travel_choice: form.travelChoice, p_service_area_id: form.areaId || null, p_travel_cover: form.travelCover ?? null,
+      p_enhancement_ids: form.enhancementIds || [], p_terms: Boolean(form.terms),
       p_design: form.design, p_recipient_name: form.to.trim(), p_from_name: form.from.trim(), p_message: form.message.trim() || null,
       p_delivery: form.delivery, p_recipient_email: form.delivery === 'email' ? form.recipientEmail.trim() : null,
       p_send_at: form.delivery === 'email' ? form.sendAt : null,

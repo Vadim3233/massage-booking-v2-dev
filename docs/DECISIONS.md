@@ -988,3 +988,15 @@ The page stays where the Admin needs it:
 
 **Follow-ups:** card payment; a receipt for the voucher purchase; "vouchers sold" in Income.
 
+
+## ADR-102 — Gift vouchers: area cards, extras, terms and late changes (2026-11-15)
+
+**Why:** "Not sure yet" could be read as covering places outside Vadim's areas, and it took several taps. Vadim asked for fewer clicks with the areas listed, the extras (Extra strong) on sale, a terms tick box, and clear rules for moving or cancelling a booking paid with a voucher. Mockup: `/mnt/project-files/gift-vouchers/mockups/areas-extras.html`.
+
+**Decision:**
+- **Travel as cards built from the live area charges:** "Just the massage" (the free areas), one card per distinct lower charge ("Congestion charge included" up to £18, with the areas it covers) and "Everything included" (the highest charge, any area; "Not sure? Choose this"). A middle card is stored as `travel_choice = 'upto'` with `travel_cover_gbp` = that charge; the database accepts only an amount that is some active area's charge, above 0 and below the "everything" amount. The page says Vadim only visits the areas listed, and "Not in these areas? Message Vadim before buying".
+- **Extras:** the buyer may add active extras, priced × people. Stored on the voucher (`enhancement_ids`, `enhancement_names`, `enhancements_gbp`), shown on it, chosen automatically at booking. At booking the voucher pays the smallest of what it paid, what the booking's extras cost, and the current price of its extras (`gift_extras_cover`).
+- **Terms:** buying needs the tick (`terms_accepted_at`): only in Vadim's areas, 12 months from payment, refundable within 14 days of buying if unused, then no refund or cash exchange (Vadim's choice).
+- **Late changes to a gift booking:** the late fee is worked out only on what the client paid on top of the voucher (`total_gbp - gift_covered_gbp`) in all five fee callers. Inside the free-cancellation hours a client can't move it online, and a client cancel uses the voucher up (recommended to Vadim as option A; Admin cancels still give it back, and Admin can press "Not used after all"). A gift booking can't be moved to a day after the voucher's end (or after its current day, if later). There is no limit on how many times it can be moved in good time.
+
+**How it was built:** migration `20261215100000_gift_voucher_extras.sql` (`get_gift_options`, `buy_gift_voucher` 17 arguments, `get_gift_voucher`, `check_gift_code`, `gift_extras_cover`, `quote_gift_booking`, `finalize_client_booking`, `admin_late_fee_preview`, `apply_booking_cancellation`, `change_fee_gbp`, `client_cancel_booking`, `get_my_change_terms`, `client_reschedule_booking`, `gift_voucher_back`, `admin_gift_vouchers`). Front end: `giftWords.js` (`travelTiers`, `travelWords`, `areaGroups`), `GiftShop.jsx`, `GiftOpen.jsx`, `VoucherCard.jsx`, `giftApi.js`, `giftCode.js`, `GiftPanel.jsx`, `BookingFlow.jsx`, `AccountApp.jsx`, `GiftVouchers.jsx`. Tests: `supabase/tests/gift_voucher_extras.test.sql`, `giftWords.test.js`, `giftCode.test.js`.

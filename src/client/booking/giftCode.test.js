@@ -14,6 +14,11 @@ describe('booking with a gift voucher', () => {
     expect(gift).toMatchObject({ code: '7K3MQX9P', minutes: 60, people: 2, from: 'Jo', travel: 'none', cover: 0 })
     expect(giftSessions(gift, minutes => ({ duration_minutes: minutes }))).toEqual([{ duration_minutes: 60 }, { duration_minutes: 60 }])
   })
+  it('carries the extras a voucher paid for, so they are chosen for the booking', () => {
+    const gift = giftFromRow('7K3MQX9P', { minutes: 90, people: 1, travel_choice: 'upto', travel_cover: '18.00', enhancement_ids: ['e1'], extras: ['EXTRA STRONG'] })
+    expect(gift).toMatchObject({ travel: 'upto', cover: 18, extraIds: ['e1'], extras: ['EXTRA STRONG'] })
+    expect(giftFromRow('X', { minutes: 60, people: 1 })).toMatchObject({ extraIds: [], extras: [] })
+  })
   it('reads what the voucher pays from the quote', () => {
     expect(giftLines({ total_gbp: 160, gift_covered_gbp: '125.00', to_pay_gbp: '35.00' })).toEqual({ covered: 125, toPay: 35 })
     expect(giftLines({ total_gbp: 90 })).toBeNull()

@@ -81,13 +81,36 @@ export function giftChoices(lengths) {
   return list.map(item => ({ ...item, loved: Boolean(loved) && item.people === 1 && item.minutes === 90 }))
 }
 
-// What the travel part adds: a known area adds its own charges, "Not sure yet" adds the most any area adds (everything included) or nothing.
-export function travelPart(options, choice) {
-  if (choice.area === 'unsure') return choice.cover === 'all' ? Number(options.all_areas_cover) : 0
-  const area = options.areas.find(item => item.id === choice.area)
-  return area ? Number(area.travel) + Number(area.congestion) : 0
+// "Where do they live?" as a few cards, one tap each, built from the areas' charges:
+//   Just the massage (+£0): the areas with no charge; anywhere else they pay that area's charge when they book.
+//   A card for each lower charge (e.g. congestion £18): covers up to that amount, so those areas and the free ones.
+//   Everything included (the highest charge): any of the areas.
+const chargeWord = list => {
+  const travel = list.some(a => Number(a.travel) > 0)
+  const congestion = list.some(a => Number(a.congestion) > 0)
+  return travel && congestion ? 'Travel and congestion' : travel ? 'Travel fee' : 'Congestion charge'
 }
-export const travelChoice = choice => (choice.area === 'unsure' ? (choice.cover === 'all' ? 'all' : 'none') : 'area')
+const orList = names => (names.length > 1 ? `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}` : names[0] || '')
+export function travelTiers(options) {
+  const areas = (options?.areas || []).map(a => ({ ...a, extra: (Number(a.travel) || 0) + (Number(a.congestion) || 0) }))
+  const top = Number(options?.all_areas_cover) || 0
+  const free = areas.filter(a => a.extra === 0).map(a => a.name)
+  const tiers = [{ key: 'none', choice: 'none', cover: 0, title: 'Just the massage', names: free }]
+  const lower = [...new Set(areas.map(a => a.extra).filter(x => x > 0 && x < top))].sort((a, b) => a - b)
+  for (const amount of lower) {
+    const these = areas.filter(a => a.extra === amount)
+    tiers.push({ key: `upto-${amount}`, choice: 'upto', cover: amount, title: `${chargeWord(these)} included`, names: these.map(a => a.name), or: orList(these.map(a => a.name)) })
+  }
+  if (top > 0) tiers.push({ key: 'all', choice: 'all', cover: top, title: 'Everything included', charged: areaGroups(areas.filter(a => a.extra > 0)) })
+  return tiers
+}
+// The words on the voucher and the booking for what a voucher covers besides the massage.
+export function travelWords(voucher) {
+  if (voucher.travel_choice === 'all') return 'Travel and congestion included, anywhere in my areas'
+  if (voucher.travel_choice === 'upto') return `Travel and congestion included up to ${whole(voucher.travel_cover ?? voucher.travel_cover_gbp)}`
+  if (voucher.travel_choice === 'area' && voucher.area_name) return `Travel to ${voucher.area_name} included`
+  return ''
+}
 
 // The code in a voucher's link (/gift/7K3M-QX9P), as the database keeps it, or null.
 export function codeFromPath(path) {
@@ -120,3 +143,21 @@ export function shopMessage(link, firstName = '', date = new Date()) {
 
 export const londonDate = iso => (iso ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/London' }).format(new Date(iso)) : '')
 export const whole = amount => `£${Number(amount).toFixed(2).replace(/\.00$/, '')}`
+
+// The areas grouped by what they add, for "Anywhere in my areas" and the voucher page: no charge first, then each charge, lowest first.
+export function areaGroups(areas) {
+  const groups = new Map()
+  for (const area of areas || []) {
+    const travel = Number(area.travel) || 0
+    const congestion = Number(area.congestion) || 0
+    const label = travel + congestion === 0 ? 'No extra charge'
+      : [travel > 0 && `travel fee ${whole(travel)}`, congestion > 0 && `congestion charge ${whole(congestion)}`].filter(Boolean).join(' + ').replace(/^./, c => c.toUpperCase())
+    const key = `${travel + congestion}|${label}`
+    if (!groups.has(key)) groups.set(key, { label, extra: travel + congestion, names: [] })
+    groups.get(key).names.push(area.name)
+  }
+  return [...groups.values()].sort((a, b) => a.extra - b.extra)
+}
+
+// A voucher can be refunded within this many days of buying, if unused (Vadim, 15 Nov 2026).
+export const REFUND_DAYS = 14
