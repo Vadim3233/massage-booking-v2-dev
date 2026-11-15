@@ -552,4 +552,5 @@
 .booking-shell .gift-card .btn--quiet { color: var(--gift-e6c47a); padding-inline: 0; }
 .gift-code-box { margin: 14px 0 4px; }
 .gift-code-box form { display: grid; gap: 8px; }
+.gift-give { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
 .gift-prices { margin-top: 8px; }

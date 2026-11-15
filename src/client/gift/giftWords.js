@@ -106,5 +106,17 @@ export function whatsappText(voucher, origin) {
 }
 export const whatsappHref = text => `https://wa.me/?text=${encodeURIComponent(text)}`
 
+// The buying page's address, to share anywhere (WhatsApp, Instagram, a client's chat).
+export const shopLink = origin => `${origin}/gift`
+
+// The message that invites someone to buy a voucher: Christmas wording in November and December, a general one otherwise.
+// {name} is the client's first name ("Hi Sarah!"), left out when there is none ("Hi!").
+export function shopMessage(link, firstName = '', date = new Date()) {
+  const name = String(firstName || '').trim()
+  const hello = name ? `Hi ${name}!` : 'Hi!'
+  const ask = isChristmasTime(date) ? 'Looking for a Christmas present?' : 'Looking for a present for someone special?'
+  return `${hello} ${ask} You can now give a massage at home as a gift voucher. Choose the length, add your own message, and it arrives beautifully wrapped 🎁\n${link}\n\nWarm wishes,\nVadim`
+}
+
 export const londonDate = iso => (iso ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/London' }).format(new Date(iso)) : '')
 export const whole = amount => `£${Number(amount).toFixed(2).replace(/\.00$/, '')}`

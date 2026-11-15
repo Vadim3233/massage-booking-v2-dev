@@ -8,6 +8,7 @@ import { bookingState, dateLabel, money, time } from './calendarPresentation.js'
 import ClientRepeats from './ClientRepeats.jsx'
 import ClientRhythm from './ClientRhythm.jsx'
 import ClientTelegram from './ClientTelegram.jsx'
+import ClientGiftVoucher from './ClientGiftVoucher.jsx'
 import ClientPaymentReminder from './ClientPaymentReminder.jsx'
 import CombinePicker from './CombinePicker.jsx'
 import DeleteClient from './DeleteClient.jsx'
@@ -207,6 +208,7 @@ export default function ClientProfile({ id, back, backLabel = 'Clients', openBoo
     <ClientRepeats clientId={id} openBooking={openBooking} />
     <Addresses clientId={id} api={api} changed={changed} />
     <ClientTelegram key={client.id} client={client} api={api} />
+    <ClientGiftVoucher key={`gift-${client.id}`} client={client} />
     <section aria-labelledby="online-title"><h2 id="online-title">Online booking</h2>
       <p>{client.online_booking_enabled ? 'This client can book online.' : 'Online booking is switched off for this client. They cannot book on the website.'}</p>
       <button className="btn--small" disabled={busy} onClick={toggleOnline}>{client.online_booking_enabled ? 'Switch off online booking' : 'Switch on online booking'}</button>
