@@ -1,6 +1,5 @@
 import { test, expect } from '@playwright/test'
 import { paymentReviewFixture } from '../paymentReviewFixture.js'
-import { dayHeading, shiftDate } from '../../src/admin/calendarPresentation.js'
 let f
 test.beforeEach(async () => { f = await paymentReviewFixture() })
 test.afterEach(async () => { await f?.cleanup() })
@@ -9,8 +8,15 @@ async function login(page, path = '/admin/review') {
   await page.getByLabel('Email', { exact: true }).fill(f.email)
   await page.getByLabel('Password', { exact: true }).fill(f.password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  if (path === '/admin/review') await openCards(page)
 }
-const item = (page, index) => page.locator('.admin-review-item').filter({ hasText: f.bookings[index].booking_reference })
+// Each client is one card, closed until tapped: open them all so the bookings inside can be reached.
+async function openCards(page) {
+  const list = page.locator('.admin-review-client, .admin-agenda-empty, [role="alert"]').first()
+  try { await list.waitFor({ timeout: 10000 }) } catch { return }
+  for (const head of await page.locator('.admin-review-client-head[aria-expanded="false"]').all()) await head.click()
+}
+const item = (page, index) => page.locator(`.admin-review-line[data-reference="${f.bookings[index].booking_reference}"]`)
 async function confirm(page, button) {
   await button.click()
   const confirmation = page.locator('dialog.admin-confirm')
@@ -23,7 +29,7 @@ for (const width of [320, 360, 390, 412]) test(`Review, confirmation and exact b
   page.on('request', request => { if (request.url().includes('/rest/v1/')) requests.push(request.url()) })
   await login(page)
   await expect(page).toHaveURL(/\/admin\/review$/)
-  await expect(page.locator('.admin-review-item')).toHaveCount(2)
+  await expect(page.locator('.admin-review-line')).toHaveCount(2)
   expect(requests.some(url => url.includes('/rest/v1/bookings?'))).toBe(false)
   expect(requests.filter(url => url.includes('/admin_payment_review_queue'))).toHaveLength(1)
   await expect(page.getByRole('navigation', { name: 'Admin navigation' })).toBeVisible()
@@ -82,7 +88,7 @@ test('bank verification persists and leaves the queue; cash approval and receipt
   await expect(page.getByRole('button', { name: 'Mark payment received', exact: true })).toHaveCount(0)
   await expect(page.getByRole('dialog').locator('.admin-details-client .admin-status')).toHaveText(['Confirmed', 'Paid'])
   await page.getByRole('button', { name: 'Close details' }).click()
-  await expect(page.locator('.admin-review-item')).toHaveCount(0)
+  await expect(page.locator('.admin-review-line')).toHaveCount(0)
 })
 test('removing a cash request requires deliberate confirmation and persists cancellation', async ({ page }) => {
   await f.authorize(); await login(page)
@@ -97,7 +103,7 @@ test('a transfer the client never declared stays listed and the Admin can remove
   await expect(item(page, 0)).toContainText('Transfer not yet declared by the client')
   await expect(item(page, 0).getByRole('button', { name: 'Verify payment', exact: true })).toBeVisible()
   await confirm(page, item(page, 0).getByRole('button', { name: 'Cancel unpaid booking', exact: true }))
-  await expect(page.locator('.admin-review-item')).toHaveCount(1)
+  await expect(page.locator('.admin-review-line')).toHaveCount(1)
   const result = (await f.admin.from('bookings').select('booking_status,cancelled_by_actor_type').eq('id', f.bookings[0].id).single()).data
   expect(result).toMatchObject({ booking_status: 'cancelled', cancelled_by_actor_type: 'admin' })
 })
@@ -128,7 +134,7 @@ test('stale action refreshes to the persisted state without claiming success', a
 })
 test('desktop Review uses compact navigation and the existing details panel', async ({ page }) => {
   await f.authorize(); await page.setViewportSize({ width: 1280, height: 900 }); await login(page)
-  await expect(page.locator('.admin-review-item')).toHaveCount(2)
+  await expect(page.locator('.admin-review-line')).toHaveCount(2)
   expect((await page.getByRole('navigation', { name: 'Admin navigation' }).boundingBox()).width).toBe(92)
   await page.screenshot({ path: 'test-results/admin-review-desktop.png', fullPage: true })
   await item(page, 0).getByRole('link', { name: 'View booking' }).click()
@@ -156,7 +162,8 @@ test('Review load failure is retryable and More offers safe navigation and sign-
   await expect(page.getByText('internal detail')).toHaveCount(0)
   await page.unroute('**/rpc/admin_payment_review_queue?**')
   await page.getByRole('button', { name: 'Retry reviews' }).click()
-  await expect(page.locator('.admin-review-item')).toHaveCount(2)
+  await openCards(page)
+  await expect(page.locator('.admin-review-line')).toHaveCount(2)
   const nav = page.getByRole('navigation', { name: 'Admin navigation' })
   await expect(nav.getByRole('link', { name: 'Clients', exact: true })).toBeVisible()
   await nav.getByRole('link', { name: 'Calendar', exact: true }).click()
@@ -192,6 +199,7 @@ test('lost response after a committed transfer is safely retried with the same c
 test('Calendar, Review and booking support browser Back and Forward', async ({ page }) => {
   await f.authorize(); await login(page, '/admin')
   await page.getByRole('link', { name: /^To check/ }).click()
+  await openCards(page)
   await item(page, 0).getByRole('link', { name: 'View booking' }).click()
   await expect(page.getByRole('dialog')).toContainText(f.bookings[0].booking_reference)
   await page.goBack(); await expect(page).toHaveURL(/\/admin\/review$/)
@@ -235,19 +243,23 @@ test('an older manual refresh cannot overwrite status fetched after a payment ac
   await expect(page.getByRole('button', { name: 'Verify payment', exact: true })).toHaveCount(0)
 })
 
-test('payments to check sit under the day of their appointment, soonest first, with the time on each card', async ({ page }) => {
+test('each client is one card, closed to a short line until tapped, with a line for each booking inside', async ({ page }) => {
   await f.authorize()
-  const later = shiftDate(f.bookings[1].date, 2)
-  const moved = await f.admin.from('bookings').update({ date: later }).eq('id', f.bookings[1].id)
-  expect(moved.error).toBeNull()
-  await login(page)
-  const days = page.locator('.admin-review-day')
-  await expect(days).toHaveCount(2)
-  await expect(days.nth(0).getByRole('heading', { level: 2 })).toContainText(dayHeading(f.bookings[0].date).name)
-  await expect(days.nth(1).getByRole('heading', { level: 2 })).toContainText(dayHeading(later).name)
-  await expect(days.nth(0).locator('.admin-review-item')).toHaveCount(1)
-  await expect(days.nth(1).locator('.admin-review-item')).toHaveCount(1)
-  // The day is in the heading, so a card says the time; the heading says what needs her that day.
-  await expect(days.nth(0).locator('.admin-review-when')).toHaveText(/^\d\d:\d\d · /)
-  await expect(days.nth(0).locator('.admin-agenda-day-heading > span')).toContainText(/needs? you · £/)
+  await page.goto('/admin/review')
+  await page.getByLabel('Email', { exact: true }).fill(f.email)
+  await page.getByLabel('Password', { exact: true }).fill(f.password)
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  // Both bookings in the fixture are the same client's: one card, closed, naming the total and how many.
+  const cards = page.locator('.admin-review-client')
+  await expect(cards).toHaveCount(1)
+  const head = cards.first().locator('.admin-review-client-head')
+  await expect(head).toHaveAttribute('aria-expanded', 'false')
+  await expect(head).toContainText('2 to check')
+  await expect(page.locator('.admin-review-line')).toHaveCount(0)
+  await head.click()
+  await expect(head).toHaveAttribute('aria-expanded', 'true')
+  await expect(page.locator('.admin-review-line')).toHaveCount(2)
+  await expect(page.locator('.admin-review-line-when').first()).toHaveText(/ · \d\d:\d\d$/)
+  await head.click()
+  await expect(page.locator('.admin-review-line')).toHaveCount(0)
 })

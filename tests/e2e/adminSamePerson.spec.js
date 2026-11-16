@@ -78,9 +78,10 @@ test('a guest who registers later is not turned away, and the Admin is asked bef
   await expect(heading(page, 'Alerts')).toBeVisible()
   const card = page.locator('.admin-alerts li').filter({ hasText: 'Is this the same person?' })
   await expect(card).toHaveCount(1)
-  await expect(card).toContainText('Olo Ehe (has a login) and Olo Ehe (booked as a guest) have the same email.')
   await expect(nav(page).getByLabel('1 unread')).toBeVisible()
-  await card.getByRole('button').click()
+  await card.locator('.admin-alert-row').click()
+  await expect(card).toContainText('Olo Ehe (has a login) and Olo Ehe (booked as a guest) have the same email.')
+  await card.getByRole('button', { name: 'Compare them' }).click()
   // The two profiles, side by side: the one with the login stays.
   await expect(heading(page, 'Same person?')).toBeVisible()
   await expect(page).toHaveURL(new RegExp(`/admin/clients/combine\\?a=${login}&b=${guest}$`))
