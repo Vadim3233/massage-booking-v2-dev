@@ -8,7 +8,7 @@ import { minutesWords, owedExtraMinutes } from './extendApi.js'
 import { activeReminder, reminderWhen, useReminders } from './paymentReminders.js'
 import PaymentActions from './PaymentActions.jsx'
 import PaymentReminder, { ReminderBox } from './PaymentReminder.jsx'
-import { combinedReminderText, dueForClient } from './shareBooking.js'
+import { combinedReminderText, dueForClient, reminderDue } from './shareBooking.js'
 import { useQuietRetry, useReturnRefresh } from './useReturnRefresh.js'
 import { acquireBodyScrollLock } from './dialogScrollLock.js'
 import { toast } from '../ui/toast.js'
@@ -54,12 +54,11 @@ function Line({ booking, openBooking, refresh, reminder }) {
 
 // "All 3 received": for a client who paid every session in one transfer. Each booking is marked received on its own, as if pressed one by one,
 // so receipts, income and alerts are exactly as usual. One that changed meanwhile (marked on another phone, say) is skipped and named.
-function AllReceived({ group, refresh }) {
+function AllReceived({ group, items, refresh }) {
   const ref = useRef(null)
   const [asking, setAsking] = useState(false)
   const [busy, setBusy] = useState(false)
   const keys = useRef(new Map())
-  const items = group.items
   const total = items.reduce((sum, booking) => sum + Number(booking.total_gbp), 0)
   const name = clientName(group.first)
   const label = `${items.length === 2 ? 'Both' : `All ${items.length}`} received · ${money(total)}`
@@ -111,12 +110,17 @@ function ClientCard({ group, open, toggle, openBooking, refresh, putOff, all }) 
   const allUnpaid = counted.every(booking => paymentOverdue(booking) && !extraOwed(booking))
   const summary = counted.length === 1
     ? `${statusText(counted[0], putOff(counted[0]))} · ${dateLabel(counted[0].date)}${counted[0].date <= today() ? `, ${howLongAgo(counted[0].date)}` : ''}`
-    : `${allUnpaid ? `${sessionWords(counted.length)} not paid` : `${counted.length} to check`} · oldest ${dateLabel(group.oldest, { day: 'numeric', month: 'short' })}, ${howLongAgo(group.oldest)}`
-  const owing = dueForClient(all, group.clientId)
+    : group.section === 'waiting'
+      ? `${counted.length} waiting for the client · from ${dateLabel(group.oldest)}`
+      : `${allUnpaid ? `${sessionWords(counted.length)} not paid` : `${counted.length} to check`} · oldest ${dateLabel(group.oldest, { day: 'numeric', month: 'short' })}${group.oldest <= today() ? `, ${howLongAgo(group.oldest)}` : ''}`
+  // A booking with no client account can still be reminded on its own.
+  const owing = group.clientId ? dueForClient(all, group.clientId) : group.items.filter(booking => reminderDue(booking))
   const first = group.first.clients?.first_name?.trim()
-  const canSettleAll = group.items.length > 1 && group.items.every(plainUnpaid)
+  // Only what still needs the Admin: a session put off with Not yet is left out, so the button agrees with the card's total.
+  const settle = group.section === 'needs' ? group.active : []
+  const canSettleAll = settle.length > 1 && settle.every(plainUnpaid)
   return <li className={`admin-review-client ${group.section === 'needs' ? '' : 'wait'} ${open ? 'is-open' : ''}`} data-variant={group.section === 'needs' ? 'sand' : undefined}>
-    <button type="button" className="admin-review-client-head" aria-expanded={open} aria-controls={bodyId} onClick={toggle}>
+    <button type="button" className="admin-review-client-head" aria-expanded={open} aria-controls={open ? bodyId : undefined} onClick={toggle}>
       <span className="admin-review-client-name">{name}</span>
       <strong className="admin-review-client-total">{money(group.owed)}</strong>
       <span className="admin-review-client-sub">{summary}</span>
@@ -128,7 +132,7 @@ function ClientCard({ group, open, toggle, openBooking, refresh, putOff, all }) 
         {owing.length > 1
           ? <ReminderBox label={owing.length === 2 ? 'Remind about both' : `Remind about all ${owing.length}`} phone={group.first.clients?.phone} makeText={bank => combinedReminderText(owing, bank, first)} />
           : owing.length === 1 && <PaymentReminder booking={owing[0]} owing={owing} />}
-        {canSettleAll && <AllReceived group={group} refresh={refresh} />}
+        {canSettleAll && <AllReceived group={group} items={settle} refresh={refresh} />}
       </div>}
     </div>}
   </li>
