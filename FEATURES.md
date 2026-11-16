@@ -140,7 +140,7 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **For a general app:** the therapist's own link.
 
 ### Welcome text and "Choose your area" arrow
-- **What it does:** The first booking screen shows Vadim's photo, a short welcome and an about text he edits himself, a trust strip, and a bouncing "Choose your area" pill that scrolls down to the areas on a phone.
+- **What it does:** The first booking screen shows Vadim's photo, a short welcome (standard wording rewritten by Vadim 16 Nov 2026, PR below; he can still replace it under More, Welcome message) and an about text he edits himself, a trust strip, and a bouncing "Choose your area" pill that scrolls down to the areas on a phone.
 - **Why:** A warm, personal first impression; on phones the areas were hidden below the welcome.
 - **Built in:** PR #8 (`20261021100000_welcome_content.sql`), design refresh PR #106, arrow PR #112 (no migration).
 - **For a general app:** photo, welcome text and about text (already editable), brand colours.
