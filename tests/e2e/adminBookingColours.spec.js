@@ -156,7 +156,7 @@ test('To check lists what is waiting on money or on the Admin in sand', async ({
   await page.setViewportSize({ width: 390, height: 844 })
   await login(page, '/admin/review')
   const sand = await token(page, '--sand-bg')
-  const items = page.locator('.admin-review-item')
+  const items = page.locator('.admin-review-client[data-variant]')
   await expect.poll(() => items.count()).toBeGreaterThan(0)
   for (const item of await items.all()) {
     expect(await item.getAttribute('data-variant')).toBe('sand')

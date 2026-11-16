@@ -487,9 +487,43 @@
 .admin-alerts-day .admin-alerts { margin: 6px 0 14px; }
 .admin-alerts-day.is-today .admin-agenda-day-heading { background: var(--primary-soft); box-shadow: 0 1px 0 var(--primary-line); }
 
-/* The payments to check sit under the day of their appointment, like the Agenda. */
-.admin-review-day .admin-review-list { margin: 6px 0 14px; }
-.admin-review-day.is-today .admin-agenda-day-heading { background: var(--primary-soft); box-shadow: 0 1px 0 var(--primary-line); }
+/* To check: one card per client, closed to one short row until tapped, then a slim line for each booking. */
+.admin-review-section-title { margin: 18px 4px 0 !important; font: 600 12px/1.2 var(--font-ui) !important; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.admin-review-section .admin-review-list { margin: 8px 0 6px; gap: 10px; }
+.admin-review-client { position: relative; border-radius: var(--radius); background: var(--surface); box-shadow: 0 0 0 1px var(--hairline), var(--shadow-1); overflow: hidden; }
+.admin-review-client::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--wait-rail); }
+.admin-review-client[data-variant="sand"] { background: var(--tint); box-shadow: 0 0 0 1px var(--edge), var(--shadow-1); color: var(--on-tint); }
+.admin-review-client[data-variant="sand"]::before { background: var(--variant-rail); }
+.admin-shell .admin-review-client-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 2px 10px; width: 100%; min-height: 64px; padding: 12px 12px 12px 18px; border: 0; border-radius: 0; background: transparent; color: inherit; text-align: left; justify-content: stretch; font: 400 15px/1.35 var(--font-ui); }
+.admin-review-client-head:focus-visible { outline: 2px solid var(--primary); outline-offset: -3px; }
+.admin-review-client-name { font: 600 17px/1.25 var(--font-ui); color: var(--ink); overflow-wrap: anywhere; }
+.admin-review-client-total { font: 700 18px/1.2 var(--font-ui); color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.admin-review-client-sub { grid-column: 1 / 3; font-size: 13.5px; color: var(--muted); }
+.admin-review-client[data-variant="sand"] .admin-review-client-sub { color: var(--on-tint-soft); }
+.admin-review-client-head > svg { grid-column: 3; grid-row: 1 / 3; color: var(--muted); transition: transform var(--dur) var(--ease); }
+.admin-review-client.is-open .admin-review-client-head > svg { transform: rotate(180deg); }
+.admin-review-client.wait .admin-review-client-name, .admin-review-client.wait .admin-review-client-total { color: var(--ink-soft); }
+.admin-review-client-body { padding: 0 12px 12px 18px; border-top: 1px solid var(--hair, var(--hairline)); }
+.admin-review-lines { list-style: none; margin: 0; padding: 0; }
+.admin-review-line { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 10px 0; border-bottom: 1px solid var(--hair, var(--hairline)); }
+.admin-review-line:last-child { border-bottom: 0; }
+.admin-review-line.wait .admin-review-line-text, .admin-review-line.wait .admin-review-line-amount { opacity: .7; }
+.admin-review .admin-review-line p { margin: 0; }
+.admin-review-line-when { font-weight: 600; color: var(--ink); }
+.admin-review-line-what { font-size: 13.5px; color: var(--ink-soft); }
+.admin-review-line-status { font-size: 13px; color: var(--needs-ink); font-weight: 500; }
+.admin-review-line.wait .admin-review-line-status { color: var(--muted); }
+.admin-review-line-amount { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+.admin-review-line-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.admin-review-line-actions .admin-payment-actions { margin: 0; }
+.admin-review-line-actions .admin-payment-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.admin-shell .admin-review-line-actions .admin-payment-buttons button { width: auto; min-height: 44px; padding: 0 16px; font-size: 14px; }
+.admin-review-line-actions .admin-payment-actions p { flex-basis: 100%; margin: 6px 0 0; }
+.admin-review-line-view { display: inline-flex; align-items: center; gap: 2px; min-height: 44px; margin-left: auto; color: var(--primary); font-weight: 600; font-size: 14px; }
+.admin-review-client-foot { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid var(--hair, var(--hairline)); }
+.admin-review-client-foot .admin-payment-reminder .admin-payment-buttons button, .admin-review-client-foot > button { width: 100%; }
+.admin-all-received-list { list-style: none; margin: 10px 0; padding: 0; display: grid; gap: 4px; font-size: 14px; }
+.admin-all-received-list li { display: flex; justify-content: space-between; gap: 12px; font-variant-numeric: tabular-nums; }
 
 /* "Is this the same person?": a quiet note on the Clients page, and the two profiles side by side. */
 .admin-same-person { margin: 14px 0 6px; padding: 12px 14px 10px; border-radius: var(--radius); background: var(--needs-tint); box-shadow: inset 4px 0 0 var(--needs-rail), var(--shadow-1); }

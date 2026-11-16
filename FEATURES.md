@@ -457,9 +457,10 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **For a general app:** how many days before each date the booking is made (already a setting, 7). Not built: clients setting up repeats themselves.
 
 ### To check
-- **What it does:** One list of everything waiting for Vadim: transfers to check, cash requests, bookings outside the areas and unpaid sessions after the appointment, with Verify, Approve, Not yet and reminder buttons.
-- **Why:** One place for everything that needs him.
-- **Built in:** PR #8 (`20261007120000_admin_payment_review.sql`, `docs/ADMIN_PAYMENT_REVIEW.md`), PR #35, PR #97.
+- **What it does:** One list of everything waiting for Vadim: transfers to check, cash requests, bookings outside the areas and unpaid sessions after the appointment, with Verify, Approve, Not yet and reminder buttons. Since 2026-11-16 each client is one card, closed to a short line (name, total owed, how many, how long the oldest has waited), the client waiting longest first. Tapping it opens a slim line per booking with its own buttons and View. The card ends with one combined WhatsApp reminder ("Remind about all 3") and, when every item is a plain unpaid session, "All 3 received", which marks each one paid in one go after a confirmation listing the sessions and the total (each is recorded exactly as if Received was pressed on it; one that changed meanwhile is skipped and named). Sections: Needs you, Reminder set (everything put off with Not yet), Waiting for the client.
+- **Why:** One place for everything that needs him. Cards per booking were a full screen each; regulars who pay monthly made the list very long.
+- **Built in:** PR #8 (`20261007120000_admin_payment_review.sql`, `docs/ADMIN_PAYMENT_REVIEW.md`), PR #35, PR #97, compact client cards (no SQL).
+- **For a general app:** nothing specific. Competitors (Square, Fresha) list unpaid items per customer but do not settle several sessions in one tap.
 
 ---
 
