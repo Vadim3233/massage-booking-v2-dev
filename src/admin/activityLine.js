@@ -59,6 +59,7 @@ const EVENTS = {
   'gift.reminder': () => ['Gift voucher reminder sent', 'gift'],
   'gift.refund_requested': () => ['Asked for a gift voucher refund', 'gift'],
   'gift.buyer_cancelled': () => ['Cancelled a gift voucher', 'gift'],
+  'gift.cancelled': () => ['Gift voucher cancelled', 'gift'],
   'gift.refund_sent': () => ['Gift voucher refund sent', 'gift'],
   'status.changed': row => [`${row.payload?.entity === 'payment' ? 'Payment' : 'Booking'}: ${label(row.payload?.to_status)}`, 'booking'],
 }
@@ -90,6 +91,7 @@ function changesOf(row) {
 }
 
 // Short notes beside the line: who asked, money still to settle, a message that did not go.
+const STARTS = ['booking.created', 'gift.bought', 'gift.transfer_declared', 'gift.ready']
 function tagsOf(row) {
   const p = row.payload || {}
   const tags = []
@@ -102,6 +104,8 @@ function tagsOf(row) {
   }
   if (row.event_type === 'booking.extended' && p.pay_by) tags.push({ text: { bill: 'added to the bill', cash: 'cash', transfer: 'by transfer', free: 'no charge' }[p.pay_by] || p.pay_by })
   if ((row.sent || []).some(item => item.status === 'failed')) tags.push({ text: 'not sent', tone: 'late' })
+  // A booking or gift that was cancelled later says so on the line that started it, so an old "New gift voucher" does not look live.
+  if (STARTS.includes(row.event_type) && (p.gift_status === 'cancelled' || row.booking_status === 'cancelled')) tags.push({ text: 'cancelled since' })
   return tags
 }
 

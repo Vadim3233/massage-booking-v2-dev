@@ -48,6 +48,14 @@ describe('a line of the record', () => {
     expect(changed.changes).toEqual([{ key: 'phone', from: '07700 900000', to: '07700 900111' }])
     expect(changed.who).toBe('Sabri Dylan')
   })
+  it('says a gift or booking was cancelled since, on the line that started it, and names Vadim\'s cancel', () => {
+    const bought = describeLine(row({ event_type: 'gift.bought', actor: 'buyer', booking_id: null, payload: { gift_status: 'cancelled' } }))
+    expect(bought.tags).toEqual([{ text: 'cancelled since' }])
+    expect(describeLine(row({ booking_status: 'cancelled' })).tags).toEqual([{ text: 'cancelled since' }])
+    expect(describeLine(row({ event_type: 'booking.rescheduled', booking_status: 'cancelled' })).tags).toEqual([])
+    const cancelled = describeLine(row({ event_type: 'gift.cancelled', actor: 'admin', booking_id: null }))
+    expect([cancelled.what, cancelled.actorLabel]).toEqual(['Gift voucher cancelled', 'You'])
+  })
   it('still shows something it does not know, under a plain name', () => {
     expect(describeLine(row({ event_type: 'booking.something_new' })).what).toBe('Something new')
   })
