@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 
 // Shown until the Admin writes her own welcome (More, Welcome message).
-export const DEFAULT_WELCOME = "Hello, I'm Vadim. I come to you, so you can relax at home without going anywhere. Choose your area to begin. I'll guide you through the rest and confirm your appointment myself."
+export const DEFAULT_WELCOME = 'No need to go anywhere for a proper relaxing or therapeutic massage. I come to you: no stress, no preparation. Trust me, the last thing you want after a massage is to drive. Strong or gentle, years of practice go into melting away tension and pain, with your safety and comfort first.'
 
 export const paragraphs = text => String(text || '').split(/\n{2,}/).map(part => part.trim()).filter(Boolean)
 

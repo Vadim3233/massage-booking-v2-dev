@@ -11,9 +11,11 @@ describe('the welcome on the booking page', () => {
     expect(welcomeFromRow({ welcome: '  Hi  ', about: 5 })).toEqual({ welcome: 'Hi', about: '' })
     expect(welcomeFromRow(null)).toEqual({ welcome: '', about: '' })
   })
+  // Vadim's own approved wording (16 Nov 2026). "Years of practice" is true (10+ years, shown in the trust strip); no qualification claims here.
   it('has a standard welcome that makes no claims about qualifications', () => {
     expect(DEFAULT_WELCOME).toMatch(/I come to you/)
-    expect(DEFAULT_WELCOME).not.toMatch(/qualified|certified|insured|years/i)
+    expect(DEFAULT_WELCOME).not.toMatch(/qualified|certified|insured/i)
+    expect(paragraphs(DEFAULT_WELCOME)).toHaveLength(1)
   })
   it('says the free window in her own number of hours', () => {
     expect(changesNote({ freeHours: 24 })).toBe('Free to change or cancel more than 24 hours before your appointment.')
