@@ -286,9 +286,9 @@ These are the things that are written for Vadim today. In a general therapist ap
 ## 4. Messages and notifications
 
 ### Alerts to Vadim (in the app, Telegram and email)
-- **What it does:** New online bookings, "I've paid", cash requests, cancellations and moves by clients reach Vadim in the app, on Telegram and by email, each with a link to the exact booking. His own actions never alert him. Failed sends are retried. An alert stops saying "New" once opened.
+- **What it does:** New online bookings, "I've paid", cash requests, cancellations and moves by clients reach Vadim in the app, on Telegram and by email, each with a link to the exact booking. His own actions never alert him. Failed sends are retried. An alert stops being new once opened. Since 2026-11-16 the Alerts page shows each alert as two short lines (what happened in bold, e.g. "Transfer made"; then who, which day and the amount, with an icon for cash, bank, gift voucher or booking); tapping opens the full message and an Open button. The short wording is read from the alert's title in the app (`src/admin/alertSummary.js`), so an alert it does not know keeps its own title.
 - **Why:** He must know at once when a client does something.
-- **Built in:** PR #8, `20261013100000_notifications.sql` (ADR-023), PR #34. Setup in `docs/NOTIFICATIONS_SETUP.md`.
+- **Built in:** PR #8, `20261013100000_notifications.sql` (ADR-023), PR #34, PR #139 (compact two-line alerts, no SQL). Setup in `docs/NOTIFICATIONS_SETUP.md`.
 - **For a general app:** which channels, the therapist's own Telegram or email.
 
 ### Emails to clients
@@ -459,7 +459,7 @@ These are the things that are written for Vadim today. In a general therapist ap
 ### To check
 - **What it does:** One list of everything waiting for Vadim: transfers to check, cash requests, bookings outside the areas and unpaid sessions after the appointment, with Verify, Approve, Not yet and reminder buttons. Since 2026-11-16 each client is one card, closed to a short line (name, total owed, how many, how long the oldest has waited), the client waiting longest first. Tapping it opens a slim line per booking with its own buttons and View. The card ends with one combined WhatsApp reminder ("Remind about all 3") and, when every item is a plain unpaid session, "All 3 received", which marks each one paid in one go after a confirmation listing the sessions and the total (each is recorded exactly as if Received was pressed on it; one that changed meanwhile is skipped and named; sessions put off with Not yet are left out). Sections: Needs you, Reminder set (everything put off with Not yet), Waiting for the client.
 - **Why:** One place for everything that needs him. Cards per booking were a full screen each; regulars who pay monthly made the list very long.
-- **Built in:** PR #8 (`20261007120000_admin_payment_review.sql`, `docs/ADMIN_PAYMENT_REVIEW.md`), PR #35, PR #97, compact client cards (no SQL).
+- **Built in:** PR #8 (`20261007120000_admin_payment_review.sql`, `docs/ADMIN_PAYMENT_REVIEW.md`), PR #35, PR #97, PR #139 (compact client cards, no SQL).
 - **For a general app:** nothing specific. Competitors (Square, Fresha) list unpaid items per customer but do not settle several sessions in one tap.
 
 ---

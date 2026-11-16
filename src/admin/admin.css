@@ -301,16 +301,29 @@
 .admin-review-item > a { display: inline-flex; align-items: center; min-height: 44px; color: var(--primary); font-weight: 600; }
 .admin-review-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
 
-.admin-alerts { list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 10px; }
-.admin-shell .admin-alerts button { display: grid; gap: 3px; width: 100%; min-height: 0; padding: 14px 16px 14px 20px; border: 0; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); color: var(--ink); text-align: left; justify-content: stretch; font: 400 15px/1.4 var(--font-ui); position: relative; overflow: hidden; }
-.admin-alerts button::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--hairline); }
-.admin-alerts .is-unread button { background: var(--needs-tint); }
-.admin-alerts .is-unread button::before { background: var(--needs-rail); }
-.admin-alerts strong { font-size: 16px; }
-.admin-alerts .is-read strong { font-weight: 600; color: var(--ink-soft); }
-.admin-alerts span { color: var(--ink-soft); }
-.admin-alerts small { color: var(--muted); font-size: 13px; }
-.admin-alerts .is-unread small { color: var(--needs-ink); font-weight: 600; }
+.admin-alerts { list-style: none; padding: 0; margin: 14px 0; display: grid; gap: 8px; }
+/* Each alert: two short lines (what happened; who, which day) with an icon for its kind, the amount and time on the right. Tap to open. */
+.admin-alerts > li { border-radius: var(--radius); background: var(--surface); box-shadow: 0 0 0 1px var(--hairline), var(--shadow-1); overflow: hidden; }
+.admin-alerts > li.is-unread { box-shadow: 0 0 0 1.5px var(--needs-rail), var(--shadow-1); }
+.admin-shell .admin-alerts .admin-alert-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 12px; border: 0; border-radius: 0; background: transparent; color: var(--ink); text-align: left; justify-content: flex-start; font: 400 15px/1.35 var(--font-ui); }
+.admin-alert-row:focus-visible { outline: 2px solid var(--primary); outline-offset: -3px; }
+.admin-alert-icon { position: relative; flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--primary-soft); color: var(--primary); }
+.admin-alert-icon.is-cash { background: var(--sage-bg); color: var(--sage-rail); }
+.admin-alert-icon.is-gift { background: var(--noshow-bg); color: var(--noshow-rail); }
+.admin-alert-icon:is(.is-booking, .is-cancel) { background: var(--accent-soft); color: var(--accent-ink); }
+.admin-alert-icon.is-people, .admin-alert-icon.is-other { background: var(--block-bg); color: var(--block-ink); }
+.is-unread .admin-alert-icon::after { content: ''; position: absolute; top: -1px; right: -1px; width: 10px; height: 10px; border-radius: 50%; background: var(--needs-rail); box-shadow: 0 0 0 2px var(--surface); }
+.admin-alert-text { display: grid; gap: 1px; min-width: 0; flex: 1 1 auto; }
+.admin-alert-text strong { font-size: 15.5px; font-weight: 650; color: var(--ink); overflow-wrap: anywhere; }
+.admin-alerts .is-read .admin-alert-text strong { font-weight: 550; color: var(--ink-soft); }
+.admin-alert-text span { font-size: 13.5px; color: var(--muted); overflow-wrap: anywhere; }
+.admin-alert-side { flex: none; align-self: flex-start; display: grid; justify-items: end; gap: 2px; padding-top: 1px; }
+.admin-alert-side b { font-size: 14px; font-weight: 650; color: var(--ink); font-variant-numeric: tabular-nums; }
+.admin-alert-side small { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.admin-alert-details { display: grid; gap: 8px; padding: 0 14px 12px 58px; font-size: 14px; color: var(--ink-soft); }
+.admin-alert-details p { margin: 0; white-space: pre-line; }
+.admin-alert-details strong { color: var(--ink); font-weight: 600; }
+.admin-alert-details > button { justify-self: start; }
 
 .admin-menu { list-style: none; padding: 0; margin: 14px 0 20px; display: grid; gap: 10px; }
 .admin-menu a, .admin-back-link { display: flex; align-items: center; justify-content: space-between; min-height: 58px; padding: 8px 16px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow-card); color: var(--ink); font-weight: 600; text-decoration: none; }

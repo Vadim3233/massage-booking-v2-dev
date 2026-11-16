@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { adminPageFromLink, alertsApi, bookingIdFromLink, groupAlerts, groupByDay } from './alertsApi.js'
+import { openLabel, summariseAlert } from './alertSummary.js'
 import { useQuietRetry, useReturnRefresh } from './useReturnRefresh.js'
 import Icon from '../ui/icons.jsx'
 
 // The day is in the heading above the card, so a card only needs the time.
+const ICONS = { cash: 'cash', bank: 'bank', gift: 'gift', booking: 'calendar', cancel: 'cross', people: 'users', other: 'bell' }
 const clock = value => new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit' }).format(new Date(value))
 
 export default function Alerts({ openBooking, openPage, changed, api = alertsApi }) {
@@ -33,9 +35,14 @@ export default function Alerts({ openBooking, openPage, changed, api = alertsApi
   async function markAll() {
     try { await api.markRead(null); setAttempt(value => value + 1); changed() } catch (failure) { setError(failure.message) }
   }
-  async function open(group) {
-    const alert = group.head
-    const id = bookingIdFromLink(alert.link_path)
+  // Each alert is two short lines until tapped; tapping opens the whole message and the button to what it is about, and marks it read.
+  const [opened, setOpened] = useState(() => new Set())
+  async function toggle(group) {
+    const wasOpen = opened.has(group.id)
+    setOpened(ids => { const next = new Set(ids); if (wasOpen) next.delete(group.id); else next.add(group.id); return next })
+    if (!wasOpen) await markRead(group)
+  }
+  async function markRead(group) {
     if (group.unreadIds.length) {
       try {
         await api.markRead(group.unreadIds)
@@ -45,6 +52,11 @@ export default function Alerts({ openBooking, openPage, changed, api = alertsApi
         changed()
       } catch { /* Opening the booking still works. */ }
     }
+  }
+  async function open(group) {
+    const alert = group.head
+    const id = bookingIdFromLink(alert.link_path)
+    await markRead(group)
     const page = adminPageFromLink(alert.link_path)
     if (id) openBooking(id)
     else if (page) openPage?.(page)
@@ -63,13 +75,25 @@ export default function Alerts({ openBooking, openPage, changed, api = alertsApi
           <h2 id={`alerts-${day.date}`}><span className="day-name">{day.name}</span>{day.rest ? ` · ${day.rest}` : ''}</h2>
           <span>{day.groups.length} {day.groups.length === 1 ? 'alert' : 'alerts'}{day.unread ? ` · ${day.unread} new` : ''}</span>
         </header>
-        <ul role="list" className="admin-alerts">{day.groups.map(group => <li key={group.id} className={group.unreadIds.length ? 'is-unread' : 'is-read'}>
-          <button onClick={() => open(group)}>
-            <strong>{group.head.title}</strong><span>{group.head.body}</span>
-            {group.older.length > 0 && <span className="admin-alert-also">Also: {group.older.map(alert => alert.title).join(' · ')}</span>}
-            <small>{clock(group.head.created_at)}{group.unreadIds.length ? ' · New' : ''}</small>
-          </button>
-        </li>)}</ul>
+        <ul role="list" className="admin-alerts">{day.groups.map(group => {
+          const line = summariseAlert(group.head)
+          const isOpen = opened.has(group.id)
+          const unread = group.unreadIds.length > 0
+          const target = bookingIdFromLink(group.head.link_path) || adminPageFromLink(group.head.link_path)
+          const detailsId = `alert-${group.id}`
+          return <li key={group.id} className={`${unread ? 'is-unread' : 'is-read'} ${isOpen ? 'is-open' : ''}`}>
+            <button type="button" className="admin-alert-row" aria-expanded={isOpen} aria-controls={isOpen ? detailsId : undefined} onClick={() => toggle(group)}>
+              <span className={`admin-alert-icon is-${line.kind}`}><Icon name={ICONS[line.kind] || 'bell'} size={18} />{unread && <span className="admin-sr-only">New: </span>}</span>
+              <span className="admin-alert-text"><strong>{line.what}</strong>{line.who && <span>{line.who}</span>}</span>
+              <span className="admin-alert-side">{line.amount && <b>{line.amount}</b>}<small>{clock(group.head.created_at)}</small></span>
+            </button>
+            {isOpen && <div id={detailsId} className="admin-alert-details">
+              <p>{group.head.title !== line.what && <strong>{group.head.title}. </strong>}{group.head.body}</p>
+              {group.older.length > 0 && <p className="admin-alert-also">Also: {group.older.map(alert => alert.title).join(' · ')}</p>}
+              {target && <button type="button" className="btn--small" onClick={() => open(group)}>{openLabel(group.head.link_path)}</button>}
+            </div>}
+          </li>
+        })}</ul>
       </section>)}
     </>}
   </section>

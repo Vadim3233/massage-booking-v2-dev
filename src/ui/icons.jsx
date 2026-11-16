@@ -28,6 +28,9 @@ const paths = {
   block: <><circle cx="12" cy="12" r="8.5" /><path d="m6 6 12 12" /></>,
   car: <><path d="M6.5 11l1.4-3.3a2 2 0 0 1 1.9-1.2h4.4a2 2 0 0 1 1.9 1.2L17.5 11" /><rect x="4" y="11" width="16" height="6" rx="2" /><circle cx="8" cy="17.4" r="1.4" /><circle cx="16" cy="17.4" r="1.4" /></>,
   cross: <><circle cx="12" cy="12" r="8.5" /><path d="m9 9 6 6M15 9l-6 6" /></>,
+  cash: <><rect x="2.5" y="6" width="19" height="12" rx="2.5" /><circle cx="12" cy="12" r="2.6" /></>,
+  bank: <><path d="M3.5 9.5h17L12 4.5z" /><path d="M6 10v7M10 10v7M14 10v7M18 10v7M4 20h16" /></>,
+  gift: <><rect x="4" y="9" width="16" height="11" rx="1.8" /><path d="M3.5 9h17M12 9v11M12 9c-1.2-2.8-5-3.8-5-1.2 0 1 1.6 1.2 5 1.2zM12 9c1.2-2.8 5-3.8 5-1.2 0 1-1.6 1.2-5 1.2z" /></>,
 }
 
 export default function Icon({ name, size = 24, filled = false, className = '' }) {
