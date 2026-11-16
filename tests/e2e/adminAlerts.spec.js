@@ -47,34 +47,38 @@ test('a new booking shows as an unread badge and an alert that opens the exact b
   await expect(page.locator('.admin-alerts li.is-unread')).toHaveCount(0)
 })
 
-test('several alerts about one booking are one card, and opening it reads them all', async ({ page }) => {
+test('each thing that happened to a booking is its own line, with what happened before it', async ({ page }) => {
   await f.authorize()
   await emit('booking.created', f.bookings[0].id, { booking_status: 'awaiting_transfer' })
   await emit('booking.transfer_declared', f.bookings[0].id, { method: 'bank_transfer' })
   await signIn(page)
   const list = page.locator('.admin-alerts li')
-  await expect(list).toHaveCount(1)
-  await expect(list).toContainText('Transfer made')
+  await expect(list).toHaveCount(2)
+  await expect(list.first()).toContainText('Transfer made')
+  await expect(list.first()).toContainText('Client')
   await expect(nav(page).getByLabel('2 unread')).toBeVisible()
-  // Reading the list again is held back for the rest of the test, so what the row says is what the page itself did on opening the alert.
-  await page.route('**/rpc/admin_list_notifications*', () => new Promise(() => {}))
-  await list.locator('.admin-alert-row').click()
-  await expect(list).toContainText('says the transfer is made')
-  await expect(list).toContainText('Also: New booking request')
-  // The row stops being new at once; it does not wait for the list to be read again.
-  await expect(page.locator('.admin-alerts li.is-unread')).toHaveCount(0)
-  await list.getByRole('button', { name: 'Open booking' }).click()
+  // Reading the list again is held back for the rest of the test, so what the row says is what the page itself did on opening the line.
+  await page.route('**/rpc/admin_activity_list*', () => new Promise(() => {}))
+  await list.first().locator('.admin-alert-row').click()
+  await expect(list.first()).toContainText('says the transfer is made')
+  await expect(list.first()).toContainText('Earlier on this booking')
+  await expect(list.first()).toContainText('New booking request')
+  // The line stops being new at once; the other one is still new.
+  await expect(page.locator('.admin-alerts li.is-unread')).toHaveCount(1)
+  await expect(nav(page).getByLabel('1 unread')).toBeVisible()
+  await list.first().getByRole('button', { name: 'Open booking' }).click()
   await expect(page.locator('dialog.admin-details')).toBeVisible()
+  // The booking's History tells its story, oldest first.
+  await expect(page.locator('.activity-history')).toContainText('New booking request')
+  await expect(page.locator('.activity-history')).toContainText('Transfer made')
   await page.getByRole('button', { name: 'Close details' }).click()
-  await expect(nav(page).getByLabel(/unread/)).toHaveCount(0)
-  await expect(page.locator('.admin-alerts li.is-unread')).toHaveCount(0)
 })
 
 test('with nothing to report the page says so kindly, and the navigation fits a small phone', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 })
   await f.authorize()
   await signIn(page)
-  await expect(page.getByText('Nothing yet. New bookings and client changes will appear here.')).toBeVisible()
+  await expect(page.getByText('Nothing yet. New bookings and changes will appear here.')).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   const boxes = await nav(page).locator('a, button').evaluateAll(items => items.map(item => { const r = item.getBoundingClientRect(); return [r.left, r.right] }))
   expect(boxes.every(([left, right]) => left >= 0 && right <= 320)).toBe(true)

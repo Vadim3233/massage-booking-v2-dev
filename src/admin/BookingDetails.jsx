@@ -8,7 +8,7 @@ import ShareBooking from './ShareBooking.jsx'
 
 // How a booking was made, in words. A booking made by a client's own AI assistant (through the connector at /mcp) is 'ai_assistant'.
 const SOURCE_NAMES = { web: 'Online booking', ai_assistant: "Client's AI assistant" }
-export default function BookingDetails({ booking: b, close, payment, lifecycle, review, address, contact, openClient, returnFocus }) {
+export default function BookingDetails({ booking: b, close, payment, lifecycle, review, address, contact, openClient, returnFocus, history }) {
   const ref = useRef(null)
   useEffect(() => {
     const dialog = ref.current
@@ -51,6 +51,7 @@ export default function BookingDetails({ booking: b, close, payment, lifecycle, 
       <section><h3>Travel / area</h3><p>{b.service_area_name_snapshot || 'Area not recorded'}</p><p>Travel / buffer: {b.travel_buffer_minutes} minutes</p><p className="admin-detail-hint">Scheduling allowance, not measured travel time.</p></section>
       <section className="admin-metadata"><h3>More details</h3><dl>{[['Reference', b.booking_reference], ['Booking date', b.date], ['Duration', `${b.treatment_duration_minutes} minutes`], ['Source', SOURCE_NAMES[b.source_channel] || b.source_channel], ...(b.series_id ? [['Repeating', 'Part of a repeating booking']] : []), ['Created', stamp(b.created_at)], ['Updated', stamp(b.updated_at)], ['Client said transfer sent', stamp(b.booking_payments?.transfer_declared_at)], ['Verified', stamp(b.booking_payments?.verified_at)], ['Paid', stamp(b.booking_payments?.paid_at)]].map(([name, value]) => <div key={name}><dt>{name}</dt><dd>{value}</dd></div>)}</dl></section>
       {b.cancelled_at && <section className="admin-metadata"><h3>Cancellation</h3><p>Cancelled: {stamp(b.cancelled_at)}</p><p>Cancelled by: {label(b.cancelled_by_actor_type)}</p>{b.cancellation_initiated_by && <p>Requested by: {label(b.cancellation_initiated_by)}</p>}{b.cancellation_reason && <p>Reason: {b.cancellation_reason}</p>}</section>}
+      {history}
     </div>
   </dialog>
 }

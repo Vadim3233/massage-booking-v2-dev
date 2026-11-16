@@ -9,6 +9,7 @@ import AllTimes from './newBooking/AllTimes.jsx'
 import EditBooking from './EditBooking.jsx'
 import ExtendDialog from './ExtendDialog.jsx'
 import { PAY_SHORT, canRemoveExtension, extendApi, extensionsOf, minutesWords } from './extendApi.js'
+import { activityApi } from './activityApi.js'
 
 const ACTION_STYLE = { extend: 'btn--tonal', complete: 'btn--primary', feeReceived: 'btn--primary', refund: 'btn--primary', balance: 'btn--primary', cancel: 'btn--danger', feeWaive: 'btn--quiet', noShow: '', edit: '', reschedule: '' }
 
@@ -34,7 +35,7 @@ function Who({ value, onChange, disabled }) {
 
 
 // One question about one booking, with what it will do. It is used on the booking sheet, and for Record refund on a cancelled card in the Calendar.
-export function ActionDialog({ kind, booking, api, close, done }) {
+export function ActionDialog({ kind, booking, api, close, done, notes = activityApi }) {
   const ref = useRef(null)
   const request = useRef(null)
   // Set when she picks or types a fee, so a standard fee that arrives later never replaces it.
@@ -108,6 +109,8 @@ export function ActionDialog({ kind, booking, api, close, done }) {
     if (request.current?.key !== key) request.current = { key, id: crypto.randomUUID() }
     try {
       await api.act(kind, booking, request.current.id, payload)
+      // The "why" goes with the move into the booking's History. The move is already saved, so a note that cannot be added is let go.
+      if (kind === 'reschedule' && reason.trim()) { try { await notes.noteLast(booking.id, 'booking.rescheduled', reason.trim()) } catch { /* the move stands */ } }
       await done(`${DONE[kind] || 'Saved'}.`)
     } catch (failure) {
       setError(failure.message)
@@ -148,6 +151,7 @@ export function ActionDialog({ kind, booking, api, close, done }) {
         {lateFeeNote && <p role="status">{lateFeeNote}</p>}
         {lateFeeWait && <p className="admin-detail-hint" role="status">{lateFeeWait}</p>}
         {lateFeeUnknown && <p role="status">{lateFeeUnknown}</p>}
+        <label className="admin-field">Why? (optional, shown in the booking's History)<textarea maxLength={300} rows={2} value={reason} disabled={busy} placeholder="For example: client's train was late" onChange={event => setReason(event.target.value)} /></label>
       </>}
       {choices.length > 0 && <>
         <fieldset className="admin-who admin-fee-choices" style={{ '--choices': choices.length }}><legend>Late fee</legend>
@@ -169,26 +173,6 @@ export function ActionDialog({ kind, booking, api, close, done }) {
       </div>
     </form>
   </dialog>
-}
-
-function History({ booking, api }) {
-  const [events, setEvents] = useState(null)
-  const [error, setError] = useState('')
-  useEffect(() => {
-    let live = true
-    api.history(booking.id).then(list => { if (live) { setEvents(list); setError('') } }, failure => { if (live) setError(failure.message) })
-    return () => { live = false }
-  }, [api, booking.id, booking.updated_at, booking.booking_payments?.updated_at])
-  const when = value => new Date(value).toLocaleString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-  const text = event => event.kind === 'schedule'
-    ? `Moved from ${event.from_date} ${time(event.from_start_minutes)} to ${event.to_date} ${time(event.to_start_minutes)}`
-    : `${event.kind === 'payment' ? 'Payment' : 'Booking'}: ${event.from_status ? `${label(event.from_status)} → ` : ''}${label(event.to_status)}`
-  return <details className="admin-history"><summary>History</summary>
-    {error && <p role="alert">{error}</p>}
-    {!events && !error && <p role="status">Loading history…</p>}
-    {events && !events.length && <p>No recorded changes yet.</p>}
-    {events && <ol>{events.map((event, index) => <li key={index}><span>{when(event.occurred_at)}</span> {text(event)} <span className="admin-detail-hint">({label(event.actor_type)})</span></li>)}</ol>}
-  </details>
 }
 
 // The extra time on a booking, each with Remove (asked once, on the spot) while it can still be undone: not once its money came in (cash, a
@@ -243,6 +227,5 @@ export default function BookingActions({ booking, refresh, api = lifecycleApi })
     {kind === 'edit' && <EditBooking booking={booking} close={() => setKind(null)} done={done} times={api} />}
     {kind === 'extend' && <ExtendDialog booking={booking} close={() => setKind(null)} done={done} />}
     {kind && kind !== 'edit' && kind !== 'extend' && <ActionDialog key={kind} kind={kind} booking={booking} api={api} close={() => setKind(null)} done={done} />}
-    <History booking={booking} api={api} />
   </div>
 }
