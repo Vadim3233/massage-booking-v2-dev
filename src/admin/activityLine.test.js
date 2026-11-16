@@ -11,7 +11,7 @@ describe('a line of the record', () => {
   it('shows a move as old time crossed out and new time, and who did it', () => {
     const line = describeLine(row({ event_type: 'booking.rescheduled', payload: { from_date: '2026-11-20', from_start_minutes: 600, to_date: '2026-11-21', to_start_minutes: 840 } }))
     expect(line.what).toBe('Moved their appointment')
-    expect(line.changes).toEqual([{ from: 'Fri 20 Nov 10:00', to: 'Sat 21 Nov 14:00' }])
+    expect(line.changes).toEqual([{ key: 'time', from: 'Fri 20 Nov 10:00', to: 'Sat 21 Nov 14:00' }])
     expect(line.actorLabel).toBe('Client')
     // The day is already in the change, so it is not said twice.
     expect(line.who).toBe('Sabri Dylan')
@@ -25,7 +25,7 @@ describe('a line of the record', () => {
   })
   it('shows a changed booking with the old and new price, and what it was before', () => {
     const line = describeLine(row({ event_type: 'booking.services_changed', payload: { previous_total_gbp: 95, total_gbp: 125, previous_sessions: 'Deep tissue 60 min', from_date: '2026-11-21', from_start_minutes: 840, to_date: '2026-11-21', to_start_minutes: 840 } }))
-    expect(line.changes).toEqual([{ from: '£95', to: '£125' }])
+    expect(line.changes).toEqual([{ key: 'price', from: '£95', to: '£125' }])
     expect(line.amount).toBe('£125')
     expect(line.before).toBe('Before: Deep tissue 60 min')
   })
@@ -45,7 +45,7 @@ describe('a line of the record', () => {
   it('names a booking made through the client\'s AI assistant, and contact changes old → new', () => {
     expect(describeLine(row({ via: 'ai' })).actorLabel).toBe('Client · via AI')
     const changed = describeLine(row({ event_type: 'client.details_changed', actor: 'admin', booking_id: null, booking_date: null, payload: { changes: { phone: { from: '07700 900000', to: '07700 900111' } } } }))
-    expect(changed.changes).toEqual([{ from: '07700 900000', to: '07700 900111' }])
+    expect(changed.changes).toEqual([{ key: 'phone', from: '07700 900000', to: '07700 900111' }])
     expect(changed.who).toBe('Sabri Dylan')
   })
   it('still shows something it does not know, under a plain name', () => {
@@ -59,7 +59,7 @@ describe('quick repeat changes', () => {
     const items = mergeRepeats([move('2026-11-16T07:48:00Z', 660, 720), move('2026-11-16T07:44:00Z', 630, 660), move('2026-11-16T07:41:00Z', 600, 630)])
     expect(items).toHaveLength(1)
     expect(items[0].line.times).toBe(3)
-    expect(items[0].line.changes).toEqual([{ from: 'Fri 20 Nov 10:00', to: 'Fri 20 Nov 12:00' }])
+    expect(items[0].line.changes).toEqual([{ key: 'time', from: 'Fri 20 Nov 10:00', to: 'Fri 20 Nov 12:00' }])
   })
   it('stay separate when far apart, by someone else, or on another booking', () => {
     expect(mergeRepeats([move('2026-11-16T09:00:00Z', 660, 720), move('2026-11-16T07:41:00Z', 600, 630)])).toHaveLength(2)
@@ -99,7 +99,7 @@ describe('reading the record', () => {
   it('falls back to the old status and move history for a booking', async () => {
     const api = createActivityApi(client({}), { list: async () => [] }, { history: async () => [{ kind: 'schedule', from_date: '2026-11-20', from_start_minutes: 600, to_date: '2026-11-21', to_start_minutes: 840, actor_type: 'admin', occurred_at: 'x' }] })
     const [line] = await api.booking(B)
-    expect(describeLine(line).changes).toEqual([{ from: 'Fri 20 Nov 10:00', to: 'Sat 21 Nov 14:00' }])
+    expect(describeLine(line).changes).toEqual([{ key: 'time', from: 'Fri 20 Nov 10:00', to: 'Sat 21 Nov 14:00' }])
   })
   it('passes the filter, search and where to continue from', async () => {
     let args
@@ -110,5 +110,17 @@ describe('reading the record', () => {
   it('says plainly when the record cannot be read for another reason', async () => {
     const api = createActivityApi({ rpc: async () => ({ data: null, error: { code: '500', message: 'boom' } }) }, { list: async () => [] }, {})
     await expect(api.list()).rejects.toThrow('Could not load your alerts. Please retry.')
+  })
+})
+
+describe('merging changes of different things', () => {
+  it('keeps each thing with its own old and new value', () => {
+    const detail = (at, changes) => ({ id: at, event_type: 'client.details_changed', at, actor: 'client', booking_id: null, client_id: 'c1', name: 'Ann Lee', payload: { changes } })
+    const [item] = mergeRepeats([detail('2026-11-16T10:05:00Z', { phone: { from: '0700', to: '0799' } }), detail('2026-11-16T10:00:00Z', { name: { from: 'Ann Lea', to: 'Ann Lee' } })])
+    expect(item.line.changes).toEqual([{ key: 'name', from: 'Ann Lea', to: 'Ann Lee' }, { key: 'phone', from: '0700', to: '0799' }])
+  })
+  it('does not stretch a group past 10 minutes from its newest change', () => {
+    const move = at => row({ id: at, event_type: 'booking.rescheduled', at, payload: { from_date: '2026-11-20', from_start_minutes: 600, to_date: '2026-11-20', to_start_minutes: 660 } })
+    expect(mergeRepeats([move('2026-11-16T10:18:00Z'), move('2026-11-16T10:09:00Z'), move('2026-11-16T10:00:00Z')]).map(item => item.rows.length)).toEqual([2, 1])
   })
 })

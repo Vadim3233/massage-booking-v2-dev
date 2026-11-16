@@ -15,8 +15,9 @@
 -- the Alerts page loads before this file is applied, it falls back to the old list of alerts.
 --
 -- To take this back: drop the functions admin_activity_list, admin_booking_activity, admin_client_moves, admin_note_last_event,
--- activity_rows, activity_current_client, activity_actor, activity_record_client_details, activity_record_client_note,
--- activity_forget_deleted_client (with their triggers on clients and client_notes) and the table activity_notes.
+-- activity_rows, activity_current_client, activity_actor, activity_money_types, activity_record_client_details, activity_record_client_note,
+-- activity_forget_deleted_client, activity_forget_merged_client (with their triggers on clients, client_notes and client_merges) and the
+-- table activity_notes.
 
 -- ---------------------------------------------------------------------------------------------
 -- 1. A short "why" Vadim can add to something he did (for now: a move)
@@ -93,8 +94,7 @@ returns trigger language plpgsql security definer set search_path = '' as $$
 begin
   insert into public.event_outbox(event_type, aggregate_type, aggregate_id, payload)
   values ('client.note_added', 'client', new.client_id,
-    jsonb_build_object('client_id', new.client_id, 'note_id', new.id, 'actor_id', auth.uid(), 'actor_type', public.activity_actor(),
-      'note', left(btrim(new.note), 160)));
+    jsonb_build_object('client_id', new.client_id, 'note_id', new.id, 'actor_id', auth.uid(), 'actor_type', public.activity_actor()));
   return null;
 end; $$;
 revoke all on function public.activity_record_client_note() from public, anon, authenticated;
@@ -117,6 +117,20 @@ drop trigger if exists clients_forget_activity on public.clients;
 create trigger clients_forget_activity after delete on public.clients
   for each row execute function public.activity_forget_deleted_client();
 
+-- Profiles combined into a client are that person too: when deleting the client removes the combine history (the only time it is
+-- removed), their lines go as well.
+create or replace function public.activity_forget_merged_client()
+returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  delete from public.event_outbox e
+  where e.aggregate_type = 'client' and e.aggregate_id = old.removed_client_id and e.event_type in ('client.details_changed', 'client.note_added');
+  return null;
+end; $$;
+revoke all on function public.activity_forget_merged_client() from public, anon, authenticated;
+drop trigger if exists client_merges_forget_activity on public.client_merges;
+create trigger client_merges_forget_activity after delete on public.client_merges
+  for each row execute function public.activity_forget_merged_client();
+
 -- ---------------------------------------------------------------------------------------------
 -- 4. The record, one row per thing that happened
 -- ---------------------------------------------------------------------------------------------
@@ -130,24 +144,40 @@ returns text[] language sql immutable set search_path = '' as $$
 $$;
 revoke all on function public.activity_money_types() from public, anon, authenticated;
 
-create or replace function public.activity_rows(p_booking_id uuid default null)
+-- p_booking_id: one booking's lines. p_before_at/p_before_id/p_limit/p_types: for the Alerts list, the page is cut from the events first
+-- (newest first), so a page never reads the whole record. p_unread_only: only events with an unread alert.
+create or replace function public.activity_rows(p_booking_id uuid default null, p_before_at timestamptz default null,
+  p_before_id uuid default null, p_limit integer default null, p_types text default 'all', p_unread_only boolean default false)
 returns table (
   id uuid, event_type text, at timestamptz, actor text, via text, initiated_by text,
   booking_id uuid, client_id uuid, name text, booking_date date, booking_start integer, booking_minutes integer, booking_total numeric,
   booking_status text, gift_voucher_id uuid, payload jsonb, note text, late boolean, next_address text,
   alert_id uuid, alert_title text, alert_body text, alert_link text, alert_read_at timestamptz, sent jsonb)
 language sql stable security definer set search_path = '' as $$
-  with ev as (
+  with settings as (select public.business_setting_int('free_cancellation_hours', 24) as free_hours),
+  page as (
+    select e.* from public.event_outbox e
+    where e.event_type <> 'client.created' and e.aggregate_type <> 'insight'
+      and (p_booking_id is null or (e.aggregate_type = 'booking' and e.aggregate_id = p_booking_id))
+      and (p_before_at is null or (e.created_at, e.id) < (p_before_at, coalesce(p_before_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid)))
+      and case coalesce(p_types, 'all')
+        when 'money' then e.event_type = any(public.activity_money_types())
+        when 'gifts' then e.event_type like 'gift.%'
+        when 'bookings' then e.event_type not like 'gift.%' and not (e.event_type = any(public.activity_money_types()))
+        else true end
+      and (not p_unread_only or exists (select 1 from public.notification_deliveries d where d.event_id = e.id and d.channel = 'in_app' and d.read_at is null))
+    order by e.created_at desc, e.id desc
+    limit p_limit
+  ),
+  ev as (
     select e.*, cmd.actor_type as cmd_actor,
       case when e.aggregate_type = 'booking' then e.aggregate_id end as b_id,
       case when e.aggregate_type = 'gift_voucher' then e.aggregate_id end as g_id,
       case when e.aggregate_type = 'waitlist' then e.aggregate_id end as w_id,
       case when e.aggregate_type = 'client' then e.aggregate_id end as c_id,
       case when e.aggregate_type = 'series' then e.aggregate_id end as s_id
-    from public.event_outbox e
+    from page e
     left join public.command_requests cmd on cmd.id = e.source_command_id
-    where e.event_type <> 'client.created'
-      and (p_booking_id is null or (e.aggregate_type = 'booking' and e.aggregate_id = p_booking_id))
   )
   select ev.id, ev.event_type, ev.created_at,
     case
@@ -167,21 +197,29 @@ language sql stable security definer set search_path = '' as $$
     coalesce(nullif(btrim(concat_ws(' ', cl.first_name, cl.last_name)), ''), nullif(btrim(g.buyer_name), ''), nullif(btrim(w.contact_name), '')),
     b.date, b.start_minutes, b.treatment_duration_minutes, b.total_gbp, b.booking_status, g.id,
     ev.payload,
-    coalesce(n.note, case when ev.event_type = 'booking.cancelled' then nullif(btrim(b.cancellation_reason), '') end),
-    -- A move, change or cancel inside the free-cancellation window (24 hours unless changed in Booking rules) before the session.
+    -- Vadim's "why", a cancellation's reason, or a note's text (read from the note itself, so a deleted note's words are gone).
+    coalesce(n.note, case when ev.event_type = 'booking.cancelled' then nullif(btrim(b.cancellation_reason), '') end,
+      case when ev.event_type = 'client.note_added' then (select left(btrim(cn.note), 160) from public.client_notes cn where cn.id::text = ev.payload->>'note_id') end),
+    -- A move, change or cancel inside the free-cancellation window (24 hours unless changed in Booking rules) before the session, and
+    -- before it started (tidying up a past booking is not late).
     coalesce(case
       when ev.event_type in ('booking.rescheduled', 'booking.services_changed') and ev.payload ? 'from_date' then
-        ev.created_at >= ((((ev.payload->>'from_date')::date + make_interval(mins => (ev.payload->>'from_start_minutes')::integer))
-          at time zone 'Europe/London') - make_interval(hours => public.business_setting_int('free_cancellation_hours', 24)))
+        ev.created_at between ((((ev.payload->>'from_date')::date + make_interval(mins => (ev.payload->>'from_start_minutes')::integer))
+          at time zone 'Europe/London') - make_interval(hours => settings.free_hours))
+          and (((ev.payload->>'from_date')::date + make_interval(mins => (ev.payload->>'from_start_minutes')::integer)) at time zone 'Europe/London')
       when ev.event_type = 'booking.cancelled' and b.id is not null then
-        ev.created_at >= (((b.date + make_interval(mins => b.start_minutes)) at time zone 'Europe/London')
-          - make_interval(hours => public.business_setting_int('free_cancellation_hours', 24)))
+        ev.created_at between (((b.date + make_interval(mins => b.start_minutes)) at time zone 'Europe/London') - make_interval(hours => settings.free_hours))
+          and ((b.date + make_interval(mins => b.start_minutes)) at time zone 'Europe/London')
     end, false),
+    -- An address change: the address it changed to (the next change's old address, or the address now).
     case when ev.event_type = 'booking.address_changed' then
-      coalesce(lead(ev.payload->>'previous_address') over (partition by ev.aggregate_id, ev.event_type order by ev.created_at, ev.id), b.address_snapshot) end,
+      coalesce((select nx.payload->>'previous_address' from public.event_outbox nx
+        where nx.aggregate_type = 'booking' and nx.aggregate_id = ev.aggregate_id and nx.event_type = 'booking.address_changed'
+          and (nx.created_at, nx.id) > (ev.created_at, ev.id) order by nx.created_at, nx.id limit 1), b.address_snapshot) end,
     alert.id, alert.title, alert.body, alert.link_path, alert.read_at,
     sent.list
   from ev
+  cross join settings
   left join public.bookings b on b.id = ev.b_id
   left join public.gift_vouchers g on g.id = coalesce(ev.g_id, nullif(ev.payload->>'gift_voucher_id', '')::uuid)
   left join public.waitlist_requests w on w.id = ev.w_id
@@ -201,7 +239,7 @@ language sql stable security definer set search_path = '' as $$
     and (ev.aggregate_type <> 'waitlist' or w.id is not null)
     and (ev.aggregate_type <> 'series' or s.id is not null);
 $$;
-revoke all on function public.activity_rows(uuid) from public, anon, authenticated;
+revoke all on function public.activity_rows(uuid, timestamptz, uuid, integer, text, boolean) from public, anon, authenticated;
 
 -- ---------------------------------------------------------------------------------------------
 -- 5. What the Admin screens read
@@ -212,6 +250,7 @@ create or replace function public.admin_activity_list(p_filter text default 'all
   p_before_at timestamptz default null, p_before_id uuid default null, p_limit integer default 50)
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
 declare v_search text := lower(nullif(btrim(coalesce(p_search, '')), ''));
+  v_limit integer := greatest(1, least(coalesce(p_limit, 50), 200));
 begin
   if not public.is_booking_admin() then
     raise exception 'Only the Admin can read the record.' using errcode = '42501';
@@ -219,18 +258,15 @@ begin
   return coalesce((
     select jsonb_agg(to_jsonb(r) order by r.at desc, r.id desc)
     from (
-      select * from public.activity_rows(null) a
-      where (p_before_at is null or (a.at, a.id) < (p_before_at, coalesce(p_before_id, 'ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid)))
-        and case coalesce(p_filter, 'all')
-          when 'new' then a.alert_id is not null and a.alert_read_at is null
-          when 'money' then a.event_type = any(public.activity_money_types())
-          when 'gifts' then a.event_type like 'gift.%'
-          when 'bookings' then a.event_type not like 'gift.%' and not (a.event_type = any(public.activity_money_types()))
-          when 'mine' then a.actor = 'admin'
-          else true end
+      -- The page is cut from the events first, unless who did it or a name decides (By me, a search), which are worked out per line.
+      select * from public.activity_rows(null, p_before_at, p_before_id,
+        -- (a few more than asked, as a line about something since deleted is left out after the cut)
+        case when v_search is null and coalesce(p_filter, 'all') <> 'mine' then v_limit + 20 end,
+        case when p_filter in ('money', 'gifts', 'bookings') then p_filter else 'all' end, coalesce(p_filter, 'all') = 'new') a
+      where (coalesce(p_filter, 'all') <> 'mine' or a.actor = 'admin')
         and (v_search is null or position(v_search in lower(coalesce(a.name, ''))) > 0)
       order by a.at desc, a.id desc
-      limit greatest(1, least(coalesce(p_limit, 50), 200))
+      limit v_limit
     ) r), '[]'::jsonb);
 end; $$;
 revoke all on function public.admin_activity_list(text, text, timestamptz, uuid, integer) from public, anon;
@@ -249,7 +285,7 @@ revoke all on function public.admin_booking_activity(uuid) from public, anon;
 grant execute on function public.admin_booking_activity(uuid) to authenticated;
 
 -- "Moved 3 of their last 5 bookings": of the client's last 5 bookings, how many the client asked to move (moved by them, or by Vadim with
--- "The client asked").
+-- "The client asked", or a new day or time in a change they made themselves).
 create or replace function public.admin_client_moves(p_client_id uuid)
 returns jsonb language plpgsql stable security definer set search_path = '' as $$
 declare v_of integer; v_moved integer;
@@ -263,7 +299,9 @@ begin
   select count(*)::integer,
     count(*) filter (where exists (
       select 1 from public.event_outbox e left join public.command_requests cmd on cmd.id = e.source_command_id
-      where e.aggregate_type = 'booking' and e.aggregate_id = recent.id and e.event_type = 'booking.rescheduled'
+      where e.aggregate_type = 'booking' and e.aggregate_id = recent.id
+        and (e.event_type = 'booking.rescheduled' or (e.event_type = 'booking.services_changed'
+          and (e.payload->>'from_date', e.payload->>'from_start_minutes') is distinct from (e.payload->>'to_date', e.payload->>'to_start_minutes')))
         and (e.payload->>'initiated_by' = 'client' or e.payload->>'source' = 'client' or cmd.actor_type = 'client')))::integer
   into v_of, v_moved from recent;
   return jsonb_build_object('moved', v_moved, 'of', v_of);

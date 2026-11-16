@@ -41,6 +41,8 @@ export function createActivityApi(client, alerts = createAlertsApi(client), life
         // Not applied yet: the alerts, as before. "Show older" and the filters other than Needs you have nothing more to show.
         if (before) return { rows: [], full: false }
         const lines = (await alerts.list(limit)).map(lineFromAlert)
+        // Alerts alone cannot say what was money, a gift or done by you, so those filters show nothing until then.
+        if (!['all', 'new'].includes(filter)) return { rows: [], full: false }
         const wanted = filter === 'new' ? lines.filter(line => !line.alert_read_at) : lines
         const needle = search.trim().toLowerCase()
         return { rows: needle ? wanted.filter(line => `${line.alert_title} ${line.alert_body}`.toLowerCase().includes(needle)) : wanted, full: false }

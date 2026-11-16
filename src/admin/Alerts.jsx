@@ -67,8 +67,11 @@ export default function Alerts({ openBooking, openPage, changed, unread: unreadC
     return () => clearTimeout(timer)
   }, [typed])
 
+  // Each read of the list has its own number, so older lines asked for before a filter, search or refresh changed are never mixed in.
+  const generation = useRef(0)
   useEffect(() => {
     let live = true
+    generation.current += 1
     api.list({ filter, search, limit: PAGE }).then(result => {
       if (!live) return
       hasList.current = true
@@ -90,12 +93,14 @@ export default function Alerts({ openBooking, openPage, changed, unread: unreadC
   async function older() {
     const last = rows?.at(-1)
     if (!last || loadingMore) return
+    const asked = generation.current
     setLoadingMore(true)
     try {
       const result = await api.list({ filter, search, before: { at: last.at, id: last.id }, limit: PAGE })
+      if (asked !== generation.current) return
       setRows(list => [...list, ...result.rows.filter(row => !list.some(item => item.id === row.id))])
       setMore(result.rows.length >= PAGE)
-    } catch (failure) { setError(failure.message) } finally { setLoadingMore(false) }
+    } catch (failure) { if (asked === generation.current) setError(failure.message) } finally { setLoadingMore(false) }
   }
 
   async function markAll() {

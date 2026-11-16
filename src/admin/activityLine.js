@@ -49,7 +49,7 @@ const EVENTS = {
   'booking.pay_after_requested': () => ['Asked to pay session by session', 'bank'],
   'series.clash': () => ['Repeat booking clashes', 'booking'],
   'client.details_changed': () => ['Contact details changed', 'people'],
-  'client.note_added': () => ['Note added', 'people'],
+  'client.note_added': row => [row.note ? 'Note added' : 'Note added (since deleted)', 'people'],
   'client.possible_duplicate': () => ['Is this the same person?', 'people'],
   'waitlist.joined': () => ['Joined the waitlist', 'booking'],
   'gift.bought': () => ['New gift voucher', 'gift'],
@@ -72,19 +72,19 @@ function changesOf(row) {
   const p = row.payload || {}
   switch (row.event_type) {
     case 'booking.rescheduled':
-      return p.from_date ? [{ from: when(p.from_date, p.from_start_minutes), to: when(p.to_date, p.to_start_minutes) }] : []
+      return p.from_date ? [{ key: 'time', from: when(p.from_date, p.from_start_minutes), to: when(p.to_date, p.to_start_minutes) }] : []
     case 'booking.services_changed': {
       const list = []
-      if (p.previous_total_gbp != null && p.total_gbp != null && Number(p.previous_total_gbp) !== Number(p.total_gbp)) list.push({ from: pounds(p.previous_total_gbp), to: pounds(p.total_gbp) })
-      if (p.from_date && (p.from_date !== p.to_date || Number(p.from_start_minutes) !== Number(p.to_start_minutes))) list.push({ from: when(p.from_date, p.from_start_minutes), to: when(p.to_date, p.to_start_minutes) })
+      if (p.previous_total_gbp != null && p.total_gbp != null && Number(p.previous_total_gbp) !== Number(p.total_gbp)) list.push({ key: 'price', from: pounds(p.previous_total_gbp), to: pounds(p.total_gbp) })
+      if (p.from_date && (p.from_date !== p.to_date || Number(p.from_start_minutes) !== Number(p.to_start_minutes))) list.push({ key: 'time', from: when(p.from_date, p.from_start_minutes), to: when(p.to_date, p.to_start_minutes) })
       return list
     }
-    case 'booking.cash_requested': return [{ from: 'Bank transfer', to: 'Cash' }]
-    case 'booking.payment_method_changed': return p.previous_method ? [{ from: METHOD[p.previous_method] || label(p.previous_method), to: METHOD[p.method] || label(p.method) }] : []
-    case 'booking.address_changed': return p.previous_address ? [{ from: p.previous_address, to: row.next_address || '' }] : []
+    case 'booking.cash_requested': return [{ key: 'method', from: 'Bank transfer', to: 'Cash' }]
+    case 'booking.payment_method_changed': return p.previous_method ? [{ key: 'method', from: METHOD[p.previous_method] || label(p.previous_method), to: METHOD[p.method] || label(p.method) }] : []
+    case 'booking.address_changed': return p.previous_address ? [{ key: 'address', from: p.previous_address, to: row.next_address || '' }] : []
     case 'client.details_changed':
-      return Object.entries(p.changes || {}).map(([, change]) => ({ from: change?.from || '(none)', to: change?.to || '(none)' }))
-    case 'status.changed': return p.from_status ? [{ from: label(p.from_status), to: label(p.to_status) }] : []
+      return Object.entries(p.changes || {}).map(([key, change]) => ({ key, from: change?.from || '(none)', to: change?.to || '(none)' }))
+    case 'status.changed': return p.from_status ? [{ key: 'status', from: label(p.from_status), to: label(p.to_status) }] : []
     default: return []
   }
 }
@@ -152,10 +152,11 @@ export function mergeRepeats(rows) {
   const items = []
   for (const row of rows) {
     const last = items.at(-1)
-    const oldest = last?.rows.at(-1)
-    const same = last && REPEATS.includes(row.event_type) && oldest.event_type === row.event_type && oldest.actor === row.actor
-      && (row.booking_id ? oldest.booking_id === row.booking_id : oldest.client_id && oldest.client_id === row.client_id)
-      && Math.abs(new Date(oldest.at) - new Date(row.at)) <= TEN_MINUTES
+    const newest = last?.rows[0]
+    // Within 10 minutes of the newest change of the group, so a chain of changes never stretches the group on and on.
+    const same = last && REPEATS.includes(row.event_type) && newest.event_type === row.event_type && newest.actor === row.actor
+      && (row.booking_id ? newest.booking_id === row.booking_id : newest.client_id && newest.client_id === row.client_id)
+      && Math.abs(new Date(newest.at) - new Date(row.at)) <= TEN_MINUTES
     if (same) last.rows.push(row)
     else items.push({ id: row.id, rows: [row] })
   }
@@ -163,9 +164,15 @@ export function mergeRepeats(rows) {
     const head = item.rows[0]
     const line = describeLine(head)
     if (item.rows.length > 1) {
-      const first = describeLine(item.rows.at(-1))
-      // From what it was before the first change to what it is after the last.
-      line.changes = line.changes.map((change, index) => ({ from: first.changes[index]?.from ?? change.from, to: change.to }))
+      // Each thing that changed (time, price, phone…), from what it was before its first change to what it is after its last.
+      const byKey = new Map()
+      for (const row of [...item.rows].reverse()) {
+        for (const change of describeLine(row).changes) {
+          const seen = byKey.get(change.key)
+          byKey.set(change.key, { key: change.key, from: seen ? seen.from : change.from, to: change.to })
+        }
+      }
+      line.changes = [...byKey.values()]
       line.times = item.rows.length
       line.tags = [...line.tags, ...item.rows.slice(1).flatMap(row => describeLine(row).tags)].filter((tag, index, all) => all.findIndex(other => other.text === tag.text) === index)
     }
