@@ -28,3 +28,11 @@ it('keeps the versions of a new booking request, and any alert it does not know,
   expect(summariseAlert(null)).toMatchObject({ what: 'Alert' })
   expect(shortMoney('£108.50')).toBe('£108.50')
 })
+it('shows what is left to pay on a gift voucher booking, a fee or refund to settle, and who joined the waitlist', () => {
+  expect(s('New booking request with a gift voucher', 'Kim: Tue 17 Nov at 10:00, 60 minutes. The gift voucher from Ann pays £90.00, £35.00 left to pay.')).toMatchObject({ who: 'Kim · Tue 17 Nov', amount: '£35' })
+  expect(s('New booking with a gift voucher', 'Kim: Tue 17 Nov at 10:00, 60 minutes. The gift voucher from Ann pays for it all.')).toMatchObject({ amount: '' })
+  expect(s('Sam Lee cancelled', 'Tue 3 Nov at 15:30 (£90.00). Late fee of £45.00 recorded as due. Refund of £45.00 to send.'))
+    .toMatchObject({ what: 'Cancelled', who: 'Sam Lee · Tue 3 Nov · refund £45 · late fee £45', amount: '£90' })
+  expect(s('Someone joined the waitlist', 'Wendy: Tue 17 Nov, any time, 60 minutes.')).toMatchObject({ what: 'Joined the waitlist', who: 'Wendy · Tue 17 Nov' })
+  expect(s('Pat changed their booking', 'Now Wed 18 Nov at 10:00: 1 person, 60 minutes. Was Tue 17 Nov at 10:00. Price £90.00 (was £125.00). Refund to send: £35.00.')).toMatchObject({ who: 'Pat · Wed 18 Nov · refund £35' })
+})

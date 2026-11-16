@@ -18,6 +18,8 @@ const BY_NAME = [
 const DAY = /\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) \d{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/g
 const MONEY = /£\d[\d,]*(?:\.\d\d)?/
 
+// "<name>: <day>…": the name at the start of a message.
+const nameBefore = body => /^([^:\n]{1,160}):/.exec(body)?.[1] || ''
 // £125.00 reads as £125; £108.50 stays as it is.
 export const shortMoney = text => text?.replace(/\.00$/, '') || ''
 
@@ -26,7 +28,10 @@ export function summariseAlert(alert) {
   const body = String(alert?.body || '')
   const days = body.match(DAY) || []
   const amount = shortMoney((title.match(MONEY) || body.match(MONEY) || [])[0])
-  const line = (what, kind, who = '', day = days[0] || '') => ({ what, kind, who: [who, day].filter(Boolean).join(' · '), amount })
+  // A fee or refund still to settle is worth seeing without opening the alert.
+  const owed = [[/Refund(?: of (£[\d,.]+?) to send| to send: (£[\d,.]+?)\.?(?:\s|$))/, 'refund'], [/Late fee of (£[\d,.]+?)\.? recorded/, 'late fee']]
+    .map(([pattern, words]) => { const found = pattern.exec(body); return found ? `${words} ${shortMoney(found[1] || found[2])}` : '' }).filter(Boolean).join(' · ')
+  const line = (what, kind, who = '', day = days[0] || '', paid = amount) => ({ what, kind, who: [who, day, owed].filter(Boolean).join(' · '), amount: paid })
   for (const [ending, what, kind] of BY_NAME) {
     if (title.endsWith(ending) && title.length > ending.length) {
       // A move names the old time, then the new one: the new one is the day that matters.
@@ -35,15 +40,16 @@ export function summariseAlert(alert) {
   }
   // "New booking request" (and its versions: with a gift voucher, outside your areas, no postcode): the body starts "<name>: <day>…".
   if (/^New booking( request)?\b/.test(title)) {
-    const who = /^([^:\n]{1,80}):/.exec(body)?.[1] || ''
-    return line(title, 'booking', who)
+    // With a gift voucher the body names what the voucher pays first; what matters is what is left to pay (nothing, if it covers it all).
+    const left = /gift voucher/.test(title) ? shortMoney(/(£[\d,.]+?) left to pay/.exec(body)?.[1]) : amount
+    return line(title, 'booking', nameBefore(body), days[0] || '', left)
   }
   const gift = /^New gift voucher: (£\S+) by (.+)$/.exec(title)
-  if (gift) return line('New gift voucher', 'gift', /^(.{1,80}?) is buying /.exec(body)?.[1] || '', gift[2])
+  if (gift) return line('New gift voucher', 'gift', /^(.{1,160}?) is buying /.exec(body)?.[1] || '', gift[2])
   const repeat = /^Next repeat booking for (.+)$/.exec(title)
   if (repeat) return line('Next repeat booking', 'booking', repeat[1])
   if (title === 'Is this the same person?') return { what: title, kind: 'people', who: '', amount: '' }
-  if (title === 'Someone joined the waitlist') return line('Someone joined the waitlist', 'booking')
+  if (title === 'Someone joined the waitlist') return line('Joined the waitlist', 'booking', nameBefore(body))
   return { what: title || 'Alert', kind: 'other', who: '', amount: '' }
 }
 

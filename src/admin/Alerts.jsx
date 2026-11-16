@@ -46,7 +46,7 @@ export default function Alerts({ openBooking, openPage, changed, api = alertsApi
     if (group.unreadIds.length) {
       try {
         await api.markRead(group.unreadIds)
-        // The row stops saying "New" at once, rather than waiting for the list to be read again.
+        // The row stops being new at once, rather than waiting for the list to be read again.
         const readAt = new Date().toISOString()
         setAlerts(list => list?.map(item => group.unreadIds.includes(item.id) ? { ...item, read_at: readAt } : item))
         changed()

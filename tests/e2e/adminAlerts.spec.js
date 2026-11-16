@@ -55,14 +55,12 @@ test('several alerts about one booking are one card, and opening it reads them a
   const list = page.locator('.admin-alerts li')
   await expect(list).toHaveCount(1)
   await expect(list).toContainText('Transfer made')
-  await list.locator('.admin-alert-row').click()
-  await expect(list).toContainText('says the transfer is made')
-  await expect(list).toContainText('Also: New booking request')
-  await list.locator('.admin-alert-row').click()
   await expect(nav(page).getByLabel('2 unread')).toBeVisible()
   // Reading the list again is held back for the rest of the test, so what the row says is what the page itself did on opening the alert.
   await page.route('**/rpc/admin_list_notifications*', () => new Promise(() => {}))
   await list.locator('.admin-alert-row').click()
+  await expect(list).toContainText('says the transfer is made')
+  await expect(list).toContainText('Also: New booking request')
   // The row stops being new at once; it does not wait for the list to be read again.
   await expect(page.locator('.admin-alerts li.is-unread')).toHaveCount(0)
   await list.getByRole('button', { name: 'Open booking' }).click()
