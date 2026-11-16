@@ -206,7 +206,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {surface === '/admin/clients' && <Clients openClient={id => navigate(`/admin/clients/${id}`)} openCombine={openCombine} />}
       {profile && <ClientProfile key={profile[1]} id={profile[1]} back={route.fromBooking ? () => window.history.back() : () => navigate('/admin/clients')} backLabel={route.fromBooking ? 'Back to the booking' : 'Clients'} openBooking={openBooking} newBooking={(clientId, day) => newBooking(day || today(), clientId)} openCombine={openCombine} onDeleted={deletedId => { forgetDraftFor(ownerId, deletedId); refreshAlerts() }} />}
       {combining && <CombineClients key={`${pairA}:${pairB}`} a={pairA} b={pairB} back={() => navigate('/admin/clients')} openClient={id => navigate(`/admin/clients/${id}`)} resolved={refreshAlerts} />}
-      {surface === '/admin/alerts' && <Alerts openBooking={openBooking} openPage={path => navigate(path)} changed={refreshAlerts} />}
+      {surface === '/admin/alerts' && <Alerts openBooking={openBooking} openPage={path => navigate(path)} changed={refreshAlerts} unread={unreadAlerts} />}
       {surface === '/admin/more' && <section className="admin-review"><h1>More</h1>
         {MORE_GROUPS.map(([title, links]) => <section key={title} aria-label={title}><h2 className="admin-group-title">{title}</h2>
           <ul role="list" className="admin-menu">{links.map(([path, text]) => <li key={path}><AdminLink href={path} navigate={navigate}>{text}</AdminLink></li>)}</ul></section>)}

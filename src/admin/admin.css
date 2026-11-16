@@ -270,9 +270,6 @@
 .admin-who input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
 .admin-who label:has(:focus-visible) { outline: 3px solid var(--primary); outline-offset: 2px; }
 .admin-owed { margin: 0 0 10px; padding-left: 18px; font-weight: 600; color: var(--danger); }
-.admin-history { margin-top: 12px; }
-.admin-history summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-weight: 600; color: var(--primary); }
-.admin-history ol { padding-left: 18px; display: grid; gap: 8px; }
 .admin-payment-buttons { display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0; }
 .admin-payment-actions p { font-size: 14px; }
 .admin-link-button { padding: 0; min-height: 0; border: 0 !important; background: none !important; color: var(--primary); font: inherit; font-weight: 600; text-decoration: underline; cursor: pointer; }
@@ -1046,3 +1043,50 @@
 .admin-extra-time li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
 .admin-extra-time li .admin-payment-buttons { margin: 0; }
 .admin-stayed-longer { margin: 4px 0 0; color: var(--ink-soft); }
+
+/* Alerts as a record (ADR-107). Gold ring = something a client did, not read yet (as before). Quiet = what you or the app did: no card
+   fill, softer title. Old → new: the old value struck through, the new one in bold. Who did it: a small chip (Client / You / Automatic). */
+.activity-filters { display: flex; gap: 6px; margin: 12px -16px 0; padding: 0 16px 2px; overflow-x: auto; scrollbar-width: none; }
+.activity-filters::-webkit-scrollbar { display: none; }
+.admin-shell .activity-filter { flex: none; min-height: 36px; padding: 0 14px; border: 0; border-radius: var(--radius-pill); background: var(--surface); box-shadow: 0 0 0 1px var(--hairline); color: var(--ink-soft); font: 500 14px/1 var(--font-ui); }
+.admin-shell .activity-filter[aria-pressed="true"] { background: var(--primary); box-shadow: none; color: var(--on-primary); }
+.activity-filter em { font-style: normal; font-weight: 700; color: var(--needs-rail); }
+.activity-filter[aria-pressed="true"] em { color: var(--needs-bg); }
+.activity-tools { display: flex; gap: 8px; align-items: center; margin: 10px 0 4px; }
+.activity-search { flex: 1 1 auto; min-width: 0; }
+.activity-search input { width: 100%; min-height: 40px; padding: 0 12px; border: 1px solid var(--hairline); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); font: 400 15px/1.2 var(--font-ui); }
+.activity-tools > button { flex: none; }
+.admin-alerts > li.is-quiet { background: transparent; box-shadow: 0 0 0 1px var(--hairline); }
+.admin-alerts > li.is-quiet .admin-alert-text strong { font-weight: 550; color: var(--ink-soft); }
+.activity-changes { display: flex; flex-wrap: wrap; gap: 0 10px; font-size: 13.5px; color: var(--ink-soft); }
+.activity-change { display: inline-flex; flex-wrap: wrap; align-items: baseline; gap: 0 5px; overflow-wrap: anywhere; }
+.activity-change s { color: var(--muted); }
+.activity-change b { font-weight: 600; color: var(--ink); }
+.activity-arrow { color: var(--muted); }
+.admin-alert-text .activity-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; font-size: 13.5px; color: var(--muted); }
+.activity-times { font-weight: 600; color: var(--muted); }
+.activity-who { display: inline-block; padding: 0 7px; border-radius: var(--radius-pill); font: 600 11px/1.6 var(--font-ui); letter-spacing: .02em; white-space: nowrap; }
+.activity-who.is-client, .activity-who.is-buyer { background: var(--accent-soft); color: var(--accent-ink); }
+.activity-who.is-admin { background: var(--primary-soft); color: var(--primary); }
+.activity-who.is-system { background: var(--block-bg); color: var(--block-ink); }
+.activity-tag { display: inline-block; padding: 0 7px; border-radius: var(--radius-pill); background: var(--block-bg); color: var(--block-ink); font: 600 11px/1.6 var(--font-ui); white-space: nowrap; }
+.activity-tag.is-late { background: var(--accent-soft); color: var(--danger); }
+.activity-note { color: var(--ink-soft); }
+.activity-sent { color: var(--ink-soft); }
+.activity-stamp { flex: none; align-self: flex-start; padding-top: 2px; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; max-width: 6.5em; }
+.activity-earlier { display: grid; gap: 6px; padding-top: 4px; border-top: 1px solid var(--hairline); }
+.activity-earlier h3 { margin: 6px 0 0; font: 600 13px/1.3 var(--font-ui); color: var(--ink-soft); }
+.activity-earlier ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.activity-earlier-line { display: flex; gap: 10px; align-items: flex-start; }
+.activity-earlier-line .admin-alert-icon { width: 28px; height: 28px; }
+.activity-earlier-line strong { font-size: 14px; font-weight: 550; color: var(--ink-soft); }
+.activity-earlier > button { justify-self: start; }
+/* The booking's History: a line down the left joins the steps, oldest first. */
+.activity-history-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.activity-history-heading small { color: var(--muted); font-size: 13px; }
+.activity-timeline { list-style: none; margin: 8px 0 0; padding: 0; display: grid; }
+.activity-timeline > li { position: relative; display: flex; flex-wrap: wrap; gap: 0 11px; align-items: flex-start; padding-bottom: 14px; }
+.activity-timeline > li:not(:last-child)::before { content: ''; position: absolute; left: 16.25px; top: 38px; bottom: 2px; width: 1.5px; background: var(--hairline); }
+.activity-timeline .admin-alert-text { display: grid; gap: 1px; min-width: 0; flex: 1 1 0; }
+.activity-timeline .admin-alert-text strong { font-size: 15px; font-weight: 600; color: var(--ink); }
+.activity-timeline .activity-note { flex-basis: 100%; margin: 4px 0 0 45px; font-size: 13.5px; }

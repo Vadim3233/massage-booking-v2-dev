@@ -7,6 +7,7 @@ import { phoneProblem } from '../lib/phone.js'
 import { bookingState, dateLabel, money, time } from './calendarPresentation.js'
 import ClientRepeats from './ClientRepeats.jsx'
 import ClientRhythm from './ClientRhythm.jsx'
+import { activityApi } from './activityApi.js'
 import ClientTelegram from './ClientTelegram.jsx'
 import ClientGiftVoucher from './ClientGiftVoucher.jsx'
 import ClientPaymentReminder from './ClientPaymentReminder.jsx'
@@ -176,6 +177,18 @@ function StayedLonger({ clientId, api, version }) {
   return <p className="admin-stayed-longer" role="status">Stayed longer {count} times. Next time, you could offer a longer session.</p>
 }
 
+// "Moved 3 of their last 5 bookings" (ADR-107): a client who often asks to move. Nothing shows until it has happened twice.
+function MovedOften({ clientId, version, api = activityApi }) {
+  const [moves, setMoves] = useState(null)
+  useEffect(() => {
+    let live = true
+    api.clientMoves(clientId).then(value => { if (live) setMoves(value) }, () => { if (live) setMoves(null) })
+    return () => { live = false }
+  }, [api, clientId, version])
+  if (!moves || moves.moved < 2) return null
+  return <p className="admin-stayed-longer" role="status">Moved {moves.moved} of their last {moves.of} bookings. You may want to confirm the time with them a day before.</p>
+}
+
 export default function ClientProfile({ id, back, backLabel = 'Clients', openBooking, newBooking, openCombine, onDeleted, api = clientsApi }) {
   const [client, setClient] = useState(null)
   const [error, setError] = useState('')
@@ -217,6 +230,7 @@ export default function ClientProfile({ id, back, backLabel = 'Clients', openBoo
     <Summary clientId={id} api={api} version={version} />
     <ClientRhythm client={client} api={api} version={version} newBooking={newBooking} />
     <StayedLonger clientId={id} api={api} version={version} />
+    <MovedOften clientId={id} version={version} />
     <ClientPaymentReminder key={`reminder-${client.id}`} client={client} api={api} version={version} />
     <History clientId={id} api={api} openBooking={openBooking} version={version} />
     <Notes clientId={id} api={api} />

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import BookingHistory from './BookingHistory.jsx'
 import BookingDetails from './BookingDetails.jsx'
 import BookingActions from './BookingActions.jsx'
 import AddressEdit from './AddressEdit.jsx'
@@ -60,5 +61,6 @@ export default function BookingDestination({ id, close, changed, returnFocus, op
     <button className="btn--quiet btn--small" onClick={() => setAttempt(value => value + 1)}>Check for changes</button>
   </>} lifecycle={error ? null : <BookingActions booking={booking} refresh={refresh} />}
     review={error ? null : <ReviewInvite key={booking.id} booking={booking} openSettings={openPage && (() => openPage('/admin/settings/google-reviews'))} />} address={error ? null : <AddressEdit key={booking.updated_at} booking={booking} refresh={refresh} />}
-    contact={error ? null : <ContactEdit booking={booking} refresh={refresh} />} openClient={openPage && (clientId => openPage(`/admin/clients/${clientId}`))} />
+    contact={error ? null : <ContactEdit booking={booking} refresh={refresh} />}
+    history={<BookingHistory bookingId={booking.id} version={`${booking.updated_at}|${booking.booking_payments?.updated_at || ''}`} />} openClient={openPage && (clientId => openPage(`/admin/clients/${clientId}`))} />
 }

@@ -31,6 +31,10 @@ const paths = {
   cash: <><rect x="2.5" y="6" width="19" height="12" rx="2.5" /><circle cx="12" cy="12" r="2.6" /></>,
   bank: <><path d="M3.5 9.5h17L12 4.5z" /><path d="M6 10v7M10 10v7M14 10v7M18 10v7M4 20h16" /></>,
   gift: <><rect x="4" y="9" width="16" height="11" rx="1.8" /><path d="M3.5 9h17M12 9v11M12 9c-1.2-2.8-5-3.8-5-1.2 0 1 1.6 1.2 5 1.2zM12 9c1.2-2.8 5-3.8 5-1.2 0 1-1.6 1.2-5 1.2z" /></>,
+  move: <><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M8 3v4M16 3v4M3.5 10h17M9 15h6m-2-2 2 2-2 2" /></>,
+  edit: <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />,
+  receipt: <path d="M6 3.5h12v17l-3-2-3 2-3-2-3 2v-17zM9 8.5h6M9 12h6" />,
+  send: <path d="m4 11.5 16-7-6 16-2.5-6.5L4 11.5z" />,
 }
 
 export default function Icon({ name, size = 24, filled = false, className = '' }) {
