@@ -19,8 +19,10 @@ export default function Welcome({ welcome, rules, usual, bookUsual }) {
       <div className="welcome-hero">
         <img className="welcome-photo" src="/vadim-portrait.jpg" alt="Vadim, your massage therapist" width="88" height="88" />
         <div>
-          <p className="eyebrow">Soft tissue &amp; massage therapy</p>
+          <p className="eyebrow welcome-eyebrow">Premium soft tissue &amp; massage therapy</p>
           <h1 id="welcome-title" tabIndex={-1}>A massage that <em>comes to you</em></h1>
+          {/* Vadim's signature in gold: decoration only, his name is already in the photo's description. */}
+          <img className="welcome-signature" src="/by-vadim.webp" alt="" width="667" height="180" />
         </div>
       </div>
       {(intro.length ? intro : paragraphs(DEFAULT_WELCOME)).map((text, index) => <p className="lede" key={index}>{text}</p>)}

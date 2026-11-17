@@ -329,6 +329,7 @@
 
 .welcome-hero { display: flex; align-items: center; gap: 16px; }
 .welcome-hero h1 { margin-bottom: 0; }
+.welcome-hero > div { min-width: 0; }
 .welcome-photo { flex: none; width: 88px; height: 88px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 3px var(--surface), 0 0 0 4.5px var(--primary-line), var(--shadow-1); }
 @media (width <= 359px) { .welcome-photo { width: 64px; height: 64px; } }
 
@@ -363,6 +364,12 @@
 .welcome-band .lede { margin-bottom: 0; color: var(--primary-line); }
 .welcome-band :focus-visible { outline-color: var(--on-primary); }
 .welcome-band .welcome-photo { box-shadow: 0 0 0 3px var(--sand-chip), var(--shadow-2); }
+/* Vadim's design (17 Nov 2026): a gold line between dashes, a bolder gold "comes to you" and his signature in gold beneath. */
+.welcome-band .welcome-eyebrow { display: flex; align-items: center; gap: 5px; color: var(--sand-chip); font-size: clamp(8px, 2.4vw, 12px); letter-spacing: .03em; white-space: nowrap; }
+.welcome-band .welcome-eyebrow::before,
+.welcome-band .welcome-eyebrow::after { content: ''; flex: none; width: 8px; height: 1.5px; background: currentColor; }
+.welcome-band h1 em { font-weight: 600; }
+.welcome-signature { display: block; width: min(100%, 250px); height: auto; margin: 2px 0 12px auto; }
 
 /* The trust strip: one line until tapped. */
 .trust { margin-top: 16px; border: 1px solid var(--on-dark-wash-strong); border-radius: var(--radius); background: var(--on-dark-wash); }
