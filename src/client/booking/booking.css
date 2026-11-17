@@ -369,12 +369,7 @@
 .welcome-band .welcome-eyebrow::before,
 .welcome-band .welcome-eyebrow::after { content: ''; flex: none; width: 8px; height: 1.5px; background: currentColor; }
 .welcome-band h1 em { font-weight: 600; }
-.welcome-signature { position: relative; width: max-content; max-width: 100%; margin: -2px 0 14px auto; padding: 0 4px 12px 0; transform: rotate(-6deg); transform-origin: right center;
-  font: 400 clamp(46px, 14vw, 60px)/1 'Great Vibes', cursive; color: var(--sand-chip);
-  background: linear-gradient(100deg, var(--sand-chip) 0%, var(--gift-f6e2a6) 45%, var(--gift-d9b25c) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-.welcome-signature svg { position: absolute; right: 0; bottom: 0; width: 82%; height: 14px; overflow: visible; }
-.welcome-signature path { fill: none; stroke: var(--gift-d9b25c); stroke-width: 2.2; stroke-linecap: round; }
-@media (forced-colors: active) { .welcome-signature { -webkit-text-fill-color: CanvasText; } }
+.welcome-signature { display: block; width: min(100%, 250px); height: auto; margin: 2px 0 12px auto; }
 
 /* The trust strip: one line until tapped. */
 .trust { margin-top: 16px; border: 1px solid var(--on-dark-wash-strong); border-radius: var(--radius); background: var(--on-dark-wash); }

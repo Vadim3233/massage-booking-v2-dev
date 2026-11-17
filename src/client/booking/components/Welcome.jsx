@@ -22,7 +22,7 @@ export default function Welcome({ welcome, rules, usual, bookUsual }) {
           <p className="eyebrow welcome-eyebrow">Premium soft tissue &amp; massage therapy</p>
           <h1 id="welcome-title" tabIndex={-1}>A massage that <em>comes to you</em></h1>
           {/* Vadim's signature in gold: decoration only, his name is already in the photo's description. */}
-          <p className="welcome-signature" aria-hidden="true">By Vadim<svg viewBox="0 0 200 16" preserveAspectRatio="none"><path d="M4 12 C 60 4, 140 2, 196 6" /></svg></p>
+          <img className="welcome-signature" src="/by-vadim.webp" alt="" width="667" height="180" />
         </div>
       </div>
       {(intro.length ? intro : paragraphs(DEFAULT_WELCOME)).map((text, index) => <p className="lede" key={index}>{text}</p>)}
