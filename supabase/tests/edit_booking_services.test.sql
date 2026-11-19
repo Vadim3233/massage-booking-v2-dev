@@ -73,22 +73,24 @@ select pg_temp.mk('00000000-0000-4000-8000-000000000b04', 4, 600, 'awaiting_tran
 select pg_temp.client_change('00000000-0000-4000-8000-000000000b04', jsonb_build_array(pg_temp.ses('00000000-0000-4000-8000-000000000b04',1,120))) is not null;
 select ok(pg_temp.st('00000000-0000-4000-8000-000000000b04') = 'total=170.00 amount=170.00 refund=0.00 balance=0.00 mins=120 status=awaiting_transfer', 'E4 now £170 to pay');
 -- E5: inside 24 h, paid £90, 1 h -> 2 h: £80 still to pay; Vadim marks it received
--- (Its time follows the clock, so the test passes at any hour: the next half hour with no notice, before E2's 20:00; late in the evening,
--- tomorrow at 09:00, which is still inside 24 h.)
+-- (Its time is one the booking page really offers for two hours, inside the next 24 h, so the test passes at any hour whatever the
+-- earlier cases moved to. It is made first at a placeholder time, then moved to that offered time.)
 create temp table e5_notice as select value from public.business_settings where key = 'minimum_notice_minutes';
 insert into public.business_settings(key, value) values ('minimum_notice_minutes', '0') on conflict (key) do update set value = excluded.value;
-create function pg_temp.e5() returns table (d integer, s integer) language sql as $$
-  with m as (select (extract(hour from clock_timestamp() at time zone 'Europe/London') * 60 + extract(minute from clock_timestamp() at time zone 'Europe/London'))::integer as now_min),
-       c as (select greatest(570, (ceil(now_min / 30.0) * 30)::integer + 30) as start from m)
-  select case when start <= 1080 then 0 else 1 end, case when start <= 1080 then start else 540 end from c $$;
-select pg_temp.mk('00000000-0000-4000-8000-000000000b05', (select d from pg_temp.e5()), (select s from pg_temp.e5()), 'paid', 1);
+select pg_temp.mk('00000000-0000-4000-8000-000000000b05', 1, 540, 'paid', 1);
+update public.bookings b set date = pg_temp.day(t.d), start_minutes = t.start_minutes
+  from (select d, x.start_minutes from generate_series(0, 1) d,
+          lateral public.my_booking_change_times('00000000-0000-4000-8000-000000000b05', pg_temp.day(d), 120) x
+        where (pg_temp.day(d) + make_interval(mins => x.start_minutes)) at time zone 'Europe/London' between clock_timestamp() and clock_timestamp() + interval '23 hours'
+        order by d, x.start_minutes limit 1) t
+ where b.id = '00000000-0000-4000-8000-000000000b05';
 select pg_temp.client_change('00000000-0000-4000-8000-000000000b05', jsonb_build_array(pg_temp.ses('00000000-0000-4000-8000-000000000b05',1,120))) is not null;
 select ok(pg_temp.st('00000000-0000-4000-8000-000000000b05') = 'total=170.00 amount=90.00 refund=0.00 balance=80.00 mins=120 status=paid', 'E5 £80 still to pay');
 select ok(pg_temp.mail('00000000-0000-4000-8000-000000000b05') like '%Please pay the extra £80.00 by bank transfer, using the reference R-0b05%', 'E5 message asks for £80');
 select pg_temp.as_admin();
 select public.admin_record_balance_received('00000000-0000-4000-8000-000000000b05', gen_random_uuid(), pg_temp.bv('00000000-0000-4000-8000-000000000b05')) is not null;
 select ok(pg_temp.st('00000000-0000-4000-8000-000000000b05') = 'total=170.00 amount=170.00 refund=0.00 balance=0.00 mins=120 status=paid', 'E5 extra received');
-select ok((select coalesce(sum(net_gbp),0) = 170 from public.income_lines(pg_temp.day((select d from pg_temp.e5())), pg_temp.day((select d from pg_temp.e5()))) where booking_id='00000000-0000-4000-8000-000000000b05'), 'E5 income £170');
+select ok((select coalesce(sum(net_gbp),0) = 170 from public.income_lines((select date from public.bookings where id='00000000-0000-4000-8000-000000000b05'), (select date from public.bookings where id='00000000-0000-4000-8000-000000000b05')) where booking_id='00000000-0000-4000-8000-000000000b05'), 'E5 income £170');
 delete from public.business_settings where key = 'minimum_notice_minutes';
 insert into public.business_settings(key, value) select 'minimum_notice_minutes', value from e5_notice;
 -- E7: 2 x 1 h -> 1 x 2 h, 5 days before, paid: £10 refund
