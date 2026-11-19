@@ -35,16 +35,19 @@
 .gift-shell .gift-design[aria-pressed=true] { border: 2px solid var(--gift-pick); }
 .gift-swatch { display: block; width: 100%; height: 54px; border-radius: 8px; position: relative; }
 .gift-swatch::after { content: ''; position: absolute; right: 8px; top: 8px; width: 12px; height: 12px; border-radius: 50%; }
-.gift-swatch--christmas_night { background: var(--gift-1d3b2e); box-shadow: inset 0 0 0 3px var(--gift-1d3b2e), inset 0 0 0 4px var(--gift-d9b25c); }
-.gift-swatch--christmas_night::after { background: var(--gift-c9302c); }
-.gift-swatch--wrapped_present { background: linear-gradient(90deg, transparent 70%, var(--gift-f3d9a4) 70% 80%, transparent 80%), var(--gift-b23a33); }
-.gift-swatch--wrapped_present::after { background: var(--gift-f3d9a4); }
-.gift-swatch--gold_foil { background: var(--gift-fdfbf6); box-shadow: inset 0 0 0 3px var(--gift-fdfbf6), inset 0 0 0 4px var(--gift-c9a052); }
-.gift-swatch--gold_foil::after { background: var(--gift-c9a052); }
-.gift-swatch--black_gold { background: linear-gradient(transparent 35%, var(--gift-d8c08a) 35% 45%, transparent 45%), var(--gift-141414); }
-.gift-swatch--black_gold::after { background: var(--gift-e2cc96); }
-.gift-swatch--any_occasion { background: radial-gradient(circle at 85% 10%, var(--gift-e9b9a4) 30%, transparent 31%), var(--gift-f6dfe0); }
-.gift-swatch--any_occasion::after { background: var(--gift-7f9e78); }
+.gift-swatch--navy_gold { background: url('/gift-voucher-navy-thumb.webp') center / cover no-repeat; }
+.gift-swatch--christmas_night { background: url('/gift-voucher-green-thumb.webp') center / cover no-repeat; }
+.gift-swatch--wrapped_present { background: url('/gift-voucher-red-thumb.webp') center / cover no-repeat; }
+.gift-swatch--gold_foil { background: url('/gift-voucher-ticket-thumb.webp') center / cover no-repeat; }
+.gift-swatch--black_gold { background: url('/gift-voucher-black-thumb.webp') center / cover no-repeat; }
+.gift-swatch--any_occasion { background: url('/gift-voucher-pink-thumb.webp') center / cover no-repeat; }
+.gift-swatch--birthday_navy { background: url('/gift-voucher-bday1-thumb.webp') center / cover no-repeat; }
+.gift-swatch--birthday_pink { background: url('/gift-voucher-bday2-thumb.webp') center / cover no-repeat; }
+.gift-swatch--for_him { background: url('/gift-voucher-him-thumb.webp') center / cover no-repeat; }
+.gift-swatch--anniversary { background: url('/gift-voucher-anniv-thumb.webp') center / cover no-repeat; }
+.gift-swatch--new_baby { background: url('/gift-voucher-baby-thumb.webp') center / cover no-repeat; }
+.gift-swatch::after { display: none; }
+.gift-swatch--navy_gold::after, .gift-swatch--christmas_night::after, .gift-swatch--wrapped_present::after, .gift-swatch--gold_foil::after, .gift-swatch--black_gold::after, .gift-swatch--any_occasion::after { display: none; }
 
 .gift-names { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0 12px; }
 .gift-chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; margin: 0 -2px; scrollbar-width: none; flex-wrap: wrap; }
