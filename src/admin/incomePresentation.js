@@ -118,6 +118,17 @@ export function dayDescription(day, owed) {
   return `${dateLabel(day.date)}: ${parts.length ? parts.join(', ') : 'nothing'}`
 }
 
+// What a day's square shows: the main amount, and, on a day where part is paid, what is still not paid as a small "+£125" under it.
+// Before 19 Nov 2026 a day with any paid booking showed only the paid money, so an upcoming or overdue second booking that day was hidden.
+export function dayAmounts(day, owed) {
+  const paid = Number(day.received_gbp) > 0 ? Number(day.received_gbp) : 0
+  const overdue = Number(owed) > 0 ? Number(owed) : 0
+  const upcoming = Number(day.to_come_gbp) > 0 ? Number(day.to_come_gbp) : 0
+  if (paid > 0) return { main: paid, rest: overdue + upcoming, restKind: overdue > 0 ? 'owed' : upcoming > 0 ? 'booked' : null }
+  if (overdue > 0) return { main: overdue, rest: upcoming, restKind: upcoming > 0 ? 'booked' : null }
+  return { main: upcoming, rest: 0, restKind: null }
+}
+
 // Time in words: "11 h", "6 h 30 min", "45 min".
 export function duration(minutes) {
   const total = Math.round(Number(minutes) || 0)

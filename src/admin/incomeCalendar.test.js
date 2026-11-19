@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calendarWeeks, dayDescription, incomeStatement, owedByDay, dayShade, duration, hourSentence, monthlyRates, shortMoney, workShare } from './incomePresentation.js'
+import { calendarWeeks, dayAmounts, dayDescription, incomeStatement, owedByDay, dayShade, duration, hourSentence, monthlyRates, shortMoney, workShare } from './incomePresentation.js'
 
 const november = Array.from({ length: 30 }, (_, index) => ({ date: `2026-11-${String(index + 1).padStart(2, '0')}`, received_gbp: 0, to_come_gbp: 0 }))
 
@@ -28,6 +28,14 @@ describe('the month calendar', () => {
   it('describes a day for a screen reader', () => {
     expect(dayDescription({ date: '2026-11-01', received_gbp: '433.00', to_come_gbp: '90.00' }, 125)).toBe('Sun 1 Nov: £433.00 paid, £125.00 overdue, £90.00 upcoming')
     expect(dayDescription({ date: '2026-11-05', received_gbp: 0, to_come_gbp: 0 }, false)).toBe('Thu 5 Nov: nothing')
+  })
+  it('shows a paid day\'s not-paid part as well (Sun 22 Nov: one paid, one upcoming)', () => {
+    expect(dayAmounts({ received_gbp: '125.00', to_come_gbp: '125.00' }, undefined)).toEqual({ main: 125, rest: 125, restKind: 'booked' })
+    expect(dayAmounts({ received_gbp: '200.00', to_come_gbp: '90.00' }, 60)).toEqual({ main: 200, rest: 150, restKind: 'owed' })
+    expect(dayAmounts({ received_gbp: 0, to_come_gbp: '90.00' }, 60)).toEqual({ main: 60, rest: 90, restKind: 'booked' })
+    expect(dayAmounts({ received_gbp: 0, to_come_gbp: '188.00' }, undefined)).toEqual({ main: 188, rest: 0, restKind: null })
+    expect(dayAmounts({ received_gbp: '250.00', to_come_gbp: 0 }, 0)).toEqual({ main: 250, rest: 0, restKind: null })
+    expect(dayAmounts({ received_gbp: 0, to_come_gbp: 0 }, undefined).main).toBe(0)
   })
 })
 
