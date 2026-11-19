@@ -241,7 +241,7 @@ export default function GiftShop({ client = supabase }) {
       <label className="field">Your email<input id="gift-buyerEmail" type="email" inputMode="email" autoComplete="email" value={buyer.email} aria-invalid={Boolean(tried && problems.buyerEmail) || undefined} onChange={e => setBuyer({ ...buyer, email: e.target.value })} />{show('buyerEmail')}</label>
       <label className="field">Your phone (optional)<input id="gift-buyerPhone" type="tel" inputMode="tel" autoComplete="tel" value={buyer.phone} onChange={e => setBuyer({ ...buyer, phone: e.target.value })} /></label>
       <label className="check gift-terms"><input id="gift-terms" type="checkbox" checked={terms} aria-invalid={Boolean(tried && problems.terms) || undefined} onChange={e => setTerms(e.target.checked)} />
-        <span>I understand the voucher is for a massage at home in Vadim's areas listed above, lasts {options.months || 12} months from payment, and can be refunded within {REFUND_DAYS} days of buying if it hasn't been used. After that it can't be refunded or exchanged for cash.</span></label>
+        <span>I understand the voucher is for a massage at home in Vadim's areas listed above, lasts {options.months || 12} months from payment, and can be refunded within {REFUND_DAYS} days of buying if it hasn't been used. After that it can't be refunded or exchanged for cash. It's for one visit, for the massage shown on the voucher. A longer massage costs only the difference. If a shorter one is chosen, no money or credit is left over.</span></label>
     </section>
 
     <section className="gift-total" aria-live="polite">
