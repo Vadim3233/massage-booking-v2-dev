@@ -1060,7 +1060,7 @@ The page stays where the Admin needs it:
 
 **Decision:** One setting, `business_settings` key `whatsapp_button` = `{number, show}`, saved by `admin_save_whatsapp` (admin only, digits only, 8–15 digits, a number is required to switch it on) and read by anyone through `get_public_whatsapp()`, which returns the number only while it is switched on. The button is an inline link to `wa.me` with a prefilled message, not a floating bubble, so it never covers the booking step's buttons. It shows at the bottom of every booking step, the FAQ and each appointment page (message names day, time and reference). Fresha and Booksy give clients a message/call option on the business page; ours goes further by naming the booking in the message. With the setting off or missing the pages look exactly as before.
 
-**How it was built:** migration `20261222100000_whatsapp_button.sql`; front end `src/client/whatsapp.js`, `WhatsAppButton.jsx`, `whatsapp.css`, `BookingFlow.jsx`, `FaqPage.jsx`, `AccountApp.jsx`, admin `SettingsWhatsApp.jsx`, `whatsappApi.js`, `AdminWorkspace.jsx`, Help.
+**How it was built:** migration `20261223100000_whatsapp_button.sql`; front end `src/client/whatsapp.js`, `WhatsAppButton.jsx`, `whatsapp.css`, `BookingFlow.jsx`, `FaqPage.jsx`, `AccountApp.jsx`, admin `SettingsWhatsApp.jsx`, `whatsappApi.js`, `AdminWorkspace.jsx`, Help.
 
 **Undo:** drop the two functions and delete the `whatsapp_button` row; the button disappears by itself.
 

@@ -148,7 +148,7 @@ These are the things that are written for Vadim today. In a general therapist ap
 ### "WhatsApp me" button
 - **What it does:** A green "WhatsApp me" button at the bottom of the booking page (every step, under "A question, or something came up?"), at the bottom of the FAQ, and on each client's appointment page. It opens WhatsApp with a message already started; on an appointment page the message names the day, time and booking reference. Vadim types his number and switches it on or off in More › WhatsApp button; while it is off, or no number is saved, nothing shows and the old "Contact Vadim" link stays.
 - **Why:** Clients should be able to reach Vadim quickly if something comes up (running late, a question before booking, parking), the way most UK clients already message small businesses.
-- **Built in:** PR (this one), migration `20261222100000_whatsapp_button.sql`.
+- **Built in:** PR (this one), migration `20261223100000_whatsapp_button.sql`.
 - **For a general app:** the number, the on/off switch and the starting messages; other businesses may want a phone or SMS button instead.
 
 ### Where the emails come from
