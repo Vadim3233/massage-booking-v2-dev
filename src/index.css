@@ -99,6 +99,8 @@
   /* Motion: small, and switched off for anyone who asks for less. */
   --ease: cubic-bezier(.2, .8, .2, 1);
   --dur-fast: 120ms; --dur: 220ms;
+  /* WhatsApp me button (ADR-109): a WhatsApp green dark enough for white text (5.4:1), the same in every theme. */
+  --whatsapp: #167a43; --whatsapp-hover: #11663a; --whatsapp-ink: #ffffff; --whatsapp-glow: rgb(22 122 67 / .25);
   /* Gift vouchers (ADR-101): the artwork's own colours (dark green, Christmas red, gold, cream). They stay the same in every theme, like a printed card. */
   --gift-0-0-0-35: rgba(0, 0, 0, .35); --gift-0-0-0-6: rgba(0, 0, 0, .6); --gift-0-0-0-7: rgba(0, 0, 0, .7); --gift-141414: #141414;
   --gift-145-93-67-8: rgba(145, 93, 67, .8); --gift-1d3b2e: #1d3b2e; --gift-20-30-25-55: rgba(20, 30, 25, .55); --gift-217-178-92-55: rgba(217, 178, 92, .55);

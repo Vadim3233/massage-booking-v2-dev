@@ -20,6 +20,7 @@ const BankSettings = lazy(() => import('./SettingsBank.jsx'))
 const ReceiptSettings = lazy(() => import('./SettingsReceipts.jsx'))
 const RulesSettings = lazy(() => import('./SettingsRules.jsx'))
 const WelcomeSettings = lazy(() => import('./SettingsWelcome.jsx'))
+const WhatsAppSettings = lazy(() => import('./SettingsWhatsApp.jsx'))
 const ShareLink = lazy(() => import('./ShareLink.jsx'))
 const Income = lazy(() => import('./Income.jsx'))
 const ShareMessageSettings = lazy(() => import('./SettingsShareMessage.jsx'))
@@ -42,7 +43,7 @@ const MORE_GROUPS = [
   ['Money', [['/admin/income', 'Income'], ['/admin/gifts', 'Gift vouchers']]],
   ['What you offer', [['/admin/settings/services', 'Services and prices'], ['/admin/settings/extras', 'Extras'], ['/admin/settings/areas', 'Areas and travel fees']]],
   ['Payments and rules', [['/admin/settings/bank', 'Bank transfer details'], ['/admin/settings/receipts', 'Receipt details'], ['/admin/settings/rules', 'Booking rules']]],
-  ['What clients read', [['/admin/settings/welcome', 'Welcome message'], ['/admin/settings/share-message', 'Share message'], ['/admin/settings/google-reviews', 'Google reviews']]],
+  ['What clients read', [['/admin/settings/welcome', 'Welcome message'], ['/admin/settings/whatsapp', 'WhatsApp button'], ['/admin/settings/share-message', 'Share message'], ['/admin/settings/google-reviews', 'Google reviews']]],
   ['Help', [['/admin/help', 'Help: how the app works']]],
 ]
 const SETTINGS_PAGES = MORE_GROUPS.flatMap(([, links]) => links.map(([path]) => path))
@@ -220,6 +221,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {surface === '/admin/settings/receipts' && <ReceiptSettings />}
       {surface === '/admin/settings/rules' && <RulesSettings />}
       {surface === '/admin/settings/welcome' && <WelcomeSettings />}
+      {surface === '/admin/settings/whatsapp' && <WhatsAppSettings />}
       {surface === '/admin/settings/link' && <ShareLink />}
       {surface === '/admin/income' && <Income openBooking={openBooking} openDay={day => navigate(`/admin?date=${day}`)} openHours={openDayHours} />}
       {surface === '/admin/gifts' && <GiftVouchers openBooking={openBooking} />}

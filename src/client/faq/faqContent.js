@@ -25,7 +25,7 @@ function minimumLines(areas) {
     .map(area => `${area.name}: at least ${lengthWords(Number(area.minimum_booking_minutes))} in total`)
 }
 
-export function clientFaq({ rules, areas = [] }) {
+export function clientFaq({ rules, areas = [], whatsapp = null }) {
   const names = areas.map(area => area.name)
   const fees = feeLines(areas)
   const minimums = minimumLines(areas)
@@ -58,7 +58,7 @@ export function clientFaq({ rules, areas = [] }) {
       { q: 'Should I tell you about health conditions or injuries?', a: ['Yes, please, but tell me directly rather than in the booking notes or through an AI assistant. I ask about anything medical myself before we start.'] },
     ] },
     { title: 'Areas and travel', items: [
-      { q: 'Where do you work?', a: [names.length ? `Selected parts of ${listWords(names)}.` : 'Selected parts of West and Central London.', 'Outside my usual route? Get in touch and I\'ll see what I can do.'] },
+      { q: 'Where do you work?', a: [names.length ? `Selected parts of ${listWords(names)}.` : 'Selected parts of West and Central London.', whatsapp ? 'Outside my usual route? WhatsApp me and I\'ll see what I can do.' : 'Outside my usual route? Get in touch and I\'ll see what I can do.'] },
       { q: 'Why do you ask for my postcode?', a: ['Your postcode tells me which area you are in, so the price and travel are right. If it belongs to a different area, the app tells you which one to choose. If it is outside my areas, your booking becomes a request: please don\'t pay until I have confirmed it.'] },
       { q: 'Is there a travel fee or congestion charge?', a: [fees.length ? 'Most areas have none. These areas include one:' : 'Not at the moment. If an area ever has one, it is shown in the price before you book.'], list: fees, after: fees.length ? ['It is always shown in the price before you book, never added afterwards.'] : [] },
       ...(minimums.length ? [{ q: 'Is there a minimum booking length?', a: ['In some areas the appointment needs to be a little longer:'], list: minimums, after: ['When you book for two or more people, everyone\'s time adds up. Lengths that are too short are greyed out.'] }] : []),
@@ -97,6 +97,8 @@ export function clientFaq({ rules, areas = [] }) {
         'A booking made with a voucher can only be moved to a day before the voucher ends.'] },
     ] },
     { title: 'Updates', items: [
+      // Only while the WhatsApp me button is switched on (More › WhatsApp button), so the answer never points at a button that isn't there.
+      ...(whatsapp ? [{ q: 'How do I contact you?', a: ['Tap the green "WhatsApp me" button at the bottom of any page: the booking page, this page or your appointment page. On your appointment page the message already says which appointment it is about.'], link: { href: `https://wa.me/${whatsapp}`, text: 'WhatsApp me' } }] : []),
       { q: 'How will you keep me updated?', a: ['By email, always. You can also turn on Telegram messages when you book: I\'ll message you when your appointment is confirmed, moved or cancelled. Send /stop in the chat to turn them off.', 'You can also add the appointment to your phone\'s calendar with one tap, from your booking page or from the "Add it to your calendar" link in my message. It works with iPhone, Google Calendar, Outlook and most others.'] },
     ] },
     { title: 'Your account and privacy', items: [
