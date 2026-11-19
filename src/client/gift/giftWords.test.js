@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { areaGroups, codeFromPath, codeShown, designsInOrder, fromLine, giftChoices, giftWords, kicker, occasionsInOrder, renameSignOff, shopLink, shopMessage, travelTiers, travelWords, whatsappText, whole, withLove } from './giftWords.js'
+import { areaGroups, codeFromPath, codeShown, designsInOrder, fromLine, giftButtonWords, giftChoices, giftWords, kicker, occasionsInOrder, renameSignOff, shopLink, shopMessage, travelTiers, travelWords, whatsappText, whole, withLove } from './giftWords.js'
 
 const options = { all_areas_cover: 35, areas: [{ id: 'c', name: 'Chelsea', travel: 20, congestion: 15 }, { id: 'n', name: 'Nearby', travel: 0, congestion: 0 }] }
 
@@ -88,5 +88,13 @@ describe('sender on the voucher', () => {
     expect(renameSignOff('Enjoy! Love, Ann x', 'Ann', 'Anna')).toBe('Enjoy! Love, Anna x')
     expect(renameSignOff('Enjoy! Love, Anna x', 'Anna', '')).toBe('Enjoy! Love, … x')
     expect(renameSignOff('My own words, from me', 'Ann', 'Anna')).toBe('My own words, from me')
+  })
+})
+
+describe('the booking page gift button', () => {
+  it('says Christmas in November and December, and gift the rest of the year', () => {
+    expect(giftButtonWords(new Date(2026, 10, 1))).toBe('Christmas gift vouchers')
+    expect(giftButtonWords(new Date(2026, 11, 31))).toBe('Christmas gift vouchers')
+    expect(giftButtonWords(new Date(2027, 0, 1))).toBe('Give a massage as a gift')
   })
 })

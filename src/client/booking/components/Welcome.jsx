@@ -1,4 +1,7 @@
+import { useEffect, useState } from 'react'
 import Icon from '../../../ui/icons.jsx'
+import { supabase } from '../../../lib/supabase.js'
+import { giftButtonWords } from '../../gift/giftWords.js'
 import { changesNote, DEFAULT_WELCOME, paragraphs } from '../../welcome.js'
 import { usualLabel } from '../usualBooking.js'
 
@@ -10,10 +13,24 @@ const TRUST_TAGS = ['10+ years in London', 'Level 5 Soft Tissue', 'BTEC & ITEC',
 const GOOGLE_REVIEWS = 'https://share.google/fZ3sjkYZd2BYrC7Eg'
 const ABOUT = 'https://www.vadmassage.com/about/'
 
+// The gold "gift vouchers" button in the navy band (20261221100000). Hidden until the database says vouchers are on and Vadim has not
+// switched the button off in Gift vouchers; any failure keeps it hidden, so the booking page never waits on it.
+function useGiftButton() {
+  const [show, setShow] = useState(false)
+  useEffect(() => {
+    if (!supabase) return undefined
+    let live = true
+    supabase.rpc('get_gift_banner').then(({ data, error }) => { if (live && !error) setShow(data === true) }, () => {})
+    return () => { live = false }
+  }, [])
+  return show
+}
+
 // The first thing a visitor sees: who they are booking with, in the navy band, then what to expect if plans change. The areas follow straight away.
 // A returning client (one with a usual booking) is offered it in one tap instead of the introduction to Vadim.
 export default function Welcome({ welcome, rules, usual, bookUsual }) {
   const intro = paragraphs(welcome.welcome)
+  const gift = useGiftButton()
   return <section className="welcome" aria-labelledby="welcome-title">
     <div className="welcome-band">
       <div className="welcome-hero">
@@ -37,6 +54,7 @@ export default function Welcome({ welcome, rules, usual, bookUsual }) {
           </p>
         </div>
       </details>}
+      {gift && <a className="welcome-gift" href="/gift"><Icon name="sparkle" size={16} />{giftButtonWords()}<Icon name="right" size={16} /></a>}
     </div>
     {usual && <button className="usual" onClick={bookUsual}>
       <span className="usual-text"><span className="eyebrow">Book your usual</span><strong>{usualLabel(usual)}</strong></span>

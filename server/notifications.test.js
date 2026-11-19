@@ -137,6 +137,12 @@ describe('writing the message', () => {
     expect(message.body).toBe('Hello.\n\nWarm wishes,\nVad')
     expect(message.url).toBe('')
   })
+  it('fills in the site address for a gift buyer\'s own page, or leaves that line out without one', () => {
+    const body = 'Thank you.\n\nYour receipt and your gift page: {site}/gift?t=abc\n\nWarm wishes,\nVadim'
+    expect(composeMessage(row({ audience: 'client', body, link_path: '/gift/ABCD-EFGH' }), config).body)
+      .toBe('Thank you.\n\nYour receipt and your gift page: https://booking.example.com/gift?t=abc\n\nWarm wishes,\nVadim')
+    expect(composeMessage(row({ audience: 'client', body, link_path: null }), readConfig({})).body).toBe('Thank you.\n\nWarm wishes,\nVadim')
+  })
 })
 
 describe('sending', () => {

@@ -6,6 +6,7 @@ import VoucherCard from './VoucherCard.jsx'
 import BankDetails from '../booking/components/BankDetails.jsx'
 import { bankFromSettings, chooseBank, paymentConfig } from '../booking/paymentConfig.js'
 import { friendlyError } from '../booking/friendlyError.js'
+import { downloadReceiptPdf } from '../../lib/receiptPdf.js'
 import '../booking/booking.css'
 import './voucher.css'
 import './gift.css'
@@ -107,6 +108,12 @@ export default function GiftShop({ client = supabase }) {
     setBusy(true); setError('')
     try { setPurchase(await api.cancel(token)) } catch (failure) { setError(friendlyError(failure)) } finally { setBusy(false) }
   }
+  // The receipt for what they paid (GV-…), made as a PDF on their phone (20261221100000).
+  async function receipt() {
+    setBusy(true); setError('')
+    try { await downloadReceiptPdf(await api.receipt(token)) } catch (failure) { setError(failure?.message === 'font' ? 'Could not make the PDF. Please try again.' : friendlyError(failure)) } finally { setBusy(false) }
+  }
+  const receiptButton = purchase?.receipt ? <button type="button" className="btn--tonal btn--block" disabled={busy} onClick={receipt}>{busy ? 'Making your receipt…' : 'Download your receipt'}</button> : null
   async function transferMade() {
     setBusy(true); setError('')
     try { setPurchase(await api.transferMade(token)) } catch (failure) { setError(friendlyError(failure)) } finally { setBusy(false) }
@@ -128,6 +135,7 @@ export default function GiftShop({ client = supabase }) {
       <p className="lede">Thank you, the payment has arrived. {purchase.delivery === 'email' && purchase.status === 'ready' ? `It will be emailed to ${purchase.recipient_email} on the day you chose. You can also open it yourself:` : 'Open it to print it, save it or send it on WhatsApp.'}</p>
       <a className="btn btn--primary btn--lg btn--block" href={`/gift/${purchase.code}`}>Open the voucher</a>
       <p className="fine">Code: <strong>{purchase.code}</strong></p>
+      {receiptButton}
       {error && <p role="alert" className="error">{error}</p>}
       {purchase.status === 'ready' && (purchase.can_refund
         ? <section className="gift-cancel"><h2>Changed your mind?</h2><p>Until {longDay(purchase.refund_until)}, while it hasn't been used, you can cancel the voucher and get your {whole(purchase.amount)} back. The code stops working straight away.</p>
@@ -135,9 +143,11 @@ export default function GiftShop({ client = supabase }) {
         : <p className="fine">Refunds were possible until {longDay(purchase.refund_until)}. If something has gone wrong, please <a href="https://vadmassage.com">message Vadim</a>.</p>)}
     </>)
     if (purchase.status === 'cancelled') return shell(<><h1 tabIndex={-1}>This gift is <em>cancelled</em></h1>
-      <p className="lede">{purchase.refunded ? `Your ${whole(purchase.amount)} has been sent back to the account it came from.`
+      <p className="lede">{purchase.refunded ? `Your ${whole(purchase.refund_gbp ?? purchase.amount)} has been sent back to the account it came from.`
         : purchase.refund_requested ? `Your ${whole(purchase.amount)} will be sent back to the account it came from within 3 working days. I'll email you when it's on its way.`
           : 'Nothing was paid, so there is nothing more to do.'}</p>
+      {receiptButton}
+      {error && <p role="alert" className="error">{error}</p>}
       <p className="fine">Please <a href="https://vadmassage.com">message Vadim</a> if you have any questions. <a href="/gift">Buy a new gift voucher</a></p></>)
     return shell(<>
       <h1 tabIndex={-1}>One last <em>step</em></h1>
@@ -151,7 +161,7 @@ export default function GiftShop({ client = supabase }) {
       <button className="btn--quiet gift-cancel-link" disabled={busy} onClick={() => cancelGift(purchase.transfer_declared
         ? `Cancel this gift? As you've sent the transfer, I'll send your ${whole(purchase.amount)} back as soon as it arrives.`
         : 'Cancel this gift? Nothing has been paid, so nothing more is needed.')}>{purchase.transfer_declared ? 'Cancel and get a refund' : 'Changed your mind? Cancel this gift'}</button>
-      <p className="fine">Keep this page's link to come back to your gift. The voucher is valid for {options?.months || 12} months from payment.</p>
+      <p className="fine">The link to this page is also in your email, so you can come back to your gift from any phone. The voucher is valid for {options?.months || 12} months from payment.</p>
     </>)
   }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { boughtBy, createGiftAdminApi, giftCsv, giftGroups, giftHistory, matchesSearch, NOT_SWITCHED_ON } from './giftApi.js'
+import { boughtBy, createGiftAdminApi, giftCsv, giftGroups, giftHistory, giftState, matchesSearch, NOT_SWITCHED_ON } from './giftApi.js'
 
 const client = result => ({ rpc: async (name, args) => (typeof result === 'function' ? result(name, args) : result) })
 
@@ -20,7 +20,9 @@ describe('More › Gift vouchers', () => {
   it('lists buyers who cancelled and are owed their money back, and records the refund', async () => {
     const groups = giftGroups([{ status: 'cancelled', refund_to_send: true, price_gbp: 90, paid_at: '2026-11-20T10:00:00Z' }, { status: 'cancelled', refund_to_send: false }], Date.parse('2026-12-01T12:00:00Z'))
     expect(groups.refunds).toHaveLength(1)
-    expect(groups.soldCount).toBe(0)
+    // Sold counts the money that came in; the refund is its own figure.
+    expect(groups.soldCount).toBe(1)
+    expect([groups.heldCount, groups.heldTotal]).toEqual([1, 90])
     let sent
     await createGiftAdminApi(client((name, args) => { sent = [name, args]; return { data: {}, error: null } })).refundSent('v1', false)
     expect(sent).toEqual(['admin_gift_refund_sent', { p_voucher_id: 'v1', p_money_came: false }])
@@ -68,8 +70,27 @@ describe('More › Gift vouchers', () => {
 
   it('makes a spreadsheet of every voucher', () => {
     const lines = giftCsv([voucher, { ...voucher, recipient_name: 'Ann, "Annie"', status: 'ready', expired: true, booking: null }]).split('\r\n')
-    expect(lines[0]).toBe('Code,Bank reference,State,Gift,For,From,Buyer,Buyer email,Price,Paid by,Paid on,Valid until,Booked by,Session date')
-    expect(lines[1]).toBe('7K3M-QX9P,GIFT-ABCD2345,Used,90 min,Sarah Jones,Tom,Tom Jones,tom@example.test,125.00,Bank transfer,2026-11-16,2027-11-16,Sarah Jones,2027-01-03')
-    expect(lines[2]).toContain('Ended,90 min,"Ann, ""Annie""",')
+    expect(lines[0]).toBe('Code,Bank reference,Receipt,State,Gift,For,From,Buyer,Buyer email,Price,Paid by,Paid on,Valid until,Booked by,Session date,Booking reference,Used on,Ended on,Refunded on,Refund')
+    expect(lines[1]).toBe('7K3M-QX9P,GIFT-ABCD2345,,Booked for 3 Jan,90 min,Sarah Jones,Tom,Tom Jones,tom@example.test,125.00,Bank transfer,2026-11-16,2027-11-16,Sarah Jones,2027-01-03,,2027-01-03,,,')
+    expect(lines[2]).toContain('Ended unused,90 min,"Ann, ""Annie""",')
+    const refunded = giftCsv([{ ...voucher, status: 'cancelled', booking: null, receipt_number: 'GV-2026-0001', refunded_at: '2026-11-20T10:00:00Z', refund_gbp: 50 }]).split('\r\n')[1]
+    expect(refunded).toMatch(/^7K3M-QX9P,GIFT-ABCD2345,GV-2026-0001,Refunded £50,.*,2026-11-20,50\.00$/)
+  })
+  it('gives every voucher a plain status, and keeps refunded and cancelled ones in their own groups', () => {
+    const base = { price_gbp: 90, paid_at: '2026-11-20T10:00:00Z' }
+    expect(giftState({ ...base, status: 'ready' })).toEqual({ label: 'Ready', tone: 'ok' })
+    expect(giftState({ ...base, status: 'used', booking: { date: '2026-12-14', status: 'confirmed', started: false } }).label).toBe('Booked for 14 Dec')
+    expect(giftState({ ...base, status: 'used', booking: { date: '2026-12-14', status: 'completed', started: true } }).label).toBe('Used 14 Dec')
+    expect(giftState({ ...base, status: 'used', booking: { date: '2026-12-14', status: 'cancelled', started: false } }).label).toBe('Used up (late cancel)')
+    expect(giftState({ ...base, status: 'cancelled', refunded_at: '2026-11-25T10:00:00Z', refund_gbp: 45.5 }).label).toBe('Refunded £45.50')
+    expect(giftState({ status: 'cancelled', paid_at: null }).label).toBe('Cancelled, not paid')
+    const groups = giftGroups([{ ...base, status: 'cancelled', refunded_at: '2026-11-25T10:00:00Z', refund_gbp: 90 }, { status: 'cancelled', paid_at: null },
+      { ...base, status: 'used', booking: { date: '2026-12-14', status: 'confirmed', started: false } }], Date.parse('2026-12-01T12:00:00Z'))
+    expect([groups.refunded.length, groups.cancelled.length, groups.booked.length, groups.used.length]).toEqual([1, 1, 1, 0])
+    expect(groups.refundedTotal).toBe(90)
+  })
+  it('shows the History the database kept, with who did each thing', () => {
+    const steps = giftHistory({ ...voucher, history: [{ at: '2026-11-15T09:00:00Z', words: 'Bought online by Tom', actor: 'buyer' }, { at: '2026-11-16T10:00:00Z', words: 'Paid £125.00, bank transfer', actor: 'admin' }] })
+    expect(steps.map(s => [s.text, s.who])).toEqual([['Bought online by Tom', 'Buyer'], ['Paid £125.00, bank transfer', 'You']])
   })
 })

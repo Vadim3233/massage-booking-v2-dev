@@ -41,10 +41,24 @@ describe('the Income screen in words', () => {
       { date: '2026-10-20', booking_reference: 'VM-2', client_name: null, method: 'bank_transfer', received_gbp: 100, refund_gbp: 70, net_gbp: 30 },
     ])
     expect(csv.split('\r\n')).toEqual([
-      'Date,Booking reference,Client,Method,Amount received,Refund,Net',
-      '2026-10-19,VM-1,"Smith, ""Jo""",Cash,90.00,0.00,90.00',
-      '2026-10-20,VM-2,,Bank transfer,100.00,70.00,30.00',
+      'Date,Booking reference,Client,Method,Amount received,Refund,Net,Of which gift voucher',
+      '2026-10-19,VM-1,"Smith, ""Jo""",Cash,90.00,0.00,90.00,0.00',
+      '2026-10-20,VM-2,,Bank transfer,100.00,70.00,30.00,0.00',
       '',
+    ])
+  })
+  it('counts a gift voucher\'s money once, and says where it came from (20261221100000)', () => {
+    const rows = [
+      { date: '2026-12-14', booking_reference: 'VM-3', client_name: 'Anna', method: 'bank_transfer', booking_status: 'confirmed', start_minutes: 600, received_gbp: 90, refund_gbp: 0, net_gbp: 90, gift_gbp: 90 },
+      { date: '2026-12-15', booking_reference: 'VM-4', client_name: 'Ben', method: 'bank_transfer', booking_status: 'confirmed', start_minutes: 600, received_gbp: 120, refund_gbp: 0, net_gbp: 120, gift_gbp: 90 },
+      { date: '2026-12-16', booking_reference: 'GIFT-ABCDE', client_name: 'Mum', method: 'gift_voucher', booking_status: 'gift_ended', start_minutes: null, received_gbp: 85, refund_gbp: 0, net_gbp: 85, gift_gbp: 85 },
+    ]
+    expect(rows.map(rowNote)).toEqual(['gift voucher £90.00', 'Bank transfer · gift voucher £90.00', 'Gift voucher, ended unused'])
+    expect(rowWhen(rows[2])).not.toMatch(/:/)
+    expect(incomeCsv(rows).split('\r\n').slice(1, 4)).toEqual([
+      '2026-12-14,VM-3,Anna,Gift voucher,90.00,0.00,90.00,90.00',
+      '2026-12-15,VM-4,Ben,Bank transfer,120.00,0.00,120.00,90.00',
+      '2026-12-16,GIFT-ABCDE,Mum,"Gift voucher, ended unused",85.00,0.00,85.00,85.00',
     ])
     expect(csvFileName(summary())).toBe('vadmassage-income-2026-10.csv')
     expect(csvFileName(summary({ kind: 'tax_year', from: '2026-04-06', to: '2027-04-05' }))).toBe('vadmassage-income-tax-year-2026-27.csv')

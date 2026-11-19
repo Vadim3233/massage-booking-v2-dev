@@ -44,9 +44,11 @@ export function incomeStatement(summary, owedRows) {
   const overdue = Math.round((owedRows || []).filter(row => row.date >= summary.from && row.date <= summary.to)
     .reduce((sum, row) => sum + (Number(row.amount_gbp) || 0), 0) * 100) / 100
   const upcoming = Number(summary.still_to_come_gbp) > 0 ? Number(summary.still_to_come_gbp) : 0
-  if (!(overdue > 0) && !(upcoming > 0)) return null
+  // Sessions still to come this period that a gift voucher already paid: their money counts on the day (20261221100000).
+  const vouchers = Number(summary.gifts?.to_come_gbp) > 0 ? Number(summary.gifts.to_come_gbp) : 0
+  if (!(overdue > 0) && !(upcoming > 0) && !(vouchers > 0)) return null
   const paid = Number(summary.total_gbp) || 0
-  return { paid, overdue, upcoming, expected: Math.round((paid + overdue + upcoming) * 100) / 100, expectedLabel: EXPECTED_WORDS[summary.kind] }
+  return { paid, overdue, upcoming, ...(vouchers > 0 ? { vouchers } : {}), expected: Math.round((paid + overdue + upcoming + vouchers) * 100) / 100, expectedLabel: EXPECTED_WORDS[summary.kind] }
 }
 
 // Each bar's short name: Mon (a week's days), 19 Oct (a month's weeks, by their first day), Jan (a year's months).
@@ -63,12 +65,18 @@ export function barDescription(kind, bar) {
   return `${dateLabel(bar.from, { month: 'long' })}: ${amount}`
 }
 
-const METHOD = { bank_transfer: 'Bank transfer', cash: 'Cash' }
+const METHOD = { bank_transfer: 'Bank transfer', cash: 'Cash', gift_voucher: 'Gift voucher' }
 export const methodName = method => METHOD[method] || 'Other'
 // One line of the list: "Mon 19 Oct, 10:00", the client, the amount and how it was paid ("refund £70.00 sent" or "late fee" when so).
-export function rowWhen(row) { return `${dateLabel(row.date)}, ${time(row.start_minutes)}` }
+export function rowWhen(row) { return row.start_minutes == null ? dateLabel(row.date) : `${dateLabel(row.date)}, ${time(row.start_minutes)}` }
+// A gift voucher's money (20261221100000): a line of its own when it was used without a booking or ended unused, or part of a booking's line.
+const GIFT_ONLY = { gift_used: 'Gift voucher, used without a booking', gift_ended: 'Gift voucher, ended unused' }
 export function rowNote(row) {
-  const notes = [methodName(row.method)]
+  if (GIFT_ONLY[row.booking_status]) return GIFT_ONLY[row.booking_status]
+  const gift = Number(row.gift_gbp) || 0
+  const clientPaid = (Number(row.received_gbp) || 0) - gift
+  const notes = gift > 0 && !(clientPaid > 0) ? [] : [methodName(row.method)]
+  if (gift > 0) notes.push(`gift voucher ${money(gift)}`)
   if (Number(row.refund_gbp) > 0) notes.push(`refund ${money(Number(row.refund_gbp))} sent`)
   if (Number(row.late_fee_gbp) > 0) notes.push('late fee')
   return notes.join(' · ')
@@ -81,8 +89,11 @@ const cell = value => {
 }
 const amount = value => Number(value ?? 0).toFixed(2)
 export function incomeCsv(rows) {
-  const lines = [['Date', 'Booking reference', 'Client', 'Method', 'Amount received', 'Refund', 'Net']]
-  for (const row of rows) lines.push([row.date, row.booking_reference, row.client_name || '', methodName(row.method), amount(row.received_gbp), amount(row.refund_gbp), amount(row.net_gbp)])
+  const lines = [['Date', 'Booking reference', 'Client', 'Method', 'Amount received', 'Refund', 'Net', 'Of which gift voucher']]
+  for (const row of rows) {
+    const method = GIFT_ONLY[row.booking_status] || (Number(row.gift_gbp) > 0 && !(Number(row.received_gbp) - Number(row.gift_gbp) > 0) ? 'Gift voucher' : methodName(row.method))
+    lines.push([row.date, row.booking_reference, row.client_name || '', method, amount(row.received_gbp), amount(row.refund_gbp), amount(row.net_gbp), amount(row.gift_gbp)])
+  }
   return lines.map(line => line.map(cell).join(',')).join('\r\n') + '\r\n'
 }
 export function csvFileName(summary) {

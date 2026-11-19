@@ -81,4 +81,43 @@ describe('the PDF itself', () => {
     expect(lines.length).toBeGreaterThan(1)
     expect(lines.every(line => font.widthOfTextAtSize(line, 10) <= 100)).toBe(true)
   })
+  it('draws a gift voucher receipt and a session paid with a voucher', async () => {
+    for (const r of [voucherReceipt(), giftSession()]) {
+      const doc = await lib.PDFDocument.load(await buildReceiptPdf(receiptView(r), { lib, fontkit, fonts }))
+      expect(doc.getPageCount()).toBe(1)
+    }
+    expect((await lib.PDFDocument.load(await buildReceiptPdf(receiptView(voucherReceipt()), { lib, fontkit, fonts }))).getTitle()).toBe('Gift voucher receipt GV-2026-0007')
+  })
+})
+
+const voucherReceipt = (standing = { status: 'paid' }) => ({
+  number: 'GV-2026-0007', standing,
+  snapshot: {
+    kind: 'gift_voucher', number: 'GV-2026-0007', issued_on: '2026-12-03', business, billed_to: 'Sarah Collins', buyer_email: 'sarah@example.com', reference: 'GIFT-7K3MQ',
+    voucher: { for: 'Anna', from: 'Sarah', gift: 'a 90-minute massage', code_end: 'QX9P', expires_at: '2027-12-03T23:59:59Z' },
+    lines: [{ label: 'A 90-minute massage', amount: 110 }, { label: 'Travel and congestion charge, any area', amount: 20 }],
+    total: 130, payment: { method: 'bank_transfer', paid_at: '2026-12-03T10:00:00Z', amount: 130 },
+  },
+})
+const giftSession = () => receipt({ snapshot: { ...receipt().snapshot, total: 100, payment: { method: 'bank_transfer', paid_at: '2026-10-12T09:00:00Z', amount: 0 }, gift: { covered: 100, code_end: 'QX9P' } } })
+
+describe('gift voucher receipts (20261221100000)', () => {
+  it('a voucher receipt names the buyer and the person, and only the end of the code', () => {
+    const view = receiptView(voucherReceipt())
+    expect(view).toMatchObject({ kind: 'gift_voucher', title: 'Gift Voucher Receipt', stamp: 'PAID', referenceLabel: 'Reference', reference: 'GIFT-7K3MQ', total: '£130.00', paid: '£130.00', fileName: 'Gift voucher receipt GV-2026-0007.pdf' })
+    expect(view.leftRows).toEqual([['Name', 'Sarah Collins'], ['Email', 'sarah@example.com']])
+    expect(view.rightRows).toContainEqual(['Code', 'ending QX9P'])
+    expect(view.rightRows).toContainEqual(['Gift', 'A 90-minute massage'])
+    expect(view.footnote).toMatch(/not for a treatment/)
+  })
+  it('a refunded voucher receipt is stamped REFUNDED with the amount', () => {
+    const view = receiptView(voucherReceipt({ status: 'refunded', refunded_at: '2026-12-10T10:00:00Z', refunded_gbp: 50 }))
+    expect(view.stamp).toBe('REFUNDED')
+    expect(view.notice).toMatch(/refunded on 10 December 2026 \(£50\.00\)/)
+  })
+  it('a session paid with a voucher shows what the voucher paid and what the client paid', () => {
+    const view = receiptView(giftSession())
+    expect(view.gift).toEqual({ covered: '£100.00', ending: 'QX9P', yours: '£0.00' })
+    expect(view.method).toBe('Gift voucher')
+  })
 })

@@ -32,7 +32,51 @@ function treatmentsOf(snapshot) {
   return [{ name: first.replace(/, \d+ minutes$/, ''), duration: minutes(snapshot.appointment.duration_minutes), recipient: '' }]
 }
 
+// A gift voucher's receipt (GV-…, 20261221100000): who bought it, who it is for, and what it pays for. Never the whole code.
+function giftVoucherView(receipt) {
+  const s = receipt.snapshot
+  const b = s.business || {}
+  const status = receipt.standing?.status || 'paid'
+  const refunded = status === 'refunded'
+  const stamp = status === 'paid' ? 'PAID' : refunded ? 'REFUNDED' : 'VOID'
+  const notice = status === 'paid' ? null
+    : refunded ? `This gift voucher was refunded${receipt.standing.refunded_at ? ` on ${longDay(receipt.standing.refunded_at)}` : ''}${receipt.standing.refunded_gbp != null ? ` (${money(receipt.standing.refunded_gbp)})` : ''}. Its code no longer works. This receipt is kept as a record.`
+      : status === 'refund_due' ? 'This gift voucher was cancelled and its money is being sent back. Its code no longer works.'
+        : 'This gift voucher was cancelled after the receipt was issued. It is kept as a record and is no longer proof of payment.'
+  const v = s.voucher || {}
+  return {
+    kind: 'gift_voucher',
+    title: 'Gift Voucher Receipt',
+    number: receipt.number || s.number,
+    issuedOn: calendarDay(s.issued_on),
+    status, stamp, notice,
+    business: { name: b.name || '', tagline: b.tagline || '', contact: [b.phone, b.email, b.website].filter(Boolean).join('  ·  '), address: b.address || '', website: b.website || '' },
+    client: s.billed_to,
+    reference: s.reference,
+    referenceLabel: 'Reference',
+    leftHeading: 'BOUGHT BY',
+    leftRows: [['Name', s.billed_to], ...(s.buyer_email ? [['Email', s.buyer_email]] : [])],
+    rightHeading: 'GIFT VOUCHER',
+    rightRows: [['For', v.for || ''], ...(v.from ? [['From', v.from]] : []), ['Gift', v.gift ? v.gift[0].toUpperCase() + v.gift.slice(1) : ''],
+      ['Code', `ending ${v.code_end || ''}`], ...(v.expires_at ? [['Use by', longDay(v.expires_at)]] : [])],
+    treatments: [],
+    showRecipients: false,
+    lines: s.lines.map(line => ({ label: line.label, amount: money(line.amount) })),
+    total: money(s.total),
+    paid: money(s.payment?.amount ?? s.total),
+    gift: null,
+    method: methodLabel(s.payment?.method),
+    paidOn: s.payment?.paid_at ? longDay(s.payment.paid_at) : '',
+    credentials: b.practitioner_name ? { name: b.practitioner_name, title: b.practitioner_title || '', association: b.association || '', number: b.membership_number || '' } : null,
+    note: '',
+    closing: b.closing || '',
+    footnote: 'Not a VAT invoice. This receipt is for buying a gift voucher, not for a treatment: the person who uses it gets their own treatment receipt after their session.',
+    fileName: `Gift voucher receipt ${receipt.number || s.number}.pdf`,
+  }
+}
+
 export function receiptView(receipt) {
+  if (receipt.snapshot?.kind === 'gift_voucher') return giftVoucherView(receipt)
   const s = receipt.snapshot
   const b = s.business || {}
   const standing = standingWords(receipt.standing)
@@ -40,7 +84,13 @@ export function receiptView(receipt) {
   const credentials = b.practitioner_name ? {
     name: b.practitioner_name, title: b.practitioner_title || '', association: b.association || '', number: b.membership_number || '',
   } : null
+  const gift = s.gift ? { covered: money(s.gift.covered), ending: s.gift.code_end || '', yours: money(s.payment?.amount ?? 0) } : null
   return {
+    kind: 'treatment',
+    title: 'Payment Receipt',
+    referenceLabel: 'Booking ref',
+    footnote: 'Not a VAT invoice. Whether this treatment can be reimbursed depends on your insurer and your policy.',
+    gift,
     number: receipt.number || s.number,
     issuedOn: calendarDay(s.issued_on),
     ...standing,
@@ -61,7 +111,7 @@ export function receiptView(receipt) {
     lines: s.lines.map(line => ({ label: line.label, amount: money(line.amount) })),
     total: money(s.total),
     paid: money(s.payment?.amount ?? s.total),
-    method: methodLabel(s.payment?.method),
+    method: gift && Number(s.payment?.amount ?? 0) === 0 ? 'Gift voucher' : methodLabel(s.payment?.method),
     paidOn: s.payment?.paid_at ? longDay(s.payment.paid_at) : '',
     credentials,
     note: s.note || '',

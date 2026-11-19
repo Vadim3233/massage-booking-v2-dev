@@ -37,7 +37,7 @@ export async function buildReceiptPdf(view, { lib, fontkit, fonts }) {
   const colour = name => rgb(...hex(COLOURS[name]))
   const doc = await PDFDocument.create()
   doc.registerFontkit(fontkit)
-  doc.setTitle(`Payment receipt ${view.number}`)
+  doc.setTitle(`${view.kind === 'gift_voucher' ? 'Gift voucher receipt' : 'Payment receipt'} ${view.number}`)
   doc.setAuthor(view.business.name)
   doc.setSubject(`Payment receipt for ${view.client}`)
   doc.setCreator(view.business.name)
@@ -80,14 +80,14 @@ export async function buildReceiptPdf(view, { lib, fontkit, fonts }) {
 
   // The title, the number and the date, and whether it is paid.
   y = height - bandHeight - 52
-  text('Payment Receipt', MARGIN, y, { font: display, size: 25, color: 'navy' })
+  text(view.title || 'Payment Receipt', MARGIN, y, { font: display, size: 25, color: 'navy' })
   const stampSize = 12
   const stampWidth = strong.widthOfTextAtSize(view.stamp, stampSize) + view.stamp.length * 2.4 + 22
   page.drawRectangle({ x: right - stampWidth, y: y - 6, width: stampWidth, height: 28, borderColor: colour('navy'), borderWidth: 1.6 })
   let stampX = right - stampWidth + 11
   for (const letter of view.stamp) { text(letter, stampX, y + 3, { font: strong, size: stampSize, color: 'navy' }); stampX += strong.widthOfTextAtSize(letter, stampSize) + 2.4 }
   y -= 22
-  const meta = [['Receipt No', view.number], ['Issued', view.issuedOn], ['Booking ref', view.reference]]
+  const meta = [['Receipt No', view.number], ['Issued', view.issuedOn], [view.referenceLabel || 'Booking ref', view.reference]]
   let metaX = MARGIN
   for (const [label, value] of meta) {
     text(label, metaX, y, { size: 9, color: 'muted' })
@@ -115,20 +115,20 @@ export async function buildReceiptPdf(view, { lib, fontkit, fonts }) {
     }
     return rowY
   }
-  text('CLIENT', MARGIN, y, { font: strong, size: 8, color: 'navy' })
+  text(view.leftHeading || 'CLIENT', MARGIN, y, { font: strong, size: 8, color: 'navy' })
   rule(y - 7, { color: 'gold', thickness: 0.9, to: MARGIN + columnWidth })
   const second = MARGIN + columnWidth + 36
-  text('TREATMENT', second, y, { font: strong, size: 8, color: 'navy' })
+  text(view.rightHeading || 'TREATMENT', second, y, { font: strong, size: 8, color: 'navy' })
   rule(y - 7, { color: 'gold', thickness: 0.9, from: second })
-  const clientEnd = pairs([['Name', view.client]], MARGIN, y - 24, 62)
+  const clientEnd = pairs(view.leftRows || [['Name', view.client]], MARGIN, y - 24, 62)
   const single = view.treatments.length === 1 ? view.treatments[0] : null
-  const treatmentRows = single
+  const treatmentRows = view.rightRows || (single
     ? [['Treatment', single.name], ['Date', view.treatmentDate], ['Duration', single.duration]]
-    : [['Date', view.treatmentDate], ['Duration', view.duration]]
+    : [['Date', view.treatmentDate], ['Duration', view.duration]])
   const treatmentEnd = pairs(treatmentRows, second, y - 24, 62)
   y = Math.min(clientEnd, treatmentEnd) - 10
 
-  if (!single) {
+  if (!single && view.kind !== 'gift_voucher') {
     // Several treatments on one booking: one row each, with who it was for when the booking names them.
     y -= 6
     for (const item of view.treatments) {
@@ -156,8 +156,20 @@ export async function buildReceiptPdf(view, { lib, fontkit, fonts }) {
   }
   rule(y, { color: 'navy', thickness: 1.3 })
   y -= 19
-  text(view.status === 'paid' ? 'TOTAL PAID' : 'TOTAL', MARGIN, y, { font: strong, size: 11.5, color: 'navy' })
-  text(view.paid, right, y, { font: strong, size: 11.5, color: 'navy', align: 'right' })
+  if (view.gift) {
+    // A session a gift voucher paid for: the full price, then what the voucher paid and what the client paid.
+    text('TOTAL', MARGIN, y, { font: strong, size: 11.5, color: 'navy' })
+    text(view.total, right, y, { font: strong, size: 11.5, color: 'navy', align: 'right' })
+    y -= 18
+    text(`Paid with gift voucher${view.gift.ending ? ` (ending ${view.gift.ending})` : ''}`, MARGIN, y, { size: 10 })
+    text(`-${view.gift.covered}`, right, y, { size: 10, align: 'right' })
+    y -= 16
+    text(view.status === 'paid' ? 'PAID BY YOU' : 'YOUR PART', MARGIN, y, { font: strong, size: 11.5, color: 'navy' })
+    text(view.gift.yours, right, y, { font: strong, size: 11.5, color: 'navy', align: 'right' })
+  } else {
+    text(view.status === 'paid' ? 'TOTAL PAID' : 'TOTAL', MARGIN, y, { font: strong, size: 11.5, color: 'navy' })
+    text(view.paid, right, y, { font: strong, size: 11.5, color: 'navy', align: 'right' })
+  }
   y -= 24
   const payment = [['Payment method', view.method], ...(view.paidOn ? [['Paid on', view.paidOn]] : []), ['Payment status', view.stamp === 'PAID' ? 'Paid' : view.stamp[0] + view.stamp.slice(1).toLowerCase()]]
   let payX = MARGIN
@@ -193,7 +205,7 @@ export async function buildReceiptPdf(view, { lib, fontkit, fonts }) {
   // The foot of the page.
   const foot = 70
   rule(foot + 26)
-  paragraph('Not a VAT invoice. Whether this treatment can be reimbursed depends on your insurer and your policy.', MARGIN, foot + 40, inner, { size: 7.5, color: 'muted' })
+  paragraph(view.footnote || 'Not a VAT invoice. Whether this treatment can be reimbursed depends on your insurer and your policy.', MARGIN, foot + 40, inner, { size: 7.5, color: 'muted' })
   text(view.business.name, MARGIN, foot + 8, { font: strong, size: 9 })
   if (view.business.website) text(view.business.website, MARGIN, foot - 5, { size: 9, color: 'muted' })
   text(view.closing || `Thank you for choosing ${view.business.name}.`, right, foot + 2, { font: display, size: 10.5, color: 'navy', align: 'right' })
