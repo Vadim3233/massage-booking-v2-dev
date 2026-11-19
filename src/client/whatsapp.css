@@ -1,0 +1,9 @@
+/* The "WhatsApp me" button (ADR-109): a WhatsApp green dark enough for white text to read clearly, the same in every theme. */
+.whatsapp-me { margin: 20px 0 6px; text-align: center; }
+.whatsapp-me-note { margin: 0 0 8px; color: var(--muted); font-size: 14px; }
+.whatsapp-me-button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 48px; padding: 0 24px; border-radius: 999px;
+  background: var(--whatsapp); color: var(--whatsapp-ink); font-size: 16px; font-weight: 650; text-decoration: none; box-shadow: 0 2px 8px var(--whatsapp-glow); }
+.whatsapp-me-button:hover { background: var(--whatsapp-hover); color: var(--whatsapp-ink); }
+.whatsapp-me-button:focus-visible { outline: 3px solid var(--whatsapp); outline-offset: 3px; }
+.whatsapp-me-button:active { transform: translateY(1px); }
+@media (prefers-reduced-motion: reduce) { .whatsapp-me-button:active { transform: none; } }

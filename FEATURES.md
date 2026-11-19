@@ -1,6 +1,6 @@
 # VadMassage booking app: feature catalogue
 
-Last updated: 15 November 2026 (Income: Paid / Overdue / Upcoming statement; extra time when a client stays longer).
+Last updated: 19 November 2026 (WhatsApp me button on the booking page, FAQ and appointment pages).
 
 This is a plain-English list of everything the app does today, grouped by area. Each entry says what the feature does, why it was built, where it was built (the pull request, or "PR", and any database change, called a "migration"), and what would need to become a **setting** if the same feature were offered to other therapists in a general app.
 
@@ -144,6 +144,12 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **Why:** A warm, personal first impression; on phones the areas were hidden below the welcome.
 - **Built in:** PR #8 (`20261021100000_welcome_content.sql`), design refresh PR #106, arrow PR #112, welcome wording PR #141, gold signature PR #142 (no migration).
 - **For a general app:** photo, welcome text and about text (already editable), brand colours.
+
+### "WhatsApp me" button
+- **What it does:** A green "WhatsApp me" button at the bottom of the booking page (every step, under "A question, or something came up?"), at the bottom of the FAQ, and on each client's appointment page. It opens WhatsApp with a message already started; on an appointment page the message names the day, time and booking reference. Vadim types his number and switches it on or off in More › WhatsApp button; while it is off, or no number is saved, nothing shows and the old "Contact Vadim" link stays.
+- **Why:** Clients should be able to reach Vadim quickly if something comes up (running late, a question before booking, parking), the way most UK clients already message small businesses.
+- **Built in:** PR (this one), migration `20261222100000_whatsapp_button.sql`.
+- **For a general app:** the number, the on/off switch and the starting messages; other businesses may want a phone or SMS button instead.
 
 ### Where the emails come from
 - **What it does:** Booking pages say which address emails come from and to look in spam if one doesn't arrive.

@@ -22,6 +22,8 @@ import HoldNotice from './components/HoldNotice.jsx'
 import { bankFromSettings, chooseBank, paymentConfig } from './paymentConfig.js'
 import { useBookingRules } from '../bookingRules.js'
 import { useWelcome } from '../welcome.js'
+import { useWhatsApp, WHATSAPP_HELLO } from '../whatsapp.js'
+import WhatsAppButton from '../WhatsAppButton.jsx'
 import { minimumFor } from '../../booking/bookingWords.js'
 import { createVisitLog, STEP_KINDS } from './visitLog.js'
 import { catalogueForOffer, offerCodeFromPath, offerFromRow } from './slotOffer.js'
@@ -68,6 +70,7 @@ export default function BookingFlow() {
   }, [visit, step]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (draft.bookingId) visit.record('booked', { booking_id: draft.bookingId }) }, [visit, draft.bookingId])
   const welcome = useWelcome(supabase)
+  const whatsapp = useWhatsApp(supabase)
   // A special-price offer's link (/offer/<code>): read what it offers, then start the booking with its time, length and price fixed.
   // 'loading', 'open', 'busy' (someone else is booking it right now) or why it cannot be booked ('taken', 'closed', 'missing').
   const [offerCode] = useState(() => offerCodeFromPath(window.location.pathname))
@@ -318,6 +321,7 @@ export default function BookingFlow() {
         </fieldset>
       </>}
     </main>
+    <WhatsAppButton number={whatsapp} text={WHATSAPP_HELLO.booking} note="A question, or something came up?" />
     <footer>Personal treatments, thoughtfully arranged. <a href="https://vadmassage.com">Contact Vadim</a>
       <p className="privacy-note">To make booking easier, I note which steps of this page are used and which times people look for. This uses no cookies, saves nothing on your phone, and is deleted after 90 days.</p></footer>
   </div>

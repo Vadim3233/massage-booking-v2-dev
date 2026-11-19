@@ -17,6 +17,8 @@ import ChangePanel from './ChangePanel.jsx'
 import { shortDay } from '../booking/payAfter.js'
 import { downloadReceiptPdf } from '../../lib/receiptPdf.js'
 import { useBookingRules } from '../bookingRules.js'
+import { appointmentHello, useWhatsApp } from '../whatsapp.js'
+import WhatsAppButton from '../WhatsAppButton.jsx'
 import '../booking/booking.css'
 import './account.css'
 
@@ -186,7 +188,7 @@ function ExtraToPay({ booking, api, id, done }) {
 
 // One booking, with what can be done to it. `linked` means it was opened from the private link in an email, with no sign-in: there is
 // no list of other bookings to go back to then.
-function Manage({ id, rules, close, changed, api, linked = false }) {
+function Manage({ id, rules, close, changed, api, linked = false, whatsapp = null }) {
   const [booking, setBooking] = useState(null)
   const [terms, setTerms] = useState(null)
   const [mode, setMode] = useState('view')
@@ -258,7 +260,7 @@ function Manage({ id, rules, close, changed, api, linked = false }) {
     {mode === 'cancel' && terms && <CancelPanel api={api} booking={booking} terms={terms} back={() => setMode('view')} refresh={load} done={result => done(result, 'Your appointment is cancelled.')} />}
     {mode === 'change' && <ChangePanel api={api} booking={booking} rules={rules} back={() => setMode('view')} done={result => done(result, 'Your booking has been changed. I have sent you the new details.')} />}
     {mode === 'reschedule' && terms && <ReschedulePanel api={api} booking={booking} terms={terms} rules={rules} back={() => setMode('view')} refresh={load} done={result => done(result, 'Your appointment has been moved.')} />}
-    <p><a href="https://vadmassage.com">Contact Vadim</a></p>
+    {whatsapp ? <WhatsAppButton number={whatsapp} text={appointmentHello(booking)} note="A question about this appointment, or running late?" /> : <p><a href="https://vadmassage.com">Contact Vadim</a></p>}
     {signIn}
   </section>
 }
@@ -304,6 +306,7 @@ function BookingList({ open }) {
 
 export default function AccountApp() {
   const auth = useClientAuth(supabase)
+  const whatsapp = useWhatsApp(supabase)
   // An email link that was used already, or has run out, brings the person back here with the reason in the address.
   const linkProblem = useLinkProblem()
   const [start, setStart] = useState(readLink)
@@ -345,7 +348,7 @@ export default function AccountApp() {
     <main className="booking-main">
     {linkProblem && <p role="alert" className="error">{linkProblem}</p>}
     {linked
-      ? <Manage key={`${start.booking}:${start.key}`} id={start.booking} api={linkApi} linked rules={rules} close={() => {}} changed={() => setRevision(value => value + 1)} />
+      ? <Manage key={`${start.booking}:${start.key}`} id={start.booking} api={linkApi} linked whatsapp={whatsapp} rules={rules} close={() => {}} changed={() => setRevision(value => value + 1)} />
       : <>
         {!auth.ready && <p role="status">Checking your account…</p>}
         {auth.ready && !auth.session && <>
@@ -353,7 +356,7 @@ export default function AccountApp() {
           <AuthPanel client={supabase} heading="Sign in to see your bookings" redirectTo={`${window.location.origin}/account`} />
         </>}
         {auth.ready && auth.session && (selected
-          ? <Manage key={selected} id={selected} api={accountApi} rules={rules} close={() => select(null)} changed={() => setRevision(value => value + 1)} />
+          ? <Manage key={selected} id={selected} api={accountApi} whatsapp={whatsapp} rules={rules} close={() => select(null)} changed={() => setRevision(value => value + 1)} />
           : <><h1 tabIndex={-1}>Your <em>bookings</em></h1><BookingList key={revision} open={select} /></>)}
       </>}
     </main>

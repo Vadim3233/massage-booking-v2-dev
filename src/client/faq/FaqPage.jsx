@@ -3,11 +3,14 @@ import { supabase } from '../../lib/supabase.js'
 import { useBookingRules } from '../bookingRules.js'
 import { clientFaq } from './faqContent.js'
 import FaqList from './FaqList.jsx'
+import { useWhatsApp, WHATSAPP_HELLO } from '../whatsapp.js'
+import WhatsAppButton from '../WhatsAppButton.jsx'
 import '../booking/booking.css'
 
 // /faq: answers to the questions clients ask, with the numbers taken from the live booking rules and areas.
 export default function FaqPage({ client = supabase }) {
   const rules = useBookingRules(client)
+  const whatsapp = useWhatsApp(client)
   const [areas, setAreas] = useState([])
 
   useEffect(() => { document.title = 'Questions and answers · VadMassage' }, [])
@@ -24,7 +27,7 @@ export default function FaqPage({ client = supabase }) {
       <h1 tabIndex={-1}>Questions and <em>answers</em></h1>
       <p className="lede">Everything about booking, paying, changing your appointment and receipts. Can't find your answer? Just ask me.</p>
       <FaqList sections={clientFaq({ rules, areas })} />
-      <p className="fine"><a href="https://vadmassage.com">Contact Vadim</a></p>
+      {whatsapp ? <WhatsAppButton number={whatsapp} text={WHATSAPP_HELLO.faq} note="Can't find your answer?" /> : <p className="fine"><a href="https://vadmassage.com">Contact Vadim</a></p>}
     </main>
   </div>
 }
