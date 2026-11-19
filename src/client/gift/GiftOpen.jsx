@@ -8,11 +8,10 @@ import '../booking/booking.css'
 import './voucher.css'
 import './gift.css'
 
-const SCRATCHES = 3
 const Snow = () => <div className="gift-snow gift-snow--full" aria-hidden="true" />
 const Confetti = () => <div className="gift-confetti" aria-hidden="true">{Array.from({ length: 30 }, (_, i) => <i key={i} style={{ left: `${(i * 97) % 100}%`, top: `${(i * 53) % 100}%`, '--turn': `${(i * 37) % 180}deg`, '--hue': i % 4 }} />)}</div>
 
-// /gift/<code>: the voucher. It opens like a present (an envelope, then a gold circle to scratch), then shows the voucher to print, save or
+// /gift/<code>: the voucher. It opens like a present (an envelope to open, then "Surprise!"), then shows the voucher to print, save or
 // send on WhatsApp, with "Choose my day" to book with it.
 export default function GiftOpen({ code, client = supabase }) {
   const api = useMemo(() => createGiftApi(client), [client])
@@ -20,7 +19,7 @@ export default function GiftOpen({ code, client = supabase }) {
   const [error, setError] = useState('')
   const [attempt, setAttempt] = useState(0)
   const [stage, setStage] = useState('envelope')
-  const [scratches, setScratches] = useState(0)
+  const [opened, setOpened] = useState(false)
   const [areas, setAreas] = useState([])
   useEffect(() => { document.title = 'Your gift · VadMassage' }, [])
   useEffect(() => {
@@ -34,11 +33,6 @@ export default function GiftOpen({ code, client = supabase }) {
     api.options().then(data => { if (live) setAreas(data?.areas || []) }, () => { /* the list is simply left out */ })
     return () => { live = false }
   }, [api])
-  useEffect(() => {
-    if (scratches < SCRATCHES) return undefined
-    const timer = setTimeout(() => setStage('card'), 500)
-    return () => clearTimeout(timer)
-  }, [scratches])
   useEffect(() => { document.querySelector('.gift-open h1')?.focus({ preventScroll: true }) }, [stage])
 
   const origin = window.location.origin
@@ -60,26 +54,13 @@ export default function GiftOpen({ code, client = supabase }) {
     <p className="gift-eyebrow">{voucher.from_name} sent you a gift</p>
     <h1 tabIndex={-1} className="sr-only">A gift for {voucher.recipient_name}</h1>
     <div className="gift-envelope" aria-hidden="true"><svg viewBox="0 0 320 210" preserveAspectRatio="none"><path d="M0 0 L160 110 L320 0" fill="#c93a35" stroke="#9e2220" strokeWidth="2" /></svg><span className="gift-envelope-band" /><span className="gift-envelope-name v-foil">{voucher.recipient_name}</span></div>
-    <button className="gift-gold-button" onClick={() => setStage('scratch')}>Open your gift</button>
+    <button className="gift-gold-button" onClick={() => { setOpened(true); setStage('card') }}>Open your gift</button>
     <button className="gift-skip" onClick={() => setStage('card')}>Skip to the voucher</button>
-  </section>, true)
-  if (stage === 'scratch') return page(<section className="gift-unwrap">
-    <div className="gift-note">
-      <p className="gift-eyebrow gift-eyebrow--dark">{/christmas|xmas/i.test(voucher.message || '') ? 'Merry Christmas' : 'A gift for you'}</p>
-      <h1 tabIndex={-1} className="gift-script v-foil">{voucher.recipient_name}</h1>
-      {voucher.message && <p className="gift-note-message">“{voucher.message}”</p>}
-      <div className="gift-scratch">
-        <div className="gift-scratch-under"><b>{giftWords(voucher.minutes, voucher.people)}</b><span>at your home</span></div>
-        <button className="gift-scratch-cover" style={{ opacity: Math.max(0, 1 - scratches * 0.32) }} disabled={scratches >= SCRATCHES}
-          onClick={() => setScratches(value => value + 1)} onPointerMove={event => { if (event.buttons) setScratches(value => Math.min(SCRATCHES, value + 0.05)) }}>
-          <span>{scratches === 0 ? 'Scratch to reveal' : 'Keep scratching'}</span></button>
-      </div>
-    </div>
   </section>, true)
 
   const message = whatsappText({ ...voucher, code: shown }, origin)
   return page(<section className="gift-reveal">
-    {scratches >= SCRATCHES && <Confetti />}
+    {opened && <Confetti />}
     <p className="gift-script v-foil" aria-hidden="true">Surprise!</p>
     <h1 tabIndex={-1}>{what}</h1>
     <p className="lede">From {voucher.from_name}, already paid for. Choose any day that suits you, any time before {londonDate(voucher.expires_at)}.
@@ -95,6 +76,6 @@ export default function GiftOpen({ code, client = supabase }) {
       <a className="btn btn--tonal" href={whatsappHref(message)} target="_blank" rel="noopener noreferrer">Send on WhatsApp</a>
     </div>
     <p className="fine">Your code is <strong>{shown}</strong>. To book, press Choose my day, scan the code on the voucher, or enter the code when you book.</p>
-    <button className="gift-skip gift-skip--light" onClick={() => { setScratches(0); setStage('envelope') }}>Open it again</button>
+    <button className="gift-skip gift-skip--light" onClick={() => { setOpened(false); setStage('envelope') }}>Open it again</button>
   </section>, true)
 }
