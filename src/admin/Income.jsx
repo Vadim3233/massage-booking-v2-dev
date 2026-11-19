@@ -114,7 +114,7 @@ export default function Income({ openBooking, openDay, openHours, api = incomeAp
                 className={`admin-income-day shade-${dayShade(item.received_gbp, bestDay)}${Number(item.to_come_gbp) > 0 ? ' is-booked' : ''}${item.date === now ? ' is-today' : ''}${owedDays.get(item.date) > 0 || (Number(item.received_gbp) > 0 && Number(item.to_come_gbp) > 0) ? ' is-owed' : ''}${owedDays.get(item.date) > 0 && !(Number(item.received_gbp) > 0) ? ' is-waiting' : ''}`}>
                 <span className="admin-income-day-number">{Number(item.date.slice(8))}</span>
                 {(amounts => amounts.main > 0 ? <span className="admin-income-day-money">{shortMoney(amounts.main)}
-                  {amounts.rest > 0 && <small className={`is-${amounts.restKind}`}>+{shortMoney(amounts.rest)}</small>}</span> : null)(dayAmounts(item, owedDays.get(item.date)))}
+                  {Math.round(amounts.rest) > 0 && <small className={`is-${amounts.restKind}`}>+{shortMoney(amounts.rest)}</small>}</span> : null)(dayAmounts(item, owedDays.get(item.date)))}
               </button>}
             </td>)}</tr>)}</tbody>
           </table>
