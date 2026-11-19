@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { BUTTON_LABEL, EMAIL_COLOURS, EMAIL_TAGLINE, composeEmailHtml, escapeHtml } from './emailHtml.js'
+import { BUTTON_LABEL, EMAIL_COLOURS, GIFT_BUTTON_LABEL, EMAIL_TAGLINE, composeEmailHtml, escapeHtml } from './emailHtml.js'
 
 const LINK = 'https://booking.example.com/account?booking=b1&x=1#key=abc123'
 const BODY = 'Thank you. Your appointment is confirmed for Mon 19 Oct at 15:00 (60 minutes) at 12 Edith Road, London, SW1A 1AA.\nReference: VDM-20261016-EXAMPLE\n\nI have received your payment.\n\nSee or change your booking: {link}\n\nWarm wishes,\nVad'
@@ -41,6 +41,20 @@ describe('the HTML version of a client email', () => {
       expect(html).not.toContain('{link}')
       expect(html).toContain('Warm wishes,<br>Vad')
     }
+  })
+
+  it('makes a "{link}" on a line of its own (the gift voucher emails) the button, labelled for the gift, never the placeholder', () => {
+    const gift = 'https://booking.example.com/gift/K7M3QX9P?open=1'
+    const html = make({ title: 'Tom has sent you a gift', body: 'Hi Sarah,\n\nTom has sent you a gift. Open it here:\n{link}', url: gift })
+    expect(html).not.toContain('{link}')
+    expect(html).toContain('Tom has sent you a gift. Open it here:')
+    expect(html).toContain(`href="${gift}"`)
+    expect(html).toContain(`>${GIFT_BUTTON_LABEL}</a>`)
+    expect(html).not.toContain(BUTTON_LABEL)
+    // With no link to give, the lone placeholder line goes and nothing else does.
+    const bare = make({ body: 'Hi Sarah,\n\nTom has sent you a gift. Open it here:\n{link}', url: '' })
+    expect(bare).not.toContain('{link}')
+    expect(bare).not.toContain('<a ')
   })
 
   it('does not lose a line because a client typed "{link}" into their address', () => {
