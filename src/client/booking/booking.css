@@ -571,6 +571,15 @@
 .gift-card-tag { font-size: 12px; letter-spacing: 2.5px; text-transform: uppercase; font-weight: 600; color: var(--gift-e6c47a) !important; }
 .booking-shell .gift-card .btn--quiet { color: var(--gift-e6c47a); padding-inline: 0; }
 .gift-code-box { margin: 14px 0 4px; }
-.gift-code-box form { display: grid; gap: 8px; }
+/* "Have a gift card? Enter your code" in the navy band, under the gift card. */
+.gift-code-entry { margin-top: 14px; text-align: center; }
+.gift-code-open { min-height: 44px; padding: 8px 14px; border: 0; background: none; color: var(--on-primary); font: inherit; font-size: 15px; cursor: pointer; }
+.gift-code-open span { color: var(--gift-e2c27a); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.gift-code-open:focus-visible { outline: 2px solid var(--gift-e2c27a); outline-offset: 2px; border-radius: 8px; }
+.gift-code-entry form { display: grid; gap: 10px; max-width: 360px; margin: 0 auto; text-align: left; }
+.gift-code-entry .field { display: grid; gap: 6px; color: var(--on-primary); font-size: 14px; }
+.gift-code-entry input { width: 100%; min-height: 48px; padding: 0 14px; border: 1px solid var(--primary-line); border-radius: 12px; background: var(--surface); color: var(--ink); font: inherit; font-size: 17px; text-transform: uppercase; letter-spacing: .08em; }
+.btn--gift { min-height: 48px; border: 0; border-radius: 999px; background: linear-gradient(180deg, var(--gift-e2c27a), var(--gift-d9b25c) 55%, var(--gift-b8913f)); color: var(--primary-strong); font-weight: 700; }
+.btn--gift:disabled { opacity: .55; }
 .gift-give { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
 .gift-prices { margin-top: 8px; }

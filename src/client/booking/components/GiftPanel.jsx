@@ -19,17 +19,24 @@ export function GiftCard({ gift, remove }) {
   </section>
 }
 
-// Under the areas: a way in for someone who has a code but not the link, and the way to buy one as a present.
-export function GiftCodeBox() {
+// "Have a gift card? Enter your code": for someone holding a voucher without scanning its QR code. Since 19 Nov 2026 it sits in the navy
+// band, straight under the "Give the Gift of Wellness" card, so it is seen at once (it used to be under the areas).
+export function GiftCodeEntry() {
   const [open, setOpen] = useState(false)
   const [code, setCode] = useState('')
   const clean = cleanGiftCode(code)
-  return <section className="gift-code-box">
-    {!open ? <button type="button" className="btn--quiet btn--small" aria-expanded="false" onClick={() => setOpen(true)}>Have a gift voucher? Enter its code</button>
+  return <div className="gift-code-entry">
+    {!open ? <button type="button" className="gift-code-open" aria-expanded="false" onClick={() => setOpen(true)}>Have a gift card? <span>Enter your code</span></button>
       : <form onSubmit={event => { event.preventDefault(); if (clean.length === 8) window.location.assign(`/?gift=${clean}`) }}>
-        <label className="field">Gift voucher code<input autoFocus value={code} maxLength={12} autoCapitalize="characters" autoComplete="off" placeholder="7K3M-QX9P" onChange={event => setCode(event.target.value)} /></label>
-        <button type="submit" className="btn--tonal" disabled={clean.length !== 8}>Use this code</button>
+        <label className="field">Gift card code<input autoFocus value={code} maxLength={12} autoCapitalize="characters" autoComplete="off" placeholder="7K3M-QX9P" onChange={event => setCode(event.target.value)} /></label>
+        <button type="submit" className="btn--gift" disabled={clean.length !== 8}>Book with this code</button>
       </form>}
+  </div>
+}
+
+// Under the areas: the way to buy one as a present.
+export function GiftCodeBox() {
+  return <section className="gift-code-box">
     <p className="gift-give">Looking for a present? <a href="/gift">Give a massage as a gift voucher</a></p>
   </section>
 }

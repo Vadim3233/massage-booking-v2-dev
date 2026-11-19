@@ -3,6 +3,7 @@ import Icon from '../../../ui/icons.jsx'
 import { supabase } from '../../../lib/supabase.js'
 import { changesNote, DEFAULT_WELCOME, paragraphs } from '../../welcome.js'
 import { usualLabel } from '../usualBooking.js'
+import { GiftCodeEntry } from './GiftPanel.jsx'
 
 // What a new client can open under the welcome to see who is coming: Vadim's own words about how he works, his qualifications and his reviews.
 // Kept here, short, until it is editable in the Admin. Every line must stay true (the rating especially).
@@ -62,6 +63,7 @@ export default function Welcome({ welcome, rules, usual, bookUsual }) {
           <span className="welcome-gift-go">Choose a Gift Card<Icon name="right" size={18} /></span>
         </span>
       </a>}
+      <GiftCodeEntry />
     </div>
     {usual && <button className="usual" onClick={bookUsual}>
       <span className="usual-text"><span className="eyebrow">Book your usual</span><strong>{usualLabel(usual)}</strong></span>
