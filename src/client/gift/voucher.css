@@ -20,102 +20,21 @@
 .v-foil { background: linear-gradient(115deg, var(--gift-a8782a) 0%, var(--gift-f0d68c) 30%, var(--gift-b8883a) 52%, var(--gift-f6e2a6) 72%, var(--gift-a06f22) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .v-frame { inset: calc(12 * var(--u)); border-radius: calc(10 * var(--u)); }
 
-/* A · Christmas night */
-.voucher--christmas_night { background: var(--gift-1d3b2e); color: var(--gift-fbf3e4); }
-.voucher--christmas_night .v-flake { width: calc(var(--r) * var(--u)); height: calc(var(--r) * var(--u)); border-radius: 50%; background: var(--gift-fff); }
-.voucher--christmas_night .v-frame { border: calc(1.5 * var(--u)) solid var(--gift-d9b25c); }
-.voucher--christmas_night .v-frame--inner { inset: calc(18 * var(--u)); border: calc(.75 * var(--u)) solid var(--gift-217-178-92-55); border-radius: calc(7 * var(--u)); }
-.voucher--christmas_night .v-ribbon { top: 0; bottom: 0; left: calc(392 * var(--u)); width: calc(22 * var(--u)); background: var(--gift-c9302c); box-shadow: inset calc(3 * var(--u)) 0 0 var(--gift-255-255-255-18); }
-.voucher--christmas_night .v-bow { left: calc(348 * var(--u)); top: calc(20 * var(--u)); }
-.voucher--christmas_night .v-text { left: calc(44 * var(--u)); top: calc(46 * var(--u)); width: calc(330 * var(--u)); }
-.voucher--christmas_night .v-kicker { color: var(--gift-e6c47a); }
-.voucher--christmas_night .v-name { font-size: calc(58 * var(--u)); }
-.voucher--christmas_night .v-rule { display: block; width: calc(64 * var(--u)); height: calc(2 * var(--u)); background: var(--gift-d9b25c); }
-.voucher--christmas_night .v-what { font-size: calc(18 * var(--u)); }
-.voucher--christmas_night .v-msg { font-size: calc(15 * var(--u)); color: var(--gift-f0dfb8); }
-.voucher--christmas_night .v-small { left: calc(44 * var(--u)); bottom: calc(32 * var(--u)); color: var(--gift-251-243-228-75); }
-.voucher--christmas_night .v-scan { right: calc(34 * var(--u)); top: calc(118 * var(--u)); width: calc(140 * var(--u)); color: var(--gift-f0dfb8); }
-.voucher--christmas_night .v-qr { width: calc(112 * var(--u)); height: calc(112 * var(--u)); background: var(--gift-fbf3e4); }
-.voucher--christmas_night .v-code { font-size: calc(18 * var(--u)); color: var(--gift-e6c47a); }
+/* Every design is Vadim's own picture with the words laid on top (VoucherCard.jsx, giftArt.js). Positions, sizes and colours come from
+   giftArt.js as inline styles; these rules give the shared lettering. */
+.voucher--art { border-radius: 0; box-shadow: none; overflow: visible; }
+.voucher--art .v-art { inset: 0; width: 100%; height: 100%; display: block; filter: drop-shadow(0 12px 18px var(--gift-20-30-25-55)); }
+.voucher--art .v-name { margin: 0; font-style: italic; font-weight: 600; line-height: 1.15; white-space: nowrap; padding: 0 .1em .08em; }
+.voucher--art .v-script { font-style: normal; font-weight: 400; line-height: 1.3; }
+.voucher--art .v-words { display: flex; flex-direction: column; overflow: hidden; }
+.voucher--art .v-what { font-family: 'Playfair Display', Georgia, serif; }
+.voucher--art .v-msg { font-size: inherit; line-height: 1.32; overflow-wrap: anywhere; }
+.voucher--art .v-from { margin: 0; opacity: .95; }
 
-/* B · Wrapped present */
-.voucher--wrapped_present { background: var(--gift-b23a33); color: var(--gift-2a1712); }
-.voucher--wrapped_present .v-dot { width: calc(6 * var(--u)); height: calc(6 * var(--u)); border-radius: 50%; background: var(--gift-243-217-164-35); }
-.voucher--wrapped_present .v-band { background: var(--gift-f3d9a4); }
-.voucher--wrapped_present .v-band--h { left: 0; right: 0; top: calc(300 * var(--u)); height: calc(30 * var(--u)); }
-.voucher--wrapped_present .v-band--v { top: 0; bottom: 0; left: calc(470 * var(--u)); width: calc(30 * var(--u)); }
-.voucher--wrapped_present .v-bow { left: calc(420 * var(--u)); top: calc(268 * var(--u)); width: calc(130 * var(--u)); }
-.voucher--wrapped_present .v-tag { left: calc(40 * var(--u)); top: calc(34 * var(--u)); width: calc(370 * var(--u)); min-height: calc(236 * var(--u)); background: var(--gift-fffaf1);
-  border-radius: calc(6 * var(--u)) calc(30 * var(--u)) calc(6 * var(--u)) calc(6 * var(--u)); padding: calc(24 * var(--u)) calc(28 * var(--u)); transform: rotate(-2deg);
-  box-shadow: 0 calc(14 * var(--u)) calc(28 * var(--u)) calc(-12 * var(--u)) var(--gift-40-10-5-55); display: flex; flex-direction: column; gap: calc(8 * var(--u)); }
-.voucher--wrapped_present .v-hole { position: absolute; right: calc(20 * var(--u)); top: calc(18 * var(--u)); width: calc(14 * var(--u)); height: calc(14 * var(--u)); border-radius: 50%; border: calc(2 * var(--u)) solid var(--gift-c9a463); background: var(--gift-b23a33); }
-.voucher--wrapped_present .v-kicker { color: var(--gift-b23a33); }
-.voucher--wrapped_present .v-name { font-size: calc(50 * var(--u)); }
-.voucher--wrapped_present .v-what { font-size: calc(17 * var(--u)); color: var(--gift-7a2a24); }
-.voucher--wrapped_present .v-msg { font-size: calc(14.5 * var(--u)); color: var(--gift-5c3a30); }
-.voucher--wrapped_present .v-scan { right: calc(22 * var(--u)); top: calc(26 * var(--u)); width: calc(124 * var(--u)); background: var(--gift-fffaf1); border-radius: calc(10 * var(--u)); padding: calc(10 * var(--u)); transform: rotate(3deg); color: var(--gift-5c3a30);
-  box-shadow: 0 calc(10 * var(--u)) calc(20 * var(--u)) calc(-10 * var(--u)) var(--gift-40-10-5-55); }
-.voucher--wrapped_present .v-qr { width: calc(100 * var(--u)); height: calc(100 * var(--u)); padding: 0; }
-.voucher--wrapped_present .v-code { font-size: calc(14 * var(--u)); color: var(--gift-b23a33); }
-.voucher--wrapped_present .v-small { left: calc(40 * var(--u)); bottom: calc(18 * var(--u)); color: var(--gift-255-244-228-92); }
-
-/* D · Gold foil ticket */
-.voucher--gold_foil { background: var(--gift-2f4a3a); }
-.voucher--gold_foil .v-ticket { left: calc(30 * var(--u)); top: calc(52 * var(--u)); width: calc(540 * var(--u)); height: calc(320 * var(--u)); background: var(--gift-fdfbf6); border-radius: calc(4 * var(--u)); color: var(--gift-233a2d);
-  box-shadow: 0 calc(18 * var(--u)) calc(30 * var(--u)) calc(-14 * var(--u)) var(--gift-0-0-0-6); }
-.voucher--gold_foil .v-ticket > * { position: absolute; }
-.voucher--gold_foil .v-frame { inset: calc(10 * var(--u)); border: calc(1.5 * var(--u)) solid var(--gift-c9a052); border-radius: calc(2 * var(--u)); }
-.voucher--gold_foil .v-frame--inner { inset: calc(15 * var(--u)); border: calc(.75 * var(--u)) solid var(--gift-e3c983); }
-.voucher--gold_foil .v-perf { top: calc(14 * var(--u)); bottom: calc(14 * var(--u)); left: calc(390 * var(--u)); border-left: calc(1.5 * var(--u)) dashed var(--gift-c9a052); }
-.voucher--gold_foil .v-notch { left: calc(380 * var(--u)); width: calc(20 * var(--u)); height: calc(20 * var(--u)); border-radius: 50%; background: var(--gift-2f4a3a); }
-.voucher--gold_foil .v-notch--top { top: calc(-10 * var(--u)); }
-.voucher--gold_foil .v-notch--bottom { bottom: calc(-10 * var(--u)); }
-.voucher--gold_foil .v-tree { left: calc(30 * var(--u)); top: calc(70 * var(--u)); width: calc(92 * var(--u)); height: calc(150 * var(--u)); }
-.voucher--gold_foil .v-text { left: calc(130 * var(--u)); top: calc(40 * var(--u)); width: calc(250 * var(--u)); gap: calc(4 * var(--u)); }
-.voucher--gold_foil .v-kicker { font-size: calc(10.5 * var(--u)); color: var(--gift-8a6a2c); }
-.voucher--gold_foil .v-name { font-family: 'Great Vibes', 'Playfair Display', cursive; font-style: normal; font-weight: 400; font-size: calc(62 * var(--u)); line-height: 1.1; padding-bottom: calc(4 * var(--u)); }
-.voucher--gold_foil .v-what { font-family: 'Playfair Display', Georgia, serif; font-size: calc(18 * var(--u)); font-weight: 600; }
-.voucher--gold_foil .v-sub { font-size: calc(12.5 * var(--u)); color: var(--gift-5d6b62); }
-.voucher--gold_foil .v-stub .v-from { margin: calc(-4 * var(--u)) 0 calc(6 * var(--u)); font-size: calc(13 * var(--u)); color: var(--gift-4a4a42); text-align: center; overflow-wrap: anywhere; }
-.voucher--gold_foil .v-msg { margin-top: calc(8 * var(--u)); font-size: calc(13.5 * var(--u)); color: var(--gift-4a4a42); }
-.voucher--gold_foil .v-small { left: calc(30 * var(--u)); bottom: calc(24 * var(--u)); width: calc(350 * var(--u)); font-size: calc(9.5 * var(--u)); color: var(--gift-7b7466); }
-.voucher--gold_foil .v-stub { left: calc(400 * var(--u)); top: calc(34 * var(--u)); width: calc(130 * var(--u)); display: flex; flex-direction: column; align-items: center; gap: calc(6 * var(--u)); text-align: center; font-size: calc(10.5 * var(--u)); color: var(--gift-5d6b62); }
-.voucher--gold_foil .v-greeting { font-family: 'Playfair Display', Georgia, serif; font-size: calc(12.5 * var(--u)); letter-spacing: .2em; text-transform: uppercase; font-weight: 600; }
-.voucher--gold_foil .v-qr { width: calc(96 * var(--u)); height: calc(96 * var(--u)); padding: 0; margin-top: calc(6 * var(--u)); background: transparent; }
-.voucher--gold_foil .v-stub small { font-size: calc(9.5 * var(--u)); letter-spacing: .2em; text-transform: uppercase; color: var(--gift-8a6a2c); }
-.voucher--gold_foil .v-code { font-size: calc(14 * var(--u)); color: var(--gift-233a2d); }
-
-/* E · Black and gold */
-.voucher--black_gold { background: var(--gift-141414); color: var(--gift-e9dcc0); }
-.voucher--black_gold .v-frame { inset: calc(16 * var(--u)); border: calc(1 * var(--u)) solid var(--gift-b8913f); border-radius: calc(6 * var(--u)); }
-.voucher--black_gold .v-sprig { right: calc(-30 * var(--u)); bottom: calc(-40 * var(--u)); width: calc(230 * var(--u)); height: calc(230 * var(--u)); opacity: .9; }
-.voucher--black_gold .v-band { left: 0; right: 0; top: calc(64 * var(--u)); height: calc(14 * var(--u)); background: var(--gift-d8c08a); }
-.voucher--black_gold .v-bow { left: calc(60 * var(--u)); top: calc(30 * var(--u)); width: calc(120 * var(--u)); }
-.voucher--black_gold .v-text { left: calc(60 * var(--u)); top: calc(118 * var(--u)); width: calc(340 * var(--u)); gap: calc(4 * var(--u)); }
-.voucher--black_gold .v-kicker { font-size: calc(10.5 * var(--u)); color: var(--gift-c9a95e); letter-spacing: .35em; font-weight: 400; }
-.voucher--black_gold .v-name { font-family: 'Great Vibes', 'Playfair Display', cursive; font-style: normal; font-weight: 400; font-size: calc(68 * var(--u)); line-height: 1.1; padding-bottom: calc(6 * var(--u)); }
-.voucher--black_gold .v-what { font-family: 'Playfair Display', Georgia, serif; font-size: calc(19 * var(--u)); color: var(--gift-f3ead6); }
-.voucher--black_gold .v-msg { margin-top: calc(6 * var(--u)); font-size: calc(14 * var(--u)); color: var(--gift-bfb39a); }
-.voucher--black_gold .v-small { left: calc(60 * var(--u)); bottom: calc(30 * var(--u)); font-size: calc(9.5 * var(--u)); color: var(--gift-9a8f78); }
-.voucher--black_gold .v-scan { right: calc(50 * var(--u)); top: calc(112 * var(--u)); width: calc(124 * var(--u)); color: var(--gift-bfb39a); }
-.voucher--black_gold .v-qr { width: calc(104 * var(--u)); height: calc(104 * var(--u)); background: var(--gift-f6efe0); }
-.voucher--black_gold .v-code { font-size: calc(15 * var(--u)); }
-
-/* C · Any occasion */
-.voucher--any_occasion { background: var(--gift-f6dfe0); color: var(--gift-24324a); }
-.voucher--any_occasion .v-blob { border-radius: 50%; }
-.voucher--any_occasion .v-blob--a { left: calc(-70 * var(--u)); bottom: calc(-90 * var(--u)); width: calc(260 * var(--u)); height: calc(260 * var(--u)); background: var(--gift-f2c6b4); }
-.voucher--any_occasion .v-blob--b { right: calc(-50 * var(--u)); top: calc(-60 * var(--u)); width: calc(220 * var(--u)); height: calc(220 * var(--u)); background: var(--gift-e9b9a4); }
-.voucher--any_occasion .v-sprig--a { left: calc(-10 * var(--u)); bottom: calc(-14 * var(--u)); width: calc(190 * var(--u)); height: calc(190 * var(--u)); }
-.voucher--any_occasion .v-sprig--b { right: 0; top: 0; width: calc(170 * var(--u)); height: calc(170 * var(--u)); transform: scale(-1, -1); }
-.voucher--any_occasion .v-panel { left: calc(46 * var(--u)); top: calc(38 * var(--u)); right: calc(46 * var(--u)); bottom: calc(38 * var(--u)); background: var(--gift-255-251-247-94); border-radius: calc(22 * var(--u));
-  box-shadow: 0 calc(16 * var(--u)) calc(34 * var(--u)) calc(-18 * var(--u)) var(--gift-90-40-30-45); display: grid; grid-template-columns: minmax(0, 1fr) calc(128 * var(--u)); gap: calc(16 * var(--u)); padding: calc(26 * var(--u)) calc(24 * var(--u)) calc(20 * var(--u)) calc(30 * var(--u)); }
-.voucher--any_occasion .v-panel > * { position: static; }
-.voucher--any_occasion .v-kicker { color: var(--gift-b4593f); }
-.voucher--any_occasion .v-name { font-size: calc(46 * var(--u)); line-height: 1.04; }
-.voucher--any_occasion .v-what { font-size: calc(16 * var(--u)); color: var(--gift-3d5a73); }
-.voucher--any_occasion .v-msg { font-size: calc(14.5 * var(--u)); color: var(--gift-5a5160); }
-.voucher--any_occasion .v-small { margin-top: auto; color: var(--gift-6a6470); }
-.voucher--any_occasion .v-scan { justify-content: center; color: var(--gift-5a5160); }
-.voucher--any_occasion .v-qr { width: calc(106 * var(--u)); height: calc(106 * var(--u)); border: calc(2 * var(--u)) solid var(--gift-f2c6b4); }
-.voucher--any_occasion .v-code { font-size: calc(15 * var(--u)); color: var(--gift-b4593f); }
+.voucher--art .v-note { display: flex; flex-direction: column; }
+.voucher--art .v-nameline { margin: 0; font-family: 'Playfair Display', Georgia, serif; font-style: italic; font-weight: 500; overflow-wrap: anywhere; }
+.voucher--art .v-small { font-family: Inter, system-ui, sans-serif; line-height: 1.72; }
+.voucher--art .v-small--one { white-space: nowrap; }
+.voucher--art .v-qr { padding: 0; border-radius: 0; background: transparent; aspect-ratio: 1; }
+.voucher--art .v-scanline { font-family: Inter, system-ui, sans-serif; white-space: nowrap; }
+.voucher--art .v-code { font-family: Inter, system-ui, sans-serif; font-weight: 700; white-space: nowrap; }
