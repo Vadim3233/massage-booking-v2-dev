@@ -227,7 +227,7 @@ export default function GiftShop({ client = supabase }) {
     <section className="gift-step" aria-labelledby="gift-s5"><h2 id="gift-s5"><span>{enhancements.length ? 6 : 5}</span>How should it arrive?</h2>
       <div className="gift-stack">
         <Choice pressed={delivery === 'self'} onClick={() => setDelivery('self')} title="I'll give it myself" note="A voucher to print or save as a PDF, plus a button to send it on WhatsApp." />
-        <Choice pressed={delivery === 'email'} onClick={() => setDelivery('email')} title="Surprise them by email" note="It arrives on the day you choose, in a red envelope they open and scratch to reveal." />
+        <Choice pressed={delivery === 'email'} onClick={() => setDelivery('email')} title="Surprise them by email" note="It arrives on the day you choose, in a red envelope they open to find their surprise." />
       </div>
       {delivery === 'email' && <div className="gift-names">
         <label className="field">Their email<input id="gift-recipientEmail" type="email" inputMode="email" autoComplete="off" value={recipientEmail} aria-invalid={Boolean(tried && problems.recipientEmail) || undefined} onChange={e => setRecipientEmail(e.target.value)} />{show('recipientEmail')}</label>
