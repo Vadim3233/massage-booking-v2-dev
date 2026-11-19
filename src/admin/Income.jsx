@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { money, today } from './calendarPresentation.js'
 import { incomeApi } from './incomeApi.js'
 import BusiestTimes from './BusiestTimes.jsx'
-import { barDescription, barLabel, calendarWeeks, comparisonText, csvFileName, dateLabelShort, dayDescription, dayShade, duration, hourSentence, incomeCsv, incomeStatement, methodName, monthlyRates, nextAnchor, owedByDay, periodLabel, previousAnchor, rowNote, rowWhen, shortMoney, workShare } from './incomePresentation.js'
+import { barDescription, barLabel, calendarWeeks, comparisonText, csvFileName, dateLabelShort, dayAmounts, dayDescription, dayShade, duration, hourSentence, incomeCsv, incomeStatement, methodName, monthlyRates, nextAnchor, owedByDay, periodLabel, previousAnchor, rowNote, rowWhen, shortMoney, workShare } from './incomePresentation.js'
 
 const TABS = [['week', 'Week'], ['month', 'Month'], ['year', 'Year']]
 const REMEMBER = 'vad-admin-income-view'
@@ -111,11 +111,10 @@ export default function Income({ openBooking, openDay, openHours, api = incomeAp
             <thead><tr>{['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(name => <th key={name} scope="col" abbr={name}>{name[0]}</th>)}</tr></thead>
             <tbody>{calendarWeeks(summary.days).map(week => <tr key={week.find(Boolean).date}>{week.map((item, index) => <td key={item?.date || `empty-${index}`}>
               {item && <button type="button" aria-pressed={day === item.date} aria-label={dayDescription(item, owedDays.get(item.date))} onClick={() => pick(item.date)}
-                className={`admin-income-day shade-${dayShade(item.received_gbp, bestDay)}${Number(item.to_come_gbp) > 0 ? ' is-booked' : ''}${item.date === now ? ' is-today' : ''}${owedDays.get(item.date) > 0 ? ' is-owed' : ''}${owedDays.get(item.date) > 0 && !(Number(item.received_gbp) > 0) ? ' is-waiting' : ''}`}>
+                className={`admin-income-day shade-${dayShade(item.received_gbp, bestDay)}${Number(item.to_come_gbp) > 0 ? ' is-booked' : ''}${item.date === now ? ' is-today' : ''}${owedDays.get(item.date) > 0 || (Number(item.received_gbp) > 0 && Number(item.to_come_gbp) > 0) ? ' is-owed' : ''}${owedDays.get(item.date) > 0 && !(Number(item.received_gbp) > 0) ? ' is-waiting' : ''}`}>
                 <span className="admin-income-day-number">{Number(item.date.slice(8))}</span>
-                {Number(item.received_gbp) > 0 ? <span className="admin-income-day-money">{shortMoney(item.received_gbp)}</span>
-                  : owedDays.get(item.date) > 0 ? <span className="admin-income-day-money">{shortMoney(owedDays.get(item.date))}</span>
-                  : Number(item.to_come_gbp) > 0 ? <span className="admin-income-day-money">{shortMoney(item.to_come_gbp)}</span> : null}
+                {(amounts => amounts.main > 0 ? <span className="admin-income-day-money">{shortMoney(amounts.main)}
+                  {Math.round(amounts.rest) > 0 && <small className={`is-${amounts.restKind}`}>+{shortMoney(amounts.rest)}</small>}</span> : null)(dayAmounts(item, owedDays.get(item.date)))}
               </button>}
             </td>)}</tr>)}</tbody>
           </table>

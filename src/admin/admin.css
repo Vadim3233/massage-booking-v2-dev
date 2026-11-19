@@ -665,6 +665,13 @@
 .admin-shell .admin-income-day { position: relative; width: 100%; aspect-ratio: 1 / 1.05; min-height: 44px; display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start; padding: 4px 5px; border: 1px solid var(--hairline); border-radius: 8px; background: var(--surface); color: var(--ink); text-align: left; overflow: hidden; }
 .admin-income-day-number { font: 500 12px/1 var(--font-ui); }
 .admin-income-day-money { font: 600 11px/1 var(--font-ui); font-variant-numeric: tabular-nums; white-space: nowrap; max-width: 100%; overflow: hidden; }
+/* The part of a paid day still not paid (19 Nov 2026): "+£125" under the paid amount, dashed underline for upcoming, accent for overdue. */
+.admin-shell .admin-income-day { gap: 2px; }
+.admin-income-day-money { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+.admin-income-day-money small { font: 600 10px/1.1 var(--font-ui); opacity: .85; }
+@media (max-width: 359px) { .admin-shell .admin-income-day { padding: 4px 3px; } .admin-income-day-money { font-size: 10px; letter-spacing: -.02em; } .admin-income-day-money small { font-size: 8.5px; } }
+.admin-income-day-money small.is-booked { text-decoration: underline dashed; text-underline-offset: 2px; }
+.admin-shell .admin-income-day:not(.shade-3) .admin-income-day-money small.is-owed { color: var(--accent-ink); }
 .admin-shell .admin-income-day.shade-1 { background: var(--sage-bg); border-color: var(--sage-hair); }
 .admin-shell .admin-income-day.shade-2 { background: var(--sage-chip); border-color: var(--sage-line); color: var(--sage-ink); }
 .admin-shell .admin-income-day.shade-3 { background: var(--sage-rail); border-color: var(--sage-rail); color: var(--surface); }
