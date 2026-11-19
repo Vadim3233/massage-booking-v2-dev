@@ -12,7 +12,7 @@ const TRUST_TAGS = ['10+ years in London', 'Level 5 Soft Tissue', 'BTEC & ITEC',
 const GOOGLE_REVIEWS = 'https://share.google/fZ3sjkYZd2BYrC7Eg'
 const ABOUT = 'https://www.vadmassage.com/about/'
 
-// The "Give the gift of calm" card just under the navy band (Vadim's pick, option C; 20261221100000). Hidden until the database says vouchers are on and Vadim has not
+// The "Give the Gift of Wellness" card at the bottom of the navy band (20261221100000; redesigned to Vadim's reference 19 Nov 2026). Hidden until the database says vouchers are on and Vadim has not
 // switched the button off in Gift vouchers; any failure keeps it hidden, so the booking page never waits on it.
 function useGiftButton() {
   const [show, setShow] = useState(false)
@@ -53,19 +53,20 @@ export default function Welcome({ welcome, rules, usual, bookUsual }) {
           </p>
         </div>
       </details>}
+      {/* The gift card section (Vadim's design, 19 Nov 2026): the whole card opens the gift shop. The picture is decoration; the words say it all. */}
+      {gift && <a className="welcome-gift" href="/gift">
+        <img className="welcome-gift-picture" src="/gift-card.webp" alt="" width="720" height="371" decoding="async" />
+        <span className="welcome-gift-text">
+          <strong>Give the Gift of Wellness</strong>
+          <span>Treat someone special to a massage in the comfort of their home.</span>
+          <span className="welcome-gift-go">Choose a Gift Card<Icon name="right" size={18} /></span>
+        </span>
+      </a>}
     </div>
     {usual && <button className="usual" onClick={bookUsual}>
       <span className="usual-text"><span className="eyebrow">Book your usual</span><strong>{usualLabel(usual)}</strong></span>
       <span className="usual-go">Choose a time<Icon name="right" size={18} /></span>
     </button>}
-    {gift && <a className="welcome-gift" href="/gift">
-      <span className="welcome-gift-voucher" aria-hidden="true" />
-      <span className="welcome-gift-text">
-        <strong>Give the gift of calm</strong>
-        <span>A massage voucher, emailed or printed. 12 months to use.</span>
-        <span className="welcome-gift-go">Choose a gift<Icon name="right" size={16} /></span>
-      </span>
-    </a>}
     <p className="welcome-note"><Icon name="check" size={20} />{changesNote(rules)}</p>
   </section>
 }
