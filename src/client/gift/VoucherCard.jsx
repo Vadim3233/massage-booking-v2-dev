@@ -30,12 +30,6 @@ const Sprig = ({ className, gold = false }) => <svg aria-hidden="true" className
     fill={gold ? 'none' : (x % 3 ? '#7f9e78' : '#9bb68f')} stroke={gold ? 'url(#v-gold)' : 'none'} strokeWidth="1.4" transform={`rotate(${a} ${x} ${y})`} />)}
 </svg>
 
-// The small gold lotus from the booking page's gift card picture.
-const Lotus = () => <svg aria-hidden="true" className="v-lotus" viewBox="0 0 60 36">
-  <path d="M30 4 C22 12, 22 24, 30 32 C38 24, 38 12, 30 4 Z M30 32 C22 30, 12 24, 6 14 C16 14, 26 20, 30 32 Z M30 32 C38 30, 48 24, 54 14 C44 14, 34 20, 30 32 Z"
-    fill="none" stroke="url(#v-navy-gold)" strokeWidth="2" strokeLinejoin="round" />
-</svg>
-
 // The voucher in one of its six designs. Drawn at 600 × 424 and scaled to fit its box, so it looks the same on a phone, on the page and printed.
 // `voucher`: code, minutes, people, extras (names of the extras paid for), recipient_name, from_name, message, design, expires_at. `qrText`: where the QR code leads.
 export default function VoucherCard({ voucher, qrText }) {
@@ -87,14 +81,11 @@ export default function VoucherCard({ voucher, qrText }) {
         <div className="v-scan"><div className="v-qr"><QrCode text={qrText} /></div><span>Scan to book</span><b className="v-code v-foil">{code}</b></div>
       </>}
       {design === 'navy_gold' && <>
-        <svg aria-hidden="true" className="v-defs" width="0" height="0"><defs><linearGradient id="v-navy-gold" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#b8883a" /><stop offset=".45" stopColor="#f0d68c" /><stop offset="1" stopColor="#a8782a" /></linearGradient></defs></svg>
-        <span className="v-frame" />
-        <span className="v-ribbon" />
-        <Bow fill="url(#v-navy-gold)" stroke="#9c6c22" tail="#c9a052" />
-        <div className="v-text"><Lotus /><p className="v-kicker">{kicker(design, voucher.message)}</p><p className="v-name v-foil">{voucher.recipient_name}</p><p className="v-what">{what}</p>{message && <p className="v-msg">{message}</p>}{from && <p className="v-from">{from}</p>}</div>
+        <img className="v-art" src="/gift-voucher-navy.webp" alt="" width="1366" height="864" />
+        <p className="v-name v-foil">{voucher.recipient_name}</p>
+        <div className="v-text"><p className="v-what">{what}</p>{message && <p className={`v-msg${message.length > 200 ? ' v-msg--longer' : message.length > 90 ? ' v-msg--long' : ''}`}>{message}</p>}{from && <p className="v-from">{from}</p>}</div>
         <p className="v-small">{until} · vadmassage.com<br />Vadim Susarin · Level 5 Soft Tissue Therapist · ISRM 9555</p>
-        <div className="v-scan"><div className="v-qr"><QrCode text={qrText} /></div><span>Scan to book</span><b className="v-code v-foil">{code}</b></div>
+        <div className="v-scan"><div className="v-qr"><QrCode text={qrText} /></div><span>Scan to book</span><b className="v-code">{code}</b></div>
       </>}
       {design === 'any_occasion' && <>
         <span className="v-blob v-blob--a" /><span className="v-blob v-blob--b" />
