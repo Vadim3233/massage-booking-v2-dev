@@ -29,6 +29,12 @@ export function enabledChannels(config) {
 export function composeMessage(row, config) {
   const url = config.appBaseUrl && row.link_path ? `${config.appBaseUrl}${row.link_path}` : ''
   let body = row.body
+  // "{site}" is the app's own address (a gift buyer's page: {site}/gift?t=…). Without one, that line is left out.
+  if (body.includes('{site}')) {
+    body = config.appBaseUrl
+      ? body.replaceAll('{site}', config.appBaseUrl)
+      : body.split('\n').filter(line => !line.includes('{site}')).join('\n').replace(/\n{3,}/g, '\n\n').trim()
+  }
   if (body.includes('{link}')) {
     body = url
       ? body.replaceAll('{link}', url)

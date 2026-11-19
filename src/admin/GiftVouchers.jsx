@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { giftAdminApi, giftCsv, giftGroups, giftHistory, matchesSearch } from './giftApi.js'
+import { giftAdminApi, giftCsv, giftGroups, giftHistory, giftState, matchesSearch } from './giftApi.js'
+import { downloadReceiptPdf } from '../lib/receiptPdf.js'
 import { codeShown, DESIGNS, giftLink, giftWords, londonDate, whatsappHref, whatsappText, whole } from '../client/gift/giftWords.js'
 import { toast } from '../ui/toast.js'
 import GiftShopLink from './GiftShopLink.jsx'
@@ -46,6 +47,19 @@ function EditVoucher({ voucher, busy, act, close }) {
   </form>
 }
 
+// "Refunded, cancel it": how much went back (the price is filled in; 0 for a voucher given free). The code stops working.
+function RefundVoucher({ voucher, busy, act, close }) {
+  const [amount, setAmount] = useState(String(Number(voucher.price_gbp)))
+  const value = Number(amount)
+  const valid = amount.trim() !== '' && Number.isFinite(value) && value >= 0 && value <= Number(voucher.price_gbp)
+  return <form className="admin-gift-edit" onSubmit={event => { event.preventDefault(); if (valid) act(() => giftAdminApi.refunded(voucher.id, value), value > 0 ? `Refund of ${whole(value)} recorded. The code no longer works.` : 'Cancelled. The code no longer works.').then(done => { if (done) close() }) }}>
+    <label className="admin-field">Amount you sent back<input inputMode="decimal" required value={amount} onChange={e => setAmount(e.target.value)} aria-describedby={`refund-hint-${voucher.id}`} />
+      <span className="admin-detail-hint" id={`refund-hint-${voucher.id}`}>Up to {whole(voucher.price_gbp)}. {voucher.buyer_email ? `${voucher.buyer_name || 'The buyer'} is emailed that it is on its way.` : 'There is no buyer email, so nobody is emailed.'} The receipt is stamped Refunded.</span></label>
+    {!valid && amount.trim() !== '' && <p role="alert" className="admin-field-error">Enter an amount from £0 to {whole(voucher.price_gbp)}.</p>}
+    <div className="admin-payment-buttons"><button type="submit" className="btn--primary btn--small" disabled={busy || !valid}>Record refund, cancel voucher</button><button type="button" className="btn--quiet btn--small" onClick={close}>Close</button></div>
+  </form>
+}
+
 const blankForm = { key: '60x1', design: 'gold_foil', to: '', from: '', message: '', buyerName: '', buyerEmail: '', method: 'cash', travel: 'none', areaId: '', price: '' }
 
 function VoucherRow({ voucher, busy, act, openBooking }) {
@@ -60,12 +74,19 @@ function VoucherRow({ voucher, busy, act, openBooking }) {
   async function copy() {
     try { await navigator.clipboard.writeText(link); toast('Link copied') } catch { toast(link) }
   }
+  const state = giftState(voucher)
+  const [fetching, setFetching] = useState(false)
+  async function receipt() {
+    setFetching(true)
+    try { await downloadReceiptPdf(await giftAdminApi.receipt(voucher.id)) } catch (failure) { toast(failure.message === 'font' ? 'Could not make the PDF. Please try again.' : failure.message) } finally { setFetching(false) }
+  }
   return <li className="admin-gift">
-    <p className="admin-gift-title"><strong>{voucher.recipient_name}</strong> · {what} · {whole(voucher.price_gbp)}</p>
+    <p className="admin-gift-title"><strong>{voucher.recipient_name}</strong> · {what} · {whole(voucher.price_gbp)} <span className={`chip chip--${state.tone}`}>{state.label}</span></p>
     <p className="admin-detail-hint">From {voucher.from_name}{voucher.buyer_name && voucher.buyer_name !== voucher.from_name ? ` (bought by ${voucher.buyer_name}${voucher.buyer_email ? `, ${voucher.buyer_email}` : ''})` : voucher.buyer_email ? ` (${voucher.buyer_email})` : ''}. Covers {travel}.</p>
     {voucher.status === 'awaiting_payment' && <p className="admin-detail-hint">Bank transfer reference <strong>{voucher.payment_reference}</strong>{voucher.transfer_declared_at ? '. They say the transfer is made.' : '.'}</p>}
     {voucher.status !== 'awaiting_payment' && <p className="admin-detail-hint">Code <strong>{codeShown(voucher.code)}</strong>{voucher.status === 'ready' && ` · ${voucher.expired ? 'Ended' : 'Valid until'} ${londonDate(voucher.expires_at)}`}{voucher.delivery === 'email' && voucher.status === 'ready' ? ` · ${voucher.recipient_sent_at ? 'Emailed to' : 'To be emailed to'} ${voucher.recipient_email}${voucher.recipient_sent_at ? '' : ` on ${londonDate(voucher.send_at)}`}` : ''}</p>}
     {voucher.refund_to_send && <p className="admin-detail-hint admin-gift-refund" role="status"><strong>Refund to send: {whole(voucher.price_gbp)}</strong> to {voucher.buyer_name || 'the buyer'}, reference {voucher.payment_reference}. {voucher.paid_at ? 'They asked for their money back, so the code no longer works.' : 'They cancelled after saying they had sent the money: send it back if it arrives.'}</p>}
+    {voucher.paid_at && <p className="admin-detail-hint">Paid {whole(voucher.price_gbp)} on {londonDate(voucher.paid_at)}{voucher.receipt_number ? ` · Receipt ${voucher.receipt_number}` : ''}{voucher.refunded_at ? ` · Refunded ${whole(voucher.refund_gbp || 0)} on ${londonDate(voucher.refunded_at)}` : ''}</p>}
     {voucher.booking && <p className="admin-detail-hint">Booked by {voucher.booking.client_name || 'a client'} for {londonDate(`${voucher.booking.date}T12:00:00Z`)}. <button type="button" className="btn--quiet btn--small" onClick={() => openBooking(voucher.booking.id)}>Open booking</button></p>}
     <div className="admin-payment-buttons">
       {voucher.refund_to_send && <>
@@ -83,16 +104,19 @@ function VoucherRow({ voucher, busy, act, openBooking }) {
         <a className="btn btn--tonal btn--small" href={whatsappHref(whatsappText(voucher, origin))} target="_blank" rel="noopener noreferrer">WhatsApp</a>
         <button type="button" className="btn--quiet btn--small" disabled={busy} onClick={() => { if (window.confirm(`Mark the voucher for ${voucher.recipient_name} as used? Do this when it was used without an online booking.`)) act(() => giftAdminApi.markUsed(voucher.id, true), 'Marked used.') }}>Mark used</button>
         <button type="button" className="btn--quiet btn--small" aria-expanded={open === 'time'} onClick={() => setOpen(open === 'time' ? '' : 'time')}>{voucher.expired ? 'Give more time' : 'More time'}</button>
-        <button type="button" className="btn--quiet btn--small" disabled={busy} onClick={() => { if (window.confirm(`Cancel the voucher for ${voucher.recipient_name}? Do this after you have refunded ${voucher.buyer_name || 'the buyer'}. Its code will stop working.`)) act(() => giftAdminApi.cancel(voucher.id), 'Cancelled. The code no longer works.') }}>Refunded, cancel it</button>
+        <button type="button" className="btn--quiet btn--small" aria-expanded={open === 'refund'} onClick={() => setOpen(open === 'refund' ? '' : 'refund')}>Refunded, cancel it</button>
       </>}
+      {voucher.paid_at && <button type="button" className="btn--quiet btn--small" disabled={fetching} onClick={receipt}>{fetching ? 'Making the receipt…' : 'Receipt'}</button>}
+      {voucher.status === 'cancelled' && !voucher.paid_at && !voucher.refund_requested_at && <button type="button" className="btn--quiet btn--small" disabled={busy} onClick={() => { if (window.confirm(`Did ${whole(voucher.price_gbp)} for this cancelled gift arrive after all? It will go into Refunds to send, so you remember to send it back.`)) act(() => giftAdminApi.moneyArrived(voucher.id), 'Added to Refunds to send.') }}>Money arrived after all</button>}
       {voucher.status !== 'cancelled' && <button type="button" className="btn--quiet btn--small" aria-expanded={open === 'edit'} onClick={() => setOpen(open === 'edit' ? '' : 'edit')}>Change details</button>}
       {voucher.status === 'used' && (!voucher.booking_id || voucher.booking?.status === 'cancelled') && <button type="button" className="btn--quiet btn--small" disabled={busy} onClick={() => act(() => giftAdminApi.markUsed(voucher.id, false), 'It can be used again.')}>Not used after all</button>}
     </div>
     {open === 'time' && voucher.status === 'ready' && <MoreTime voucher={voucher} busy={busy} act={act} close={() => setOpen('')} />}
     {open === 'edit' && <EditVoucher voucher={voucher} busy={busy} act={act} close={() => setOpen('')} />}
+    {open === 'refund' && voucher.status === 'ready' && <RefundVoucher voucher={voucher} busy={busy} act={act} close={() => setOpen('')} />}
     <details className="admin-gift-history">
       <summary>History</summary>
-      <ol>{giftHistory(voucher).map((step, index) => <li key={index}><span className="admin-gift-history-day">{step.day}</span> {step.text}</li>)}</ol>
+      <ol>{giftHistory(voucher).map((step, index) => <li key={index}><span className="admin-gift-history-day">{step.day}</span> {step.text}{step.who && <span className="admin-gift-history-who"> · {step.who}</span>}</li>)}</ol>
     </details>
   </li>
 }
@@ -137,6 +161,23 @@ function MakeVoucher({ options, done }) {
   </form>
 }
 
+// The "Christmas gift vouchers" button on the booking page (option A, 19 Nov 2026): shown unless switched off here.
+function BannerSwitch() {
+  const [on, setOn] = useState(null)
+  useEffect(() => {
+    let live = true
+    giftAdminApi.banner().then(value => { if (live) setOn(value !== false) }, () => { if (live) setOn(null) })
+    return () => { live = false }
+  }, [])
+  if (on === null) return null
+  async function change(next) {
+    setOn(next)
+    try { await giftAdminApi.setBanner(next); toast(next ? 'The gift card shows on the booking page.' : 'The gift card is hidden from the booking page.') }
+    catch (failure) { setOn(!next); toast(failure.message) }
+  }
+  return <label className="admin-gift-banner"><input type="checkbox" checked={on} onChange={e => change(e.target.checked)} /> Show the gift card on the booking page</label>
+}
+
 // More › Gift vouchers: the ones waiting for a transfer (mark them paid), the ones ready to use, the used ones, and making one by hand.
 export default function GiftVouchers({ openBooking }) {
   const [list, setList] = useState(null)
@@ -173,7 +214,16 @@ export default function GiftVouchers({ openBooking }) {
     {items.length ? <ul role="list" className="admin-gift-list">{items.map(v => <VoucherRow key={v.id} voucher={v} busy={busy} act={act} openBooking={openBooking} />)}</ul> : <p className="admin-detail-hint">{empty}</p>}</section>
   return <section className="admin-review" aria-labelledby="gifts-title">
     <header className="admin-review-heading"><div><h1 id="gifts-title" tabIndex={-1}>Gift vouchers</h1>
-      <p>Sold in the last 12 months: {groups.soldCount} {groups.soldCount === 1 ? 'voucher' : 'vouchers'}, {whole(groups.soldTotal)}. Clients buy them at the link below.</p></div></header>
+      <p>Every voucher stays here, with its receipt and History. Clients buy them at the link below.</p></div></header>
+    <dl className="admin-gift-sums" aria-label="Gift voucher money">
+      <div className="admin-gift-held"><dt>Held for vouchers not used yet</dt><dd>{whole(groups.heldTotal)}<small>{groups.heldCount} {groups.heldCount === 1 ? 'voucher' : 'vouchers'}</small></dd></div>
+      <div><dt>Sold, last 12 months</dt><dd>{whole(groups.soldTotal)}<small>{groups.soldCount} {groups.soldCount === 1 ? 'voucher' : 'vouchers'}</small></dd></div>
+      <div><dt>Used</dt><dd>{whole(groups.usedTotal)}</dd></div>
+      <div><dt>Refunded</dt><dd>{whole(groups.refundedTotal)}</dd></div>
+      <div><dt>Ended unused</dt><dd>{whole(groups.endedTotal)}</dd></div>
+    </dl>
+    <p className="admin-detail-hint">On Income, a voucher's money counts once: on the day it is used (or on its last day if it ends unused). Selling one does not add to Income.</p>
+    <BannerSwitch />
     <GiftShopLink />
     <div className="admin-gift-find">
       <label className="admin-field">Find a voucher<input type="search" value={search} autoComplete="off" placeholder="Code, name, email or GIFT- reference" onChange={e => setSearch(e.target.value)} /></label>
@@ -187,8 +237,12 @@ export default function GiftVouchers({ openBooking }) {
       {groups.refunds.length > 0 && group('Refunds to send', groups.refunds, '')}
       {group('Waiting for payment', groups.waiting, 'Nothing waiting. When someone buys a voucher, it shows here until you mark it paid.')}
       {group('Ready to use', groups.ready, 'None at the moment.')}
+      {groups.booked.length > 0 && group('Booked', groups.booked, '')}
       {groups.ended.length > 0 && group('Ended unused', groups.ended, '')}
       {group('Used', groups.used, 'None yet.')}
+      {groups.refunded.length > 0 && group('Refunded or cancelled after paying', groups.refunded, '')}
+      {groups.cancelled.length > 0 && <details className="admin-gift-folded"><summary>Cancelled before paying ({groups.cancelled.length})</summary>
+        <ul role="list" className="admin-gift-list">{groups.cancelled.map(v => <VoucherRow key={v.id} voucher={v} busy={busy} act={act} openBooking={openBooking} />)}</ul></details>}
     </>}
     <MakeVoucher options={options} done={() => setAttempt(value => value + 1)} />
   </section>

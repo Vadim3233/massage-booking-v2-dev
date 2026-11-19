@@ -13,6 +13,24 @@ function remembered() {
 
 // More › Income: money actually received, by the date of the appointment (Vadim's change requests 3 and 4). The database works out every figure
 // (admin_income_summary, admin_income_rows, admin_money_owed); this page shows them, moves between periods and saves the accountant's file.
+// Gift vouchers on Income: their money counts once, on the day a voucher is used (or ends unused). What was sold, refunded and is still
+// held is shown here for information and is not added to the total.
+function GiftVoucherFigures({ gifts }) {
+  const row = (label, value, note) => <div><dt>{label}{note && <small>{note}</small>}</dt><dd className="figure">{money(Number(value) || 0)}</dd></div>
+  return <section className="admin-income-gifts" aria-labelledby="income-gifts-title">
+    <h2 id="income-gifts-title" className="admin-income-subhead">Gift vouchers</h2>
+    <dl>
+      {row('Used', gifts.used_gbp, 'In the total')}
+      {Number(gifts.ended_gbp) > 0 && row('Ended unused', gifts.ended_gbp, 'In the total: the money is yours')}
+      {row('Sold', gifts.sold_gbp, `Money in${Number(gifts.sold_count) ? ` · ${gifts.sold_count} ${Number(gifts.sold_count) === 1 ? 'voucher' : 'vouchers'}` : ''}`)}
+      {Number(gifts.kept_gbp) > 0 && row('Kept after a refund', gifts.kept_gbp, 'In the total: the part not sent back')}
+      {Number(gifts.refunded_gbp) > 0 && row('Refunded', gifts.refunded_gbp, 'Sent back')}
+      <div className="is-held"><dt>Held for vouchers not used yet<small>{gifts.held_count} {Number(gifts.held_count) === 1 ? 'voucher' : 'vouchers'}, today</small></dt><dd className="figure">{money(Number(gifts.held_gbp) || 0)}</dd></div>
+    </dl>
+    <p className="admin-detail-hint">A voucher's money counts once, on the day it is used. Selling one does not add to the total, so nothing is counted twice.</p>
+  </section>
+}
+
 export default function Income({ openBooking, openDay, openHours, api = incomeApi }) {
   const [view, setView] = useState(remembered)
   const [anchor, setAnchor] = useState(today)
@@ -67,6 +85,8 @@ export default function Income({ openBooking, openDay, openHours, api = incomeAp
   const highest = summary ? Math.max(...(summary.bars || []).map(bar => Number(bar.total_gbp)), 0) : 0
   const bestDay = summary ? Math.max(...(summary.days || []).map(item => Number(item.received_gbp)), 0) : 0
   const hours = summary?.hours
+  // The Gift vouchers box, shown once any voucher money moved in this period or some is held (20261221100000).
+  const gifts = summary?.gifts && ['sold_gbp', 'used_gbp', 'ended_gbp', 'refunded_gbp', 'held_gbp'].some(key => Number(summary.gifts[key]) > 0) ? summary.gifts : null
   const rates = summary && (kind === 'year' || kind === 'tax_year') ? monthlyRates(summary.bars) : []
   const now = today()
   // Overdue needs the owed list; until it arrives the statement waits rather than show a wrong "Expected".
@@ -102,9 +122,11 @@ export default function Income({ openBooking, openDay, openHours, api = incomeAp
         <dl className="admin-income-facts">
           <div><dt>Bank transfer</dt><dd>{money(Number(summary.bank_gbp))}</dd></div>
           <div><dt>Cash</dt><dd>{money(Number(summary.cash_gbp))}</dd></div>
+          {Number(summary.gift_gbp) > 0 && <div><dt>Gift vouchers</dt><dd>{money(Number(summary.gift_gbp))}</dd></div>}
           <div><dt>Bookings</dt><dd>{summary.bookings}</dd></div>
           <div><dt>Average per booking</dt><dd>{summary.average_gbp === null ? '—' : money(Number(summary.average_gbp))}</dd></div>
         </dl>
+        {gifts && <GiftVoucherFigures gifts={gifts} />}
         {kind === 'month' && summary.days ? <section className="admin-income-calendar" aria-labelledby="income-calendar-title">
           <h2 id="income-calendar-title" className="admin-income-subhead">Day by day</h2>
           <table className="admin-income-cal">
@@ -162,9 +184,11 @@ export default function Income({ openBooking, openDay, openHours, api = incomeAp
         </div>
         {day && <button type="button" className="btn--tonal btn--small" onClick={() => pick(day)}>Show the whole month</button>}
         {shownRows.length ? <ul role="list" className="admin-income-list">
-          {shownRows.map(row => <li key={row.booking_id}><button type="button" onClick={() => openBooking(row.booking_id)}>
+          {shownRows.map(row => <li key={row.booking_id || `gift:${row.gift_voucher_id}`}>{row.booking_id ? <button type="button" onClick={() => openBooking(row.booking_id)}>
             <span><strong>{row.client_name || 'Client'}</strong><small>{rowWhen(row)} · {rowNote(row)}</small></span><span className="figure">{money(Number(row.net_gbp))}</span>
-          </button></li>)}
+          </button> : <div className="admin-income-giftline">
+            <span><strong>{row.client_name || 'Gift voucher'}</strong><small>{rowWhen(row)} · {rowNote(row)} · {row.booking_reference}</small></span><span className="figure">{money(Number(row.net_gbp))}</span>
+          </div>}</li>)}
         </ul> : <p className="admin-detail-hint">{day ? 'No money received for appointments on this day.' : 'No money received for appointments in this period.'}</p>}
         <p className="admin-detail-hint">The file for your accountant lists these bookings: date, reference, client, {methodName('bank_transfer').toLowerCase()} or cash, amount received, refund and net.</p>
       </section>}

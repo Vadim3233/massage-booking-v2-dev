@@ -1097,3 +1097,27 @@
 .activity-timeline .admin-alert-text { display: grid; gap: 1px; min-width: 0; flex: 1 1 0; }
 .activity-timeline .admin-alert-text strong { font-size: 15px; font-weight: 600; color: var(--ink); }
 .activity-timeline .activity-note { flex-basis: 100%; margin: 4px 0 0 45px; font-size: 13.5px; }
+/* Gift vouchers: the money at the top, the booking page switch, who did each thing, the folded cancelled ones (20261221100000). */
+.admin-gift-sums { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0 0 10px; }
+.admin-gift-sums div { padding: 10px 12px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); min-width: 0; }
+.admin-gift-sums dt { font-size: 13px; color: var(--muted); }
+.admin-gift-sums dd { margin: 2px 0 0; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.admin-gift-sums dd small { display: block; font-size: 12px; font-weight: 400; color: var(--muted); }
+.admin-gift-sums .admin-gift-held { grid-column: 1 / -1; background: var(--sand-bg); border-color: var(--sand-line); }
+@media (min-width: 720px) { .admin-gift-sums { grid-template-columns: 2fr repeat(4, minmax(0, 1fr)); } .admin-gift-sums .admin-gift-held { grid-column: auto; } }
+.admin-gift-banner { display: flex; gap: 10px; align-items: center; margin: 4px 0 14px; min-height: 44px; }
+.admin-gift-banner input { width: 20px; height: 20px; }
+.admin-gift-history-who { color: var(--muted); }
+.admin-gift-title .chip { margin-left: 4px; vertical-align: 1px; }
+.admin-gift-folded { margin: 0 0 18px; }
+.admin-gift-folded summary { cursor: pointer; color: var(--muted); min-height: 44px; display: flex; align-items: center; }
+/* Income › Gift vouchers (20261221100000) */
+.admin-income-gifts { margin: 16px 0; padding: 12px 14px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); }
+.admin-income-gifts dl { margin: 0; display: grid; gap: 0; }
+.admin-income-gifts dl div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--hairline); }
+.admin-income-gifts dl div:last-child { border-bottom: 0; }
+.admin-income-gifts dt small { display: block; font-size: 12px; color: var(--muted); }
+.admin-income-gifts dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 600; }
+.admin-income-gifts .is-held dt, .admin-income-gifts .is-held dd { color: var(--sand-ink); }
+.admin-income-giftline { display: flex; justify-content: space-between; gap: 12px; width: 100%; padding: 10px 12px; }
+.admin-income-giftline small { display: block; color: var(--muted); }

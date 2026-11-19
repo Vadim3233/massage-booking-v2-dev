@@ -61,6 +61,11 @@ const EVENTS = {
   'gift.buyer_cancelled': () => ['Cancelled a gift voucher', 'gift'],
   'gift.cancelled': () => ['Gift voucher cancelled', 'gift'],
   'gift.refund_sent': () => ['Gift voucher refund sent', 'gift'],
+  'gift.marked_used': () => ['Gift voucher marked used', 'gift'],
+  'gift.not_used': () => ['Gift voucher not used after all', 'gift'],
+  'gift.extended': () => ['Gift voucher extended', 'gift'],
+  'gift.changed': () => ['Gift voucher details changed', 'gift'],
+  'gift.money_arrived': () => ['Gift voucher money arrived after the cancel', 'gift'],
   'status.changed': row => [`${row.payload?.entity === 'payment' ? 'Payment' : 'Booking'}: ${label(row.payload?.to_status)}`, 'booking'],
 }
 const plainName = type => {

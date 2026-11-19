@@ -21,6 +21,10 @@ export function createGiftApi(client) {
     // Cancel before paying, or ask for the money back within 14 days while unused (20261217100000).
     cancel: token => unwrap(client.rpc('gift_buyer_cancel', { p_token: token })),
     voucher: code => unwrap(client.rpc('get_gift_voucher', { p_code: code })),
+    // The buyer's receipt (20261221100000), from their own page's private key.
+    receipt: token => unwrap(client.rpc('get_gift_receipt', { p_token: token })),
+    // Whether the booking page shows its "Give the gift of calm" card.
+    banner: () => unwrap(client.rpc('get_gift_banner')),
   }
 }
 
