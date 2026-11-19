@@ -40,8 +40,8 @@ describe('gift words', () => {
     expect(travelWords({ travel_choice: 'none' })).toBe('')
   })
   it('puts Navy and gold first, then Christmas in November and December, and Christmas last the rest of the year', () => {
-    expect(designsInOrder(new Date('2026-11-20')).map(d => d.id)).toEqual(['navy_gold', 'christmas_night', 'wrapped_present', 'gold_foil', 'black_gold', 'any_occasion'])
-    expect(designsInOrder(new Date('2027-03-01')).map(d => d.id)).toEqual(['navy_gold', 'any_occasion', 'christmas_night', 'wrapped_present', 'gold_foil', 'black_gold'])
+    expect(designsInOrder(new Date('2026-11-20')).map(d => d.id)).toEqual(['navy_gold', 'christmas_night', 'wrapped_present', 'gold_foil', 'black_gold', 'any_occasion', 'birthday_navy', 'birthday_pink', 'for_him', 'anniversary', 'new_baby'])
+    expect(designsInOrder(new Date('2027-03-01')).map(d => d.id)).toEqual(['navy_gold', 'any_occasion', 'birthday_navy', 'birthday_pink', 'for_him', 'anniversary', 'new_baby', 'black_gold', 'christmas_night', 'wrapped_present', 'gold_foil'])
     expect(kicker('navy_gold', 'Merry Christmas')).toBe('A gift of wellness for')
     expect(occasionsInOrder(new Date('2026-12-01'))[0].name).toBe('Christmas')
     expect(occasionsInOrder(new Date('2027-05-01'))[0].name).toBe('For Mum')

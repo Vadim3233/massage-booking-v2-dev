@@ -1,8 +1,9 @@
 // Gift vouchers (Vadim, 14 Nov 2026; ADR-101). The database keeps the prices, the codes and what a voucher pays
 // (20261214100000_gift_vouchers.sql); this file is only the words and choices the gift pages show.
 
-// The six designs, as the database names them. "Navy and gold" (the booking page's "Give the Gift of Wellness" card, 19 Nov 2026) always comes
-// first, then the Christmas ones in November and December, "Any occasion" first among the rest the rest of the year.
+// The eleven designs, as the database names them; each is one of Vadim's own pictures (giftArt.js, 19 Nov 2026). "Navy and gold" (the booking
+// page's "Give the Gift of Wellness" card) always comes first, then the Christmas ones in November and December; the rest of the year
+// "Any occasion" and the occasion designs come next and the Christmas ones last.
 export const DESIGNS = [
   { id: 'navy_gold', name: 'Navy and gold', christmas: false },
   { id: 'christmas_night', name: 'Christmas night', christmas: true },
@@ -10,11 +11,16 @@ export const DESIGNS = [
   { id: 'gold_foil', name: 'Gold foil', christmas: true },
   { id: 'black_gold', name: 'Black and gold', christmas: false },
   { id: 'any_occasion', name: 'Any occasion', christmas: false },
+  { id: 'birthday_navy', name: 'Birthday balloons', christmas: false },
+  { id: 'birthday_pink', name: 'Birthday cake', christmas: false },
+  { id: 'for_him', name: 'For him', christmas: false },
+  { id: 'anniversary', name: 'Anniversary', christmas: false },
+  { id: 'new_baby', name: 'New baby', christmas: false },
 ]
 export const isChristmasTime = (date = new Date()) => date.getMonth() >= 10
 export function designsInOrder(date = new Date()) {
   if (isChristmasTime(date)) return DESIGNS
-  const first = ['navy_gold', 'any_occasion']
+  const first = ['navy_gold', 'any_occasion', 'birthday_navy', 'birthday_pink', 'for_him', 'anniversary', 'new_baby', 'black_gold']
   return [...first.map(id => DESIGNS.find(design => design.id === id)), ...DESIGNS.filter(design => !first.includes(design.id))]
 }
 export const designName = id => DESIGNS.find(design => design.id === id)?.name || DESIGNS[0].name
