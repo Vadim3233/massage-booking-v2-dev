@@ -40,7 +40,7 @@ export default function VoucherCard({ voucher, qrText }) {
   const code = voucher.code ? codeShown(voucher.code) : 'XXXX-XXXX'
   const lineHeight = 1.22
   const scale = messageScale(`${message} ${from || ''}`)
-  const book = 'Book at book.vadmassage.com'
+  const book = 'Book at booking.vadmassage.com'
   let top
   if (art.occasion) {
     const nameLine = `For ${voucher.recipient_name || ''}${from ? `, ${from.replace(/^From/, 'from')}` : ''}`
