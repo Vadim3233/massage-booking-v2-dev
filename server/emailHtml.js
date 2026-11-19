@@ -16,6 +16,7 @@ export const EMAIL_COLOURS = {
 }
 export const EMAIL_TAGLINE = 'Personal treatments, thoughtfully arranged.'
 export const BUTTON_LABEL = 'See or change your booking'
+export const GIFT_BUTTON_LABEL = 'Open the gift voucher'
 
 const C = EMAIL_COLOURS
 const SERIF = "Georgia, 'Times New Roman', serif"
@@ -55,13 +56,17 @@ function inline(line) {
 }
 const paragraph = (lines, style) => `<p style="margin:0 0 16px;${style}">${lines.map(inline).join('<br>')}</p>`
 
+// A gift voucher's link (/gift/<code>) is not a booking, so its button says what it opens.
+const buttonLabel = (url) => (/^https?:\/\/[^/]+\/gift\//i.test(url) ? GIFT_BUTTON_LABEL : BUTTON_LABEL)
+
 function button(url) {
   return `<table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin:8px 0 24px"><tr><td bgcolor="${C.primary}" style="background:${C.primary};border-radius:999px">`
-    + `<a href="${escapeHtml(url)}" style="display:inline-block;padding:14px 28px;font:600 16px/1.2 ${SANS};color:${C.onPrimary};text-decoration:none;border-radius:999px">${BUTTON_LABEL}</a></td></tr></table>`
+    + `<a href="${escapeHtml(url)}" style="display:inline-block;padding:14px 28px;font:600 16px/1.2 ${SANS};color:${C.onPrimary};text-decoration:none;border-radius:999px">${buttonLabel(url)}</a></td></tr></table>`
 }
 
-// The line that holds the link ("See or change your booking: {link}"). A "{link}" typed into the middle of anything else is just text.
-const isLinkLine = (line) => /:\s*\{link\}\s*$/.test(line)
+// The line that holds the link ("See or change your booking: {link}", or a "{link}" on a line of its own under "Open it here:", as the gift
+// voucher emails have it). A "{link}" typed into the middle of anything else is just text.
+const isLinkLine = (line) => /:\s*\{link\}\s*$/.test(line) || /^\s*\{link\}\s*$/.test(line)
 
 // The body is the plain text with a "{link}" where the booking's private link goes: blocks are split at blank lines, lines inside a block are kept
 // as lines, a "Reference:" line is set small and quiet, and the line that holds the link becomes the button (or nothing, when there is no link).
