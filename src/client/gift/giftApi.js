@@ -23,7 +23,7 @@ export function createGiftApi(client) {
     voucher: code => unwrap(client.rpc('get_gift_voucher', { p_code: code })),
     // The buyer's receipt (20261221100000), from their own page's private key.
     receipt: token => unwrap(client.rpc('get_gift_receipt', { p_token: token })),
-    // Whether the booking page shows its "Give the gift of calm" card.
+    // Whether the booking page shows its "Give the Gift of Wellness" card.
     banner: () => unwrap(client.rpc('get_gift_banner')),
   }
 }
