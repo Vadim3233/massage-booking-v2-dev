@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import Icon from '../../../ui/icons.jsx'
 import { supabase } from '../../../lib/supabase.js'
-import { giftButtonWords } from '../../gift/giftWords.js'
 import { changesNote, DEFAULT_WELCOME, paragraphs } from '../../welcome.js'
 import { usualLabel } from '../usualBooking.js'
 
@@ -13,7 +12,7 @@ const TRUST_TAGS = ['10+ years in London', 'Level 5 Soft Tissue', 'BTEC & ITEC',
 const GOOGLE_REVIEWS = 'https://share.google/fZ3sjkYZd2BYrC7Eg'
 const ABOUT = 'https://www.vadmassage.com/about/'
 
-// The gold "gift vouchers" button in the navy band (20261221100000). Hidden until the database says vouchers are on and Vadim has not
+// The "Give the gift of calm" card just under the navy band (Vadim's pick, option C; 20261221100000). Hidden until the database says vouchers are on and Vadim has not
 // switched the button off in Gift vouchers; any failure keeps it hidden, so the booking page never waits on it.
 function useGiftButton() {
   const [show, setShow] = useState(false)
@@ -54,12 +53,19 @@ export default function Welcome({ welcome, rules, usual, bookUsual }) {
           </p>
         </div>
       </details>}
-      {gift && <a className="welcome-gift" href="/gift"><Icon name="sparkle" size={16} />{giftButtonWords()}<Icon name="right" size={16} /></a>}
     </div>
     {usual && <button className="usual" onClick={bookUsual}>
       <span className="usual-text"><span className="eyebrow">Book your usual</span><strong>{usualLabel(usual)}</strong></span>
       <span className="usual-go">Choose a time<Icon name="right" size={18} /></span>
     </button>}
+    {gift && <a className="welcome-gift" href="/gift">
+      <span className="welcome-gift-voucher" aria-hidden="true" />
+      <span className="welcome-gift-text">
+        <strong>Give the gift of calm</strong>
+        <span>A massage voucher, emailed or printed. 12 months to use.</span>
+        <span className="welcome-gift-go">Choose a gift<Icon name="right" size={16} /></span>
+      </span>
+    </a>}
     <p className="welcome-note"><Icon name="check" size={20} />{changesNote(rules)}</p>
   </section>
 }

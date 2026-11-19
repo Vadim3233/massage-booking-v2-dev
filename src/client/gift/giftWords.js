@@ -10,8 +10,6 @@ export const DESIGNS = [
   { id: 'any_occasion', name: 'Any occasion', christmas: false },
 ]
 export const isChristmasTime = (date = new Date()) => date.getMonth() >= 10
-// The booking page's gold button (20261221100000).
-export const giftButtonWords = (date = new Date()) => isChristmasTime(date) ? 'Christmas gift vouchers' : 'Give a massage as a gift'
 export function designsInOrder(date = new Date()) {
   if (isChristmasTime(date)) return DESIGNS
   return [...DESIGNS.filter(design => design.id === 'any_occasion'), ...DESIGNS.filter(design => design.id !== 'any_occasion')]

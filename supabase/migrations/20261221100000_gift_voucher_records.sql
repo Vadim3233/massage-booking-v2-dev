@@ -14,7 +14,7 @@
 --   5. Every voucher stays in More › Gift vouchers (cancelled ones no longer drop out after 30 days); "Refunded, cancel it" records the
 --      amount; "Money arrived after all" for a gift cancelled before the money was seen.
 --   6. Emails to the buyer carry the link back to their own gift page.
---   7. A "Give a gift" button on the booking page, with a switch to hide it.
+--   7. A "Give the gift of calm" card on the booking page, with a switch to hide it.
 --
 -- Safe to run more than once (create or replace, if not exists, on conflict do nothing).
 -- Undo: see ADR-108 in docs/DECISIONS.md.

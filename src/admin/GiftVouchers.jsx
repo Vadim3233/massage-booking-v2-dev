@@ -172,10 +172,10 @@ function BannerSwitch() {
   if (on === null) return null
   async function change(next) {
     setOn(next)
-    try { await giftAdminApi.setBanner(next); toast(next ? 'The gift button shows on the booking page.' : 'The gift button is hidden from the booking page.') }
+    try { await giftAdminApi.setBanner(next); toast(next ? 'The gift card shows on the booking page.' : 'The gift card is hidden from the booking page.') }
     catch (failure) { setOn(!next); toast(failure.message) }
   }
-  return <label className="admin-gift-banner"><input type="checkbox" checked={on} onChange={e => change(e.target.checked)} /> Show the "Give a gift" button at the top of the booking page</label>
+  return <label className="admin-gift-banner"><input type="checkbox" checked={on} onChange={e => change(e.target.checked)} /> Show the gift card on the booking page</label>
 }
 
 // More › Gift vouchers: the ones waiting for a transfer (mark them paid), the ones ready to use, the used ones, and making one by hand.
