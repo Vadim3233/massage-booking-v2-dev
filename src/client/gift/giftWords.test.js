@@ -39,9 +39,10 @@ describe('gift words', () => {
     expect(travelWords({ travel_choice: 'area', area_name: 'Clapham' })).toBe('Travel to Clapham included')
     expect(travelWords({ travel_choice: 'none' })).toBe('')
   })
-  it('puts Christmas first in November and December, and last the rest of the year', () => {
-    expect(designsInOrder(new Date('2026-11-20'))[0].id).toBe('christmas_night')
-    expect(designsInOrder(new Date('2027-03-01'))[0].id).toBe('any_occasion')
+  it('puts Navy and gold first, then Christmas in November and December, and Christmas last the rest of the year', () => {
+    expect(designsInOrder(new Date('2026-11-20')).map(d => d.id)).toEqual(['navy_gold', 'christmas_night', 'wrapped_present', 'gold_foil', 'black_gold', 'any_occasion'])
+    expect(designsInOrder(new Date('2027-03-01')).map(d => d.id)).toEqual(['navy_gold', 'any_occasion', 'christmas_night', 'wrapped_present', 'gold_foil', 'black_gold'])
+    expect(kicker('navy_gold', 'Merry Christmas')).toBe('A gift of wellness for')
     expect(occasionsInOrder(new Date('2026-12-01'))[0].name).toBe('Christmas')
     expect(occasionsInOrder(new Date('2027-05-01'))[0].name).toBe('For Mum')
   })

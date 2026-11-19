@@ -1,8 +1,10 @@
 // Gift vouchers (Vadim, 14 Nov 2026; ADR-101). The database keeps the prices, the codes and what a voucher pays
 // (20261214100000_gift_vouchers.sql); this file is only the words and choices the gift pages show.
 
-// The five designs, as the database names them. The Christmas ones come first in November and December, "Any occasion" first the rest of the year.
+// The six designs, as the database names them. "Navy and gold" (the booking page's "Give the Gift of Wellness" card, 19 Nov 2026) always comes
+// first, then the Christmas ones in November and December, "Any occasion" first among the rest the rest of the year.
 export const DESIGNS = [
+  { id: 'navy_gold', name: 'Navy and gold', christmas: false },
   { id: 'christmas_night', name: 'Christmas night', christmas: true },
   { id: 'wrapped_present', name: 'Wrapped present', christmas: true },
   { id: 'gold_foil', name: 'Gold foil', christmas: true },
@@ -12,7 +14,8 @@ export const DESIGNS = [
 export const isChristmasTime = (date = new Date()) => date.getMonth() >= 10
 export function designsInOrder(date = new Date()) {
   if (isChristmasTime(date)) return DESIGNS
-  return [...DESIGNS.filter(design => design.id === 'any_occasion'), ...DESIGNS.filter(design => design.id !== 'any_occasion')]
+  const first = ['navy_gold', 'any_occasion']
+  return [...first.map(id => DESIGNS.find(design => design.id === id)), ...DESIGNS.filter(design => !first.includes(design.id))]
 }
 export const designName = id => DESIGNS.find(design => design.id === id)?.name || DESIGNS[0].name
 
@@ -74,6 +77,7 @@ export function kicker(design, message = '') {
   const christmasWords = /christmas|xmas|new year/i.test(message)
   if (design === 'gold_foil' || design === 'black_gold') return 'A special gift for'
   if (design === 'wrapped_present') return 'To'
+  if (design === 'navy_gold') return 'A gift of wellness for'
   return christmasDesign && christmasWords ? 'A Christmas gift for' : 'A little gift of calm for'
 }
 

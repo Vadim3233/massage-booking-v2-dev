@@ -119,3 +119,21 @@
 .voucher--any_occasion .v-scan { justify-content: center; color: var(--gift-5a5160); }
 .voucher--any_occasion .v-qr { width: calc(106 * var(--u)); height: calc(106 * var(--u)); border: calc(2 * var(--u)) solid var(--gift-f2c6b4); }
 .voucher--any_occasion .v-code { font-size: calc(15 * var(--u)); color: var(--gift-b4593f); }
+
+/* F · Navy and gold (the booking page's "Give the Gift of Wellness" card): navy, a gold ribbon and bow down the left, a gold lotus, ivory words. */
+.voucher--navy_gold { background: radial-gradient(circle at 70% 20%, var(--gift-navy-light), var(--gift-navy) 60%, var(--gift-navy-deep)); color: var(--gift-fbf3e4); }
+.voucher--navy_gold .v-defs { position: absolute; }
+.voucher--navy_gold .v-frame { inset: calc(12 * var(--u)); border: calc(1.5 * var(--u)) solid var(--gift-c9a052); }
+.voucher--navy_gold .v-ribbon { background: linear-gradient(90deg, var(--gift-a8782a), var(--gift-f0d68c) 45%, var(--gift-b8883a)); box-shadow: 0 0 calc(10 * var(--u)) var(--gift-0-0-0-35); }
+.voucher--navy_gold .v-ribbon { top: 0; bottom: 0; left: calc(78 * var(--u)); width: calc(24 * var(--u)); }
+.voucher--navy_gold .v-bow { left: calc(30 * var(--u)); top: calc(66 * var(--u)); width: calc(120 * var(--u)); filter: drop-shadow(0 calc(4 * var(--u)) calc(6 * var(--u)) var(--gift-0-0-0-35)); }
+.voucher--navy_gold .v-lotus { width: calc(44 * var(--u)); height: auto; margin-bottom: calc(2 * var(--u)); }
+.voucher--navy_gold .v-text { left: calc(172 * var(--u)); top: calc(40 * var(--u)); width: calc(250 * var(--u)); gap: calc(6 * var(--u)); }
+.voucher--navy_gold .v-kicker { font-size: calc(10.5 * var(--u)); color: var(--gift-e6c47a); letter-spacing: .3em; }
+.voucher--navy_gold .v-name { font-size: calc(52 * var(--u)); padding-bottom: calc(4 * var(--u)); }
+.voucher--navy_gold .v-what { font-family: 'Playfair Display', Georgia, serif; font-size: calc(17 * var(--u)); color: var(--gift-f3ead6); }
+.voucher--navy_gold .v-msg { font-size: calc(14 * var(--u)); color: var(--gift-f0dfb8); }
+.voucher--navy_gold .v-small { left: calc(172 * var(--u)); bottom: calc(30 * var(--u)); color: var(--gift-251-243-228-75); }
+.voucher--navy_gold .v-scan { right: calc(36 * var(--u)); top: calc(110 * var(--u)); width: calc(132 * var(--u)); color: var(--gift-f0dfb8); }
+.voucher--navy_gold .v-qr { width: calc(110 * var(--u)); height: calc(110 * var(--u)); background: var(--gift-fbf3e4); }
+.voucher--navy_gold .v-code { font-size: calc(16 * var(--u)); }
