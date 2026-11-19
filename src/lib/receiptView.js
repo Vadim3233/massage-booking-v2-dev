@@ -84,7 +84,9 @@ export function receiptView(receipt) {
   const credentials = b.practitioner_name ? {
     name: b.practitioner_name, title: b.practitioner_title || '', association: b.association || '', number: b.membership_number || '',
   } : null
-  const gift = s.gift ? { covered: money(s.gift.covered), ending: s.gift.code_end || '', yours: money(s.payment?.amount ?? 0) } : null
+  // The voucher's part is what the client did not pay, so it always adds up even after the booking was edited or given extra time.
+  const paidByYou = Number(s.payment?.amount ?? 0)
+  const gift = s.gift ? { covered: money(Math.max(Number(s.total) - paidByYou, 0)), ending: s.gift.code_end || '', yours: money(paidByYou) } : null
   return {
     kind: 'treatment',
     title: 'Payment Receipt',

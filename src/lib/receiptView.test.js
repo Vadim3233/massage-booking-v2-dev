@@ -120,4 +120,9 @@ describe('gift voucher receipts (20261221100000)', () => {
     expect(view.gift).toEqual({ covered: '£100.00', ending: 'QX9P', yours: '£0.00' })
     expect(view.method).toBe('Gift voucher')
   })
+  it('after the booking was made cheaper than the voucher, the voucher part is what the client did not pay', () => {
+    const edited = giftSession()
+    edited.snapshot = { ...edited.snapshot, total: 90, gift: { covered: 125, code_end: 'QX9P' } }
+    expect(receiptView(edited).gift).toEqual({ covered: '£90.00', ending: 'QX9P', yours: '£0.00' })
+  })
 })

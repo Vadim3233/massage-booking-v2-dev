@@ -147,16 +147,16 @@ select ok((select words like '%for: Mum → Mother%' from public.gift_voucher_hi
 update public.gift_vouchers set expires_at = public.gift_end_of_day(clock_timestamp() - interval '2 days') where id = (select id from v1);
 select is((select (date, booking_status) from public.income_lines(pg_temp.day(-10), pg_temp.day(0)) where gift_voucher_id = (select id from v1)), (pg_temp.day(-2), 'gift_ended'::text), 'Income: ended unused on its last day');
 
--- 6. Refunded by Vadim (part of it): recorded, emailed, receipt stamped, never counted.
+-- 6. Refunded by Vadim (part of it): recorded, emailed, receipt stamped; the part kept counts on the day of the refund.
 create temp table v2 as select pg_temp.voucher('none', 'rec2@rec.example.test') as id;
 select throws_ok(format($$ select pg_temp.adm($q$public.admin_gift_refunded(%L, 95)$q$) $$, (select id from v2)), '22023', null, 'not more than was paid');
 select lives_ok(format($$ select pg_temp.adm($q$public.admin_gift_refunded(%L, 50)$q$) $$, (select id from v2)), 'refunded £50');
 select is((select (status, refund_gbp) from public.gift_vouchers where id = (select id from v2)), ('cancelled'::text, 50.00::numeric), 'cancelled with £50 refunded');
 select is(pg_temp.adm(format('public.admin_gift_receipt(%L)', (select id from v2)))#>>'{standing,status}', 'refunded', 'receipt stands as refunded');
-select is((select words from public.gift_voucher_history where voucher_id = (select id from v2) and kind = 'refunded'), 'Refund sent: £50.00', 'History: refund sent £50');
+select is((select words from public.gift_voucher_history where voucher_id = (select id from v2) and kind = 'refunded'), 'Refund sent: £50.00 (£40.00 kept)', 'History: refund sent £50, £40 kept');
 select ok((select d.body like '%£50%' from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id where e.aggregate_id = (select id from v2) and e.event_type = 'gift.refund_sent' and d.audience = 'client'), 'buyer emailed the amount');
 select ok((pg_temp.adm($q$public.admin_income_summary('month', '$q$ || pg_temp.day(0) || $q$')$q$)#>>'{gifts,refunded_gbp}')::numeric >= 50, 'Income: refunded figure');
-select is((select count(*)::integer from public.income_lines(pg_temp.day(-400), pg_temp.day(400)) where gift_voucher_id = (select id from v2)), 0, 'a refunded voucher never counts');
+select is((select (booking_status, net_gbp) from public.income_lines(pg_temp.day(-400), pg_temp.day(400)) where gift_voucher_id = (select id from v2)), ('gift_kept'::text, 40.00::numeric), 'Income: only the £40 kept counts');
 
 -- 7. Money arrived after the buyer cancelled before paying: it becomes a refund to send.
 create temp table v3 as select (public.buy_gift_voucher(60, 1, 'none', null, 'gold_foil', 'Dad', 'Ben', null, 'self', null, null, 'Ben Buyer', 'rec3@rec.example.test', null, p_terms := true)->>'token')::uuid as token;
@@ -170,6 +170,66 @@ select ok((select not (v ? 'buyer_token') from jsonb_array_elements(pg_temp.adm(
 update public.gift_vouchers set updated_at = clock_timestamp() - interval '90 days' where buyer_token = (select token from v3);
 select ok((select jsonb_array_length(v->'history') >= 2 from jsonb_array_elements(pg_temp.adm('public.admin_gift_vouchers()')) v
   where v->>'payment_reference' = (select payment_reference from public.gift_vouchers where buyer_token = (select token from v3))), 'a cancelled voucher stays, with its History');
+
+-- 10. Fixes from the fresh audit.
+-- Edit booking on a voucher booking made cheaper than the voucher (90 → 60 minutes) still works, and its receipt adds up.
+create temp table tk as select (public.buy_gift_voucher(90, 1, 'none', null, 'gold_foil', 'Mum', 'Anna', null, 'self', null, null, 'Anna Buyer', 'rec5@rec.example.test', null, p_terms := true)->>'token')::uuid as t;
+create temp table v5 as select id, code from public.gift_vouchers where buyer_token = (select t from tk);
+grant select on v5 to authenticated;
+select lives_ok(format($$ select pg_temp.adm($q$public.admin_mark_gift_paid(%L)$q$) $$, (select id from v5)), '90-minute voucher paid');
+select pg_temp.as_user('00000000-0000-0000-0000-00000000f702');
+create temp table b5 as select * from pg_temp.book((select code from v5), '00000000-0000-4000-8000-00000000f732', pg_temp.sessions(90), 5, 600, 'b5');
+reset role;
+set constraints all immediate;
+set constraints all deferred;
+select lives_ok(format($$ select pg_temp.adm($q$public.admin_edit_booking(%L, gen_random_uuid(), %L, %L::jsonb)$q$) $$, (select id from b5), pg_temp.stamp((select id from b5)),
+   (select jsonb_agg(jsonb_build_object('id', s.id, 'service_id', s.service_id, 'duration_minutes', 60)) from public.booking_sessions s where s.booking_id = (select id from b5))), 'Edit booking down to 60 minutes works');
+set constraints all immediate;
+set constraints all deferred;
+select ok(public.receipt_message((select snapshot from public.booking_receipts where booking_id = (select id from b5))) like '%Total: £90.00%Paid with gift voucher (ending ____): £90.00%Paid by you: £0.00%', 'its receipt adds up: £90, all by the voucher');
+select ok(public.receipt_message((select snapshot from public.booking_receipts where booking_id = (select id from b5))) not like '%Paid by bank transfer%', 'no "Paid by bank transfer" when the voucher paid it all');
+
+-- Extra time (cash) on a voucher session with a top-up refreshes the receipt.
+create temp table v6 as select pg_temp.voucher('none', 'rec6@rec.example.test') as id;
+alter table v6 add column code text;
+update v6 set code = (select code from public.gift_vouchers g where g.id = v6.id);
+grant select on v6 to authenticated;
+select pg_temp.as_user('00000000-0000-0000-0000-00000000f702');
+create temp table b6 as select * from pg_temp.book((select code from v6), '00000000-0000-4000-8000-00000000f732', pg_temp.sessions(90), 6, 600, 'b6');
+reset role;
+update public.booking_payments set status = 'paid', paid_at = clock_timestamp() where booking_id = (select id from b6);
+update public.bookings set booking_status = 'confirmed' where id = (select id from b6);
+set constraints all immediate;
+set constraints all deferred;
+update public.bookings set date = pg_temp.day(-1) where id = (select id from b6);
+select lives_ok(format($$ select pg_temp.adm($q$public.admin_extend_booking(%L, gen_random_uuid(), %L, %L, 30, 40, 'cash', false)$q$) $$,
+  (select id from b6), pg_temp.stamp((select id from b6)), (select id from public.booking_sessions where booking_id = (select id from b6) limit 1)), 'extra time, cash');
+set constraints all immediate;
+set constraints all deferred;
+select is((select (snapshot->>'total')::numeric from public.booking_receipts where booking_id = (select id from b6)), 165.00, 'receipt total includes the extra time');
+
+-- "Not used after all" is refused while the booking is still on.
+select throws_ok(format($$ select pg_temp.adm($q$public.admin_mark_gift_used(%L, false)$q$) $$, (select id from v6)), 'PT409', null, 'not while its booking is on');
+
+-- A voucher Vadim made: the buyer can't cancel or refund it from their page.
+create temp table v7 as select (pg_temp.adm($q$public.admin_make_gift_voucher(60, 1, 'none', null, 'gold_foil', 'Friend', 'Vadim', null, 'Kind Client', 'kind@rec.example.test', 'cash', 0)$q$)->>'id')::uuid as id;
+select is((public.get_my_gift_purchase((select buyer_token from public.gift_vouchers where id = (select id from v7))))->>'can_refund', 'false', 'no refund button on a voucher Vadim made');
+select throws_ok(format($$ select public.gift_buyer_cancel(%L) $$, (select buyer_token from public.gift_vouchers where id = (select id from v7))), 'PT409', null, 'and the buyer can''t cancel it');
+
+-- £0 back on a paid voucher: cancelled (not "refund due"), its £90 counted as kept.
+create temp table v8 as select pg_temp.voucher('none', 'rec8@rec.example.test') as id;
+select lives_ok(format($$ select pg_temp.adm($q$public.admin_gift_refunded(%L, 0)$q$) $$, (select id from v8)), 'cancelled, nothing sent back');
+select is(pg_temp.adm(format('public.admin_gift_receipt(%L)', (select id from v8)))#>>'{standing,status}', 'cancelled', 'receipt stands as cancelled');
+select is((select words from public.gift_voucher_history where voucher_id = (select id from v8) and kind = 'refunded'), 'Cancelled by you, nothing sent back', 'History says so');
+select is((select net_gbp from public.income_lines(pg_temp.day(-1), pg_temp.day(1)) where gift_voucher_id = (select id from v8)), 90.00, 'the £90 kept counts');
+
+-- The old Cancel on a paid voucher (app not yet updated) records a full refund.
+create temp table v9 as select pg_temp.voucher('none', 'rec9@rec.example.test') as id;
+select lives_ok(format($$ select pg_temp.adm($q$public.admin_cancel_gift_voucher(%L)$q$) $$, (select id from v9)), 'old cancel on a paid voucher');
+select is((select (status, refund_gbp, refunded_at is not null) from public.gift_vouchers where id = (select id from v9)), ('cancelled'::text, 90.00::numeric, true), 'recorded as a full refund');
+
+-- Income: a voucher session later this month is in the total once, with no extra "to come" figure.
+select ok(not (pg_temp.adm($q$public.admin_income_summary('month', '$q$ || pg_temp.day(0) || $q$')$q$)->'gifts' ? 'to_come_gbp'), 'no separate voucher "to come"');
 
 -- 9. The booking page button and its switch.
 select is(public.get_gift_banner(), true, 'button shown by default');

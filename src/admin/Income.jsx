@@ -23,6 +23,7 @@ function GiftVoucherFigures({ gifts }) {
       {row('Used', gifts.used_gbp, 'In the total')}
       {Number(gifts.ended_gbp) > 0 && row('Ended unused', gifts.ended_gbp, 'In the total: the money is yours')}
       {row('Sold', gifts.sold_gbp, `Money in${Number(gifts.sold_count) ? ` · ${gifts.sold_count} ${Number(gifts.sold_count) === 1 ? 'voucher' : 'vouchers'}` : ''}`)}
+      {Number(gifts.kept_gbp) > 0 && row('Kept after a refund', gifts.kept_gbp, 'In the total: the part not sent back')}
       {Number(gifts.refunded_gbp) > 0 && row('Refunded', gifts.refunded_gbp, 'Sent back')}
       <div className="is-held"><dt>Held for vouchers not used yet<small>{gifts.held_count} {Number(gifts.held_count) === 1 ? 'voucher' : 'vouchers'}, today</small></dt><dd className="figure">{money(Number(gifts.held_gbp) || 0)}</dd></div>
     </dl>
@@ -116,7 +117,6 @@ export default function Income({ openBooking, openDay, openHours, api = incomeAp
           <div className="is-paid"><dt>Paid<small>In the bank or cash in hand</small></dt><dd>{money(statement.paid)}</dd></div>
           {statement.overdue > 0 && <div className="is-overdue"><dt>Overdue<small>Done, not paid yet (or a late fee)</small></dt><dd>{money(statement.overdue)}</dd></div>}
           {statement.upcoming > 0 && <div className="is-upcoming"><dt>Upcoming<small>Booked, not paid yet</small></dt><dd>{money(statement.upcoming)}</dd></div>}
-          {statement.vouchers > 0 && <div className="is-upcoming"><dt>Gift voucher sessions<small>Booked, paid by voucher</small></dt><dd>{money(statement.vouchers)}</dd></div>}
           <div className="is-expected"><dt>{statement.expectedLabel}<small>If everyone pays</small></dt><dd className="figure">{money(statement.expected)}</dd></div>
         </dl>}
         <dl className="admin-income-facts">

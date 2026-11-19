@@ -44,11 +44,9 @@ export function incomeStatement(summary, owedRows) {
   const overdue = Math.round((owedRows || []).filter(row => row.date >= summary.from && row.date <= summary.to)
     .reduce((sum, row) => sum + (Number(row.amount_gbp) || 0), 0) * 100) / 100
   const upcoming = Number(summary.still_to_come_gbp) > 0 ? Number(summary.still_to_come_gbp) : 0
-  // Sessions still to come this period that a gift voucher already paid: their money counts on the day (20261221100000).
-  const vouchers = Number(summary.gifts?.to_come_gbp) > 0 ? Number(summary.gifts.to_come_gbp) : 0
-  if (!(overdue > 0) && !(upcoming > 0) && !(vouchers > 0)) return null
+  if (!(overdue > 0) && !(upcoming > 0)) return null
   const paid = Number(summary.total_gbp) || 0
-  return { paid, overdue, upcoming, ...(vouchers > 0 ? { vouchers } : {}), expected: Math.round((paid + overdue + upcoming + vouchers) * 100) / 100, expectedLabel: EXPECTED_WORDS[summary.kind] }
+  return { paid, overdue, upcoming, expected: Math.round((paid + overdue + upcoming) * 100) / 100, expectedLabel: EXPECTED_WORDS[summary.kind] }
 }
 
 // Each bar's short name: Mon (a week's days), 19 Oct (a month's weeks, by their first day), Jan (a year's months).
@@ -70,7 +68,7 @@ export const methodName = method => METHOD[method] || 'Other'
 // One line of the list: "Mon 19 Oct, 10:00", the client, the amount and how it was paid ("refund £70.00 sent" or "late fee" when so).
 export function rowWhen(row) { return row.start_minutes == null ? dateLabel(row.date) : `${dateLabel(row.date)}, ${time(row.start_minutes)}` }
 // A gift voucher's money (20261221100000): a line of its own when it was used without a booking or ended unused, or part of a booking's line.
-const GIFT_ONLY = { gift_used: 'Gift voucher, used without a booking', gift_ended: 'Gift voucher, ended unused' }
+const GIFT_ONLY = { gift_used: 'Gift voucher, used without a booking', gift_ended: 'Gift voucher, ended unused', gift_kept: 'Gift voucher, cancelled: part kept' }
 export function rowNote(row) {
   if (GIFT_ONLY[row.booking_status]) return GIFT_ONLY[row.booking_status]
   const gift = Number(row.gift_gbp) || 0

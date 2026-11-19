@@ -28,6 +28,9 @@ alter table public.gift_vouchers add constraint gift_vouchers_refund_valid check
 -- A refund already sent before this was the full price.
 update public.gift_vouchers set refund_gbp = price_gbp where refunded_at is not null and refund_gbp is null and paid_at is not null;
 update public.gift_vouchers set refund_gbp = 0 where refunded_at is not null and refund_gbp is null and paid_at is null;
+-- Before this, "Refunded, cancel it" on a paid voucher only cancelled it: those were full refunds (dated when they were cancelled).
+update public.gift_vouchers set refunded_at = updated_at, refund_requested_at = updated_at, refund_gbp = price_gbp
+where status = 'cancelled' and paid_at is not null and refunded_at is null and refund_requested_at is null;
 
 create table if not exists public.gift_voucher_history (
   id uuid primary key default gen_random_uuid(),
@@ -146,7 +149,7 @@ begin
       perform public.gift_history_add(new.id, 'not_used', 'admin', format('Not used after all: can be used until %s', public.gift_london_date(new.expires_at)), '{}'::jsonb, true);
     else
       select bk.booking_reference into b from public.bookings bk where bk.id = old.booking_id;
-      perform public.gift_history_add(new.id, 'back', v_actor,
+      perform public.gift_history_add(new.id, 'back', case when v_actor = 'buyer' then 'client' else v_actor end,
         format('Booking %s cancelled in good time: voucher can be used again, until %s', coalesce(b.booking_reference, ''), public.gift_london_date(new.expires_at)),
         jsonb_build_object('booking_id', old.booking_id));
     end if;
@@ -183,7 +186,10 @@ begin
   end if;
   if new.refunded_at is not null and old.refunded_at is null then
     perform public.gift_history_add(new.id, 'refunded', 'admin',
-      case when coalesce(new.refund_gbp, 0) > 0 then format('Refund sent: %s', public.notification_money(new.refund_gbp))
+      case when coalesce(new.refund_gbp, 0) > 0 and new.refund_gbp < new.price_gbp
+             then format('Refund sent: %s (%s kept)', public.notification_money(new.refund_gbp), public.notification_money(new.price_gbp - new.refund_gbp))
+           when coalesce(new.refund_gbp, 0) > 0 then format('Refund sent: %s', public.notification_money(new.refund_gbp))
+           when new.paid_at is not null then 'Cancelled by you, nothing sent back'
            else 'Cleared: the money never came' end, jsonb_build_object('refund_gbp', coalesce(new.refund_gbp, 0)));
   end if;
   return null;
@@ -226,6 +232,11 @@ begin
   if p_used then
     update public.gift_vouchers g set status = 'used', used_at = clock_timestamp() where g.id = p_voucher_id and g.status = 'ready' returning * into v;
   else
+    -- Only once its booking is cancelled or missed, so one voucher never pays for two bookings.
+    if exists (select 1 from public.gift_vouchers g join public.bookings b on b.id = g.booking_id
+               where g.id = p_voucher_id and b.booking_status not in ('cancelled', 'no_show')) then
+      raise exception 'This voucher''s booking is still on. Cancel the booking first.' using errcode = 'PT409';
+    end if;
     perform set_config('app.gift_not_used', '1', true);
     update public.gift_vouchers g set status = 'ready', used_at = null, booking_id = null,
            expires_at = greatest(g.expires_at, public.gift_end_of_day(clock_timestamp() + interval '30 days'))
@@ -269,7 +280,10 @@ begin
       insert into public.gift_voucher_history(voucher_id, at, kind, actor, words, details) values (g.id, coalesce(g.used_at, g.updated_at), 'marked_used', 'admin', 'Marked used by you', '{"backfilled": true}');
     end if;
     if g.status = 'cancelled' then
-      if g.refund_requested_at is not null then
+      -- Refunded by Vadim himself ("Refunded, cancel it"): asked and sent at the same moment, so only the refund line below.
+      if g.refund_requested_at is not null and g.refund_requested_at is not distinct from g.refunded_at then
+        null;
+      elsif g.refund_requested_at is not null then
         insert into public.gift_voucher_history(voucher_id, at, kind, actor, words, details) values (g.id, g.refund_requested_at, 'refund_asked', 'buyer',
           case when g.paid_at is not null then format('Buyer asked for a refund of %s: code stopped', public.notification_money(g.price_gbp))
                else 'Buyer cancelled after saying the transfer was made: refund owed if the money arrives' end, '{"backfilled": true}');
@@ -363,6 +377,7 @@ returns jsonb language sql stable security definer set search_path = '' as $$
   select jsonb_build_object('number', r.receipt_number, 'issued_at', r.issued_at, 'snapshot', r.snapshot,
     'standing', jsonb_build_object(
       'status', case when g.refunded_at is not null and coalesce(g.refund_gbp, 0) > 0 then 'refunded'
+                     when g.refunded_at is not null then 'cancelled'
                      when g.status = 'cancelled' and g.refund_requested_at is not null then 'refund_due'
                      when g.status = 'cancelled' then 'cancelled' else 'paid' end,
       'refunded_at', g.refunded_at, 'refunded_gbp', g.refund_gbp))
@@ -455,12 +470,14 @@ as $$
        from jsonb_array_elements(p_snapshot->'lines') with ordinality l(value, ordinality)),
     case when p_snapshot ? 'gift' then
       'Total: ' || public.notification_money((p_snapshot->>'total')::numeric) || E'\n'
-      || 'Paid with gift voucher' || coalesce(' (ending ' || (p_snapshot#>>'{gift,code_end}') || ')', '') || ': ' || public.notification_money((p_snapshot#>>'{gift,covered}')::numeric) || E'\n'
+      || 'Paid with gift voucher' || coalesce(' (ending ' || (p_snapshot#>>'{gift,code_end}') || ')', '') || ': ' || public.notification_money(greatest((p_snapshot->>'total')::numeric - coalesce((p_snapshot#>>'{payment,amount}')::numeric, 0), 0)) || E'\n'
       || 'Paid by you: ' || public.notification_money(coalesce((p_snapshot#>>'{payment,amount}')::numeric, 0))
     else 'Total paid: ' || public.notification_money((p_snapshot->>'total')::numeric) end,
+    -- Nothing paid by the client (the voucher paid it all): no "Paid by bank transfer" line.
+    case when p_snapshot ? 'gift' and coalesce((p_snapshot#>>'{payment,amount}')::numeric, 0) = 0 then null else
     'Paid by ' || case p_snapshot#>>'{payment,method}' when 'bank_transfer' then 'bank transfer' when 'cash' then 'cash'
         else replace(coalesce(p_snapshot#>>'{payment,method}', 'payment'), '_', ' ') end
-      || ' on ' || to_char(((p_snapshot#>>'{payment,paid_at}')::timestamptz at time zone 'Europe/London')::date, 'FMDD FMMonth YYYY') || '.',
+      || ' on ' || to_char(((p_snapshot#>>'{payment,paid_at}')::timestamptz at time zone 'Europe/London')::date, 'FMDD FMMonth YYYY') || '.' end,
     case when nullif(p_snapshot#>>'{business,practitioner_name}', '') is not null then
       E'\nPractitioner: ' || concat_ws(', ', p_snapshot#>>'{business,practitioner_name}', nullif(p_snapshot#>>'{business,practitioner_title}', ''))
       || concat_ws(', ', E'\n' || nullif(p_snapshot#>>'{business,association}', ''),
@@ -501,8 +518,9 @@ begin
      or nullif(btrim(v_details->>'membership_number'), '') is null then
     raise exception 'Save your receipt details first' using errcode = 'PT409';
   end if;
-  -- A booking a gift voucher paid for, in part or in full: the client paid the rest (20261221100000).
-  if p.amount_gbp + coalesce(b.gift_covered_gbp, 0) <> b.total_gbp then
+  -- A booking a gift voucher paid for, in part or in full: the client paid the rest (20261221100000). The voucher never pays more than
+  -- the booking: after Edit booking made it cheaper than the voucher (90 → 60 minutes), the voucher pays all of it.
+  if p.amount_gbp + least(coalesce(b.gift_covered_gbp, 0), b.total_gbp) <> b.total_gbp then
     raise exception 'The amount paid does not match the booking, so a receipt cannot be made' using errcode = 'PT409';
   end if;
   select * into c from public.clients x where x.id = b.client_id;
@@ -553,11 +571,41 @@ begin
     'lines', v_lines,
     'total', b.total_gbp,
     'payment', jsonb_build_object('method', p.method, 'paid_at', p.paid_at, 'amount', p.amount_gbp))
-    || case when coalesce(b.gift_covered_gbp, 0) > 0 then jsonb_build_object('gift', jsonb_build_object('covered', b.gift_covered_gbp,
+    || case when coalesce(b.gift_covered_gbp, 0) > 0 then jsonb_build_object('gift', jsonb_build_object('covered', least(b.gift_covered_gbp, b.total_gbp),
          'code_end', (select right(g.code, 4) from public.gift_vouchers g where g.id = b.gift_voucher_id))) else '{}'::jsonb end;
 end;
 $function$;
 
+
+-- Extra time refreshes the receipt only when the payment matches the booking: for a gift session, the voucher's part counts too
+-- (copied from 20261219100000_extend_session.sql; only the amount check changed).
+create or replace function public.extension_refresh_receipt(p_booking_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  b public.bookings%rowtype;
+  p public.booking_payments%rowtype;
+  r public.booking_receipts%rowtype;
+  v_fresh jsonb;
+begin
+  select * into b from public.bookings where id = p_booking_id;
+  select * into p from public.booking_payments where booking_id = p_booking_id;
+  select * into r from public.booking_receipts x where x.booking_id = p_booking_id for update;
+  if r.id is null or b.balance_due_gbp > 0 or p.status is distinct from 'paid'
+     or p.amount_gbp + least(coalesce(b.gift_covered_gbp, 0), b.total_gbp) <> b.total_gbp then return; end if;
+  v_fresh := public.build_receipt_snapshot(b.id);
+  insert into public.booking_receipt_revisions(receipt_id, revision, snapshot, edited_by) values (r.id, r.edit_count + 1, r.snapshot, auth.uid());
+  update public.booking_receipts set snapshot = r.snapshot || jsonb_build_object('appointment', v_fresh->'appointment', 'treatments', v_fresh->'treatments',
+      'lines', v_fresh->'lines', 'total', v_fresh->'total', 'payment', v_fresh->'payment')
+      || case when v_fresh ? 'gift' then jsonb_build_object('gift', v_fresh->'gift') else '{}'::jsonb end,
+    edited_at = clock_timestamp(), edited_by = auth.uid(), edit_count = r.edit_count + 1
+  where id = r.id;
+end;
+$$;
+revoke all on function public.extension_refresh_receipt(uuid) from public, anon, authenticated;
 
 -- Receipts for gift sessions already paid (a £0 one is "paid" the moment it is booked), as Mark paid would have made them.
 do $$
@@ -623,6 +671,13 @@ as $$
     from public.gift_vouchers g
     where g.status = 'ready' and g.paid_at is not null and g.expires_at <= clock_timestamp()
       and public.gift_last_day(g.expires_at) between p_from and p_to
+    union all
+    -- Cancelled with only part (or none) of the money sent back: what was kept counts on the day of the refund.
+    select null::uuid, (g.refunded_at at time zone 'Europe/London')::date, null::integer, g.payment_reference, g.recipient_name, 'gift_voucher', 'gift_kept',
+      g.price_gbp, coalesce(g.refund_gbp, 0), 0::numeric, g.price_gbp - coalesce(g.refund_gbp, 0), g.price_gbp - coalesce(g.refund_gbp, 0), g.id
+    from public.gift_vouchers g
+    where g.status = 'cancelled' and g.paid_at is not null and g.refunded_at is not null and coalesce(g.refund_gbp, 0) < g.price_gbp
+      and (g.refunded_at at time zone 'Europe/London')::date between p_from and p_to
   ) lines
   order by 2, 3 nulls last;
 $$;
@@ -655,13 +710,11 @@ returns jsonb language sql stable security definer set search_path = '' as $$
     'sold_gbp', coalesce((select sum(g.price_gbp) from public.gift_vouchers g where g.paid_at is not null
                  and (g.paid_at at time zone 'Europe/London')::date between p_from and p_to), 0),
     'sold_count', (select count(*) from public.gift_vouchers g where g.paid_at is not null and (g.paid_at at time zone 'Europe/London')::date between p_from and p_to),
-    'used_gbp', coalesce((select sum(l.gift_gbp) from public.income_lines(p_from, p_to) l where l.booking_status is distinct from 'gift_ended'), 0),
+    'used_gbp', coalesce((select sum(l.gift_gbp) from public.income_lines(p_from, p_to) l where l.booking_status is distinct from 'gift_ended' and l.booking_status is distinct from 'gift_kept'), 0),
+    'kept_gbp', coalesce((select sum(l.gift_gbp) from public.income_lines(p_from, p_to) l where l.booking_status = 'gift_kept'), 0),
     'ended_gbp', coalesce((select sum(l.gift_gbp) from public.income_lines(p_from, p_to) l where l.booking_status = 'gift_ended'), 0),
     'refunded_gbp', coalesce((select sum(g.refund_gbp) from public.gift_vouchers g where g.refunded_at is not null
                  and (g.refunded_at at time zone 'Europe/London')::date between p_from and p_to), 0),
-    'to_come_gbp', coalesce((select sum(g.price_gbp) from public.gift_vouchers g join public.bookings b on b.id = g.booking_id
-                 where g.status = 'used' and b.date between greatest(p_from, (clock_timestamp() at time zone 'Europe/London')::date) and p_to
-                   and ((b.date + make_interval(mins => b.start_minutes)) at time zone 'Europe/London') > clock_timestamp()), 0),
     'held_gbp', coalesce((select sum(g.price_gbp) from public.gift_vouchers g left join public.bookings b on b.id = g.booking_id
                  where g.paid_at is not null and (
                    (g.status = 'ready' and g.expires_at > clock_timestamp())
@@ -881,13 +934,84 @@ returns jsonb language sql stable security definer set search_path = '' as $$
     'code', case when g.status in ('ready', 'used') then public.gift_code_shown(g.code) end,
     'bank', case when g.status = 'awaiting_payment' then (select value from public.business_settings where key = 'bank_details') end,
     'refund_until', g.created_at + interval '14 days',
-    'can_refund', g.status = 'ready' and g.created_at + interval '14 days' > clock_timestamp(),
+    'can_refund', g.status = 'ready' and g.created_by is distinct from 'admin' and g.created_at + interval '14 days' > clock_timestamp(),
+    'made_by_vadim', g.created_by = 'admin',
     'refund_requested', g.refund_requested_at is not null,
     'refunded', g.refunded_at is not null,
     'refund_gbp', g.refund_gbp,
     'receipt', g.paid_at is not null)
   from public.gift_vouchers g where g.buyer_token = p_token;
 $$;
+
+-- The buyer's own cancel (from 20261217100000_gift_buyer_cancel.sql): not for a voucher Vadim made himself, whose buyer may have been
+-- emailed the link to their page for the receipt.
+create or replace function public.gift_buyer_cancel(p_token uuid)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare v public.gift_vouchers%rowtype; v_now timestamptz := clock_timestamp(); v_refund boolean;
+begin
+  select * into v from public.gift_vouchers g where g.buyer_token = p_token for update;
+  if not found then raise exception 'That link doesn''t work. Please message Vadim.' using errcode = 'PT404'; end if;
+  if v.status = 'cancelled' then return public.get_my_gift_purchase(p_token); end if;
+  -- A voucher Vadim made himself (paid him in cash, or given free) is changed or refunded by him, not from this page.
+  if v.created_by = 'admin' and v.status <> 'cancelled' then
+    raise exception 'Please message Vadim to change or cancel this voucher.' using errcode = 'PT409';
+  end if;
+  if v.status = 'used' then
+    raise exception 'This voucher has already been used, so it can''t be refunded.' using errcode = 'PT409';
+  end if;
+  if v.status = 'ready' and v.created_at + interval '14 days' <= v_now then
+    raise exception 'Refunds are possible within 14 days of buying, and that time has passed. Please message Vadim if something has gone wrong.' using errcode = 'PT409';
+  end if;
+
+  -- Money may be on its way (they said they sent it) or has arrived (paid): a refund is owed.
+  v_refund := v.status = 'ready' or v.transfer_declared_at is not null;
+  update public.gift_vouchers g set status = 'cancelled', refund_requested_at = case when v_refund then v_now end
+  where g.id = v.id returning * into v;
+
+  if v_refund then
+    perform public.gift_notify(v, 'refund_requested',
+      format('%s asked for a gift voucher refund', v.buyer_name),
+      format('%s, reference %s, for %s.', public.notification_money(v.price_gbp), v.payment_reference, v.recipient_name)
+        || case when v.paid_at is null then ' You had not marked it paid yet: if the money arrives, send it back.' else '' end
+        || ' The code no longer works. Send the money back to the account it came from, then press Refund sent in More › Gift vouchers.',
+      v.buyer_email, 'Your gift voucher is cancelled',
+      format('Hi %s,', split_part(btrim(v.buyer_name), ' ', 1)) || E'\n\n'
+        || format('Your gift voucher for %s is cancelled, as you asked. ', v.recipient_name)
+        || case when v.paid_at is null
+             then format('If your transfer of %s has already left your account, I''ll send it back to the account it came from as soon as it arrives.', public.notification_money(v.price_gbp))
+             else format('I''ll send your %s back to the account it came from within 3 working days, and email you when it''s on its way.', public.notification_money(v.price_gbp)) end,
+      null, 'gift.refund_requested:' || v.id::text);
+  else
+    perform public.gift_notify(v, 'buyer_cancelled',
+      format('%s cancelled a gift voucher before paying', v.buyer_name),
+      format('%s, reference %s, for %s. Nothing to do, unless that money arrives after all.', public.notification_money(v.price_gbp), v.payment_reference, v.recipient_name),
+      null, null, null, null, 'gift.buyer_cancelled:' || v.id::text);
+  end if;
+  return public.get_my_gift_purchase(p_token);
+end; $$;
+
+-- "Cancel" on a paid voucher (the old "Refunded, cancel it", still on screen until the app is updated) records a full refund, so a paid
+-- voucher is never cancelled without saying what happened to its money (from 20261220110000_activity_gift_cancel.sql).
+create or replace function public.admin_cancel_gift_voucher(p_voucher_id uuid)
+returns public.gift_vouchers language plpgsql security definer set search_path = '' as $$
+declare v public.gift_vouchers%rowtype;
+begin
+  perform public.require_booking_admin();
+  select * into v from public.gift_vouchers g where g.id = p_voucher_id;
+  if found and v.status = 'ready' and v.paid_at is not null then
+    return public.admin_gift_refunded(p_voucher_id, v.price_gbp);
+  end if;
+  update public.gift_vouchers g set status = 'cancelled' where g.id = p_voucher_id and g.status in ('awaiting_payment', 'ready') returning * into v;
+  if not found then raise exception 'That voucher has already been used, so it can''t be cancelled.' using errcode = 'PT409'; end if;
+  insert into public.event_outbox(event_type, aggregate_type, aggregate_id, deduplication_key, payload)
+  values ('gift.cancelled', 'gift_voucher', v.id, 'gift.cancelled:' || v.id::text,
+    jsonb_build_object('gift_voucher_id', v.id, 'actor_type', 'admin', 'actor_id', auth.uid(), 'from_status', 'ready'))
+  on conflict (deduplication_key) do nothing;
+  update public.notification_deliveries d set read_at = clock_timestamp()
+  where d.channel = 'in_app' and d.read_at is null
+    and d.event_id in (select e.id from public.event_outbox e where e.aggregate_type = 'gift_voucher' and e.aggregate_id = v.id);
+  return v;
+end; $$;
 
 -- ---------------------------------------------------------------------------------------------
 -- 9. "Give a gift" on the booking page, with a switch (More › Gift vouchers) to hide it. Shown while vouchers are on sale.

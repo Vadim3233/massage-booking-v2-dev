@@ -140,10 +140,12 @@ export default function GiftShop({ client = supabase }) {
       {purchase.status === 'ready' && (purchase.can_refund
         ? <section className="gift-cancel"><h2>Changed your mind?</h2><p>Until {longDay(purchase.refund_until)}, while it hasn't been used, you can cancel the voucher and get your {whole(purchase.amount)} back. The code stops working straight away.</p>
           <button className="btn--quiet" disabled={busy} onClick={() => cancelGift(`Cancel the voucher for ${purchase.recipient_name} and get your ${whole(purchase.amount)} back? The code will stop working straight away.`)}>Cancel and get a refund</button></section>
-        : <p className="fine">Refunds were possible until {longDay(purchase.refund_until)}. If something has gone wrong, please <a href="https://vadmassage.com">message Vadim</a>.</p>)}
+        : purchase.made_by_vadim ? <p className="fine">To change or cancel this voucher, please <a href="https://vadmassage.com">message Vadim</a>.</p>
+          : <p className="fine">Refunds were possible until {longDay(purchase.refund_until)}. If something has gone wrong, please <a href="https://vadmassage.com">message Vadim</a>.</p>)}
     </>)
     if (purchase.status === 'cancelled') return shell(<><h1 tabIndex={-1}>This gift is <em>cancelled</em></h1>
-      <p className="lede">{purchase.refunded ? `Your ${whole(purchase.refund_gbp ?? purchase.amount)} has been sent back to the account it came from.`
+      <p className="lede">{purchase.refunded && Number(purchase.refund_gbp ?? purchase.amount) > 0 ? `Your ${whole(purchase.refund_gbp ?? purchase.amount)} has been sent back to the account it came from.`
+        : purchase.refunded ? 'There is nothing more to do.'
         : purchase.refund_requested ? `Your ${whole(purchase.amount)} will be sent back to the account it came from within 3 working days. I'll email you when it's on its way.`
           : 'Nothing was paid, so there is nothing more to do.'}</p>
       {receiptButton}
