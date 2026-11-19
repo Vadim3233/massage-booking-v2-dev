@@ -37,3 +37,13 @@ describe('client FAQ', () => {
     expect(listWords(['A', 'B'])).toBe('A and B')
   })
 })
+
+describe('the WhatsApp me answer', () => {
+  const rules = { freeHours: 24, graceMinutes: 15 }
+  const all = faq => faq.flatMap(section => section.items)
+  it('shows only while the button is on, linking to the number', () => {
+    expect(all(clientFaq({ rules })).find(item => item.q === 'How do I contact you?')).toBeUndefined()
+    const item = all(clientFaq({ rules, whatsapp: '447700900123' })).find(entry => entry.q === 'How do I contact you?')
+    expect(item.link.href).toBe('https://wa.me/447700900123')
+  })
+})

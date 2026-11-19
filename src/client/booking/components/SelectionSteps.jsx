@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { OUTSIDE_AREA_HELLO, whatsappLink } from '../../whatsapp.js'
 import Icon from '../../../ui/icons.jsx'
 import { AskPanel, NoneSuit } from './WantedTime.jsx'
 import Welcome, { HowItWorks } from './Welcome.jsx'
@@ -33,7 +34,7 @@ function ScrollHint({ target, watch }) {
   return createPortal(<button type="button" className="scroll-hint" onClick={go}>Choose your area<Icon name="down" size={18} className="scroll-hint-arrow" /></button>, document.body)
 }
 
-export function AreaStep({ catalogue, choose, welcome, rules, usual, bookUsual, intro = null }) {
+export function AreaStep({ catalogue, choose, welcome, rules, usual, bookUsual, intro = null, whatsapp = null }) {
   const areasHeading = useRef(null)
   const areaList = useRef(null)
   return <>
@@ -46,7 +47,7 @@ export function AreaStep({ catalogue, choose, welcome, rules, usual, bookUsual, 
     </button>)}</div>
     {!catalogue.areas.length && <p>Online booking areas are being updated.</p>}
     {!intro && <HowItWorks welcome={welcome} />}
-    <p className="fine">I visit selected parts of these areas. Outside my usual route? <a href="https://vadmassage.com">Get in touch</a> and I'll see what I can arrange.</p>
+    <p className="fine">I visit selected parts of these areas. Outside my usual route? {whatsapp ? <a href={whatsappLink(whatsapp, OUTSIDE_AREA_HELLO)} target="_blank" rel="noopener noreferrer">WhatsApp me</a> : <a href="https://vadmassage.com">Get in touch</a>} and I'll see what I can arrange.</p>
   </>
 }
 

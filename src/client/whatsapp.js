@@ -21,6 +21,8 @@ export const WHATSAPP_HELLO = {
   faq: 'Hi Vadim, I have a question.',
 }
 
+export const OUTSIDE_AREA_HELLO = 'Hi Vadim, I live outside your usual areas. Could you come to me? My postcode is '
+
 // Names the appointment (day, time and reference) so Vadim knows straight away which booking the message is about.
 export function appointmentHello(booking) {
   const when = booking?.date && Number.isFinite(booking?.start_minutes) ? ` on ${dateLabel(booking.date)} at ${timeLabel(booking.start_minutes)}` : ''

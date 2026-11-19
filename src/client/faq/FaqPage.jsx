@@ -26,7 +26,7 @@ export default function FaqPage({ client = supabase }) {
     <main className="booking-main">
       <h1 tabIndex={-1}>Questions and <em>answers</em></h1>
       <p className="lede">Everything about booking, paying, changing your appointment and receipts. Can't find your answer? Just ask me.</p>
-      <FaqList sections={clientFaq({ rules, areas })} />
+      <FaqList sections={clientFaq({ rules, areas, whatsapp })} />
       {whatsapp ? <WhatsAppButton number={whatsapp} text={WHATSAPP_HELLO.faq} note="Can't find your answer?" /> : <p className="fine"><a href="https://vadmassage.com">Contact Vadim</a></p>}
     </main>
   </div>

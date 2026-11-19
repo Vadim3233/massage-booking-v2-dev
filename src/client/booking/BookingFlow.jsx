@@ -294,7 +294,7 @@ export default function BookingFlow() {
         {(step === 5 || step === 6) && draft.date && draft.start != null && <p className="trip-pill" aria-label="Your booking">
           <span>{(({ weekday, day, month }) => `${weekday} ${day} ${month}`)(dayParts(draft.date))}</span><span>{timeLabel(draft.start)}</span>{quote && <b>{money(quote.to_pay_gbp ?? quote.total_gbp)}</b>}</p>}
         <fieldset className={`screen enter ${busy ? 'is-busy' : ''}`} key={step}>
-          {step === 0 && <AreaStep welcome={welcome} rules={rules} catalogue={catalogue} usual={usual} bookUsual={bookUsual} intro={offer ? <OfferCard offer={offer} busy={offerState === 'busy'} /> : draft.gift ? <GiftCard gift={draft.gift} remove={bookWithoutGift} /> : null} choose={async (areaId) => { if (areaId === draft.areaId || await store.changeSelection({ areaId })) navigate(1) }} />}
+          {step === 0 && <AreaStep welcome={welcome} whatsapp={whatsapp} rules={rules} catalogue={catalogue} usual={usual} bookUsual={bookUsual} intro={offer ? <OfferCard offer={offer} busy={offerState === 'busy'} /> : draft.gift ? <GiftCard gift={draft.gift} remove={bookWithoutGift} /> : null} choose={async (areaId) => { if (areaId === draft.areaId || await store.changeSelection({ areaId })) navigate(1) }} />}
           {step === 0 && !offer && !draft.gift && <GiftCodeBox />}
           {step === 1 && <TreatmentStep catalogue={catalogue} choose={async (serviceId) => {
             // An offer's length is fixed, so the people-and-length step is skipped.
