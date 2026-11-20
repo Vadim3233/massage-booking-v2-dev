@@ -52,17 +52,14 @@ export function AreaStep({ catalogue, choose, welcome, rules, usual, bookUsual, 
 }
 
 export function TreatmentStep({ catalogue, choose }) {
-  const from = id => {
-    const prices = catalogue.prices.filter((price) => price.service_id === id).map((price) => Number(price.price_gbp))
-    return prices.length ? Math.min(...prices) : null
-  }
+  // No prices on this step (Vadim, 20 Nov 2026): the client picks what would help first; prices appear from the length step on.
   return <><h1 tabIndex={-1}>What would help you <em>most today?</em></h1><p className="lede">Choose the treatment that feels closest to what you need.</p>
     <div className="tiles tiles--treatments">{catalogue.services.map((service) => <button className="tile tile--wide" key={service.id} onClick={() => choose(service.id)}>
       <span className="tile-body">
         <strong className="tile-title tile-title--display">{service.name}</strong>
         <span className="tile-note">{service.short_description || service.long_description}</span>
       </span>
-      <span className="tile-side">{from(service.id) !== null && <span className="tile-from">From <b className="figure">{money(from(service.id))}</b></span>}<Icon name="right" size={20} className="tile-chevron" /></span>
+      <span className="tile-side"><Icon name="right" size={20} className="tile-chevron" /></span>
     </button>)}</div>{!catalogue.services.length && <p>No treatments are currently available. Please contact Vadim.</p>}
   </>
 }

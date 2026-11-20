@@ -69,8 +69,6 @@
 .tile-body { display: grid; gap: 4px; min-width: 0; }
 .tile-title--display { font: 600 22px/1.2 var(--font-display); font-variant-numeric: lining-nums; }
 .tile-side { display: grid; justify-items: end; gap: 6px; flex-shrink: 0; }
-.tile-from { color: var(--muted); font-size: 12px; font-weight: 500; }
-.tile-from b { color: var(--primary); font-size: 17px; }
 .tile-chevron { color: var(--muted); }
 .tiles--durations { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
 .tile--duration { flex-direction: column; justify-content: center; align-items: center; gap: 2px; min-height: 132px; padding: 14px 8px; text-align: center; }
@@ -408,8 +406,6 @@
 .tiles--treatments .tile:hover,
 .tiles--treatments .tile:active { border-color: var(--card); background: var(--card); box-shadow: var(--shadow-2); }
 .tiles--treatments .tile-note,
-.tiles--treatments .tile-from,
-.tiles--treatments .tile-from b,
 .tiles--treatments .tile-chevron { color: var(--on-primary); }
 
 /* Days with free times are sage; the chosen day stays navy. */

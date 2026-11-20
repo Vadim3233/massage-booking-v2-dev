@@ -44,7 +44,7 @@ These are the things that are written for Vadim today. In a general therapist ap
 ## 1. Client booking
 
 ### Online booking flow
-- **What it does:** A client books from a phone in a few steps: choose the area, the treatment, how many people and how long, a day and time, their details and address, then how to pay. The price follows their choices on the screen and is worked out by the database, never by the phone. Back on the phone returns through the steps without losing anything typed.
+- **What it does:** A client books from a phone in a few steps: choose the area, the treatment, how many people and how long, a day and time, their details and address, then how to pay. The price follows their choices on the screen and is worked out by the database, never by the phone. The treatment step shows no prices (just the treatments, so the client picks what would help); prices start on the people and length step. Back on the phone returns through the steps without losing anything typed.
 - **Why:** The core of the business: clients book themselves without messaging Vadim.
 - **Built in:** the foundation work before numbered PRs (migrations `20260923…` to `20260930…`: catalogue, scheduling, bookings and holds, quotes and finalising), then PR #8 and the design overhaul PR #11 (ADR-014, ADR-017, ADR-032).
 - **For a general app:** the steps (area first suits a mobile therapist; a clinic would skip it), treatments, lengths and extras.
