@@ -10,6 +10,7 @@ import { downloadReceiptPdf } from '../../lib/receiptPdf.js'
 import '../booking/booking.css'
 import './voucher.css'
 import './gift.css'
+import { EMAIL_SENDER } from '../emailSender.js'
 
 const fallbackBank = paymentConfig(import.meta.env)
 const emailOk = value => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value.trim())
@@ -132,7 +133,7 @@ export default function GiftShop({ client = supabase }) {
     const bank = chooseBank(bankFromSettings(purchase.bank), fallbackBank)
     if (purchase.status === 'ready' || purchase.status === 'used') return shell(<>
       <h1 tabIndex={-1}>Your gift is <em>ready</em></h1>
-      <p className="lede">Thank you, the payment has arrived. {purchase.delivery === 'email' && purchase.status === 'ready' ? `It will be emailed to ${purchase.recipient_email} on the day you chose. You can also open it yourself:` : 'Open it to print it, save it or send it on WhatsApp.'}</p>
+      <p className="lede">Thank you, the payment has arrived. {purchase.delivery === 'email' && purchase.status === 'ready' ? `It will be emailed to ${purchase.recipient_email} on the day you chose. If they don't see it, ask them to look in Promotions or Junk. You can also open it yourself:` : 'Open it to print it, save it or send it on WhatsApp.'}</p>
       <a className="btn btn--primary btn--lg btn--block" href={`/gift/${purchase.code}`}>Open the voucher</a>
       <p className="fine">Code: <strong>{purchase.code}</strong></p>
       {receiptButton}
@@ -232,6 +233,7 @@ export default function GiftShop({ client = supabase }) {
       {delivery === 'email' && <div className="gift-names">
         <label className="field">Their email<input id="gift-recipientEmail" type="email" inputMode="email" autoComplete="off" value={recipientEmail} aria-invalid={Boolean(tried && problems.recipientEmail) || undefined} onChange={e => setRecipientEmail(e.target.value)} />{show('recipientEmail')}</label>
         <label className="field">On which day?<input id="gift-sendDay" type="date" min={londonToday()} value={sendDay} aria-invalid={Boolean(tried && problems.sendDay) || undefined} onChange={e => setSendDay(e.target.value)} /><span className="field-hint">It arrives at 8 in the morning, once the payment has arrived.</span>{show('sendDay')}</label>
+        <p className="gift-hint gift-inbox-tip">It comes from Vadim ({EMAIL_SENDER}). Some inboxes put gifts in Promotions or Junk, so if they don't see it, tell them to look there.</p>
       </div>}
     </section>
 
