@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { createGiftApi } from './giftApi.js'
 import { bookingLink, codeShown, giftWords, londonDate, whatsappHref, whatsappText, whole } from './giftWords.js'
@@ -12,7 +12,7 @@ import './gift.css'
 const Snow = () => <div className="gift-snow gift-snow--full" aria-hidden="true" />
 
 // /gift/<code>: the voucher. It opens like a present (an envelope to open, then "Surprise!"), then shows the voucher to print, save or
-// send on WhatsApp, with "Choose my day" to book with it.
+// send on WhatsApp, with "Book my massage" (above and under it, and the voucher itself is tappable) to book with it, and Copy code.
 export default function GiftOpen({ code, client = supabase }) {
   const api = useMemo(() => createGiftApi(client), [client])
   const [voucher, setVoucher] = useState(null)
@@ -21,6 +21,8 @@ export default function GiftOpen({ code, client = supabase }) {
   const [stage, setStage] = useState('envelope')
   const [opened, setOpened] = useState(false)
   const [areas, setAreas] = useState([])
+  const [copied, setCopied] = useState('')
+  const codeRef = useRef(null)
   useEffect(() => { document.title = 'Your gift · VadMassage' }, [])
   useEffect(() => {
     let live = true
@@ -59,6 +61,19 @@ export default function GiftOpen({ code, client = supabase }) {
   </section>, true)
 
   const message = whatsappText({ ...voucher, code: shown }, origin)
+  const book = bookingLink(origin, code)
+  // Copy the code; where the phone won't allow it, select it on screen so it can be copied by hand.
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(shown)
+      setCopied('yes')
+      setTimeout(() => setCopied(''), 2500)
+    } catch {
+      const range = document.createRange()
+      if (codeRef.current) { range.selectNodeContents(codeRef.current); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range) }
+      setCopied('select')
+    }
+  }
   return page(<section className="gift-reveal">
     {opened && <Confetti />}
     <p className="gift-script v-foil" aria-hidden="true">Surprise!</p>
@@ -69,13 +84,21 @@ export default function GiftOpen({ code, client = supabase }) {
       {voucher.travel_choice === 'all' && ' Any travel fee or congestion charge in my areas is included too.'}
       {voucher.travel_choice === 'upto' && ` Travel and congestion are included up to ${whole(voucher.travel_cover)}.`}</p>
     {voucher.travel_choice !== 'area' && areas.length > 0 && <p className="fine">Vadim comes to your home in {areas.map(item => item.name).join(', ')}.</p>}
-    <a className="btn btn--primary btn--lg btn--block gift-book" href={bookingLink(origin, code)}>Choose my day</a>
-    <div className="gift-print-area"><VoucherCard voucher={{ ...voucher, code }} qrText={bookingLink(origin, code)} /></div>
+    <a className="btn btn--primary btn--lg btn--block gift-book" href={book}>Book my massage</a>
+    {/* The voucher itself (and its QR code) is a tap-to-book link too: on the phone that holds it, the QR can't be scanned. */}
+    <a className="gift-print-area gift-card-link" href={book} aria-label="Book my massage with this voucher"><VoucherCard voucher={{ ...voucher, code }} qrText={book} /></a>
+    <a className="btn btn--primary btn--lg btn--block gift-book gift-book--under" href={book}>Book my massage</a>
+    <div className="gift-code-row">
+      <span>Your code</span>
+      <strong ref={codeRef} className="gift-code">{shown}</strong>
+      <button className="btn--tonal gift-copy" onClick={copyCode} aria-live="polite">{copied === 'yes' ? 'Copied ✓' : 'Copy code'}</button>
+    </div>
+    {copied === 'select' && <p className="fine">Your phone didn't let me copy it, so the code is selected: hold it to copy.</p>}
     <div className="gift-actions">
       <button className="btn--tonal" onClick={() => window.print()}>Print or save as PDF</button>
       <a className="btn btn--tonal" href={whatsappHref(message)} target="_blank" rel="noopener noreferrer">Send on WhatsApp</a>
     </div>
-    <p className="fine">Your code is <strong>{shown}</strong>. To book, press Choose my day, scan the code on the voucher, or enter the code when you book.</p>
+    <p className="fine">To book, tap Book my massage or the voucher, and the code is filled in for you. On a printed voucher, scan the QR code, or enter the code when you book.</p>
     <button className="gift-skip gift-skip--light" onClick={() => { setOpened(false); setStage('envelope') }}>Open it again</button>
   </section>, true)
 }

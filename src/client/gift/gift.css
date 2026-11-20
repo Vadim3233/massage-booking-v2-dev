@@ -94,6 +94,14 @@
 .gift-shell .gift-book { background: var(--gift-gold); border-color: var(--gift-gold); color: var(--gift-green); box-shadow: none; }
 .gift-shell .btn--primary.gift-book:not(:disabled):hover { background: var(--gift-f0d68c); border-color: var(--gift-f0d68c); }
 .gift-print-area { margin: 8px 0; }
+.gift-card-link { display: block; color: inherit; text-decoration: none; border-radius: 18px; -webkit-tap-highlight-color: transparent; }
+.gift-card-link:active { transform: scale(.99); }
+.gift-card-link:focus-visible { outline: 3px solid var(--gift-gold); outline-offset: 3px; }
+.gift-book--under { margin: 4px 0 14px; }
+.gift-code-row { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 0 0 14px; }
+.gift-open--dark .gift-code-row > span { color: var(--gift-e9dcc0); }
+.gift-code { font-size: 20px; letter-spacing: .08em; color: var(--gift-gold); user-select: all; -webkit-user-select: all; }
+.gift-open--dark .gift-code-row .gift-copy { background: var(--gift-255-255-255-12); color: var(--gift-cream); border-color: transparent; min-width: 118px; }
 .gift-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
 .gift-open--dark .gift-actions .btn--tonal { background: var(--gift-255-255-255-12); color: var(--gift-cream); border-color: transparent; }
 .gift-confetti { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 5; }
