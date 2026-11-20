@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase.js'
 import { createGiftApi } from './giftApi.js'
-import { bookingLink, codeShown, giftWords, londonDate, whatsappHref, whatsappText, whole } from './giftWords.js'
+import { bookingLink, codeShown, giftEmail, giftLink, giftWords, londonDate, mailtoHref, whatsappHref, whatsappText, whole } from './giftWords.js'
 import VoucherCard from './VoucherCard.jsx'
 import Confetti from './Confetti.jsx'
 import { envelopeFor } from './giftEnvelopes.js'
@@ -22,8 +22,11 @@ export default function GiftOpen({ code, client = supabase }) {
   const [areas, setAreas] = useState([])
   const [copied, setCopied] = useState('')
   const codeRef = useRef(null)
+  const linkRef = useRef(null)
   const copiedTimer = useRef(0)
   useEffect(() => () => clearTimeout(copiedTimer.current), [])
+  // A link the phone wouldn't copy is shown, selected, to copy by hand (once it is on screen).
+  useEffect(() => { if (copied === 'link-select') selectText(linkRef.current) }, [copied])
   useEffect(() => { document.title = 'Your gift · VadMassage' }, [])
   useEffect(() => {
     let live = true
@@ -69,19 +72,28 @@ export default function GiftOpen({ code, client = supabase }) {
 
   const message = whatsappText({ ...voucher, code: shown }, origin)
   const book = bookingLink(origin, code)
-  // Copy the code; where the phone won't allow it, select it on screen so it can be copied by hand.
-  const copyCode = async () => {
+  const link = giftLink(origin, code)
+  const email = giftEmail({ ...voucher, code }, origin)
+  // Copy the code (or the gift link); where the phone won't allow it, select it on screen so it can be copied by hand.
+  // An earlier "Copied" timer is stopped first, so it can't clear the message for this one.
+  const copy = async (text, ref, what) => {
+    clearTimeout(copiedTimer.current)
     try {
-      await navigator.clipboard.writeText(shown)
-      setCopied('yes')
-      clearTimeout(copiedTimer.current)
+      await navigator.clipboard.writeText(text)
+      setCopied(what)
       copiedTimer.current = setTimeout(() => setCopied(''), 2500)
     } catch {
-      const range = document.createRange()
-      if (codeRef.current) { range.selectNodeContents(codeRef.current); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range) }
-      setCopied('select')
+      selectText(ref.current)
+      setCopied(`${what}-select`)
     }
   }
+  const copyCode = () => copy(shown, codeRef, 'code')
+  const copyLink = () => copy(link, linkRef, 'link')
+  // The phone's own share menu (Messages, Instagram, Mail...), where the browser has one.
+  const shared = { title: email.subject, text: message.split('\n\n')[0], url: link }
+  const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function' && (navigator.canShare?.(shared) ?? true)
+  // Closing the menu is fine; if the browser refuses to share, copy the link instead so the tap still does something.
+  const share = () => navigator.share(shared).catch(failure => { if (failure?.name !== 'AbortError') copyLink() })
   return page(<section className="gift-reveal">
     {opened && <Confetti />}
     <p className="gift-script v-foil" aria-hidden="true">Surprise!</p>
@@ -99,14 +111,30 @@ export default function GiftOpen({ code, client = supabase }) {
     <div className="gift-code-row">
       <span>Your code</span>
       <strong ref={codeRef} className="gift-code">{shown}</strong>
-      <button className="btn--tonal gift-copy" onClick={copyCode}>{copied === 'yes' ? 'Copied ✓' : 'Copy code'}</button>
+      <button className="btn--tonal gift-copy" onClick={copyCode}>{copied === 'code' ? 'Copied ✓' : 'Copy code'}</button>
     </div>
-    <p className="fine gift-copy-status" role="status">{copied === 'yes' ? <span className="sr-only">Code copied</span> : copied === 'select' ? "Your phone didn't let me copy it, so the code is selected: hold it to copy." : ''}</p>
+    <p className="fine gift-copy-status" role="status">{copied === 'code' ? <span className="sr-only">Code copied</span> : copied === 'link' ? 'Gift link copied. Paste it into a message or an email.'
+      : copied.endsWith('-select') ? `Your phone didn't let me copy it, so the ${copied === 'code-select' ? 'code' : 'link'} is selected: hold it to copy.` : ''}</p>
+    {/* Sending it on: from the buyer's own email app, WhatsApp, the phone's share menu, or the link to paste anywhere.
+        The person it is for sees this page too, so the buttons say who they are for. */}
+    <p className="gift-send-title">{voucher.recipient_name ? `Sending it to ${voucher.recipient_name} yourself?` : 'Sending it on yourself?'}</p>
     <div className="gift-actions">
-      <button className="btn--tonal" onClick={() => window.print()}>Print or save as PDF</button>
+      <a className="btn btn--tonal" href={mailtoHref(email)}>Send by email</a>
       <a className="btn btn--tonal" href={whatsappHref(message)} target="_blank" rel="noopener noreferrer">Send on WhatsApp</a>
+      {canShare && <button className="btn--tonal" onClick={share}>Share…</button>}
+      <button className="btn--tonal" onClick={copyLink}>{copied === 'link' ? 'Copied ✓' : 'Copy gift link'}</button>
+      <button className="btn--tonal" onClick={() => window.print()}>Print or save as PDF</button>
     </div>
+    {copied === 'link-select' && <p className="fine gift-link"><span ref={linkRef}>{link}</span></p>}
     <p className="fine">To book, tap Book my massage or the voucher, and the code is filled in for you. On a printed voucher, scan the QR code, or enter the code when you book.</p>
     <button className="gift-skip" onClick={() => { setOpened(false); setStage('envelope') }}>Open it again</button>
   </section>, envelope)
+}
+
+// Selects a piece of text on screen, ready to copy by hand.
+function selectText(node) {
+  if (!node) return
+  const range = document.createRange()
+  range.selectNodeContents(node)
+  const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range)
 }
