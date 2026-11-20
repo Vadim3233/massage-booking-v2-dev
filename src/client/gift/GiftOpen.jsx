@@ -3,13 +3,13 @@ import { supabase } from '../../lib/supabase.js'
 import { createGiftApi } from './giftApi.js'
 import { bookingLink, codeShown, giftWords, londonDate, whatsappHref, whatsappText, whole } from './giftWords.js'
 import VoucherCard from './VoucherCard.jsx'
+import Confetti from './Confetti.jsx'
 import { friendlyError } from '../booking/friendlyError.js'
 import '../booking/booking.css'
 import './voucher.css'
 import './gift.css'
 
 const Snow = () => <div className="gift-snow gift-snow--full" aria-hidden="true" />
-const Confetti = () => <div className="gift-confetti" aria-hidden="true">{Array.from({ length: 30 }, (_, i) => <i key={i} style={{ left: `${(i * 97) % 100}%`, top: `${(i * 53) % 100}%`, '--turn': `${(i * 37) % 180}deg`, '--hue': i % 4 }} />)}</div>
 
 // /gift/<code>: the voucher. It opens like a present (an envelope to open, then "Surprise!"), then shows the voucher to print, save or
 // send on WhatsApp, with "Choose my day" to book with it.

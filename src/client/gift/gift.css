@@ -96,12 +96,7 @@
 .gift-print-area { margin: 8px 0; }
 .gift-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
 .gift-open--dark .gift-actions .btn--tonal { background: var(--gift-255-255-255-12); color: var(--gift-cream); border-color: transparent; }
-.gift-confetti { position: absolute; inset: 0 0 auto; height: 320px; pointer-events: none; }
-.gift-confetti i { position: absolute; width: 8px; height: 14px; border-radius: 2px; transform: rotate(var(--turn)); background: var(--gift-e6c47a); animation: gift-fall 2.2s ease-out both; }
-.gift-confetti i:nth-child(4n+1) { background: var(--gift-c9302c); }
-.gift-confetti i:nth-child(4n+2) { background: var(--gift-fbf3e4); }
-.gift-confetti i:nth-child(4n+3) { background: var(--gift-7fb38a); }
-@keyframes gift-fall { from { transform: translateY(-60px) rotate(0); opacity: 0; } 25% { opacity: 1; } to { transform: translateY(40px) rotate(var(--turn)); opacity: 0; } }
+.gift-confetti { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 5; }
 @media (prefers-reduced-motion: reduce) { .gift-confetti { display: none; } }
 .gift-reveal > :not(.gift-confetti) { position: relative; z-index: 1; }
 .gift-open--dark .brand { background: transparent; box-shadow: none; border: 0; }
