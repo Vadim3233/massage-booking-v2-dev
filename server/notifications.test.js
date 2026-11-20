@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { handle } from '../api/dispatch-notifications.js'
-import { composeMessage, createDispatcher, enabledChannels, readConfig } from './notifications.js'
+import { composeMessage, createDispatcher, enabledChannels, readConfig, senderFor } from './notifications.js'
 
 const env = { APP_BASE_URL: 'https://booking.example.com/', TELEGRAM_BOT_TOKEN: '123:SECRET-TOKEN', ADMIN_TELEGRAM_CHAT_ID: '555', RESEND_API_KEY: 're_SECRET_KEY',
   EMAIL_FROM: 'Vad <hello@example.com>', ADMIN_ALERT_EMAIL: 'vad@example.com', EMAIL_REPLY_TO: 'vad@example.com' }
@@ -390,5 +390,21 @@ describe('the endpoint', () => {
     const unconfigured = reply()
     await handle(request(), unconfigured, { ...deps, env: { ...deps.env, SUPABASE_SERVICE_ROLE_KEY: '' } })
     expect(unconfigured.out.statusCode).toBe(500)
+  })
+})
+
+describe('senderFor: gift voucher emails come from "Vadim"', () => {
+  const from = 'VadMassage <hello@book.vadmassage.com>'
+  it('names Vadim on an email about a gift voucher, at the same address', () => {
+    expect(senderFor({ audience: 'client', link_path: '/gift/7K3MQX9P?open=1' }, from)).toBe('Vadim <hello@book.vadmassage.com>')
+    expect(senderFor({ audience: 'client', link_path: '/gift/7K3MQX9P' }, from)).toBe('Vadim <hello@book.vadmassage.com>')
+    expect(senderFor({ audience: 'client', link_path: '/gift' }, 'hello@book.vadmassage.com')).toBe('Vadim <hello@book.vadmassage.com>')
+  })
+  it('leaves every other email as it was', () => {
+    expect(senderFor({ audience: 'client', link_path: '/booking/abc' }, from)).toBe(from)
+    expect(senderFor({ audience: 'client', link_path: '/giftshop' }, from)).toBe(from)
+    expect(senderFor({ audience: 'client', link_path: null }, from)).toBe(from)
+    expect(senderFor({ audience: 'admin', link_path: '/gift/ABC' }, from)).toBe(from)
+    expect(senderFor({ audience: 'client', link_path: '/gift/ABC' }, '')).toBe('')
   })
 })

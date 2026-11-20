@@ -86,10 +86,19 @@ async function sendTelegramClient(row, message, config, fetchImpl, client) {
   }
 }
 
+// A gift voucher email (to the person receiving it, or to the buyer) comes from "Vadim", a person rather than a business name, at the same
+// address as the EMAIL_FROM setting. Gmail and others are then less likely to file it under Promotions.
+const GIFT_SENDER_NAME = 'Vadim'
+export function senderFor(row, from) {
+  if (row.audience !== 'client' || !/^\/gift(?:[/?#]|$)/.test(String(row.link_path || ''))) return from
+  const address = /<([^<>\s]+@[^<>\s]+)>\s*$/.exec(from)?.[1] || (/^[^<>\s]+@[^<>\s]+$/.test(from.trim()) ? from.trim() : '')
+  return address ? `${GIFT_SENDER_NAME} <${address}>` : from
+}
+
 async function sendEmail(row, message, config, fetchImpl) {
   const to = row.audience === 'admin' ? config.email.adminTo : row.recipient
   if (!to) throw new Error('ADMIN_ALERT_EMAIL is not set')
-  const payload = { from: config.email.from, to: [to], subject: row.audience === 'admin' ? `[VadMassage] ${message.title}` : message.title, text: message.body }
+  const payload = { from: senderFor(row, config.email.from), to: [to], subject: row.audience === 'admin' ? `[VadMassage] ${message.title}` : message.title, text: message.body }
   if (row.audience === 'client') {
     // A client's email also goes out in the look of the booking pages, beside the plain text. It is made from the message as written (with its
     // "{link}") and the private link, and it never holds the email back: if it cannot be made the plain text goes alone.

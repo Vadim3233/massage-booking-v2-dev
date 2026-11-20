@@ -1064,3 +1064,7 @@ The page stays where the Admin needs it:
 
 **Undo:** drop the two functions and delete the `whatsapp_button` row; the button disappears by itself.
 
+
+## ADR-110 — Gift voucher emails that reach the inbox (2026-11-20)
+**Why:** In Vadim's own test (20 Nov) Gmail filed the voucher email under Promotions. No sender controls that, but three things help. He said yes to all three.
+**What:** (1) The email to the person receiving a voucher is titled "Sonia, Vadim has sent you a gift 🎁" (`plan_gift_messages`). (2) Every email about a gift voucher (link to `/gift…`, to a client) comes from "Vadim" at the EMAIL_FROM address instead of "VadMassage" (`senderFor` in `server/notifications.js`); every other email is unchanged. (3) The buyer is told it may land in Promotions or Junk: on the buying page under the email choice, on their gift page once paid, and in their "one last step" and "ready" emails for an emailed voucher (`gift_notify`). Migration `20261224100000_gift_inbox_help.sql`.

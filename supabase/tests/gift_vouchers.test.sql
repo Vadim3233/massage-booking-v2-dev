@@ -203,9 +203,11 @@ select is((select status from public.admin_mark_gift_paid((select id from public
 reset role;
 select ok((select body like '%I will email it to Dad at dad@example.test%' from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id
   where e.event_type = 'gift.ready' and d.recipient = 'ben@example.test'), 'The buyer is told when it will arrive');
+select ok((select body like '%The voucher is emailed to Dad from Vadim. Some inboxes put gifts in Promotions or Junk%' from public.notification_deliveries d join public.event_outbox e on e.id = d.event_id
+  where e.event_type = 'gift.ready' and d.recipient = 'ben@example.test'), 'The buyer is told it may land in Promotions or Junk');
 select is(public.plan_gift_messages(now()), 0, 'Nothing goes before the day');
 select is(public.plan_gift_messages(now() + interval '3 days'), 1, 'On the day, the voucher goes');
-select is((select link_path from public.notification_deliveries where recipient = 'dad@example.test' and title = 'Ben has sent you a gift'), '/gift/' || (select public.gift_code_shown(code) from public.gift_vouchers where recipient_name = 'Dad') || '?open=1',
+select is((select link_path from public.notification_deliveries where recipient = 'dad@example.test' and title = 'Dad, Ben has sent you a gift 🎁'), '/gift/' || (select public.gift_code_shown(code) from public.gift_vouchers where recipient_name = 'Dad') || '?open=1',
   'Dad is emailed the link to open it');
 select is(public.plan_gift_messages(now() + interval '3 days'), 0, 'only once');
 select is(public.plan_gift_messages(now() + interval '11 months' + interval '10 days'), 2, 'A month before the end, a reminder for each unused voucher');
