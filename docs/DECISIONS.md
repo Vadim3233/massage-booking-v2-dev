@@ -1068,3 +1068,12 @@ The page stays where the Admin needs it:
 ## ADR-110 — Gift voucher emails that reach the inbox (2026-11-20)
 **Why:** In Vadim's own test (20 Nov) Gmail filed the voucher email under Promotions. No sender controls that, but three things help. He said yes to all three.
 **What:** (1) The email to the person receiving a voucher is titled "Sonia, Vadim has sent you a gift 🎁" (`plan_gift_messages`). (2) Every email about a gift voucher (link to `/gift…`, to a client) comes from "Vadim" at the EMAIL_FROM address instead of "VadMassage" (`senderFor` in `server/notifications.js`); every other email is unchanged. (3) The buyer is told it may land in Promotions or Junk: on the buying page under the email choice, on their gift page once paid, and in their "one last step" and "ready" emails for an emailed voucher (`gift_notify`). Migration `20261224100000_gift_inbox_help.sql`.
+
+## ADR-111 — The gift opens from Vadim's envelope pictures (2026-11-20)
+Vadim found the gift page's drawn red envelope and dark green page plain next to the voucher pictures, and supplied three envelope pictures
+(ivory with a gold bow, blush pink with a VM wax seal, sage green), clean, with no words baked in. Each voucher design opens from the envelope
+that suits it (`src/client/gift/giftEnvelopes.js`; an unknown design gets ivory). The words ("Vadim sent you a gift", "For <name>") and the
+gold button are real text, so any name fits and the button is easy to tap; the envelope picture is also a button. The picture's edges fade
+into a page colour sampled from its border, and the whole gift page (Surprise and the voucher) keeps that paper colour, with colour tokens in
+`src/index.css` checked for contrast in `src/theme.test.js`. Printing is unchanged (the voucher alone on white). Pictures are 1200 px WebP
+(75 to 140 KB). No SQL.

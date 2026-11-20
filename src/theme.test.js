@@ -42,6 +42,9 @@ const TEXT = [
   ['--grid-open-ink', '--grid-open-bg'], ['--grid-open-ink', '--grid-open-line'], ['--grid-booking-ink', '--grid-booking-bg'], ['--grid-travel-ink', '--grid-travel-bg'],
   // The Admin's booking boxes: the name, time and price on the sage and sand tints (and on their pressed colour), the softer words under them, and the pill
   // that names the state on its own, deeper, tint.
+  // The gift's own page, in each envelope's paper colour: its words, its softer words, and the dark words on its gold buttons.
+  ...['ivory', 'blush', 'sage'].flatMap(paper => [[`--gift-env-${paper}-ink`, `--gift-env-${paper}`], [`--gift-env-${paper}-soft`, `--gift-env-${paper}`]]),
+  ['--gift-env-gold-ink', '--gift-env-gold'], ['--gift-env-gold-ink', '--gift-env-gold-hover'],
   ...['--sage', '--sand'].flatMap(family => [
     [`${family}-ink`, `${family}-bg`], [`${family}-ink`, `${family}-hover`], [`${family}-ink`, `${family}-chip`],
     [`${family}-ink-soft`, `${family}-bg`], [`${family}-ink-soft`, `${family}-hover`],

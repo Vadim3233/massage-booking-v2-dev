@@ -10,7 +10,6 @@
 .gift-snow { position: absolute; inset: 0; pointer-events: none; opacity: .5;
   background-image: radial-gradient(circle, var(--gift-fff) 1.2px, transparent 1.6px), radial-gradient(circle, var(--gift-fff) 1px, transparent 1.4px);
   background-size: 64px 58px, 41px 47px; background-position: 7px 11px, 23px 31px; }
-.gift-snow--full { position: fixed; z-index: 0; }
 .gift-preview { position: relative; transform: rotate(-1.5deg); margin: 6px 4px 4px; }
 
 .gift-step { margin: 26px 0; }
@@ -71,52 +70,71 @@
 .gift-total-sum { margin: 0; font: 600 28px/1.1 var(--font-display); }
 .gift-total .gift-hint { margin: 2px 0 0; }
 
-/* The voucher's own page */
-.gift-open--dark { background: var(--gift-green); color: var(--gift-cream); min-height: 100vh; position: relative; }
-.gift-open--dark .brand, .gift-open--dark .gift-main { position: relative; z-index: 1; }
-.gift-open--dark .brand-link, .gift-open--dark .brand-aside { color: var(--gift-cream); }
-.gift-open--dark .gift-main h1, .gift-open--dark .lede { color: var(--gift-cream); }
-.gift-open--dark .fine { color: var(--gift-e9dcc0); }
-.gift-open--dark .fine a, .gift-open--dark .lede a { color: var(--gift-gold); }
-.gift-unwrap { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 24px 0; text-align: center; }
-.gift-envelope { position: relative; width: min(320px, 100%); aspect-ratio: 320 / 210; background: var(--gift-b8302c); border-radius: 8px; overflow: hidden; box-shadow: 0 24px 40px -18px var(--gift-0-0-0-7); }
-.gift-envelope svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.gift-envelope-band { position: absolute; top: 0; bottom: 0; left: calc(50% - 10px); width: 20px; background: var(--gift-e2c27a); }
-.gift-envelope-name { position: absolute; left: 0; right: 0; bottom: 14px; font: 400 54px/1.1 'Great Vibes', 'Playfair Display', cursive; }
-.gift-shell .gift-gold-button { min-height: 54px; padding: 0 34px; border: 0; border-radius: 999px; background: var(--gift-gold); color: var(--gift-green); font-size: 17px; box-shadow: 0 10px 24px -12px var(--gift-0-0-0-6); }
-.gift-shell .gift-gold-button:hover { background: var(--gift-f0d68c); }
-.gift-shell .gift-skip { min-height: 44px; border: 0; background: transparent; color: var(--gift-c9b88e); font-weight: 500; text-decoration: underline; }
-.gift-shell .gift-skip:hover { background: transparent; color: var(--gift-gold); }
+/* The voucher's own page: the paper colour of its envelope picture (giftEnvelopes.js), with that paper's words and gold buttons. */
+.gift-open--ivory { --env: var(--gift-env-ivory); --env-ink: var(--gift-env-ivory-ink); --env-soft: var(--gift-env-ivory-soft); }
+.gift-open--blush { --env: var(--gift-env-blush); --env-ink: var(--gift-env-blush-ink); --env-soft: var(--gift-env-blush-soft); }
+.gift-open--sage { --env: var(--gift-env-sage); --env-ink: var(--gift-env-sage-ink); --env-soft: var(--gift-env-sage-soft); }
+.gift-open--paper { background: var(--env); color: var(--env-ink); min-height: 100vh; position: relative; }
+.booking-shell.gift-open--paper > .brand { background: transparent; box-shadow: none; border: 0; }
+.booking-shell.gift-open--paper > .brand .brand-link, .booking-shell.gift-open--paper > .brand .brand-aside, .gift-open--paper .gift-main h1, .gift-open--paper .lede { color: var(--env-ink); }
+.booking-shell.gift-open--paper > .brand .brand-mark { border-color: var(--env-ink); color: var(--env-ink); }
+.gift-open--paper .fine, .gift-open--paper .gift-eyebrow { color: var(--env-soft); }
+.gift-open--paper .fine a, .gift-open--paper .lede a { color: var(--env-ink); }
+/* The focus ring in the paper's own dark ink, as the site's blue is faint on the sage. */
+.gift-open--paper :focus-visible { outline-color: var(--env-ink); }
+.gift-unwrap { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 8px 0 24px; text-align: center; }
+.gift-unwrap .gift-eyebrow { margin-top: 6px; }
+.gift-shell .gift-for { margin: 0; font: 400 clamp(46px, 13vw, 68px)/1.05 'Great Vibes', 'Playfair Display', cursive; color: var(--env-ink); overflow-wrap: anywhere; }
+.gift-for span { font-size: .7em; }
+.gift-shell .gift-for--long { font-size: clamp(36px, 9vw, 48px); }
+/* The envelope picture runs edge to edge on a phone and melts into the page (its edges fade into the same paper colour). */
+.gift-shell .gift-envelope-picture { display: block; width: calc(100% + 32px); max-width: 600px; min-height: 0; margin: 0 -16px; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; }
+.gift-shell .gift-envelope-picture:hover { background: transparent; }
+.gift-envelope-picture:active { transform: scale(.985); }
+/* The float is on the picture, so the button's own press (scale) still shows while it floats. */
+.gift-envelope-picture img { display: block; width: auto; max-width: 100%; max-height: 50vh; height: auto; margin: 0 auto; animation: gift-float 5s ease-in-out infinite;
+  -webkit-mask-image: linear-gradient(to right, transparent, var(--gift-mask) 9%, var(--gift-mask) 91%, transparent), linear-gradient(transparent, var(--gift-mask) 9%, var(--gift-mask) 91%, transparent);
+  -webkit-mask-composite: source-in; mask-image: linear-gradient(to right, transparent, var(--gift-mask) 9%, var(--gift-mask) 91%, transparent), linear-gradient(transparent, var(--gift-mask) 9%, var(--gift-mask) 91%, transparent);
+  mask-composite: intersect; }
+.gift-open--blush .gift-envelope-picture { max-width: 460px; }
+@keyframes gift-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@media (prefers-reduced-motion: reduce) { .gift-envelope-picture img { animation: none; } }
+.gift-shell .gift-gold-button { min-height: 54px; padding: 0 38px; border: 0; border-radius: 999px; background: var(--gift-env-gold); color: var(--gift-env-gold-ink); font-size: 17px; letter-spacing: .02em; box-shadow: 0 12px 24px -12px var(--gift-env-lift); }
+.gift-shell .gift-gold-button:hover { background: var(--gift-env-gold-hover); }
+.gift-shell .gift-skip { min-height: 44px; border: 0; background: transparent; color: var(--env-soft); font-weight: 500; text-decoration: underline; }
+.gift-shell .gift-skip:hover { background: transparent; color: var(--env-ink); }
 .gift-script { margin: 0; font: 400 58px/1.05 'Great Vibes', 'Playfair Display', cursive; }
 .gift-reveal { position: relative; display: flex; flex-direction: column; gap: 16px; padding: 12px 0 24px; text-align: center; }
 .gift-reveal .gift-script { font-size: 54px; }
 .gift-reveal h1 { margin: 0; }
-.gift-shell .gift-book { background: var(--gift-gold); border-color: var(--gift-gold); color: var(--gift-green); box-shadow: none; }
-.gift-shell .btn--primary.gift-book:not(:disabled):hover { background: var(--gift-f0d68c); border-color: var(--gift-f0d68c); }
+.gift-shell .gift-book { background: var(--gift-env-gold); border-color: var(--gift-env-gold); color: var(--gift-env-gold-ink); box-shadow: 0 12px 24px -14px var(--gift-env-lift); }
+.gift-shell .btn--primary.gift-book:not(:disabled):hover { background: var(--gift-env-gold-hover); border-color: var(--gift-env-gold-hover); }
 .gift-print-area { margin: 8px 0; }
 .gift-card-link { display: block; color: inherit; text-decoration: none; border-radius: 18px; -webkit-tap-highlight-color: transparent; }
 .gift-card-link:active { transform: scale(.99); }
-.gift-card-link:focus-visible { outline: 3px solid var(--gift-gold); outline-offset: 3px; }
+.gift-card-link:focus-visible { outline: 3px solid var(--env-ink, var(--gift-gold)); outline-offset: 3px; }
 .gift-book--under { margin: 4px 0 14px; }
 .gift-code-row { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 0 0 14px; }
-.gift-open--dark .gift-code-row > span { color: var(--gift-e9dcc0); }
-.gift-code { font-size: 20px; letter-spacing: .08em; color: var(--gift-gold); user-select: all; -webkit-user-select: all; }
-.gift-open--dark .gift-code-row .gift-copy { background: var(--gift-255-255-255-12); color: var(--gift-cream); border-color: transparent; min-width: 118px; }
+.gift-open--paper .gift-code-row > span { color: var(--env-soft); }
+.gift-code { font-size: 20px; letter-spacing: .08em; color: var(--env-ink, var(--ink)); user-select: all; -webkit-user-select: all; }
+.gift-open--paper .gift-code-row .gift-copy { background: var(--gift-env-glass); color: var(--env-ink); border-color: transparent; min-width: 118px; }
 .gift-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
-.gift-open--dark .gift-actions .btn--tonal { background: var(--gift-255-255-255-12); color: var(--gift-cream); border-color: transparent; }
+.gift-open--paper .gift-actions .btn--tonal, .gift-open--paper .gift-code-row .gift-copy { background: var(--gift-env-glass); color: var(--env-ink); border-color: transparent; }
+.gift-open--paper .gift-actions .btn--tonal:hover, .gift-open--paper .gift-code-row .gift-copy:hover { background: var(--gift-env-glass-hover); }
 .gift-confetti { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 5; }
 @media (prefers-reduced-motion: reduce) { .gift-confetti { display: none; } }
 .gift-reveal > :not(.gift-confetti) { position: relative; z-index: 1; }
-.gift-open--dark .brand { background: transparent; box-shadow: none; border: 0; }
 
 /* Printing (or "Save as PDF") the voucher page gives the voucher alone, landscape, full width. */
 @media print {
   @page { size: A5 landscape; margin: 8mm; }
-  .gift-open, .gift-open--dark { background: var(--gift-fff) !important; min-height: 0; }
-  .gift-open .brand, .gift-open .gift-snow, .gift-reveal > :not(.gift-print-area), .booking-main > :not(.gift-reveal) { display: none !important; }
+  .gift-open, .gift-open--paper { background: var(--gift-fff) !important; min-height: 0; }
+  .gift-open .brand, .gift-reveal > :not(.gift-print-area), .booking-main > :not(.gift-reveal) { display: none !important; }
   .gift-reveal, .gift-main { padding: 0; margin: 0; max-width: none; }
   .gift-print-area { margin: 0; }
   .gift-print-area .voucher { box-shadow: none; border-radius: 0; }
+  .gift-print-area .v-art { filter: none !important; }
   html, body, .booking-shell, .gift-shell { background: var(--gift-fff) !important; max-width: none !important; padding: 0 !important; margin: 0 !important; }
   /* Gold lettering prints as plain gold: printers draw the edges of clipped gradients as lines. */
   .v-foil { background: none !important; color: var(--gift-a8782a) !important; }

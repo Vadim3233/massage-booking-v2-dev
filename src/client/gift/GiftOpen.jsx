@@ -4,14 +4,13 @@ import { createGiftApi } from './giftApi.js'
 import { bookingLink, codeShown, giftWords, londonDate, whatsappHref, whatsappText, whole } from './giftWords.js'
 import VoucherCard from './VoucherCard.jsx'
 import Confetti from './Confetti.jsx'
+import { envelopeFor } from './giftEnvelopes.js'
 import { friendlyError } from '../booking/friendlyError.js'
 import '../booking/booking.css'
 import './voucher.css'
 import './gift.css'
 
-const Snow = () => <div className="gift-snow gift-snow--full" aria-hidden="true" />
-
-// /gift/<code>: the voucher. It opens like a present (an envelope to open, then "Surprise!"), then shows the voucher to print, save or
+// /gift/<code>: the voucher. It opens like a present (Vadim's envelope picture for the voucher's design, then "Surprise!"), then shows the voucher to print, save or
 // send on WhatsApp, with "Book my massage" (above and under it, and the voucher itself is tappable) to book with it, and Copy code.
 export default function GiftOpen({ code, client = supabase }) {
   const api = useMemo(() => createGiftApi(client), [client])
@@ -37,11 +36,12 @@ export default function GiftOpen({ code, client = supabase }) {
     api.options().then(data => { if (live) setAreas(data?.areas || []) }, () => { /* the list is simply left out */ })
     return () => { live = false }
   }, [api])
-  useEffect(() => { document.querySelector('.gift-open h1')?.focus({ preventScroll: true }) }, [stage])
+  // Each step starts at the top (the envelope page can be scrolled to its button on a small phone).
+  useEffect(() => { window.scrollTo?.(0, 0); document.querySelector('.gift-open h1')?.focus({ preventScroll: true }) }, [stage])
 
   const origin = window.location.origin
-  const page = (children, dark = false) => <div className={`booking-shell gift-shell gift-open ${dark ? 'gift-open--dark' : ''}`}>
-    {dark && <Snow />}
+  // The envelope and the voucher pages take the envelope's paper colour; the other messages (not found, used...) stay plain.
+  const page = (children, envelope = null) => <div className={`booking-shell gift-shell gift-open${envelope ? ` gift-open--paper gift-open--${envelope.name}` : ''}`}>
     <header className="brand"><a className="brand-link" href="/"><b className="brand-mark" aria-hidden="true">VM</b>VadMassage</a><a className="brand-aside" href="/gift">Give a gift</a></header>
     <main className="booking-main gift-main">{children}</main>
   </div>
@@ -54,13 +54,18 @@ export default function GiftOpen({ code, client = supabase }) {
   if (voucher.state === 'expired') return page(<><h1 tabIndex={-1}>This gift has <em>ended</em></h1><p className="lede">It could be used until {londonDate(voucher.expires_at)}. Please message Vadim and he'll see what he can do.</p><a className="btn btn--tonal" href="https://vadmassage.com">Contact Vadim</a></>)
 
   const what = `${giftWords(voucher.minutes, voucher.people)}${(voucher.extras || []).map(name => `, ${name.toLowerCase()}`).join('')}, at your home`
+  const envelope = envelopeFor(voucher.design)
+  const open = () => { setOpened(true); setStage('card') }
   if (stage === 'envelope') return page(<section className="gift-unwrap">
     <p className="gift-eyebrow">{voucher.from_name} sent you a gift</p>
-    <h1 tabIndex={-1} className="sr-only">A gift for {voucher.recipient_name}</h1>
-    <div className="gift-envelope" aria-hidden="true"><svg viewBox="0 0 320 210" preserveAspectRatio="none"><path d="M0 0 L160 110 L320 0" fill="#c93a35" stroke="#9e2220" strokeWidth="2" /></svg><span className="gift-envelope-band" /><span className="gift-envelope-name v-foil">{voucher.recipient_name}</span></div>
-    <button className="gift-gold-button" onClick={() => { setOpened(true); setStage('card') }}>Open your gift</button>
+    <h1 tabIndex={-1} className={`gift-for${String(voucher.recipient_name || '').length > 14 ? ' gift-for--long' : ''}`}><span>For</span> {voucher.recipient_name}</h1>
+    {/* The picture opens the gift too, as people tap the envelope itself. Screen readers and the keyboard use the gold button, so it isn't there twice. */}
+    <button className="gift-envelope-picture" onClick={open} tabIndex={-1} aria-hidden="true">
+      <img src={envelope.src} width={envelope.w} height={envelope.h} alt="" decoding="async" fetchPriority="high" />
+    </button>
+    <button className="gift-gold-button" onClick={open}>Open your gift</button>
     <button className="gift-skip" onClick={() => setStage('card')}>Skip to the voucher</button>
-  </section>, true)
+  </section>, envelope)
 
   const message = whatsappText({ ...voucher, code: shown }, origin)
   const book = bookingLink(origin, code)
@@ -102,6 +107,6 @@ export default function GiftOpen({ code, client = supabase }) {
       <a className="btn btn--tonal" href={whatsappHref(message)} target="_blank" rel="noopener noreferrer">Send on WhatsApp</a>
     </div>
     <p className="fine">To book, tap Book my massage or the voucher, and the code is filled in for you. On a printed voucher, scan the QR code, or enter the code when you book.</p>
-    <button className="gift-skip gift-skip--light" onClick={() => { setOpened(false); setStage('envelope') }}>Open it again</button>
-  </section>, true)
+    <button className="gift-skip" onClick={() => { setOpened(false); setStage('envelope') }}>Open it again</button>
+  </section>, envelope)
 }
