@@ -1,35 +1,68 @@
 import { useEffect, useRef } from 'react'
 
-// "Surprise!" confetti that behaves like real paper: two bursts shoot up from the bottom corners, each piece slows in the air, then
-// flutters down under gravity, flipping and swaying as it goes, over the whole screen. Drawn on one canvas (smooth on phones), it stops by
-// itself after a few seconds and is skipped for people who ask their phone for less motion.
-const COLOURS = ['#e6c47a', '#d4a24c', '#f3dfa6', '#c9302c', '#e0524d', '#fbf3e4', '#7fb38a', '#4f8a64']
-const PIECES = 160
-const RUN_MS = 7500
+// "Surprise!" confetti that behaves like real paper, in the style of the well-known confetti party pages: a big "pop" from just below
+// the middle of the screen, then two side bursts. Each piece is a little paper square or dot that tumbles (its corners wobble and tilt,
+// so it flashes as it turns), slows in the air, drifts down and fades. Drawn on one full-screen canvas, ticked 60 times a second on
+// any phone, it stops by itself and is skipped for people who ask their phone for less motion.
+const COLOURS = ['#e6c47a', '#fce855', '#ec1e45', '#fe7e99', '#f6fbf6', '#4fb06d', '#c9302c']
+const TICKS = 220
+const STEP_MS = 1000 / 60
 
 const random = (low, high) => low + Math.random() * (high - low)
 
-function makePiece(width, height, fromLeft) {
-  // Thrown hard enough to reach between half-way and near the top of the screen before they slow and float down.
-  const rise = random(0.5, 0.95) * height
-  const shape = Math.random()
-  return {
-    x: fromLeft ? random(-10, width * 0.12) : random(width * 0.88, width + 10),
-    y: height + random(0, 20),
-    vx: (fromLeft ? 1 : -1) * random(1.5, 9) * Math.min(1.4, width / 400),
-    vy: -(rise + 120) / 30,
-    w: random(6, 11),
-    h: shape < 0.15 ? random(14, 20) : random(8, 14),
-    round: shape > 0.85,
-    colour: COLOURS[Math.floor(Math.random() * COLOURS.length)],
-    spin: random(0, Math.PI * 2),
-    spinSpeed: random(-0.25, 0.25),
-    flip: random(0, Math.PI * 2),
-    flipSpeed: random(0.08, 0.2),
-    sway: random(0, Math.PI * 2),
-    swaySpeed: random(0.03, 0.07),
-    delay: Math.floor(random(0, 24)),
+// One burst: `count` pieces thrown from (x, y) at `angle` degrees (90 = straight up), fanned over `spread` degrees.
+function burst(pieces, { x, y, count, angle = 90, spread = 60, speed = 45, decay = 0.9, scalar = 1, delay = 0 }) {
+  for (let i = 0; i < count; i += 1) {
+    const shape = Math.random() < 0.3 ? 'circle' : 'square'
+    pieces.push({
+      x, y, shape, delay,
+      angle: -angle * Math.PI / 180 + (0.5 * spread - Math.random() * spread) * Math.PI / 180,
+      velocity: speed * 0.5 + Math.random() * speed,
+      decay, scalar,
+      gravity: 3,
+      drift: random(-0.4, 0.4),
+      wobble: Math.random() * 10,
+      wobbleSpeed: Math.min(0.11, Math.random() * 0.1 + 0.05),
+      tilt: random(0.25, 0.75) * Math.PI,
+      colour: COLOURS[Math.floor(Math.random() * COLOURS.length)],
+      tick: 0,
+    })
   }
+}
+
+// One tick of one piece: move, slow, fall, wobble and tilt, then draw it. False once it has faded away.
+function tickPiece(context, p) {
+  if (p.delay > 0) { p.delay -= 1; return true }
+  p.x += Math.cos(p.angle) * p.velocity + p.drift
+  p.y += Math.sin(p.angle) * p.velocity + p.gravity
+  p.velocity *= p.decay
+  p.wobble += p.wobbleSpeed
+  const wobbleX = p.x + 10 * p.scalar * Math.cos(p.wobble)
+  const wobbleY = p.y + 10 * p.scalar * Math.sin(p.wobble)
+  p.tilt += 0.1
+  const sin = Math.sin(p.tilt)
+  const cos = Math.cos(p.tilt)
+  const jitter = Math.random() + 2
+  const progress = p.tick / TICKS
+  p.tick += 1
+  const x1 = p.x + jitter * cos
+  const y1 = p.y + jitter * sin
+  const x2 = wobbleX + jitter * cos
+  const y2 = wobbleY + jitter * sin
+  context.globalAlpha = Math.max(0, 1 - progress)
+  context.fillStyle = p.colour
+  context.beginPath()
+  if (p.shape === 'circle') {
+    context.ellipse(p.x, p.y, Math.abs(x2 - x1) * 0.6, Math.abs(y2 - y1) * 0.6, Math.PI / 10 * p.wobble, 0, 2 * Math.PI)
+  } else {
+    context.moveTo(Math.floor(p.x), Math.floor(p.y))
+    context.lineTo(Math.floor(wobbleX), Math.floor(y1))
+    context.lineTo(Math.floor(x2), Math.floor(y2))
+    context.lineTo(Math.floor(x1), Math.floor(wobbleY))
+  }
+  context.closePath()
+  context.fill()
+  return p.tick < TICKS
 }
 
 export default function Confetti() {
@@ -45,38 +78,34 @@ export default function Confetti() {
     canvas.width = width * ratio
     canvas.height = height * ratio
     context.scale(ratio, ratio)
-    const pieces = Array.from({ length: PIECES }, (_, i) => makePiece(width, height, i % 2 === 0))
-    const started = performance.now()
+
+    // The pop: several fans together, narrow and fast in the middle, wide and slow at the edges (about 220 pieces), then a side burst
+    // from each edge a moment later.
+    let pieces = []
+    const x = width / 2
+    const y = height * 0.7
+    burst(pieces, { x, y, count: 55, spread: 26, speed: 55 })
+    burst(pieces, { x, y, count: 45, spread: 60 })
+    burst(pieces, { x, y, count: 70, spread: 100, decay: 0.91, scalar: 0.8 })
+    burst(pieces, { x, y, count: 22, spread: 120, speed: 25, decay: 0.92, scalar: 1.2 })
+    burst(pieces, { x, y, count: 22, spread: 120, speed: 45 })
+    burst(pieces, { x: 0, y: height * 0.65, count: 45, angle: 60, spread: 55, delay: 18 })
+    burst(pieces, { x: width, y: height * 0.65, count: 45, angle: 120, spread: 55, delay: 18 })
+
     let frame = 0
-    let last = started
+    let last = performance.now()
+    let owed = 0
     const draw = (now) => {
-      const step = Math.min(2, (now - last) / 16.7)
+      owed = Math.min(owed + (now - last) / STEP_MS, 4)
       last = now
-      const age = now - started
-      context.clearRect(0, 0, width, height)
-      const fade = age > RUN_MS - 1200 ? Math.max(0, (RUN_MS - age) / 1200) : 1
-      for (const p of pieces) {
-        if (p.delay > 0) { p.delay -= step; continue }
-        p.vx *= Math.pow(0.985, step)
-        p.vy = p.vy * Math.pow(0.985, step) + 0.22 * step
-        if (p.vy > 2.2) p.vy = 2.2 + (p.vy - 2.2) * 0.9
-        p.sway += p.swaySpeed * step
-        p.x += (p.vx + Math.sin(p.sway) * (p.vy > 0 ? 1.4 : 0)) * step
-        p.y += p.vy * step
-        p.spin += p.spinSpeed * step
-        p.flip += p.flipSpeed * step
-        if (p.y > height + 30) continue
-        context.save()
-        context.globalAlpha = fade
-        context.translate(p.x, p.y)
-        context.rotate(p.spin)
-        context.scale(1, Math.cos(p.flip))
-        context.fillStyle = p.colour
-        if (p.round) { context.beginPath(); context.arc(0, 0, p.w / 2, 0, Math.PI * 2); context.fill() }
-        else context.fillRect(-p.w / 2, -p.h / 2, p.w, p.h)
-        context.restore()
+      // 60 ticks a second whatever the screen's speed: a slow phone runs a few ticks in one frame (only the last one stays on screen).
+      while (owed >= 1) {
+        owed -= 1
+        context.clearRect(0, 0, width, height)
+        pieces = pieces.filter(p => tickPiece(context, p))
+        context.globalAlpha = 1
       }
-      if (age < RUN_MS) frame = requestAnimationFrame(draw)
+      if (pieces.length) frame = requestAnimationFrame(draw)
       else context.clearRect(0, 0, width, height)
     }
     frame = requestAnimationFrame(draw)
