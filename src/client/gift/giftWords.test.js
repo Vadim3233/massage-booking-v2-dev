@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { areaGroups, codeFromPath, codeShown, designsInOrder, fromLine, giftChoices, giftWords, kicker, occasionsInOrder, renameSignOff, shopLink, shopMessage, travelTiers, travelWords, whatsappText, whole, withLove } from './giftWords.js'
+import { areaGroups, codeFromPath, codeShown, designsInOrder, fromLine, giftChoices, giftWords, kicker, occasionsInOrder, renameSignOff, shopLink, shopMessage, travelTiers, travelWords, whatsappText, giftEmail, mailtoHref, whole, withLove } from './giftWords.js'
 
 const options = { all_areas_cover: 35, areas: [{ id: 'c', name: 'Chelsea', travel: 20, congestion: 15 }, { id: 'n', name: 'Nearby', travel: 0, congestion: 0 }] }
 
@@ -54,6 +54,10 @@ describe('gift words', () => {
   })
   it('writes the WhatsApp message and the prices plainly', () => {
     expect(whatsappText({ from_name: 'Anna', minutes: 60, people: 1, code: '7K3MQX9P' }, 'https://x.test')).toBe('Anna has sent you a gift: a 60-minute massage at your home 🎁\n\nOpen it here: https://x.test/gift/7K3M-QX9P')
+    const email = giftEmail({ recipient_name: ' Sonia ', from_name: 'Vadim', minutes: 90, people: 1, code: '7K3MQX9P' }, 'https://x.test')
+    expect(email).toEqual({ subject: 'Sonia, a gift for you 🎁', body: "Hi Sonia,\n\nI've got you a gift: a 90-minute massage at your home 🎁\n\nOpen it here: https://x.test/gift/7K3M-QX9P\n\nVadim" })
+    expect(mailtoHref({ subject: 'A & B?', body: 'line 1\nline 2' })).toBe('mailto:?subject=A%20%26%20B%3F&body=line%201%0D%0Aline%202')
+    expect(giftEmail({ minutes: 60, people: 1, code: '7K3MQX9P' }, 'https://x.test').subject).toBe('A gift for you 🎁')
     expect(whole(125)).toBe('£125')
     expect(whole(12.5)).toBe('£12.50')
   })

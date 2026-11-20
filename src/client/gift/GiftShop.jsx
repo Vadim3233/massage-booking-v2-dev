@@ -133,7 +133,7 @@ export default function GiftShop({ client = supabase }) {
     const bank = chooseBank(bankFromSettings(purchase.bank), fallbackBank)
     if (purchase.status === 'ready' || purchase.status === 'used') return shell(<>
       <h1 tabIndex={-1}>Your gift is <em>ready</em></h1>
-      <p className="lede">Thank you, the payment has arrived. {purchase.delivery === 'email' && purchase.status === 'ready' ? `It will be emailed to ${purchase.recipient_email} on the day you chose. If they don't see it, ask them to look in Promotions or Junk. You can also open it yourself:` : 'Open it to print it, save it or send it on WhatsApp.'}</p>
+      <p className="lede">Thank you, the payment has arrived. {purchase.delivery === 'email' && purchase.status === 'ready' ? `It will be emailed to ${purchase.recipient_email} on the day you chose. If they don't see it, ask them to look in Promotions or Junk. You can also open it yourself:` : 'Open it to send it by email or WhatsApp, print it or save it.'}</p>
       <a className="btn btn--primary btn--lg btn--block" href={`/gift/${purchase.code}`}>Open the voucher</a>
       <p className="fine">Code: <strong>{purchase.code}</strong></p>
       {receiptButton}
@@ -227,7 +227,7 @@ export default function GiftShop({ client = supabase }) {
 
     <section className="gift-step" aria-labelledby="gift-s5"><h2 id="gift-s5"><span>{enhancements.length ? 6 : 5}</span>How should it arrive?</h2>
       <div className="gift-stack">
-        <Choice pressed={delivery === 'self'} onClick={() => setDelivery('self')} title="I'll give it myself" note="A voucher to print or save as a PDF, plus a button to send it on WhatsApp." />
+        <Choice pressed={delivery === 'self'} onClick={() => setDelivery('self')} title="I'll give it myself" note="A voucher to print or save as a PDF, or send it yourself by email or WhatsApp." />
         <Choice pressed={delivery === 'email'} onClick={() => setDelivery('email')} title="Surprise them by email" note="It arrives on the day you choose, in an envelope matching the design, which they open to find their surprise." />
       </div>
       {delivery === 'email' && <div className="gift-names">

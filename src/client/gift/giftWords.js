@@ -152,6 +152,18 @@ export function whatsappText(voucher, origin) {
 }
 export const whatsappHref = text => `https://wa.me/?text=${encodeURIComponent(text)}`
 
+// The email the buyer sends from their own email app (Send by email): personal, from them, with the gift link.
+export function giftEmail(voucher, origin) {
+  const to = String(voucher.recipient_name || '').trim()
+  const from = String(voucher.from_name || '').trim()
+  return {
+    subject: to ? `${to}, a gift for you 🎁` : 'A gift for you 🎁',
+    body: `${to ? `Hi ${to},` : 'Hi,'}\n\nI've got you a gift: ${giftWords(voucher.minutes, voucher.people).toLowerCase()} at your home 🎁\n\nOpen it here: ${giftLink(origin, voucher.code)}${from ? `\n\n${from}` : ''}`,
+  }
+}
+// Line breaks go as %0D%0A, as the mailto rules ask (some Outlook versions join lines sent as %0A alone).
+export const mailtoHref = ({ subject, body }) => `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.replace(/\r?\n/g, '\r\n'))}`
+
 // The buying page's address, to share anywhere (WhatsApp, Instagram, a client's chat).
 export const shopLink = origin => `${origin}/gift`
 
