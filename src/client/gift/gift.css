@@ -137,3 +137,4 @@
 .gift-shell .gift-cancel h2 { font-size: 1.1rem; margin: 0 0 6px; }
 .gift-shell .gift-cancel p { margin: 0 0 10px; }
 .gift-shell .gift-cancel-link { display: block; margin: 14px auto 0; }
+.gift-copy-status:empty, .gift-copy-status:has(> .sr-only:only-child) { margin: 0; }

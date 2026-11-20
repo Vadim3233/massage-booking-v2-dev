@@ -23,6 +23,8 @@ export default function GiftOpen({ code, client = supabase }) {
   const [areas, setAreas] = useState([])
   const [copied, setCopied] = useState('')
   const codeRef = useRef(null)
+  const copiedTimer = useRef(0)
+  useEffect(() => () => clearTimeout(copiedTimer.current), [])
   useEffect(() => { document.title = 'Your gift · VadMassage' }, [])
   useEffect(() => {
     let live = true
@@ -67,7 +69,8 @@ export default function GiftOpen({ code, client = supabase }) {
     try {
       await navigator.clipboard.writeText(shown)
       setCopied('yes')
-      setTimeout(() => setCopied(''), 2500)
+      clearTimeout(copiedTimer.current)
+      copiedTimer.current = setTimeout(() => setCopied(''), 2500)
     } catch {
       const range = document.createRange()
       if (codeRef.current) { range.selectNodeContents(codeRef.current); const selection = window.getSelection(); selection?.removeAllRanges(); selection?.addRange(range) }
@@ -91,9 +94,9 @@ export default function GiftOpen({ code, client = supabase }) {
     <div className="gift-code-row">
       <span>Your code</span>
       <strong ref={codeRef} className="gift-code">{shown}</strong>
-      <button className="btn--tonal gift-copy" onClick={copyCode} aria-live="polite">{copied === 'yes' ? 'Copied ✓' : 'Copy code'}</button>
+      <button className="btn--tonal gift-copy" onClick={copyCode}>{copied === 'yes' ? 'Copied ✓' : 'Copy code'}</button>
     </div>
-    {copied === 'select' && <p className="fine">Your phone didn't let me copy it, so the code is selected: hold it to copy.</p>}
+    <p className="fine gift-copy-status" role="status">{copied === 'yes' ? <span className="sr-only">Code copied</span> : copied === 'select' ? "Your phone didn't let me copy it, so the code is selected: hold it to copy." : ''}</p>
     <div className="gift-actions">
       <button className="btn--tonal" onClick={() => window.print()}>Print or save as PDF</button>
       <a className="btn btn--tonal" href={whatsappHref(message)} target="_blank" rel="noopener noreferrer">Send on WhatsApp</a>
