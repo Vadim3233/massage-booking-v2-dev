@@ -19,8 +19,10 @@ describe('when Remove travel fee shows', () => {
     for (const status of ['completed', 'cancelled', 'no_show']) expect(travelFeeBlock(booking({ booking_status: status }))).toBeNull()
     expect(travelFeeBlock(booking({ booking_payments: [{ status: 'refunded', amount_gbp: 200 }] }))).toBeNull()
   })
-  it('asks for money said to be sent to be checked first', () => {
-    expect(travelFeeBlock(booking({ booking_status: 'awaiting_payment_verification', booking_payments: { status: 'awaiting_verification', amount_gbp: 200 } }))).toMatch(/Check it first/)
+  it('a transfer said sent counts as not paid; an extra said sent is checked first', () => {
+    const said = booking({ booking_payments: { method: 'bank_transfer', status: 'awaiting_verification', amount_gbp: 200 } })
+    expect(canRemoveTravelFee(said)).toBe(true)
+    expect(travelFeeOutcome(said)).toEqual({ refund: 0, text: 'The price goes from £200.00 to £180.00. The client then pays £180.00. They said they sent the transfer, so when you check your bank: if the full £200.00 came, send the difference back.' })
     expect(travelFeeBlock(booking({ total_gbp: 260, balance_due_gbp: 60, balance_reported_at: '2031-01-01T09:00:00Z' }))).toMatch(/Mark it received first/)
   })
   it('says why when nothing would be left to pay', () => {
