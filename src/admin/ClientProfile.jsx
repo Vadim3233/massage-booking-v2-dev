@@ -199,7 +199,6 @@ function UpcomingTravelFees({ clientId, version, changed, api = travelFeeApi }) 
   const [busy, setBusy] = useState(false)
   const [problems, setProblems] = useState([])
   const [loadError, setLoadError] = useState('')
-  const [reload, setReload] = useState(0)
   const requests = useRef({})
   useEffect(() => {
     let live = true
@@ -209,7 +208,7 @@ function UpcomingTravelFees({ clientId, version, changed, api = travelFeeApi }) 
       setTicked(Object.fromEntries(list.map(row => [row.id, travelFeeBlock(row) === ''])))
     }, failure => { if (live) { setRows([]); setLoadError(failure.message) } })
     return () => { live = false }
-  }, [api, clientId, version, reload])
+  }, [api, clientId, version])
   if (loadError) return <p role="alert">{loadError}</p>
   if (!rows?.length) return null
   const chosen = rows.filter(row => ticked[row.id] && travelFeeBlock(row) === '')
@@ -226,11 +225,10 @@ function UpcomingTravelFees({ clientId, version, changed, api = travelFeeApi }) 
     setProblems(failed)
     setBusy(false)
     if (removed) toast(`Travel fee removed from ${removed} ${removed === 1 ? 'booking' : 'bookings'}`)
-    setReload(value => value + 1)
     changed()
   }
   return <div className="admin-travel-fee-ask" role="group" aria-labelledby="upcoming-fees-title">
-    <h4 id="upcoming-fees-title">{rows.length === 1 ? 'Their upcoming booking still has a travel fee' : `${rows.length} upcoming bookings still have a travel fee`}</h4>
+    <h4 id="upcoming-fees-title">{rows.length === 1 ? 'Their upcoming booking still has a travel fee' : `Their ${rows.length} upcoming bookings still have a travel fee`}</h4>
     <p className="admin-detail-hint">They were made before you switched this on. Remove it from these too?</p>
     <ul role="list" className="admin-travel-fee-list">{rows.map(row => {
       const block = travelFeeBlock(row)

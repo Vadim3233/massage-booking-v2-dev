@@ -5,11 +5,14 @@
 --   * Only Vadim, on a booking still to happen (awaiting payment, awaiting cash approval, awaiting the transfer check, or confirmed; not once
 --     the appointment has started) that has a travel fee. The congestion charge stays.
 --   * The money follows the Edit booking rules (20261204100000_edit_booking_services.sql). Not paid yet: the amount to pay drops by the fee.
---     Paid, or a transfer the client says was sent: the fee first comes off anything still to pay, then the rest becomes a refund to send
---     (bookings.refund_due_gbp, "Refund to send" / Record refund sent, as now). The free-cancellation hours do not matter: it is his choice.
---   * A receipt already made is corrected (keeping what it said before) once nothing is still to pay.
---   * A gift voucher booking: the fee comes off what the client pays. When the voucher itself paid for the travel, or nothing would be left to
---     pay, it is refused (a voucher has no balance to put money back on).
+--     Paid: the fee first comes off any extra still to pay, then the rest becomes a refund to send (bookings.refund_due_gbp, "Refund due" /
+--     Record refund sent, as now). The free-cancellation hours do not matter: it is his choice.
+--   * Money the client says they sent but Vadim has not checked yet (a transfer, or an extra still to pay) is checked first: a refund owed
+--     on money that never arrives could not be cleared (fresh audit, 21 Nov 2026).
+--   * A receipt already made is corrected (keeping what it said before) once nothing is still to pay; a receipt that cannot be rebuilt never
+--     stops the price change.
+--   * A gift voucher booking: the fee comes off what the client pays. When the voucher paid for any of the travel, or nothing would be left
+--     to pay, it is refused (a voucher has no balance to put money back on).
 --   * The client gets an email (and the Telegram copy) unless Vadim unticks it. The booking's History says "Travel fee removed".
 --   * On the client page, while "No travel fee" is on, the client's upcoming bookings that still have a travel fee are listed with
 --     "Remove from these bookings" (the screens call admin_remove_travel_fee once for each).
@@ -17,7 +20,7 @@
 -- Safe to apply before the new screens are live: nothing live calls the new function, and the History filter only gains a new event name.
 --
 -- To take this back: drop the functions admin_remove_travel_fee and travel_fee_removed_notify, and run activity_money_types from
--- 20261220100000_activity_record.sql again.
+-- 20261220100000_activity_record.sql and mirror_client_email_to_telegram from 20261204100000_edit_booking_services.sql again.
 
 -- ---------------------------------------------------------------------------------------------
 -- 1. The client's message
@@ -43,8 +46,10 @@ begin
     v_money := format('You have already paid, so I will send %s back to you.', public.notification_money(p_refund));
   elsif b.balance_due_gbp > 0 then
     v_money := format('There is now %s still to pay.', public.notification_money(b.balance_due_gbp));
-  elsif p.status in ('paid', 'awaiting_verification') then
+  elsif p.status = 'paid' then
     v_money := 'There is nothing more to pay.';
+  elsif b.pay_after_booking_id is not null and p.status = 'awaiting_transfer' then
+    v_money := format('The amount to pay for this session is now %s. As before, you pay it after your earlier session.', public.notification_money(p.amount_gbp));
   elsif p.method = 'cash' then
     v_money := format('The amount to pay in cash is now %s.', public.notification_money(p.amount_gbp));
   else
@@ -57,7 +62,7 @@ begin
     || E'\n\n' || v_money;
   insert into public.notification_deliveries(event_id, channel, audience, recipient, title, body, link_path)
   values (p_event, 'email', 'client', btrim(b.booking_email_snapshot), 'No travel fee for your appointment',
-    v_body || E'\n\nSee your booking: {link}' || E'\n\nWarm wishes,\nVadim', '/account?booking=' || b.id::text);
+    v_body || E'\n\nSee or change your booking: {link}' || E'\n\nWarm wishes,\nVadim', '/account?booking=' || b.id::text);
 end;
 $$;
 revoke all on function public.travel_fee_removed_notify(uuid, uuid, numeric, numeric, numeric) from public, anon, authenticated;
@@ -75,7 +80,7 @@ as $$
 declare
   b public.bookings%rowtype;
   p public.booking_payments%rowtype;
-  r public.booking_receipts%rowtype;
+  g public.gift_vouchers%rowtype;
   v_now timestamptz := clock_timestamp();
   v_date date;
   v_fee numeric(10,2);
@@ -86,7 +91,6 @@ declare
   v_refund numeric(10,2) := 0;
   v_amount numeric(10,2);
   v_balance numeric(10,2);
-  v_fresh jsonb;
   v_fingerprint text;
   v_existing uuid;
   v_command uuid;
@@ -119,27 +123,36 @@ begin
   if p.id is null or p.status in ('rejected', 'refunded') then
     raise exception 'This booking has no payment to change.' using errcode = '22023';
   end if;
+  if p.status = 'awaiting_verification' then
+    raise exception 'The client says they sent the transfer. Check it first (Mark received), then remove the travel fee.' using errcode = '22023';
+  end if;
+  if b.balance_reported_at is not null and coalesce(b.balance_due_gbp, 0) > 0 then
+    raise exception 'The client says they sent the extra still to pay. Mark it received first, then remove the travel fee.' using errcode = '22023';
+  end if;
 
   v_fee := b.travel_fee_gbp;
   v_total := b.total_gbp - v_fee;
   v_gift := coalesce(b.gift_covered_gbp, 0);
-  v_held := p.status in ('paid', 'awaiting_verification');
-  -- A gift voucher's part cannot shrink: there is nowhere to put that money back.
-  if v_gift > v_total then
-    raise exception 'The gift voucher already paid for the travel on this booking, so the travel fee stays.' using errcode = '22023';
+  v_held := p.status = 'paid';
+  -- A gift voucher's part cannot shrink: there is nowhere to put that money back. A voucher that paid for any of the travel keeps it.
+  if b.gift_voucher_id is not null then
+    select * into g from public.gift_vouchers where id = b.gift_voucher_id;
+    if g.id is not null and least(b.travel_fee_gbp + b.congestion_fee_gbp, coalesce(g.travel_cover_gbp, 0)) > b.congestion_fee_gbp then
+      raise exception 'The gift voucher already paid for the travel on this booking, so the travel fee stays.' using errcode = '22023';
+    end if;
   end if;
   v_balance := coalesce(b.balance_due_gbp, 0);
   if v_held then
-    -- Paid or sent: the fee first comes off anything still to pay, the rest is a refund to send.
+    -- Paid: the fee first comes off any extra still to pay, the rest is a refund to send.
     v_from_balance := least(v_balance, v_fee);
     v_balance := v_balance - v_from_balance;
     v_refund := v_fee - v_from_balance;
-    v_amount := greatest(p.amount_gbp - v_refund, 0);
+    v_amount := p.amount_gbp - v_refund;
   else
     v_amount := p.amount_gbp - v_fee;
-    if v_amount <= 0 then
-      raise exception 'Without the travel fee there would be nothing left to pay. Please change this booking by hand.' using errcode = '22023';
-    end if;
+  end if;
+  if v_total - v_gift <= 0 or v_amount < 0 or (v_gift > 0 and v_amount + v_balance <= 0) then
+    raise exception 'Without the travel fee there would be nothing left to pay. Please change this booking by hand.' using errcode = '22023';
   end if;
 
   v_command := public.admin_finish_command('admin_remove_travel_fee', p_request_id, v_fingerprint, b.id);
@@ -152,18 +165,13 @@ begin
     update public.booking_payments set amount_gbp = v_amount where id = p.id;
   end if;
 
-  -- A receipt already made is corrected to match (once nothing is still to pay), keeping what it said before.
-  if p.status = 'paid' and v_balance = 0 then
-    select * into r from public.booking_receipts x where x.booking_id = b.id for update;
-    if found then
-      v_fresh := public.build_receipt_snapshot(b.id);
-      insert into public.booking_receipt_revisions(receipt_id, revision, snapshot, edited_by) values (r.id, r.edit_count + 1, r.snapshot, auth.uid());
-      update public.booking_receipts set snapshot = r.snapshot || jsonb_build_object('appointment', v_fresh->'appointment', 'treatments', v_fresh->'treatments',
-          'lines', v_fresh->'lines', 'total', v_fresh->'total', 'payment', v_fresh->'payment'),
-        edited_at = v_now, edited_by = auth.uid(), edit_count = r.edit_count + 1
-      where id = r.id;
-    end if;
-  end if;
+  -- A receipt already made is corrected to match (as for extra time: paid, nothing owed, amounts agree), keeping what it said before.
+  -- A receipt that cannot be rebuilt never undoes the price change; it can still be corrected by hand.
+  begin
+    perform public.extension_refresh_receipt(b.id);
+  exception when others then
+    raise warning 'Receipt for booking % not corrected: %', b.id, sqlerrm;
+  end;
 
   perform public.admin_lifecycle_event('booking.travel_fee_removed', v_command, b.id, jsonb_build_object('travel_fee_gbp', v_fee,
     'total_gbp', v_total, 'previous_total_gbp', b.total_gbp, 'amount_gbp', v_amount, 'refund_added_gbp', v_refund,
@@ -190,3 +198,44 @@ returns text[] language sql immutable set search_path = '' as $$
     'booking.travel_fee_removed'];
 $$;
 revoke all on function public.activity_money_types() from public, anon, authenticated;
+
+-- ---------------------------------------------------------------------------------------------
+-- 4. The Telegram copy of the client's email: as 20261204100000_edit_booking_services.sql, with "Travel fee removed" added
+-- ---------------------------------------------------------------------------------------------
+create or replace function public.mirror_client_email_to_telegram()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_event text;
+  v_booking uuid;
+  v_client uuid;
+  v_body text;
+begin
+  select e.event_type, e.aggregate_id into v_event, v_booking
+  from public.event_outbox e where e.id = new.event_id and e.aggregate_type = 'booking';
+  if v_event is null or v_event not in ('booking.created', 'booking.bank_transfer_verified', 'booking.cash_approved', 'booking.confirmed_payment_due',
+    'booking.confirmed_pay_after', 'booking.next_payment_due', 'booking.services_changed',
+    'booking.rescheduled', 'booking.cancelled', 'booking.pending_removed', 'booking.cash_rejected', 'booking.refund_recorded',
+    'booking.travel_fee_removed') then
+    return null;
+  end if;
+  select b.client_id into v_client from public.bookings b where b.id = v_booking;
+  if v_client is null then return null; end if;
+  v_body := replace(replace(replace(new.body, E'\n\nSee or change your booking: {link}', ''), E'\n\nWarm wishes,\nVadim', ''), E'\n\nWarm wishes,\nVad', '')
+    || case when v_event in ('booking.created', 'booking.bank_transfer_verified', 'booking.cash_approved', 'booking.confirmed_payment_due',
+         'booking.confirmed_pay_after', 'booking.next_payment_due', 'booking.services_changed', 'booking.rescheduled', 'booking.travel_fee_removed')
+         then E'\n\nTo change or cancel, use the link in your email, or contact Vadim.' else '' end;
+  insert into public.notification_deliveries(event_id, channel, audience, recipient, title, body)
+  select new.event_id, 'telegram_client', 'client', l.chat_id::text, new.title, v_body
+  from public.client_telegram_links l
+  where l.client_id = v_client and l.stopped_at is null
+  on conflict (event_id, channel, recipient) do nothing;
+  return null;
+end;
+$$;
+revoke all on function public.mirror_client_email_to_telegram() from public, anon, authenticated;
+
+notify pgrst, 'reload schema';
