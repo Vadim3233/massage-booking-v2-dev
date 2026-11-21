@@ -37,6 +37,7 @@ const EVENTS = {
   'booking.extra_reported': () => ['Says they sent the extra', 'bank'],
   'booking.extended': row => [`Extra time · +${minutesWords(Number(row.payload?.minutes) || 0)}`, 'clock'],
   'booking.extension_removed': row => [`Extra time removed · ${minutesWords(Number(row.payload?.minutes) || 0)}`, 'clock'],
+  'booking.travel_fee_removed': row => [`Travel fee removed${row.payload?.travel_fee_gbp ? ` · ${pounds(row.payload.travel_fee_gbp)}` : ''}`, 'cash'],
   'booking.completed': () => ['Marked completed', 'check'],
   'booking.no_show': () => ['Marked no-show', 'cancel'],
   'booking.address_changed': () => ['Address changed', 'pin'],
@@ -107,6 +108,7 @@ function tagsOf(row) {
     if (Number(p.refund_due_gbp) > 0) tags.push({ text: `refund ${pounds(p.refund_due_gbp)}` })
     if (Number(p.balance_due_gbp) > 0) tags.push({ text: `${pounds(p.balance_due_gbp)} still to pay` })
   }
+  if (row.event_type === 'booking.travel_fee_removed' && Number(p.refund_added_gbp) > 0) tags.push({ text: `refund ${pounds(p.refund_added_gbp)}` })
   if (row.event_type === 'booking.extended' && p.pay_by) tags.push({ text: { bill: 'added to the bill', cash: 'cash', transfer: 'by transfer', free: 'no charge' }[p.pay_by] || p.pay_by })
   if ((row.sent || []).some(item => item.status === 'failed')) tags.push({ text: 'not sent', tone: 'late' })
   // A booking or gift that was cancelled later says so on the line that started it, so an old "New gift voucher" does not look live.
@@ -119,7 +121,7 @@ function amountOf(row) {
   const p = row.payload || {}
   const value = { 'booking.bank_transfer_received': p.amount_gbp, 'booking.bank_transfer_verified': p.amount_gbp, 'booking.cash_approved': p.amount_gbp,
     'booking.cash_received': p.amount_gbp, 'booking.refund_recorded': p.refunded_gbp ?? p.refund_due_gbp, 'booking.balance_received': p.received_gbp,
-    'booking.extended': p.price_gbp, 'booking.extension_removed': p.price_gbp, 'booking.services_changed': p.total_gbp,
+    'booking.extended': p.price_gbp, 'booking.extension_removed': p.price_gbp, 'booking.services_changed': p.total_gbp, 'booking.travel_fee_removed': p.total_gbp,
     'booking.late_fee_settled': p.action === 'received' ? p.late_fee_due_gbp : undefined }[row.event_type]
   if (value !== undefined && value !== null) return pounds(value)
   if (row.event_type?.startsWith('client.') || row.event_type?.startsWith('gift.') || row.event_type === 'booking.reminder' || row.event_type === 'booking.review_request') return ''

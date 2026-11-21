@@ -1121,3 +1121,11 @@
 .admin-income-gifts .is-held dt, .admin-income-gifts .is-held dd { color: var(--sand-ink); }
 .admin-income-giftline { display: flex; justify-content: space-between; gap: 12px; width: 100%; padding: 10px 12px; }
 .admin-income-giftline small { display: block; color: var(--muted); }
+
+/* Remove travel fee (booking sheet) and the client page's list of upcoming bookings with a travel fee. */
+.admin-travel-fee { margin: 8px 0; }
+.admin-travel-fee-ask { margin-top: 4px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.admin-travel-fee-ask h4 { margin: 0 0 6px; font: 600 15px/1.3 var(--font-ui); }
+.admin-travel-fee-ask p { margin: 0 0 8px; }
+.admin-travel-fee-list { margin: 8px 0; padding: 0; list-style: none; display: grid; gap: 2px; }
+.admin-travel-fee-list .admin-who-row { min-height: 44px; }

@@ -116,4 +116,4 @@ export function createLifecycleApi(client) {
 export const lifecycleApi = createLifecycleApi(supabase)
 
 // What the sheet and the toast say once it is done: the outcome, not the name of the button that was pressed.
-export const DONE = { extend: 'Extra time added', removeExtra: 'Extra time removed', edit: 'Booking changed', balance: 'Extra payment recorded', complete: 'Marked completed', noShow: 'Marked no-show', reschedule: 'Booking moved', cancel: 'Booking cancelled', refund: 'Refund recorded', feeReceived: 'Fee recorded as received', feeWaive: 'Fee waived' }
+export const DONE = { extend: 'Extra time added', removeExtra: 'Extra time removed', travelFee: 'Travel fee removed', edit: 'Booking changed', balance: 'Extra payment recorded', complete: 'Marked completed', noShow: 'Marked no-show', reschedule: 'Booking moved', cancel: 'Booking cancelled', refund: 'Refund recorded', feeReceived: 'Fee recorded as received', feeWaive: 'Fee waived' }
