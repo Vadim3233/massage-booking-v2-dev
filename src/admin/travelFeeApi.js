@@ -3,7 +3,7 @@ import { hasStarted, money, today } from './calendarPresentation.js'
 
 // "Remove travel fee" on a booking already made (20261225100000_remove_travel_fee.sql). Only the Admin, on a booking still to happen.
 // The money follows the Edit booking rules: not paid yet, the amount to pay drops; paid, it first comes off any extra still to pay, then the
-// rest is a refund to send. Money the client says they sent is checked first.
+// rest is a refund to send. A transfer said sent but not checked counts as not paid yet (20261226100000).
 
 export const STILL_TO_HAPPEN = ['awaiting_transfer', 'awaiting_payment_verification', 'awaiting_cash_approval', 'confirmed']
 const paymentOf = booking => (Array.isArray(booking?.booking_payments) ? booking.booking_payments[0] : booking?.booking_payments) || null
@@ -14,7 +14,6 @@ export function travelFeeBlock(booking, now = new Date()) {
   if (!booking || cents(booking.travel_fee_gbp) <= 0 || !STILL_TO_HAPPEN.includes(booking.booking_status) || hasStarted(booking, now)) return null
   const payment = paymentOf(booking)
   if (!payment || ['rejected', 'refunded'].includes(payment.status)) return null
-  if (payment.status === 'awaiting_verification') return 'The client says they sent the transfer. Once the money is in your bank, press Mark paid above, then remove the travel fee.'
   if (booking.balance_reported_at && cents(booking.balance_due_gbp) > 0) return 'The client says they sent the extra still to pay. Mark it received first, then remove the travel fee.'
   const fee = cents(booking.travel_fee_gbp)
   const gift = cents(booking.gift_covered_gbp)
@@ -34,7 +33,10 @@ export function travelFeeOutcome(booking) {
   const total = (cents(booking.total_gbp) - fee) / 100
   const price = `The price goes from ${money(booking.total_gbp)} to ${money(total)}.`
   if (!payment || payment.status !== 'paid') {
-    return { refund: 0, text: `${price} The client then pays ${money((cents(payment?.amount_gbp) - fee) / 100)}${payment?.method === 'cash' ? ' in cash' : ''}.` }
+    const pays = money((cents(payment?.amount_gbp) - fee) / 100)
+    const said = payment?.status === 'awaiting_verification'
+      ? ` They said they sent the transfer, so when you check your bank: if the full ${money(booking.total_gbp)} came, send the difference back.` : ''
+    return { refund: 0, text: `${price} The client then pays ${pays}${payment?.method === 'cash' ? ' in cash' : ''}.${said}` }
   }
   const fromBalance = Math.min(cents(booking.balance_due_gbp), fee)
   const refund = (fee - fromBalance) / 100
