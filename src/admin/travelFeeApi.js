@@ -14,7 +14,7 @@ export function travelFeeBlock(booking, now = new Date()) {
   if (!booking || cents(booking.travel_fee_gbp) <= 0 || !STILL_TO_HAPPEN.includes(booking.booking_status) || hasStarted(booking, now)) return null
   const payment = paymentOf(booking)
   if (!payment || ['rejected', 'refunded'].includes(payment.status)) return null
-  if (payment.status === 'awaiting_verification') return 'The client says they sent the transfer. Check it first (Mark received), then remove the travel fee.'
+  if (payment.status === 'awaiting_verification') return 'The client says they sent the transfer. Once the money is in your bank, press Mark paid above, then remove the travel fee.'
   if (booking.balance_reported_at && cents(booking.balance_due_gbp) > 0) return 'The client says they sent the extra still to pay. Mark it received first, then remove the travel fee.'
   const fee = cents(booking.travel_fee_gbp)
   const gift = cents(booking.gift_covered_gbp)
@@ -55,9 +55,11 @@ const SAFE = new Set([
   'The client says they sent the transfer. Check it first (Mark received), then remove the travel fee.',
   'The client says they sent the extra still to pay. Mark it received first, then remove the travel fee.',
 ])
+// The database's own words (20261225100000) name the button as it was first written; the screen shows the button's real name.
+const SHOWN = { 'The client says they sent the transfer. Check it first (Mark received), then remove the travel fee.': 'The client says they sent the transfer. Once the money is in your bank, press Mark paid above, then remove the travel fee.' }
 function failure(error) {
   const conflict = ['PT409', '40001'].includes(error?.code) && !SAFE.has(error?.message)
-  const result = new Error(SAFE.has(error?.message) ? error.message
+  const result = new Error(SAFE.has(error?.message) ? SHOWN[error.message] || error.message
     : conflict ? 'This booking changed before you could finish, so it has been reloaded. Please check it and try again.'
       : 'Could not remove the travel fee. Please check your connection and try again.')
   result.conflict = conflict

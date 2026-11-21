@@ -20,7 +20,7 @@ describe('when Remove travel fee shows', () => {
     expect(travelFeeBlock(booking({ booking_payments: [{ status: 'refunded', amount_gbp: 200 }] }))).toBeNull()
   })
   it('asks for money said to be sent to be checked first', () => {
-    expect(travelFeeBlock(booking({ booking_status: 'awaiting_payment_verification', booking_payments: { status: 'awaiting_verification', amount_gbp: 200 } }))).toMatch(/Check it first/)
+    expect(travelFeeBlock(booking({ booking_status: 'awaiting_payment_verification', booking_payments: { status: 'awaiting_verification', amount_gbp: 200 } }))).toMatch(/press Mark paid above/)
     expect(travelFeeBlock(booking({ total_gbp: 260, balance_due_gbp: 60, balance_reported_at: '2031-01-01T09:00:00Z' }))).toMatch(/Mark it received first/)
   })
   it('says why when nothing would be left to pay', () => {
