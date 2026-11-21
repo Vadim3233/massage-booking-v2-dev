@@ -10,6 +10,7 @@ import EditBooking from './EditBooking.jsx'
 import ExtendDialog from './ExtendDialog.jsx'
 import { PAY_SHORT, canRemoveExtension, extendApi, extensionsOf, minutesWords } from './extendApi.js'
 import { activityApi } from './activityApi.js'
+import { travelFeeApi, travelFeeBlock, travelFeeOutcome } from './travelFeeApi.js'
 
 const ACTION_STYLE = { extend: 'btn--tonal', complete: 'btn--primary', feeReceived: 'btn--primary', refund: 'btn--primary', balance: 'btn--primary', cancel: 'btn--danger', feeWaive: 'btn--quiet', noShow: '', edit: '', reschedule: '' }
 
@@ -205,6 +206,42 @@ function ExtraTime({ booking, done, api = extendApi }) {
   </div>
 }
 
+// "Remove travel fee" (20261225100000_remove_travel_fee.sql): on a booking still to happen that has a travel fee. Asked once, on the spot,
+// with what it does to the money and whether to tell the client.
+export function RemoveTravelFee({ booking, done, api = travelFeeApi }) {
+  const [asking, setAsking] = useState(false)
+  const [notify, setNotify] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const request = useRef(null)
+  const block = travelFeeBlock(booking)
+  if (block === null) return null
+  async function remove() {
+    if (busy) return
+    setBusy(true); setError('')
+    const key = `${booking.id}|${booking.updated_at}|${notify}`
+    if (request.current?.key !== key) request.current = { key, id: crypto.randomUUID() }
+    try { await api.remove(booking, request.current.id, notify); setAsking(false); await done('Travel fee removed.', false, 'travelFee') } catch (failure) { setError(failure.message); if (failure.conflict) await done(failure.message, true) }
+    setBusy(false)
+  }
+  const fee = money(booking.travel_fee_gbp)
+  return <div className="admin-travel-fee">
+    {!asking && <button className="btn--quiet btn--small" onClick={() => { setError(''); setAsking(true) }}>Remove travel fee ({fee})</button>}
+    {asking && <div className="admin-travel-fee-ask" role="group" aria-label="Remove travel fee">
+      <h4>Remove the {fee} travel fee?</h4>
+      {block ? <p role="status">{block}</p> : <>
+        <p>{travelFeeOutcome(booking).text}{Number(booking.congestion_fee_gbp) > 0 ? ' The congestion charge stays.' : ''}</p>
+        <label className="admin-who-row"><input type="checkbox" checked={notify} disabled={busy} onChange={event => setNotify(event.target.checked)} /> Send the client the new price</label>
+      </>}
+      {error && <p role="alert">{error}</p>}
+      <div className="admin-payment-buttons">
+        {!block && <button className="btn--primary btn--small" disabled={busy} onClick={remove}>{busy ? 'Removing…' : 'Remove travel fee'}</button>}
+        <button className="btn--quiet btn--small" disabled={busy} onClick={() => setAsking(false)}>{block ? 'Close' : 'Keep it'}</button>
+      </div>
+    </div>}
+  </div>
+}
+
 export default function BookingActions({ booking, refresh, api = lifecycleApi }) {
   const [kind, setKind] = useState(null)
   const [message, setMessage] = useState(null)
@@ -224,6 +261,7 @@ export default function BookingActions({ booking, refresh, api = lifecycleApi })
     {actions.length > 0 && <div className="admin-payment-buttons">{actions.map(action => <button key={action} className={ACTION_STYLE[action]} onClick={() => { setMessage(null); setKind(action) }}>{lifecycleLabels[action]}</button>)}</div>}
     {message && <p role={message.error ? 'alert' : 'status'}>{message.text}</p>}
     <ExtraTime booking={booking} done={done} />
+    <RemoveTravelFee booking={booking} done={done} />
     {kind === 'edit' && <EditBooking booking={booking} close={() => setKind(null)} done={done} times={api} />}
     {kind === 'extend' && <ExtendDialog booking={booking} close={() => setKind(null)} done={done} />}
     {kind && kind !== 'edit' && kind !== 'extend' && <ActionDialog key={kind} kind={kind} booking={booking} api={api} close={() => setKind(null)} done={done} />}

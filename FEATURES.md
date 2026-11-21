@@ -1,6 +1,6 @@
 # VadMassage booking app: feature catalogue
 
-Last updated: 19 November 2026 (WhatsApp me button on the booking page, FAQ and appointment pages).
+Last updated: 21 November 2026 (Remove travel fee from bookings already made).
 
 This is a plain-English list of everything the app does today, grouped by area. Each entry says what the feature does, why it was built, where it was built (the pull request, or "PR", and any database change, called a "migration"), and what would need to become a **setting** if the same feature were offered to other therapists in a general app.
 
@@ -282,10 +282,10 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **For a general app:** tax year start, currency; travel counting only for mobile therapists.
 
 ### No travel fee for a chosen client
-- **What it does:** A switch on a client's page (Prices section) removes the travel fee from their new bookings. The congestion charge still applies.
-- **Why:** Vadim wanted to treat certain regulars kindly.
-- **Built in:** PR #91, `20261122100000_no_travel_fee.sql`.
-- **For a general app:** nothing specific (only relevant with travel fees).
+- **What it does:** A switch on a client's page (Prices section) removes the travel fee from their new bookings. The congestion charge still applies. Since 21 Nov 2026 it also reaches bookings already made: while the switch is on, the client's page lists their upcoming bookings that still have a travel fee (all ticked) with "Remove the travel fee", and any booking still to happen has a "Remove travel fee" button. The money follows the Edit booking rules: not paid yet, the client pays less; paid, the difference becomes "Refund due" until Record refund sent (anything still owed is reduced first); a transfer the client says they sent is checked first; a receipt already made is corrected. The client gets an email (and Telegram) with the new price unless Vadim unticks it, and the booking's History shows "Travel fee removed". Refused once the appointment has started, or when a gift voucher paid for the travel.
+- **Why:** Vadim wanted to treat certain regulars kindly. A client (Fash) booked before he switched it on, and the booking kept its £20 travel fee.
+- **Built in:** PR #91, `20261122100000_no_travel_fee.sql`; existing bookings: PR (21 Nov 2026), `20261225100000_remove_travel_fee.sql`.
+- **For a general app:** nothing specific (only relevant with travel fees). Competitors (Fresha, Booksy) only allow a manual price edit per appointment; tying it to the client switch is the improvement.
 
 ---
 
@@ -516,7 +516,7 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **Built in:** PR #16, `20261025100000_admin_delete_client.sql` (ADR-036).
 
 ### Per-client price switches
-- **What it does:** A Prices section on a client's page with "No travel fee" and "No minimum booking". They apply to new bookings only.
+- **What it does:** A Prices section on a client's page with "No travel fee" and "No minimum booking". They apply to new bookings; "No travel fee" can also be taken off their upcoming bookings (see "No travel fee for a chosen client").
 - **Why:** Kindness to regulars.
 - **Built in:** PR #91, PR #101 (see sections 1 and 3).
 

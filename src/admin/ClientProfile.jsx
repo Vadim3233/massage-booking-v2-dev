@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Icon from '../ui/icons.jsx'
 import { clientsApi, fullName } from './clientsApi.js'
 import { AddressForm, ClientForm } from './ClientForms.jsx'
@@ -16,6 +16,7 @@ import CombinePicker from './CombinePicker.jsx'
 import DeleteClient from './DeleteClient.jsx'
 import { deletedMessage } from './clientDelete.js'
 import { toast } from '../ui/toast.js'
+import { travelFeeApi, travelFeeBlock, travelFeeOutcome } from './travelFeeApi.js'
 
 const PAGE = 15
 const stamp = value => new Date(value).toLocaleDateString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', year: 'numeric' })
@@ -189,6 +190,60 @@ function MovedOften({ clientId, version, api = activityApi }) {
   return <p className="admin-stayed-longer" role="status">Moved {moves.moved} of their last {moves.of} bookings. You may want to confirm the time with them a day before.</p>
 }
 
+// While "No travel fee" is on: their upcoming bookings that still have a travel fee (made before it was switched on), each ticked, with
+// "Remove the travel fee" for the ticked ones (20261225100000_remove_travel_fee.sql). One booking that cannot change does not stop the others.
+function UpcomingTravelFees({ clientId, version, changed, api = travelFeeApi }) {
+  const [rows, setRows] = useState(null)
+  const [ticked, setTicked] = useState({})
+  const [notify, setNotify] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [problems, setProblems] = useState([])
+  const [loadError, setLoadError] = useState('')
+  const requests = useRef({})
+  useEffect(() => {
+    let live = true
+    api.upcoming(clientId).then(list => {
+      if (!live) return
+      setRows(list); setLoadError('')
+      setTicked(Object.fromEntries(list.map(row => [row.id, travelFeeBlock(row) === ''])))
+    }, failure => { if (live) { setRows([]); setLoadError(failure.message) } })
+    return () => { live = false }
+  }, [api, clientId, version])
+  if (loadError) return <p role="alert">{loadError}</p>
+  if (!rows?.length) return null
+  const chosen = rows.filter(row => ticked[row.id] && travelFeeBlock(row) === '')
+  async function removeAll() {
+    if (busy || !chosen.length) return
+    setBusy(true); setProblems([])
+    const failed = []
+    let removed = 0
+    for (const row of chosen) {
+      const key = `${row.id}|${row.updated_at}|${notify}`
+      if (requests.current[row.id]?.key !== key) requests.current[row.id] = { key, id: crypto.randomUUID() }
+      try { await api.remove(row, requests.current[row.id].id, notify); removed += 1 } catch (failure) { failed.push(`${dateLabel(row.date)} ${time(row.start_minutes)}: ${failure.message}`) }
+    }
+    setProblems(failed)
+    setBusy(false)
+    if (removed) toast(`Travel fee removed from ${removed} ${removed === 1 ? 'booking' : 'bookings'}`)
+    changed()
+  }
+  return <div className="admin-travel-fee-ask" role="group" aria-labelledby="upcoming-fees-title">
+    <h4 id="upcoming-fees-title">{rows.length === 1 ? 'Their upcoming booking still has a travel fee' : `Their ${rows.length} upcoming bookings still have a travel fee`}</h4>
+    <p className="admin-detail-hint">They were made before you switched this on. Remove it from these too?</p>
+    <ul role="list" className="admin-travel-fee-list">{rows.map(row => {
+      const block = travelFeeBlock(row)
+      return <li key={row.id}>
+        <label className="admin-who-row"><input type="checkbox" checked={Boolean(ticked[row.id]) && !block} disabled={busy || Boolean(block)} onChange={event => setTicked(value => ({ ...value, [row.id]: event.target.checked }))} />
+          <span>{dateLabel(row.date)} · {time(row.start_minutes)} · {money(row.travel_fee_gbp)} travel{row.service_area_name_snapshot ? ` (${row.service_area_name_snapshot})` : ''}</span></label>
+        <p className="admin-detail-hint">{block || travelFeeOutcome(row).text}</p>
+      </li>
+    })}</ul>
+    <label className="admin-who-row"><input type="checkbox" checked={notify} disabled={busy} onChange={event => setNotify(event.target.checked)} /> Send the client the new price</label>
+    {problems.map(line => <p key={line} role="alert">{line}</p>)}
+    <div className="admin-payment-buttons"><button className="btn--primary btn--small" disabled={busy || !chosen.length} onClick={removeAll}>{busy ? 'Removing…' : chosen.length > 1 ? `Remove the travel fee from ${chosen.length} bookings` : 'Remove the travel fee'}</button></div>
+  </div>
+}
+
 export default function ClientProfile({ id, back, backLabel = 'Clients', openBooking, newBooking, openCombine, onDeleted, api = clientsApi }) {
   const [client, setClient] = useState(null)
   const [error, setError] = useState('')
@@ -246,7 +301,9 @@ export default function ClientProfile({ id, back, backLabel = 'Clients', openBoo
     <section aria-labelledby="prices-title"><h2 id="prices-title">Prices</h2>
       <p>{client.no_travel_fee ? 'No travel fee: this client\'s new bookings have no travel fee, whoever makes them. The congestion charge still applies.' : 'This client pays the travel fee for their area.'}</p>
       <button className="btn--small" disabled={busy} aria-pressed={Boolean(client.no_travel_fee)} onClick={toggleTravelFee}>{client.no_travel_fee ? 'Charge the travel fee again' : 'No travel fee for this client'}</button>
-      <p className="admin-detail-hint">Bookings already made keep their price.</p>
+      {client.no_travel_fee
+        ? <UpcomingTravelFees clientId={id} version={version} changed={changed} />
+        : <p className="admin-detail-hint">Bookings already made keep their price. When you switch this on, you can remove the travel fee from their upcoming bookings too.</p>}
       <p>{client.no_minimum_booking ? 'No minimum booking: this client can book any length in any area.' : 'This client keeps to each area\'s minimum booking (More > Areas).'}</p>
       <button className="btn--small" disabled={busy} aria-pressed={Boolean(client.no_minimum_booking)} onClick={toggleMinimum}>{client.no_minimum_booking ? 'Use the area minimums again' : 'No minimum booking for this client'}</button>
     </section>
