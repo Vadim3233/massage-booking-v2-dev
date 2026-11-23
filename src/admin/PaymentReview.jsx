@@ -188,7 +188,7 @@ export default function PaymentReview({ openBooking, revision, changed }) {
   const toggle = key => setOpenCards(keys => { const next = new Set(keys); if (next.has(key)) next.delete(key); else next.add(key); return next })
   // Confirmed bookings not paid yet whose session is still to come sit apart, under "Coming up", so a client who also owes for a past
   // session has a gold card for what is owed now and a calm one for what is coming. They never count in the badge or the total.
-  const coming = current ? current.bookings.filter(booking => comingUp(booking, now)) : []
+  const coming = current ? current.bookings.filter(booking => comingUp(booking)) : []
   const rest = current ? current.bookings.filter(booking => !coming.includes(booking)) : []
   const sections = current ? groupByClient(rest, { needsYou: booking => needsYou(booking) && !putOff(booking), putOff, isExtra: extraOwed }) : { needs: [], reminded: [], waiting: [] }
   const comingGroups = groupByClient(coming, { needsYou: () => false, isExtra: owesExtra }).waiting.map(group => ({ ...group, section: 'coming' }))

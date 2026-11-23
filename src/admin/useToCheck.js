@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { loadReviewResource, needsYou, paymentReviewApi } from './paymentReviewApi.js'
+import { extraOwed, loadReviewResource, needsYou, paymentReviewApi } from './paymentReviewApi.js'
+import { reviewAmount } from './reviewClients.js'
 import { activeReminder, useReminders } from './paymentReminders.js'
 
 // What needs the Admin right now: transfers the client says they made, and cash requests to decide, except the ones put off with "Not yet"
@@ -8,7 +9,7 @@ export function summariseToCheck(bookings, reminders = {}, now = Date.now()) {
   const asking = bookings.filter(needsYou)
   const snoozed = asking.filter(booking => activeReminder(booking, reminders, now))
   const needs = asking.filter(booking => !snoozed.includes(booking))
-  return { needs, snoozed, waiting: bookings.length - asking.length, total: needs.reduce((sum, booking) => sum + Number(booking.total_gbp || 0), 0), loaded: true }
+  return { needs, snoozed, waiting: bookings.length - asking.length, total: needs.reduce((sum, booking) => sum + reviewAmount(booking, extraOwed), 0), loaded: true }
 }
 
 const EMPTY = { needs: [], snoozed: [], waiting: 0, total: 0, loaded: false }
