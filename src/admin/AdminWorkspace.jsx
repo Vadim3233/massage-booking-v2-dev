@@ -7,7 +7,14 @@ import { forgetDraftFor } from './adminBookingDraft.js'
 import Icon from '../ui/icons.jsx'
 import ToastHost from '../ui/ToastHost.jsx'
 import './agenda.css'
+import './calendarViews.css'
+import { readLastView, writeLastView } from './calendarGrid.js'
+import { useNarrow } from './calendarHooks.js'
 const Agenda = lazy(() => import('./Agenda.jsx'))
+const MonthView = lazy(() => import('./MonthView.jsx'))
+const WeekView = lazy(() => import('./WeekView.jsx'))
+const VIEW_PATHS = { day: '/admin', week: '/admin/week', month: '/admin/month', agenda: '/admin/agenda' }
+const VIEW_OF_SURFACE = { '/admin': 'day', '/admin/week': 'week', '/admin/month': 'month', '/admin/agenda': 'agenda' }
 const PaymentReview = lazy(() => import('./PaymentReview.jsx'))
 const Alerts = lazy(() => import('./Alerts.jsx'))
 const ScheduleSettings = lazy(() => import('./ScheduleSettings.jsx'))
@@ -99,15 +106,16 @@ export default function AdminWorkspace({ signOut, ownerId }) {
   const context = match ? route.background : route.path + route.search
   const rawSurface = context?.split('?')[0]
   const date = new URLSearchParams(context?.split('?')[1]).get('date') || undefined
-  // Opening the Admin, or pressing Calendar, shows the Agenda. The day view lives at /admin/day (or /admin?date=...).
-  const surface = rawSurface === '/admin/day' ? '/admin' : rawSurface === '/admin' && !date ? '/admin/agenda' : rawSurface
+  // Opening the Admin, or pressing Calendar, shows the calendar view used last on this device (the Agenda the first time). The day view lives at
+  // /admin/day (or /admin?date=...), the Week and Month views at /admin/week and /admin/month (ADR-112).
+  const surface = rawSurface === '/admin/day' ? '/admin' : rawSurface === '/admin' && !date ? VIEW_PATHS[readLastView()] : rawSurface
   const clientParam = new URLSearchParams(context?.split('?')[1]).get('client') || undefined
   const profile = context?.split('?')[0].match(/^\/admin\/clients\/([0-9a-f-]{36})$/i)
   // Two profiles to look at side by side: /admin/clients/combine?a=<id>&b=<id>
   const pairParams = new URLSearchParams(context?.split('?')[1])
   const [pairA, pairB] = [pairParams.get('a') || '', pairParams.get('b') || '']
   const combining = surface === '/admin/clients/combine' && /^[0-9a-f-]{36}$/i.test(pairA) && /^[0-9a-f-]{36}$/i.test(pairB) && pairA.toLowerCase() !== pairB.toLowerCase()
-  const calendarSurface = ['/admin', '/admin/agenda'].includes(surface)
+  const calendarSurface = ['/admin', '/admin/agenda', '/admin/week', '/admin/month'].includes(surface)
   const daySettingsSurface = surface === '/admin/day-settings'
   const daySettingsBack = (!match && route.returnTo) || (date ? `/admin?date=${date}` : '/admin')
   const dayHoursSurface = surface === '/admin/day-hours'
@@ -116,9 +124,10 @@ export default function AdminWorkspace({ signOut, ownerId }) {
     if (route.background) window.history.back()
     else { window.history.replaceState({}, '', '/admin'); setRoute(readRoute()) }
   }
-  const openBooking = id => { setOpener(document.activeElement); navigate(`/admin/bookings/${id}`, context) }
+  // Week and Month keep the week or month on show in the address as it changes, so a booking opened from them comes back to that one.
+  const openBooking = id => { setOpener(document.activeElement); navigate(`/admin/bookings/${id}`, !match && ['/admin/week', '/admin/month'].includes(window.location.pathname) ? window.location.pathname + window.location.search : context) }
   const newBooking = (date, clientId) => {
-    const returnTo = clientId ? `/admin/clients/${clientId}` : surface === '/admin/agenda' ? surface : `/admin?date=${date}`
+    const returnTo = clientId ? `/admin/clients/${clientId}` : surface === '/admin/agenda' ? surface : ['/admin/week', '/admin/month'].includes(surface) ? `${surface}?date=${date}` : `/admin?date=${date}`
     window.history.pushState({ adminReturnTo: returnTo }, '', `/admin/bookings/new?date=${date}${clientId ? `&client=${clientId}` : ''}`)
     setRoute(readRoute())
     window.scrollTo(0, 0)
@@ -137,8 +146,8 @@ export default function AdminWorkspace({ signOut, ownerId }) {
     window.scrollTo(0, 0)
   }
   // A day as half-hour blocks, opened with Edit hours from the Day view. Cancel and Save go back to that day.
-  const openDayHours = day => {
-    window.history.pushState({ adminReturnTo: `/admin?date=${day}` }, '', `/admin/day-hours?date=${day}`)
+  const openDayHours = (day, returnTo = `/admin?date=${day}`) => {
+    window.history.pushState({ adminReturnTo: returnTo }, '', `/admin/day-hours?date=${day}`)
     setRoute(readRoute())
     window.scrollTo(0, 0)
   }
@@ -147,7 +156,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
     setRevision(value => value + 1)
     // The booking opens over the page she started from: the Agenda or the client's page, or else the day it is on.
     const startedFrom = route.returnTo
-    const background = startedFrom === '/admin/agenda' || startedFrom?.startsWith('/admin/clients/') ? startedFrom : `/admin?date=${result.date}`
+    const background = startedFrom === '/admin/agenda' || startedFrom?.startsWith('/admin/clients/') || startedFrom?.startsWith('/admin/week') || startedFrom?.startsWith('/admin/month') ? startedFrom : `/admin?date=${result.date}`
     window.history.replaceState({}, '', background)
     window.history.pushState({ adminBackground: background }, '', `/admin/bookings/${result.booking_id}`)
     setOpener(null)
@@ -156,7 +165,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
   }
   const moreSurface = ['/admin/more', ...SETTINGS_PAGES].includes(surface)
   const openCombine = (a, b) => navigate(`/admin/clients/combine?a=${a}&b=${b}`)
-  const screen = creating ? 'New booking' : match ? 'Booking' : profile ? 'Client' : combining ? 'Same person?' : ({ '/admin': 'Day', '/admin/agenda': 'Agenda', '/admin/review': 'To check', '/admin/alerts': 'Alerts', '/admin/clients': 'Clients', '/admin/more': 'More', '/admin/waitlist': 'Waitlist', '/admin/schedule': 'Working hours', '/admin/day-settings': 'Day settings' }[surface] || (SETTINGS_PAGES.includes(surface) ? SETTINGS_TITLES[surface] : 'Admin'))
+  const screen = creating ? 'New booking' : match ? 'Booking' : profile ? 'Client' : combining ? 'Same person?' : ({ '/admin': 'Day', '/admin/week': 'Week', '/admin/month': 'Month', '/admin/agenda': 'Agenda', '/admin/review': 'To check', '/admin/alerts': 'Alerts', '/admin/clients': 'Clients', '/admin/more': 'More', '/admin/waitlist': 'Waitlist', '/admin/schedule': 'Working hours', '/admin/day-settings': 'Day settings' }[surface] || (SETTINGS_PAGES.includes(surface) ? SETTINGS_TITLES[surface] : 'Admin'))
   const previousScreen = useRef(null)
   const headingFocusWanted = useRef(false)
   useEffect(() => {
@@ -182,6 +191,26 @@ export default function AdminWorkspace({ signOut, ownerId }) {
     return () => { stopped = true }
   }, [screen])
   const needsYou = toCheck.needs.length
+  const narrow = useNarrow()
+  // The calendar view on show is remembered on this device, so Calendar in the bottom bar opens it next time.
+  const currentView = calendarSurface && !match ? VIEW_OF_SURFACE[surface] : null
+  useEffect(() => { if (currentView) writeLastView(currentView) }, [currentView])
+  // Changing view keeps the day being looked at: Month of November goes to the week (or the day) of the day in view.
+  const openView = view => navigate(view === 'agenda' ? '/admin/agenda' : `${view === 'day' ? '/admin/day' : VIEW_PATHS[view]}${viewedDay.current ? `?date=${viewedDay.current}` : ''}`)
+  const openViewRef = useRef(openView)
+  useEffect(() => { openViewRef.current = openView })
+  // Keys on a computer, as in Google Calendar: D, W, M and A change the view.
+  useEffect(() => {
+    if (!currentView) return
+    const press = event => {
+      if (event.defaultPrevented || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return
+      if (event.target?.closest?.('input, textarea, select, [contenteditable="true"], [role="dialog"], dialog') || document.querySelector('[role="dialog"], dialog[open]')) return
+      const view = { d: 'day', w: 'week', m: 'month', a: 'agenda' }[event.key.toLowerCase()]
+      if (view && view !== currentView) { event.preventDefault(); openViewRef.current(view) }
+    }
+    window.addEventListener('keydown', press)
+    return () => window.removeEventListener('keydown', press)
+  }, [currentView])
   return <>
     <a className="skip-link" href="#admin-main">Skip to the page</a>
     {!creating && <nav inert={Boolean(match)} className="admin-primary-nav" aria-label="Admin navigation">
@@ -194,10 +223,11 @@ export default function AdminWorkspace({ signOut, ownerId }) {
     <Suspense fallback={<div className="skeleton-rows" role="status" aria-label="Loading Admin"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>}>
       <main id="admin-main" className="admin-content" inert={Boolean(match)}>
       {calendarSurface && <nav className="admin-calendar-views" aria-label="Calendar views">
-        <AdminLink href="/admin/day" navigate={navigate} aria-current={surface === '/admin' ? 'page' : undefined}>Day</AdminLink>
-        <AdminLink href="/admin/agenda" navigate={navigate} aria-current={surface === '/admin/agenda' ? 'page' : undefined}>Agenda</AdminLink>
+        {[['day', 'Day'], ['week', narrow ? '3 days' : 'Week'], ['month', 'Month'], ['agenda', 'Agenda']].map(([view, text]) => <a key={view} href={view === 'day' ? '/admin/day' : VIEW_PATHS[view]} aria-current={currentView === view ? 'page' : undefined} onClick={event => { if (plainClick(event)) { event.preventDefault(); openView(view) } }}>{text}</a>)}
       </nav>}
       {surface === '/admin' && <Calendar key={date || 'today'} initialDate={date} signOut={signOut} openBooking={openBooking} openDay={day => openDaySettings(day, `/admin?date=${day}`)} openHours={openDayHours} revision={revision} onDate={rememberDay} />}
+      {surface === '/admin/week' && <WeekView key={`week-${agendaHome}`} initialDate={date} openBooking={openBooking} openHours={day => openDayHours(day, `/admin/week?date=${day}`)} openDayView={day => navigate(`/admin?date=${day}`)} revision={revision} onDate={rememberDay} />}
+      {surface === '/admin/month' && <MonthView key={`month-${agendaHome}`} initialDate={date} openBooking={openBooking} openHours={day => openDayHours(day, `/admin/month?date=${day}`)} openDayView={day => navigate(`/admin?date=${day}`)} revision={revision} onDate={rememberDay} />}
       {daySettingsSurface && <AdminLink className="admin-back-link" href={daySettingsBack} navigate={navigate}>← {daySettingsBack === '/admin/agenda' ? 'Agenda' : 'Day'}</AdminLink>}
       {daySettingsSurface && <DaySettings key={`settings-${date}`} date={date} revision={revision} openBooking={openBooking} changed={() => setRevision(value => value + 1)} done={() => navigate(daySettingsBack)} />}
       {dayHoursSurface && <DayHoursGrid key={`hours-${date}`} date={date} changed={() => setRevision(value => value + 1)} done={() => navigate(daySettingsBack)} />}
@@ -232,11 +262,11 @@ export default function AdminWorkspace({ signOut, ownerId }) {
       {surface === '/admin/settings/family-alerts' && <FamilyAlertsSettings />}
       {surface === '/admin/visitors' && <Visitors openClient={id => navigate(`/admin/clients/${id}`)} openRules={() => navigate('/admin/settings/rules')} />}
       {surface === '/admin/waitlist' && <Waitlist bookFor={request => newBooking(request.requested_date, request.client_id)} />}
-      {!creating && !match && !['/admin', '/admin/agenda', '/admin/day-settings', '/admin/day-hours', '/admin/review', '/admin/alerts', '/admin/more', '/admin/clients', ...SETTINGS_PAGES].includes(surface) && !profile && !combining && <section className="admin-review"><h1>Admin page not found</h1><a href="/admin">Back to Calendar</a></section>}
+      {!creating && !match && !['/admin', '/admin/agenda', '/admin/week', '/admin/month', '/admin/day-settings', '/admin/day-hours', '/admin/review', '/admin/alerts', '/admin/more', '/admin/clients', ...SETTINGS_PAGES].includes(surface) && !profile && !combining && <section className="admin-review"><h1>Admin page not found</h1><a href="/admin">Back to Calendar</a></section>}
       </main>
       {match && <BookingDestination key={match[1]} id={match[1]} close={close} returnFocus={opener} changed={() => setRevision(value => value + 1)} openPage={path => { headingFocusWanted.current = true; navigate(path) }} />}
     </Suspense>
-    {calendarSurface && !match && <button className={`btn btn--primary btn--lg admin-fab ${fabCompact ? 'is-compact' : ''}`} onClick={() => newBooking((surface === '/admin' && viewedDay.current) || date || today())}><span className="fab-plus">+</span><span className="fab-label"> New booking</span></button>}
+    {calendarSurface && !match && <button className={`btn btn--primary btn--lg admin-fab ${fabCompact ? 'is-compact' : ''}`} onClick={() => newBooking((['/admin', '/admin/week', '/admin/month'].includes(surface) && viewedDay.current) || date || today())}><span className="fab-plus">+</span><span className="fab-label"> New booking</span></button>}
     <ToastHost />
   </>
 }
