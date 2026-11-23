@@ -38,6 +38,13 @@ export function groupByClient(bookings, { needsYou, putOff = () => false, isExtr
   return { needs: sections.needs.sort(order), reminded: sections.reminded.sort(order), waiting: sections.waiting.sort(order) }
 }
 
+// For a day still to come: "today", "tomorrow", "in 6 days".
+export function howSoon(date, from = today()) {
+  if (date <= from) return 'today'
+  if (date === shiftDate(from, 1)) return 'tomorrow'
+  return `in ${Math.round((Date.parse(`${date}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 86400000)} days`
+}
+
 // "today", "yesterday", "30 days ago", or for a day still to come "Sat 21 Nov".
 export function howLongAgo(date, from = today()) {
   if (date === from) return 'today'
