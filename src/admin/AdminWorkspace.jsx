@@ -124,7 +124,8 @@ export default function AdminWorkspace({ signOut, ownerId }) {
     if (route.background) window.history.back()
     else { window.history.replaceState({}, '', '/admin'); setRoute(readRoute()) }
   }
-  const openBooking = id => { setOpener(document.activeElement); navigate(`/admin/bookings/${id}`, context) }
+  // Week and Month keep the week or month on show in the address as it changes, so a booking opened from them comes back to that one.
+  const openBooking = id => { setOpener(document.activeElement); navigate(`/admin/bookings/${id}`, !match && ['/admin/week', '/admin/month'].includes(window.location.pathname) ? window.location.pathname + window.location.search : context) }
   const newBooking = (date, clientId) => {
     const returnTo = clientId ? `/admin/clients/${clientId}` : surface === '/admin/agenda' ? surface : ['/admin/week', '/admin/month'].includes(surface) ? `${surface}?date=${date}` : `/admin?date=${date}`
     window.history.pushState({ adminReturnTo: returnTo }, '', `/admin/bookings/new?date=${date}${clientId ? `&client=${clientId}` : ''}`)
@@ -202,7 +203,7 @@ export default function AdminWorkspace({ signOut, ownerId }) {
   useEffect(() => {
     if (!currentView) return
     const press = event => {
-      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return
+      if (event.defaultPrevented || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return
       if (event.target?.closest?.('input, textarea, select, [contenteditable="true"], [role="dialog"], dialog') || document.querySelector('[role="dialog"], dialog[open]')) return
       const view = { d: 'day', w: 'week', m: 'month', a: 'agenda' }[event.key.toLowerCase()]
       if (view && view !== currentView) { event.preventDefault(); openViewRef.current(view) }
@@ -225,8 +226,8 @@ export default function AdminWorkspace({ signOut, ownerId }) {
         {[['day', 'Day'], ['week', narrow ? '3 days' : 'Week'], ['month', 'Month'], ['agenda', 'Agenda']].map(([view, text]) => <a key={view} href={view === 'day' ? '/admin/day' : VIEW_PATHS[view]} aria-current={currentView === view ? 'page' : undefined} onClick={event => { if (plainClick(event)) { event.preventDefault(); openView(view) } }}>{text}</a>)}
       </nav>}
       {surface === '/admin' && <Calendar key={date || 'today'} initialDate={date} signOut={signOut} openBooking={openBooking} openDay={day => openDaySettings(day, `/admin?date=${day}`)} openHours={openDayHours} revision={revision} onDate={rememberDay} />}
-      {surface === '/admin/week' && <WeekView key={`week-${narrow}`} initialDate={date} openBooking={openBooking} openHours={day => openDayHours(day, `/admin/week?date=${day}`)} openDayView={day => navigate(`/admin?date=${day}`)} revision={revision} onDate={rememberDay} />}
-      {surface === '/admin/month' && <MonthView initialDate={date} openBooking={openBooking} openHours={day => openDayHours(day, `/admin/month?date=${day}`)} openDayView={day => navigate(`/admin?date=${day}`)} revision={revision} onDate={rememberDay} />}
+      {surface === '/admin/week' && <WeekView key={`week-${agendaHome}`} initialDate={date} openBooking={openBooking} openHours={day => openDayHours(day, `/admin/week?date=${day}`)} openDayView={day => navigate(`/admin?date=${day}`)} revision={revision} onDate={rememberDay} />}
+      {surface === '/admin/month' && <MonthView key={`month-${agendaHome}`} initialDate={date} openBooking={openBooking} openHours={day => openDayHours(day, `/admin/month?date=${day}`)} openDayView={day => navigate(`/admin?date=${day}`)} revision={revision} onDate={rememberDay} />}
       {daySettingsSurface && <AdminLink className="admin-back-link" href={daySettingsBack} navigate={navigate}>← {daySettingsBack === '/admin/agenda' ? 'Agenda' : 'Day'}</AdminLink>}
       {daySettingsSurface && <DaySettings key={`settings-${date}`} date={date} revision={revision} openBooking={openBooking} changed={() => setRevision(value => value + 1)} done={() => navigate(daySettingsBack)} />}
       {dayHoursSurface && <DayHoursGrid key={`hours-${date}`} date={date} changed={() => setRevision(value => value + 1)} done={() => navigate(daySettingsBack)} />}

@@ -70,12 +70,14 @@ export function useViewOptions() {
 }
 
 // Keys on a computer: T for today, the arrow keys for the previous and next week or month. Never while typing or with a window open.
-export function useCalendarKeys(handlers) {
+export function useCalendarKeys(handlers, path) {
   const latest = useRef(handlers)
   useEffect(() => { latest.current = handlers })
   useEffect(() => {
     const press = event => {
-      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return
+      if (event.defaultPrevented || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return
+      // Only while the view itself is on screen, not with a booking open over it.
+      if (path && window.location.pathname !== path) return
       const target = event.target
       if (target?.closest?.('input, textarea, select, [contenteditable="true"], [role="dialog"], dialog')) return
       if (document.querySelector('[role="dialog"], dialog[open]')) return
@@ -84,6 +86,6 @@ export function useCalendarKeys(handlers) {
     }
     window.addEventListener('keydown', press)
     return () => window.removeEventListener('keydown', press)
-  }, [])
+  }, [path])
 }
 

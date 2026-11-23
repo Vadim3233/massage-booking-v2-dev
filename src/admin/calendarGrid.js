@@ -86,30 +86,40 @@ export const TONE_LABEL = { ok: 'paid', wait: 'payment awaited', needs: 'to chec
 
 const isAllDay = row => row.start_minutes === 0 && row.end_minutes === 1440
 const blockName = row => row.title || (row.kind === 'personal_event' ? 'Personal event' : 'Blocked time')
-// Time away: a block over several days, or over a whole day. Every day it covers says so, and which day of it it is.
-function awayDays(blocks) {
+// Time away: the days a block covers from midnight to midnight. Every such day says so, and which day of it it is, counted over the whole
+// block (`groupBlocks` holds every row of a block that starts or ends outside the dates read). The part-days at either end of a block
+// ("Mon 18:00 to Wed 10:00") stay timed blocked time on their day, so the hours still worked that day still show.
+function awayDays(blocks, groupBlocks = []) {
   const groups = new Map()
-  for (const row of blocks) groups.set(row.group_id ?? row.id, [...(groups.get(row.group_id ?? row.id) || []), row])
+  const seen = new Set()
+  for (const row of [...groupBlocks, ...blocks]) {
+    if (seen.has(row.id)) continue
+    seen.add(row.id)
+    groups.set(row.group_id ?? row.id, [...(groups.get(row.group_id ?? row.id) || []), row])
+  }
   const away = new Map()
   for (const rows of groups.values()) {
-    const dates = [...new Set(rows.map(row => row.date))].sort()
-    if (dates.length < 2 && !rows.some(isAllDay)) continue
+    const whole = rows.filter(isAllDay)
+    const dates = [...new Set(whole.map(row => row.date))].sort()
+    if (!dates.length) continue
     const title = rows[0].kind === 'personal_event' ? blockName(rows[0]) : `Away${rows[0].title ? ` · ${rows[0].title}` : ''}`
-    dates.forEach((date, index) => away.set(date, { title, number: index + 1, total: dates.length, ids: rows.map(row => row.id) }))
+    dates.forEach((date, index) => away.set(date, { title, number: index + 1, total: dates.length, ids: whole.filter(row => row.date === date).map(row => row.id) }))
   }
   return away
 }
+// A no-show did not happen either, so it is shown only with the cancelled bookings.
+export const listedForViews = (bookings, showCancelled) => showCancelled ? bookings : listedBookings(bookings, false).filter(booking => booking.booking_status !== 'no_show')
 
 // Everything a Month or Week view needs to know about each day it shows, from one read of the calendar (loadCalendarRange):
 // its hours (special or usual, or a day off), whether it is time away, its entries in time order, and how full it is (booked, travel and
 // blocked time against the working hours, 0 to 1). Cancelled bookings are left out unless asked for, as in Day and Agenda.
 export function calendarDays(data, dates, { showCancelled = false, blocked = true } = {}, todayDate, nowMinutes, now = Date.now()) {
   const timedBlocks = (data.blocks || []).filter(row => row.kind === 'blocked' || row.kind === 'personal_event')
-  const away = awayDays(timedBlocks)
+  const away = awayDays(timedBlocks, (data.groupBlocks || []).filter(row => row.kind === 'blocked' || row.kind === 'personal_event'))
   const days = new Map()
   for (const date of dates) {
     const hours = (data.dayHours || []).find(row => row.date === date) || null
-    const bookings = listedBookings((data.bookings || []).filter(row => row.date === date), showCancelled)
+    const bookings = listedForViews((data.bookings || []).filter(row => row.date === date), showCancelled)
     const dayBlocks = (data.blocks || []).filter(row => row.date === date)
     const awayHere = away.get(date) || null
     const entries = [
@@ -125,14 +135,16 @@ export function calendarDays(data, dates, { showCancelled = false, blocked = tru
       full = Math.min(1, Math.max(0, 1 - free / (hours.end_minutes - hours.start_minutes)))
     }
     const booked = bookings.filter(goingAhead).length
-    days.set(date, { date, hours, open: Boolean(open) && !awayHere, special: hours?.source === 'special' && Boolean(hours.available), away: awayHere, entries, booked, full: awayHere ? 0 : full })
+    // A day whose hours have not been read yet (another month is still loading) is unknown: never drawn as a day off.
+    const unknown = !(data.dayHours || []).some(row => row.date === date)
+    days.set(date, { date, hours, unknown, open: Boolean(open) && !awayHere, special: hours?.source === 'special' && Boolean(hours.available), away: awayHere, entries, booked, full: awayHere ? 0 : full })
   }
   return days
 }
 
 // The hours of a day in a few words for its square: "14:30–19:00", "Special 12:00–16:00", "Day off".
 export function hoursWords(day) {
-  if (day.away) return ''
+  if (day.away || day.unknown) return ''
   if (!day.hours?.available) return 'Day off'
   const span = `${time(day.hours.start_minutes)}–${time(day.hours.end_minutes)}`
   return day.special ? `Special ${span}` : span
@@ -145,9 +157,10 @@ export function hiddenWeekdays(days, dates, showDaysOff) {
   const hidden = new Set()
   for (let weekday = 1; weekday <= 7; weekday++) {
     const ofDay = dates.filter(date => weekdayOf(date) === weekday)
-    if (ofDay.length && ofDay.every(date => { const day = days.get(date); return day && !day.open && !day.entries.length })) hidden.add(weekday)
+    if (ofDay.length && ofDay.every(date => { const day = days.get(date); return day && !day.unknown && !day.open && !day.entries.length })) hidden.add(weekday)
   }
-  return hidden.size === 7 ? new Set() : hidden
+  // Never leave nothing on show.
+  return hidden.size >= new Set(dates.map(weekdayOf)).size ? new Set() : hidden
 }
 
 // The month's line under its name: "18 sessions · 6 working days still free" (from today on; a month gone by counts only its sessions).
@@ -156,7 +169,7 @@ export function monthSummary(days, month, todayDate) {
   for (const day of days.values()) {
     if (!day.date.startsWith(month)) continue
     sessions += day.booked
-    if (day.open && day.date >= todayDate && !day.booked) freeDays++
+    if (day.open && day.date >= todayDate && !day.booked && day.full < 1) freeDays++
   }
   const words = [`${sessions} ${sessions === 1 ? 'session' : 'sessions'}`]
   if (month >= todayDate.slice(0, 7)) words.push(`${freeDays} working ${freeDays === 1 ? 'day' : 'days'} still free`)
@@ -210,5 +223,6 @@ export function mergeRanges(parts) {
     dayHours: [...new Map(parts.flatMap(part => part.dayHours || []).map(row => [row.date, row])).values()],
     holds: byId(parts.flatMap(part => part.holds || [])),
     offers: byId(parts.flatMap(part => part.offers || [])),
+    groupBlocks: byId(parts.flatMap(part => part.groupBlocks || [])),
   }
 }

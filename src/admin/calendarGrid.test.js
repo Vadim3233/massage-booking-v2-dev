@@ -138,3 +138,27 @@ describe('week grid', () => {
     expect(clampRow('x')).toBe(108)
   })
 })
+
+describe('audit fixes', () => {
+  const dates = ['2026-11-23', '2026-11-24']
+  it('a day not read yet is unknown, not a day off, and never hides its weekday', () => {
+    const days = calendarDays({ bookings: [], blocks: [], dayHours: [], holds: [], offers: [] }, dates, {}, '2026-11-23', 0, 0)
+    expect(days.get('2026-11-23').unknown).toBe(true)
+    expect(hoursWords(days.get('2026-11-23'))).toBe('')
+    expect(hiddenWeekdays(days, dates, false).size).toBe(0)
+  })
+  it('time away counts over the whole block, even from before the days read', () => {
+    const row = (id, date, start = 0, end = 1440) => ({ id, group_id: 'trip', date, kind: 'blocked', title: 'Spain', start_minutes: start, end_minutes: end })
+    const data = { bookings: [], holds: [], offers: [], dayHours: dates.map(date => hours(date, 600, 1080)), blocks: [row('b', '2026-11-23'), row('c', '2026-11-24', 0, 600)], groupBlocks: [row('a', '2026-11-22'), row('b', '2026-11-23'), row('c', '2026-11-24', 0, 600)] }
+    const days = calendarDays(data, dates, {}, '2026-11-23', 0, 0)
+    expect(days.get('2026-11-23').away).toMatchObject({ number: 2, total: 2 })
+    // The morning off at the end is timed blocked time; the afternoon is still worked.
+    expect(days.get('2026-11-24').away).toBeNull()
+    expect(days.get('2026-11-24').entries.map(entry => entry.id)).toEqual(['c'])
+  })
+  it('a no-show shows only with the cancelled ones', () => {
+    const data = { blocks: [], holds: [], offers: [], dayHours: [hours('2026-11-23', 600, 1080)], bookings: [booking('n', '2026-11-23', 700, { booking_status: 'no_show' })] }
+    expect(calendarDays(data, dates, {}, '2026-11-23', 0, 0).get('2026-11-23').entries).toHaveLength(0)
+    expect(calendarDays(data, dates, { showCancelled: true }, '2026-11-23', 0, 0).get('2026-11-23').entries).toHaveLength(1)
+  })
+})

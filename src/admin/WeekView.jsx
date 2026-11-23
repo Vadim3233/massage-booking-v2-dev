@@ -1,9 +1,9 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { dateLabel, dayTimeline, shiftDate, time, today } from './calendarPresentation.js'
-import { calendarDays, hiddenWeekdays, hoursWords, isoWeek, placeColumns, shortName, TONE_LABEL, TONE_WORD, weekDates, weekSpan, weekStart } from './calendarGrid.js'
+import { calendarDays, hiddenWeekdays, listedForViews, hoursWords, isoWeek, placeColumns, shortName, TONE_LABEL, TONE_WORD, weekDates, weekSpan, weekStart } from './calendarGrid.js'
 import { HoursOnlySwitch, LoadState, ViewOptions } from './CalendarViewParts.jsx'
 import { useCalendarKeys, useCalendarRange, useNarrow, useViewOptions } from './calendarHooks.js'
-import { listedBookings, useShowCancelled } from './cancelledBookings.js'
+import { useShowCancelled } from './cancelledBookings.js'
 import { canOffer, isUsualPrice, londonClock, offerPrice, roomAround, withOffers } from './slotOffers.js'
 import { weekdayOf } from './scheduleApi.js'
 import Icon from '../ui/icons.jsx'
@@ -28,21 +28,23 @@ export default function WeekView({ initialDate, openBooking, openDayView, openHo
   const [offerDialog, setOfferDialog] = useState(null)
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 60000); return () => clearInterval(timer) }, [])
   useEffect(() => { onDate?.(anchor); return () => onDate?.(undefined) }, [anchor, onDate])
-  useEffect(() => { window.history.replaceState(window.history.state, '', `/admin/week?date=${anchor}`) }, [anchor])
+  useEffect(() => { if (window.location.pathname === '/admin/week') window.history.replaceState(window.history.state, '', `/admin/week?date=${anchor}`) }, [anchor])
   const todayDate = today()
   const nowMinutes = minutesNow(now)
   const step = narrow ? 3 : 7
   const move = direction => setAnchor(value => narrow ? shiftDate(value, direction * step) : shiftDate(weekStart(value), direction * 7))
-  useCalendarKeys({ previous: () => move(-1), next: () => move(1), today: () => setAnchor(today()) })
+  useCalendarKeys({ previous: () => move(-1), next: () => move(1), today: () => setAnchor(today()) }, '/admin/week')
 
   const data = range.data
-  const days = useMemo(() => data ? calendarDays(data, dates, { showCancelled, blocked: options.blocked }, todayDate, nowMinutes, now) : new Map(), [data, dates, showCancelled, options.blocked, todayDate, nowMinutes, now])
+  const loaded = useMemo(() => data ? calendarDays(data, dates, { showCancelled, blocked: options.blocked }, todayDate, nowMinutes, now) : new Map(), [data, dates, showCancelled, options.blocked, todayDate, nowMinutes, now])
+  // Days of a week still loading are drawn blank, never as days off.
+  const days = useMemo(() => new Map([...loaded].filter(([, day]) => !day.unknown)), [loaded])
   // Each day's rows, worked out as the Day view does (free time, travel, holds), with open offers in their place.
   const rowsByDate = useMemo(() => {
     const map = new Map()
     if (!data) return map
     for (const date of dates) {
-      const bookings = listedBookings(data.bookings.filter(row => row.date === date), showCancelled)
+      const bookings = listedForViews(data.bookings.filter(row => row.date === date), showCancelled)
       const timeline = dayTimeline({ dayHours: data.dayHours, blocks: data.blocks.filter(row => row.date === date), bookings, holds: data.holds.filter(row => row.date === date) }, date, now)
       map.set(date, withOffers(timeline.rows, data.offers.filter(row => row.date === date)))
     }
@@ -51,9 +53,11 @@ export default function WeekView({ initialDate, openBooking, openDayView, openHo
   const hidden = hiddenWeekdays(days, dates, options.daysOff)
   const shown = dates.filter(date => !hidden.has(weekdayOf(date)))
   const visibleRows = date => (rowsByDate.get(date) || []).filter(row => {
-    if (options.hoursOnly) return false
+    if (options.hoursOnly || !days.has(date)) return false
     if (row.kind === 'buffer') return options.travel
-    if (row.kind === 'block') return options.blocked && row.block?.kind !== 'series_hold'
+    // Someone part way through booking is not shown here (the Day view shows it); time away is the day's own card, not a box.
+    if (row.kind === 'hold') return false
+    if (row.kind === 'block') return options.blocked && row.block?.kind !== 'series_hold' && !days.get(date)?.away?.ids.includes(row.block?.id)
     return true
   })
   const span = weekSpan(shown.map(date => days.get(date)).filter(Boolean), new Map(shown.map(date => [date, visibleRows(date)])))

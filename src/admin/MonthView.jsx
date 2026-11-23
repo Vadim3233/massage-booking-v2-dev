@@ -38,6 +38,8 @@ export default function MonthView({ initialDate, openBooking, openDayView, openH
   const [showCancelled, setShowCancelled] = useShowCancelled()
   const [now, setNow] = useState(Date.now)
   const [picked, setPicked] = useState(null)
+  // The day last opened on a phone stays the day a New booking starts on after its card is closed.
+  const [tapped, setTapped] = useState(null)
   const [blockDialog, setBlockDialog] = useState(null)
   const [offerDialog, setOfferDialog] = useState(null)
   const [rowHeight, setRowHeight] = useState(readRowHeight)
@@ -53,27 +55,29 @@ export default function MonthView({ initialDate, openBooking, openDayView, openH
   const hidden = hiddenWeekdays(days, dates, options.daysOff)
   const shownWeekdays = [1, 2, 3, 4, 5, 6, 7].filter(weekday => !hidden.has(weekday))
   // The day a New booking starts on: the day opened on a phone, else today when it is in this month, else the 1st.
-  const focusDay = picked || (anchor.slice(0, 7) === grid.month ? anchor : grid.first)
+  const focusDay = picked || (tapped?.startsWith(grid.month) ? tapped : null) || (anchor.slice(0, 7) === grid.month ? anchor : grid.first)
   useEffect(() => { onDate?.(focusDay); return () => onDate?.(undefined) }, [focusDay, onDate])
   // The month on show is kept in the address, so coming back to the page (or a refresh) shows the same month.
-  useEffect(() => { window.history.replaceState(window.history.state, '', `/admin/month?date=${anchor}`) }, [anchor])
-  const move = months => { setPicked(null); setAnchor(value => shiftMonth(value, months)) }
-  const goToday = () => { setPicked(null); setAnchor(today()) }
-  useCalendarKeys({ previous: () => move(-1), next: () => move(1), today: goToday })
+  useEffect(() => { if (window.location.pathname === '/admin/month') window.history.replaceState(window.history.state, '', `/admin/month?date=${anchor}`) }, [anchor])
+  const move = months => { setPicked(null); setTapped(null); setAnchor(value => shiftMonth(value, months)) }
+  const goToday = () => { setPicked(null); setTapped(null); setAnchor(today()) }
+  useCalendarKeys({ previous: () => move(-1), next: () => move(1), today: goToday }, '/admin/month')
 
   // Two fingers on the month make the weeks taller or shorter, like a phone's own calendar. One finger still scrolls.
   useEffect(() => {
     const element = gridRef.current
     if (!element || !narrow) return
     let start = null
+    let last = null
     const distance = touches => Math.hypot(touches[0].clientX - touches[1].clientX, touches[0].clientY - touches[1].clientY)
     const down = event => { if (event.touches.length === 2) start = { distance: distance(event.touches), height: rowHeightRef.current } }
     const moveTouch = event => {
       if (!start || event.touches.length !== 2) return
       event.preventDefault()
-      setRowHeight(clampRow(start.height * distance(event.touches) / Math.max(20, start.distance)))
+      last = clampRow(start.height * distance(event.touches) / Math.max(20, start.distance))
+      setRowHeight(last)
     }
-    const up = event => { if (start && event.touches.length < 2) { start = null; writeRowHeight(rowHeightRef.current) } }
+    const up = event => { if (start && event.touches.length < 2) { start = null; if (last != null) writeRowHeight(last); last = null } }
     element.addEventListener('touchstart', down, { passive: true })
     element.addEventListener('touchmove', moveTouch, { passive: false })
     element.addEventListener('touchend', up)
@@ -85,13 +89,15 @@ export default function MonthView({ initialDate, openBooking, openDayView, openH
   // How many lines fit in a day square: three on a computer; on a phone, as many as the week's height allows.
   const lines = narrow ? Math.max(1, Math.floor((rowHeight - 30) / 29)) : 3
   const monthName = dateLabel(grid.first, { month: 'long', year: 'numeric' })
-  const pickedDay = picked && days.get(picked)
+  const pickedDay = picked && !days.get(picked)?.unknown && days.get(picked)
   const closeSheet = () => { setPicked(null); requestAnimationFrame(() => opener.current?.focus?.()) }
   const sheetRef = useRef(null)
   useEffect(() => { if (picked) sheetRef.current?.querySelector('.calview-sheet-close')?.focus() }, [picked])
 
   function cell(date) {
-    const day = days.get(date)
+    // A day of a month still loading is drawn blank, never as a day off.
+    const found = days.get(date)
+    const day = found?.unknown ? undefined : found
     const inMonth = date.startsWith(grid.month)
     const isToday = date === todayDate
     const classes = ['calview-day', inMonth ? '' : 'is-other', isToday ? 'is-today' : '', day && !day.open ? 'is-off' : '', day?.away ? 'is-away' : '', day?.special ? 'is-special' : '', picked === date ? 'is-picked' : '', date < todayDate ? 'is-past' : ''].filter(Boolean).join(' ')
@@ -158,7 +164,7 @@ export default function MonthView({ initialDate, openBooking, openDayView, openH
         {shownWeekdays.map(weekday => <span key={weekday}>{narrow ? WEEKDAY_NAMES[weekday - 1][0] : WEEKDAY_NAMES[weekday - 1]}</span>)}
       </div>
       {grid.weeks.map(week => <div key={week.days[0]} className="calview-week">
-        {!narrow && <span className="calview-wk" aria-label={`Week ${week.number}`}>W{week.number}</span>}
+        {!narrow && <span className="calview-wk" title={`Week ${week.number}`}><span aria-hidden="true">W</span><span className="calview-sr">Week </span>{week.number}</span>}
         {week.days.filter(date => !hidden.has(weekdayOf(date))).map(cell)}
       </div>)}
     </div>}
@@ -170,7 +176,16 @@ export default function MonthView({ initialDate, openBooking, openDayView, openH
     </ul>}
 
     {pickedDay && <div className="calview-sheet-backdrop" onClick={closeSheet}>
-      <section ref={sheetRef} className="calview-sheet" role="dialog" aria-modal="true" aria-labelledby="calview-sheet-title" onClick={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'Escape') closeSheet() }}>
+      <section ref={sheetRef} className="calview-sheet" role="dialog" aria-modal="true" aria-labelledby="calview-sheet-title" onClick={event => event.stopPropagation()} onKeyDown={event => {
+        if (event.key === 'Escape') closeSheet()
+        // Tab stays inside the card while it is open.
+        if (event.key !== 'Tab') return
+        const items = [...sheetRef.current.querySelectorAll('button, a[href]')]
+        if (!items.length) return
+        const [first, last] = [items[0], items.at(-1)]
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+      }}>
         <span className="calview-sheet-grip" aria-hidden="true" />
         <div className="calview-sheet-head">
           <h2 id="calview-sheet-title">{picked === todayDate ? 'Today · ' : ''}{dateLabel(picked, { weekday: 'short', day: 'numeric', month: 'short' })}</h2>

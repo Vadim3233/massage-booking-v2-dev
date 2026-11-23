@@ -43,7 +43,11 @@ export function createCalendarApi(client) {
       // Open special-price offers (20261207100000_special_price_offers.sql). Before that change is in the database there are none.
       const offers = await client.from('slot_offers').select('*').gte('date', start).lt('date', end).eq('status', 'open').gt('closes_at', new Date().toISOString())
         .then(({ data, error }) => (error ? [] : data || []), () => [])
-      return { bookings, blocks, dayHours, overrides, hours, holds, offers }
+      // A block over several days is read whole as well, so "Away · day 3 of 5" counts right even where it began before these days.
+      const groups = [...new Set(blocks.map(row => row.group_id).filter(Boolean))]
+      const groupBlocks = groups.length ? await client.from('calendar_blocks').select('id,group_id,kind,title,date,start_minutes,end_minutes').in('group_id', groups).order('date')
+        .then(({ data, error }) => (error ? [] : data || []), () => []) : []
+      return { bookings, blocks, dayHours, overrides, hours, holds, offers, groupBlocks }
     },
     async loadAgendaRange(start, end) {
       validateRange(start, end)
