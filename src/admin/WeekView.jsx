@@ -10,6 +10,7 @@ import Icon from '../ui/icons.jsx'
 
 const BlockDialog = lazy(() => import('./BlockDialog.jsx'))
 const OfferDialog = lazy(() => import('./OfferDialog.jsx'))
+const QuickHours = lazy(() => import('./QuickHours.jsx'))
 const PER_HOUR = 64
 const minutesNow = now => { const [hour, minute] = londonClock(new Date(now)).split(':').map(Number); return hour * 60 + minute }
 const longDate = date => dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long' })
@@ -26,6 +27,7 @@ export default function WeekView({ initialDate, openBooking, openDayView, openHo
   const [now, setNow] = useState(Date.now)
   const [blockDialog, setBlockDialog] = useState(null)
   const [offerDialog, setOfferDialog] = useState(null)
+  const [quick, setQuick] = useState(null)
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 60000); return () => clearInterval(timer) }, [])
   useEffect(() => { onDate?.(anchor); return () => onDate?.(undefined) }, [anchor, onDate])
   useEffect(() => { if (window.location.pathname === '/admin/week') window.history.replaceState(window.history.state, '', `/admin/week?date=${anchor}`) }, [anchor])
@@ -122,7 +124,7 @@ export default function WeekView({ initialDate, openBooking, openDayView, openHo
               {options.hoursOnly && <span className="calview-open-times"><strong>{time(day.hours.start_minutes)}</strong><span>to</span><strong>{time(day.hours.end_minutes)}</strong>{day.special && <small>special</small>}</span>}
             </span>}
             {day && !day.open && <span className="calview-offcard">{day.away ? day.away.title : 'Day off'}</span>}
-            {options.hoursOnly && openHours && date >= todayDate && !day?.away && <button className="calview-edit-hours" onClick={() => openHours(date)} aria-label={`Change the hours of ${longDate(date)}: ${day ? hoursWords(day) : ''}`}><span>Change hours</span></button>}
+            {options.hoursOnly && openHours && date >= todayDate && !day?.away && <button className="calview-edit-hours" onClick={event => setQuick({ date, anchor: event.currentTarget.querySelector('span')?.getBoundingClientRect() })} aria-label={`Change the hours of ${longDate(date)}: ${day ? hoursWords(day) : ''}`}><span>Change hours</span></button>}
             {date === todayDate && nowMinutes >= span.from && nowMinutes <= span.to && <span className="calview-now" style={{ top: `${top(nowMinutes)}px` }} aria-hidden="true" />}
             {rows.map(row => entry(date, row))}
           </div>
@@ -131,6 +133,7 @@ export default function WeekView({ initialDate, openBooking, openDayView, openHo
     </div>}
     {!options.hoursOnly && data && <p className="calview-note">White is your working hours. {options.travel ? 'Travel shows as striped boxes.' : 'Tick Travel time in View options to see the drive either side.'} Tap Free to offer it to clients.</p>}
     {offerDialog && <Suspense fallback={null}><OfferDialog date={offerDialog.date} free={offerDialog.free} offer={offerDialog.offer} close={() => setOfferDialog(null)} changed={range.reread} /></Suspense>}
+    {quick && <Suspense fallback={null}><QuickHours date={quick.date} hours={days.get(quick.date)?.hours} anchor={quick.anchor} narrow={narrow} close={() => setQuick(null)} saved={() => { setQuick(null); range.reread() }} openFull={() => { const day = quick.date; setQuick(null); openHours(day) }} /></Suspense>}
     {blockDialog && <Suspense fallback={null}><BlockDialog date={blockDialog.date} block={blockDialog.block} close={() => setBlockDialog(null)} saved={() => { setBlockDialog(null); range.reread() }} /></Suspense>}
   </section>
 }

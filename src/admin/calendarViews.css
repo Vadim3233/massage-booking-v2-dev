@@ -204,3 +204,16 @@ button.calview-entry:hover { background: var(--primary-soft); }
 .calview-edit-hours:hover span, .calview-edit-hours:focus-visible span { background: var(--primary); color: var(--on-primary); }
 
 .calview-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* ---------- Quick hours: From / To drop-downs from Hours only ---------- */
+.calview-quick-backdrop.is-popover { display: block; background: transparent; }
+.calview-quick:not(.calview-sheet) { padding: 10px 14px 14px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--paper); box-shadow: var(--shadow-2); }
+.calview-quick .calview-sheet-head h2 { font-size: 18px; }
+.calview-quick-times { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 6px 0 4px; }
+.calview-quick-times label { display: flex; flex-direction: column; gap: 4px; color: var(--ink-soft); font-size: 13px; font-weight: 600; }
+.calview-quick-times select { min-height: 48px; font-size: 18px; font-variant-numeric: tabular-nums; }
+.calview-quick-off { padding: 6px 0; }
+.calview-quick-note { margin: 4px 0; color: var(--ink-soft); font-size: 14px; }
+.calview-quick-note.is-warn { color: var(--danger); font-weight: 600; }
+.calview-quick-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.calview-quick-actions > :first-child { flex: 1 1 auto; min-height: 48px; }

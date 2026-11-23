@@ -10,6 +10,7 @@ import BookingCard from './BookingCard.jsx'
 import Icon from '../ui/icons.jsx'
 
 const BlockDialog = lazy(() => import('./BlockDialog.jsx'))
+const QuickHours = lazy(() => import('./QuickHours.jsx'))
 const OfferDialog = lazy(() => import('./OfferDialog.jsx'))
 const WEEKDAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const longDate = date => dateLabel(date, { weekday: 'long', day: 'numeric', month: 'long' })
@@ -42,6 +43,8 @@ export default function MonthView({ initialDate, openBooking, openDayView, openH
   const [tapped, setTapped] = useState(null)
   const [blockDialog, setBlockDialog] = useState(null)
   const [offerDialog, setOfferDialog] = useState(null)
+  // Hours only: the day whose hours are being changed with the drop-downs, and where it was tapped.
+  const [quick, setQuick] = useState(null)
   const [rowHeight, setRowHeight] = useState(readRowHeight)
   const gridRef = useRef(null)
   const rowHeightRef = useRef(rowHeight)
@@ -113,7 +116,7 @@ export default function MonthView({ initialDate, openBooking, openDayView, openH
     const editable = options.hoursOnly && Boolean(openHours) && date >= todayDate && !day?.away
     const bigInside = day && <>{day.away ? day.away.title : !day.hours?.available ? 'Day off' : <>{time(day.hours.start_minutes)}<br />{time(day.hours.end_minutes)}</>}{day.special && day.hours?.available && <small>special</small>}{editable && <small className="calview-edit-word">change</small>}</>
     const big = options.hoursOnly && day && (editable && !narrow
-      ? <button className={`calview-hours-big is-editable ${day.special ? 'is-special' : ''}`} onClick={() => openHours(date)} aria-label={`Change the hours of ${longDate(date)}: ${hoursText}`}>{bigInside}</button>
+      ? <button className={`calview-hours-big is-editable ${day.special ? 'is-special' : ''}`} onClick={event => setQuick({ date, anchor: event.currentTarget.getBoundingClientRect() })} aria-label={`Change the hours of ${longDate(date)}: ${hoursText}`}>{bigInside}</button>
       : <span className={`calview-hours-big ${day.special ? 'is-special' : ''}`}>{bigInside}</span>)
     const line = (entry, interactive) => {
       const content = <><span className="calview-mark" aria-hidden="true" />{entryText(entry, narrow)}{entry.kind === 'booking' && entry.booking.gift_voucher_id && <Icon name="gift" size={12} />}{entry.kind === 'booking' && TONE_WORD[entry.tone] && !narrow && <span className="calview-tag">{TONE_WORD[entry.tone]}</span>}</>
@@ -124,7 +127,7 @@ export default function MonthView({ initialDate, openBooking, openDayView, openH
     }
     if (narrow) {
       const label = [longDate(date), hoursText, day?.booked ? `${day.booked} booked` : '', more > 0 ? `${entries.length} entries` : ''].filter(Boolean).join(', ')
-      return <button key={date} className={classes} aria-label={editable ? `Change the hours of ${longDate(date)}: ${hoursText}` : label} aria-current={isToday ? 'date' : undefined} onClick={event => { if (editable) { openHours(date); return } opener.current = event.currentTarget; setPicked(date) }}>
+      return <button key={date} className={classes} aria-label={editable ? `Change the hours of ${longDate(date)}: ${hoursText}` : label} aria-current={isToday ? 'date' : undefined} onClick={event => { if (editable) { setQuick({ date }); return } opener.current = event.currentTarget; setPicked(date) }}>
         <span className="calview-num">{number}</span>
         {big}{away}
         {shown.map(entry => line(entry, false))}
@@ -205,6 +208,7 @@ export default function MonthView({ initialDate, openBooking, openDayView, openH
       </section>
     </div>}
     {offerDialog && <Suspense fallback={null}><OfferDialog date={offerDialog.date} offer={offerDialog.offer} close={() => setOfferDialog(null)} changed={range.reread} /></Suspense>}
+    {quick && <Suspense fallback={null}><QuickHours date={quick.date} hours={days.get(quick.date)?.hours} anchor={quick.anchor} narrow={narrow} close={() => setQuick(null)} saved={() => { setQuick(null); range.reread() }} openFull={() => { const day = quick.date; setQuick(null); openHours(day) }} /></Suspense>}
     {blockDialog && <Suspense fallback={null}><BlockDialog date={blockDialog.date} block={blockDialog.block} close={() => setBlockDialog(null)} saved={() => { setBlockDialog(null); range.reread() }} /></Suspense>}
   </section>
 }
