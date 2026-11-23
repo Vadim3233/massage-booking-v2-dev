@@ -84,7 +84,7 @@ export default function ConfirmationStep({ id, api, bank, quote, again }) {
         <li>Keep your booking reference for future enquiries.</li>
       </ol>}
     </section>
-    {bankTransfer && <details className="more"><summary><span className="more-title">Bank transfer details</span></summary><div className="more-body"><BankDetails bank={bank} reference={booking.booking_payments.payment_reference} /></div></details>}
+    {bankTransfer && <details className="more"><summary><span className="more-title">Bank transfer details</span></summary><div className="more-body"><BankDetails bank={bank} reference={booking.booking_payments.payment_reference} amount={money(booking.booking_payments.amount_gbp ?? booking.total_gbp)} /></div></details>}
     {another}
     <a className="btn btn--quiet btn--block" href={`/account?booking=${booking.id}`}>Change or cancel this appointment</a>
     <p className="fine"><a href="https://vadmassage.com">Contact Vadim</a></p>

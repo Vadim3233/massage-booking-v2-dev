@@ -156,7 +156,7 @@ export default function GiftShop({ client = supabase }) {
       <h1 tabIndex={-1}>One last <em>step</em></h1>
       <p className="lede">To finish your gift for {purchase.recipient_name}, please make a bank transfer. As soon as it arrives I'll email you the voucher.</p>
       <section className="amount-card" aria-label="Amount to transfer"><p className="eyebrow">Amount to transfer</p><p className="amount figure">{whole(purchase.amount)}</p></section>
-      <section className="panel bank-card"><h2>Bank transfer</h2><BankDetails bank={bank} reference={purchase.reference} /></section>
+      <section className="panel bank-card"><h2>Bank transfer</h2><BankDetails bank={bank} reference={purchase.reference} amount={whole(purchase.amount)} then={purchase.transfer_declared ? '' : 'Then come back and press "I\'ve made the bank transfer".'} /></section>
       {error && <p role="alert" className="error">{error}</p>}
       {purchase.transfer_declared
         ? <p role="status" className="reserved"><span className="reserved-dot" aria-hidden="true" />Thank you! I'll check my bank and send you the voucher.</p>

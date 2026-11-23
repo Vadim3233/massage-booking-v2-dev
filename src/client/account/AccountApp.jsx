@@ -8,7 +8,8 @@ import AuthPanel from '../auth/AuthPanel.jsx'
 import { dateLabel, londonDate, money, timeLabel } from '../booking/bookingDraft.js'
 import DayTimePicker from '../booking/components/DayTimePicker.jsx'
 import BookingSummary from '../booking/components/BookingSummary.jsx'
-import { CopyValue } from '../booking/components/BankDetails.jsx'
+import { CopyValue, PayWithWise } from '../booking/components/BankDetails.jsx'
+import { wiseLinkOf } from '../../lib/wiseLink.js'
 import TelegramBox from '../booking/components/TelegramBox.jsx'
 import { accountApi, createAccountApi, LINK_INVALID } from './accountApi.js'
 import { cancelledOn } from './cancelledOn.js'
@@ -179,6 +180,7 @@ function ExtraToPay({ booking, api, id, done }) {
       <CopyValue label="Account number" value={bank.account_number} />
       <CopyValue label="Payment reference" value={reference} />
     </dl> : <p className="fine">If you need my bank details, just ask me. Use the reference {reference}.</p>}
+    {bank?.sort_code && bank?.account_number && <PayWithWise link={wiseLinkOf(bank.wise_link)} amount={money(booking.balance_due_gbp)} reference={reference} then={booking.balance_reported_at ? '' : `Then come back and press "I've sent the ${money(booking.balance_due_gbp)}".`} />}
     {booking.balance_reported_at
       ? <p className="account-note" role="status">Thank you. I'll check my bank and let you know if anything is missing.</p>
       : <button className="btn--primary" disabled={busy} onClick={sent}>{busy ? 'Saving…' : `I've sent the ${money(booking.balance_due_gbp)}`}</button>}

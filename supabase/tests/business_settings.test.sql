@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions, pg_temp;
-select plan(22);
+select plan(30);
 
 insert into auth.users(id, aud, role, email, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values
@@ -36,9 +36,17 @@ select is((select updated_by from public.business_settings where key = 'bank_det
 select lives_ok($$select public.admin_save_bank_details('Vad Massage', null, '65-43-21', '87654321')$$, 'They can be changed, and the optional parts left out');
 select is(public.admin_bank_details()->>'sort_code', '65-43-21', 'The new details replace the old');
 select ok(not (public.admin_bank_details() ? 'bank_name') and not (public.admin_bank_details() ? 'note'), 'Left-out optional parts are not stored as empty');
+select ok(not (public.admin_bank_details() ? 'wise_link'), 'No Wise link until one is saved');
+select throws_ok($$select public.admin_save_bank_details('Vad Massage', null, '65-43-21', '87654321', null, 'https://evil.example/pay/me/x')$$, '22023', 'That is not a Wise payment link', 'Only a Wise payment link is accepted');
+select throws_ok($$select public.admin_save_bank_details('Vad Massage', null, '65-43-21', '87654321', null, 'https://wise.com.evil.example/pay/me/x')$$, '22023', 'That is not a Wise payment link', 'A look-alike address is refused');
+select lives_ok($$select public.admin_save_bank_details('Vad Massage', null, '65-43-21', '87654321', null, ' www.Wise.com/pay/me/vadims119 ')$$, 'A Wise link pasted loosely is accepted');
+select is(public.admin_bank_details()->>'wise_link', 'https://wise.com/pay/me/vadims119', 'It is stored tidily');
+select lives_ok($$select public.admin_save_bank_details('Vad Massage', 'Wise', '65-43-21', '87654321')$$, 'Saving from a screen that does not know about the link');
+select ok(public.admin_bank_details()->>'wise_link' = 'https://wise.com/pay/me/vadims119' and public.admin_bank_details()->>'bank_name' = 'Wise', 'keeps the saved link');
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000a902","role":"authenticated"}', true);
 select is(public.get_bank_details()->>'account_number', '87654321', 'A client can read what they need to make a transfer');
+select is(public.get_bank_details()->>'wise_link', 'https://wise.com/pay/me/vadims119', 'and the Wise link');
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-00000000a903","role":"authenticated"}', true);
 select is(public.get_bank_details(), null, 'Someone with no client record gets nothing');
 select set_config('request.jwt.claims', '', true);
