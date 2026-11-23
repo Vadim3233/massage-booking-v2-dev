@@ -145,8 +145,8 @@ export default function AdminWorkspace({ signOut, ownerId }) {
     window.scrollTo(0, 0)
   }
   // A day as half-hour blocks, opened with Edit hours from the Day view. Cancel and Save go back to that day.
-  const openDayHours = day => {
-    window.history.pushState({ adminReturnTo: `/admin?date=${day}` }, '', `/admin/day-hours?date=${day}`)
+  const openDayHours = (day, returnTo = `/admin?date=${day}`) => {
+    window.history.pushState({ adminReturnTo: returnTo }, '', `/admin/day-hours?date=${day}`)
     setRoute(readRoute())
     window.scrollTo(0, 0)
   }
@@ -225,8 +225,8 @@ export default function AdminWorkspace({ signOut, ownerId }) {
         {[['day', 'Day'], ['week', narrow ? '3 days' : 'Week'], ['month', 'Month'], ['agenda', 'Agenda']].map(([view, text]) => <a key={view} href={view === 'day' ? '/admin/day' : VIEW_PATHS[view]} aria-current={currentView === view ? 'page' : undefined} onClick={event => { if (plainClick(event)) { event.preventDefault(); openView(view) } }}>{text}</a>)}
       </nav>}
       {surface === '/admin' && <Calendar key={date || 'today'} initialDate={date} signOut={signOut} openBooking={openBooking} openDay={day => openDaySettings(day, `/admin?date=${day}`)} openHours={openDayHours} revision={revision} onDate={rememberDay} />}
-      {surface === '/admin/week' && <WeekView key={`week-${narrow}`} initialDate={date} openBooking={openBooking} openDayView={day => navigate(`/admin?date=${day}`)} revision={revision} onDate={rememberDay} />}
-      {surface === '/admin/month' && <MonthView initialDate={date} openBooking={openBooking} openDayView={day => navigate(`/admin?date=${day}`)} revision={revision} onDate={rememberDay} />}
+      {surface === '/admin/week' && <WeekView key={`week-${narrow}`} initialDate={date} openBooking={openBooking} openHours={day => openDayHours(day, `/admin/week?date=${day}`)} openDayView={day => navigate(`/admin?date=${day}`)} revision={revision} onDate={rememberDay} />}
+      {surface === '/admin/month' && <MonthView initialDate={date} openBooking={openBooking} openHours={day => openDayHours(day, `/admin/month?date=${day}`)} openDayView={day => navigate(`/admin?date=${day}`)} revision={revision} onDate={rememberDay} />}
       {daySettingsSurface && <AdminLink className="admin-back-link" href={daySettingsBack} navigate={navigate}>← {daySettingsBack === '/admin/agenda' ? 'Agenda' : 'Day'}</AdminLink>}
       {daySettingsSurface && <DaySettings key={`settings-${date}`} date={date} revision={revision} openBooking={openBooking} changed={() => setRevision(value => value + 1)} done={() => navigate(daySettingsBack)} />}
       {dayHoursSurface && <DayHoursGrid key={`hours-${date}`} date={date} changed={() => setRevision(value => value + 1)} done={() => navigate(daySettingsBack)} />}

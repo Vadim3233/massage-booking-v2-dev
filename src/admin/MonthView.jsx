@@ -29,7 +29,7 @@ function entryLabel(entry, date) {
 
 // The month as a grid of six weeks, like a wall calendar (ADR-112). On a computer each day lists its first entries and a tap on a line opens it;
 // the date opens the Day view. On a phone the whole day is one button that opens its list in a card from the bottom, and two fingers make the weeks taller.
-export default function MonthView({ initialDate, openBooking, openDayView, revision, onDate }) {
+export default function MonthView({ initialDate, openBooking, openDayView, openHours, revision, onDate }) {
   const narrow = useNarrow()
   const [anchor, setAnchor] = useState(() => initialDate || today())
   const grid = useMemo(() => monthGrid(anchor), [anchor])
@@ -103,7 +103,12 @@ export default function MonthView({ initialDate, openBooking, openDayView, revis
     const hoursText = day ? hoursWords(day) : ''
     const bar = day && day.open && !options.hoursOnly && day.full > 0 && <span className="calview-full" aria-hidden="true"><span style={{ width: `${Math.round(day.full * 100)}%` }} /></span>
     const away = day?.away && !options.hoursOnly && <span className="calview-away">{day.away.number === 1 || date === grid.start ? day.away.title : 'Away'}{day.away.total > 1 ? ` · ${day.away.number}/${day.away.total}` : ''}</span>
-    const big = options.hoursOnly && day && <span className={`calview-hours-big ${day.special ? 'is-special' : ''}`}>{day.away ? day.away.title : !day.hours?.available ? 'Day off' : <>{time(day.hours.start_minutes)}<br />{time(day.hours.end_minutes)}</>}{day.special && day.hours?.available && <small>special</small>}</span>
+    // In Hours only, a day still to come opens its Edit hours grid (on a computer from the hours, on a phone from the whole day).
+    const editable = options.hoursOnly && Boolean(openHours) && date >= todayDate && !day?.away
+    const bigInside = day && <>{day.away ? day.away.title : !day.hours?.available ? 'Day off' : <>{time(day.hours.start_minutes)}<br />{time(day.hours.end_minutes)}</>}{day.special && day.hours?.available && <small>special</small>}{editable && <small className="calview-edit-word">change</small>}</>
+    const big = options.hoursOnly && day && (editable && !narrow
+      ? <button className={`calview-hours-big is-editable ${day.special ? 'is-special' : ''}`} onClick={() => openHours(date)} aria-label={`Change the hours of ${longDate(date)}: ${hoursText}`}>{bigInside}</button>
+      : <span className={`calview-hours-big ${day.special ? 'is-special' : ''}`}>{bigInside}</span>)
     const line = (entry, interactive) => {
       const content = <><span className="calview-mark" aria-hidden="true" />{entryText(entry, narrow)}{entry.kind === 'booking' && entry.booking.gift_voucher_id && <Icon name="gift" size={12} />}{entry.kind === 'booking' && TONE_WORD[entry.tone] && !narrow && <span className="calview-tag">{TONE_WORD[entry.tone]}</span>}</>
       const kind = `calview-entry is-${entry.kind}${entry.kind === 'booking' ? ` tone-${entry.tone}` : ''}`
@@ -113,7 +118,7 @@ export default function MonthView({ initialDate, openBooking, openDayView, revis
     }
     if (narrow) {
       const label = [longDate(date), hoursText, day?.booked ? `${day.booked} booked` : '', more > 0 ? `${entries.length} entries` : ''].filter(Boolean).join(', ')
-      return <button key={date} className={classes} aria-label={label} aria-current={isToday ? 'date' : undefined} onClick={event => { opener.current = event.currentTarget; setPicked(date) }}>
+      return <button key={date} className={classes} aria-label={editable ? `Change the hours of ${longDate(date)}: ${hoursText}` : label} aria-current={isToday ? 'date' : undefined} onClick={event => { if (editable) { openHours(date); return } opener.current = event.currentTarget; setPicked(date) }}>
         <span className="calview-num">{number}</span>
         {big}{away}
         {shown.map(entry => line(entry, false))}
@@ -169,6 +174,7 @@ export default function MonthView({ initialDate, openBooking, openDayView, revis
         <span className="calview-sheet-grip" aria-hidden="true" />
         <div className="calview-sheet-head">
           <h2 id="calview-sheet-title">{picked === todayDate ? 'Today · ' : ''}{dateLabel(picked, { weekday: 'short', day: 'numeric', month: 'short' })}</h2>
+          {openHours && picked >= todayDate && !pickedDay.away && <button className="btn--quiet calview-open-day" onClick={() => openHours(picked)}>Edit hours</button>}
           <button className="btn--quiet calview-open-day" onClick={() => openDayView(picked)}>Open day ›</button>
           <button className="calview-sheet-close" aria-label="Close" onClick={closeSheet}><Icon name="cross" size={18} /></button>
         </div>

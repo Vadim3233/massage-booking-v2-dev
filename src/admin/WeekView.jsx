@@ -16,7 +16,7 @@ const longDate = date => dateLabel(date, { weekday: 'long', day: 'numeric', mont
 
 // A week as a time grid, like a paper diary (ADR-112): Monday to Sunday on a computer, three days on a phone. Each booking is a box as long as the
 // visit; travel time shows either side when ticked; a free stretch still to come can be tapped to offer it, as in the Day view.
-export default function WeekView({ initialDate, openBooking, openDayView, revision, onDate }) {
+export default function WeekView({ initialDate, openBooking, openDayView, openHours, revision, onDate }) {
   const narrow = useNarrow()
   const [anchor, setAnchor] = useState(() => initialDate || today())
   const dates = useMemo(() => weekDates(anchor, narrow), [anchor, narrow])
@@ -118,6 +118,7 @@ export default function WeekView({ initialDate, openBooking, openDayView, revisi
               {options.hoursOnly && <span className="calview-open-times"><strong>{time(day.hours.start_minutes)}</strong><span>to</span><strong>{time(day.hours.end_minutes)}</strong>{day.special && <small>special</small>}</span>}
             </span>}
             {day && !day.open && <span className="calview-offcard">{day.away ? day.away.title : 'Day off'}</span>}
+            {options.hoursOnly && openHours && date >= todayDate && !day?.away && <button className="calview-edit-hours" onClick={() => openHours(date)} aria-label={`Change the hours of ${longDate(date)}: ${day ? hoursWords(day) : ''}`}><span>Change hours</span></button>}
             {date === todayDate && nowMinutes >= span.from && nowMinutes <= span.to && <span className="calview-now" style={{ top: `${top(nowMinutes)}px` }} aria-hidden="true" />}
             {rows.map(row => entry(date, row))}
           </div>
