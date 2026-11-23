@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions, pg_temp;
-select plan(30);
+select plan(32);
 
 insert into auth.users(id, aud, role, email, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 values
@@ -41,6 +41,8 @@ select throws_ok($$select public.admin_save_bank_details('Vad Massage', null, '6
 select throws_ok($$select public.admin_save_bank_details('Vad Massage', null, '65-43-21', '87654321', null, 'https://wise.com.evil.example/pay/me/x')$$, '22023', 'That is not a Wise payment link', 'A look-alike address is refused');
 select lives_ok($$select public.admin_save_bank_details('Vad Massage', null, '65-43-21', '87654321', null, ' www.Wise.com/pay/me/vadims119 ')$$, 'A Wise link pasted loosely is accepted');
 select is(public.admin_bank_details()->>'wise_link', 'https://wise.com/pay/me/vadims119', 'It is stored tidily');
+select lives_ok($$select public.admin_save_bank_details('Vad Massage', null, '65-43-21', '87654321', null, 'http://wise.com/pay/me/vadims119')$$, 'An http:// link is accepted');
+select is(public.admin_bank_details()->>'wise_link', 'https://wise.com/pay/me/vadims119', 'and stored as https://');
 select lives_ok($$select public.admin_save_bank_details('Vad Massage', 'Wise', '65-43-21', '87654321')$$, 'Saving from a screen that does not know about the link');
 select ok(public.admin_bank_details()->>'wise_link' = 'https://wise.com/pay/me/vadims119' and public.admin_bank_details()->>'bank_name' = 'Wise', 'keeps the saved link');
 

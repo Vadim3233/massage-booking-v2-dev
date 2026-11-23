@@ -36,7 +36,7 @@ export default function SettingsBank({ api = settingsApi }) {
         <label className="admin-field">Account number<input inputMode="numeric" value={details.account_number} maxLength={9} disabled={busy} onChange={event => set({ account_number: event.target.value })} /></label>
       </div>
       <label className="admin-field">A note for clients (optional)<input value={details.note} maxLength={300} disabled={busy} onChange={event => set({ note: event.target.value })} /></label>
-      <label className="admin-field">Wise payment link (optional)<input type="url" inputMode="url" autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="wise.com/pay/me/yourname" value={details.wise_link} maxLength={200} disabled={busy} onChange={event => set({ wise_link: event.target.value })} /></label>
+      <label className="admin-field">Wise payment link (optional)<input inputMode="url" autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="wise.com/pay/me/yourname" value={details.wise_link} maxLength={200} disabled={busy} onChange={event => set({ wise_link: event.target.value })} /></label>
       <p className="admin-detail-hint">Clients who have Wise see a green "Pay with Wise" button under your bank details. In the Wise app: Request payment, then Share, and paste the link here. Leave it empty to hide the button.</p>
       <p className="admin-detail-hint">The payment reference is added for each booking automatically.</p>
       {!details.account_name && !details.sort_code && !details.account_number && <p className="admin-detail-hint">Nothing is saved here yet. Until you save your details, clients may not be able to pay by bank transfer.</p>}

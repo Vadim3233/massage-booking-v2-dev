@@ -40,7 +40,8 @@ begin
   if p_wise_link is null then
     v_wise := (select s.value->>'wise_link' from public.business_settings s where s.key = 'bank_details');
   elsif v_wise is not null then
-    if v_wise !~* '^https://' then v_wise := 'https://' || v_wise; end if;
+    -- http:// or no scheme at all becomes https://, like the app does (wiseLinkOf).
+    if v_wise !~* '^https://' then v_wise := 'https://' || regexp_replace(v_wise, '^http://', '', 'i'); end if;
     v_wise := regexp_replace(v_wise, '^https://(www\.)?wise\.com/', 'https://wise.com/', 'i');
     if v_wise !~ '^https://wise\.com/pay/[A-Za-z0-9/_.?=&%-]{1,180}$' then
       raise exception 'That is not a Wise payment link' using errcode = '22023';
