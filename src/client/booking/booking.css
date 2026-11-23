@@ -226,6 +226,13 @@
 .bank-reference { margin: 12px 0 4px; padding: 4px 14px; border-left: 4px solid var(--primary); border-radius: var(--radius-sm); background: var(--primary-soft); }
 .bank-reference > div { border-bottom: 0; }
 .bank-card h3 { margin-top: 18px; }
+/* "Pay with Wise": Wise's own colours (bright green, forest green text, 12:1), so it reads as Wise's button at a glance. */
+.wise-pay { margin: 16px 0 4px; padding-top: 14px; border-top: 1px solid var(--hairline); }
+.wise-pay-title { margin: 0 0 8px; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+:is(.booking-shell, .admin-shell) a.wise-button { gap: 10px; min-height: 52px; border: 2px solid var(--wise); border-radius: 999px; background: var(--wise); color: var(--wise-ink); font-weight: 700; font-size: 17px; text-decoration: none; }
+@media (hover: hover) { :is(.booking-shell, .admin-shell) a.wise-button:hover { background: var(--wise-hover); border-color: var(--wise-hover); } }
+:is(.booking-shell, .admin-shell) a.wise-button:focus-visible { outline: 3px solid var(--wise-ink); outline-offset: 3px; }
+.wise-pay .fine { margin-top: 8px; }
 .steps-list { margin: 8px 0 0; padding-left: 22px; }
 .steps-list li { margin: 6px 0; }
 .tiles--methods { grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 8px 0 12px; }

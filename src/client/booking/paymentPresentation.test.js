@@ -17,4 +17,7 @@ it('prefers bank details saved in the app and falls back to the build-time ones'
   expect(chooseBank(null, fallback).accountName).toBe('Env Name')
   expect(chooseBank(bankFromSettings({ account_name: 'Half', sort_code: '12-34', account_number: '1' }), fallback).accountName).toBe('Env Name')
   expect(bankFromSettings(null)).toBeNull()
+  expect(bankFromSettings({ account_name: 'A', sort_code: '12-34-56', account_number: '12345678', wise_link: 'https://wise.com/pay/me/vadims119' }).wiseLink).toBe('https://wise.com/pay/me/vadims119')
+  expect(bankFromSettings({ account_name: 'A', sort_code: '12-34-56', account_number: '12345678', wise_link: 'https://evil.example/pay' }).wiseLink).toBe('')
+  expect(paymentConfig({}).wiseLink).toBe('')
 })

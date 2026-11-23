@@ -1,7 +1,8 @@
 import { supabase } from '../lib/supabase.js'
+import { wiseLinkOf } from '../lib/wiseLink.js'
 
 const SAFE = new Set([
-  'Enter the name on the account', 'The sort code needs six digits', 'The account number needs eight digits', 'That is too long',
+  'Enter the name on the account', 'The sort code needs six digits', 'The account number needs eight digits', 'That is too long', 'That is not a Wise payment link',
   'Booking ahead must be between 1 and 365 days', 'Notice must be between 0 and 72 hours', 'The free cancellation window must be between 0 and 168 hours',
   'The grace period must be between 0 and 240 minutes', 'A new client may hold between 1 and 10 bookings', 'A returning client may hold as many as a new client, up to 20',
   'Every rule needs a whole number',
@@ -12,6 +13,7 @@ export function validateBank(details) {
   if (!details.account_name.trim()) return 'Enter the name on the account.'
   if (details.sort_code.replace(/[^0-9]/g, '').length !== 6) return 'The sort code needs six digits, for example 12-34-56.'
   if (details.account_number.replace(/[^0-9]/g, '').length !== 8) return 'The account number needs eight digits.'
+  if (details.wise_link?.trim() && !wiseLinkOf(details.wise_link)) return 'The Wise link should look like wise.com/pay/me/yourname. In the Wise app: Request payment, then Share.'
   return ''
 }
 
@@ -46,7 +48,7 @@ export function createSettingsApi(client) {
     bank: () => call('admin_bank_details'),
     rules: () => call('admin_booking_rules'),
     saveRules: values => call('admin_save_booking_rules', { p_rules: Object.fromEntries(RULE_FIELDS.map(field => [field.key, Number(values[field.key])])) }),
-    saveBank: details => call('admin_save_bank_details', { p_account_name: details.account_name, p_bank_name: details.bank_name || null, p_sort_code: details.sort_code, p_account_number: details.account_number, p_note: details.note || null }),
+    saveBank: details => call('admin_save_bank_details', { p_account_name: details.account_name, p_bank_name: details.bank_name || null, p_sort_code: details.sort_code, p_account_number: details.account_number, p_note: details.note || null, p_wise_link: wiseLinkOf(details.wise_link) }),
   }
 }
 export const settingsApi = createSettingsApi(supabase)

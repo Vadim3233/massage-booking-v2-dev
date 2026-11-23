@@ -150,7 +150,7 @@ export default function PaymentStep({ rules, draft, quote, quoteError, bank, api
     </section>
     {!cash && <section className="panel bank-card">
       <h2>Bank transfer</h2>
-      <BankDetails bank={bank} reference={booking.booking_payments.payment_reference} />
+      <BankDetails bank={bank} reference={booking.booking_payments.payment_reference} amount={money(booking.booking_payments.amount_gbp ?? booking.total_gbp)} then={'Then come back and press "I\'ve made the bank transfer".'} />
     </section>}
     {cash && <section className="panel">
       <h2>Cash on arrival</h2>
