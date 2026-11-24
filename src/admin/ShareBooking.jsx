@@ -30,11 +30,12 @@ export default function ShareBooking({ booking, wordingApi = shareMessageApi }) 
   }, [open, wording, wordingApi])
   const [said, setSaid] = useState('')
   const wrap = useRef(null)
-  // The bank details are only needed when a transfer is still due; they are the ones the client's own booking page shows.
+  // The bank details are only needed when a transfer is still due; they are the ones the client's own booking page shows, read with the Admin's own
+  // reader (get_bank_details answers only someone with a client record, which the Admin may not have).
   useEffect(() => {
     if (!open || bank || !transferDue(booking)) return undefined
     let live = true
-    supabase.rpc('get_bank_details').then(({ data }) => { if (live) setBank(chooseBank(bankFromSettings(data), fallbackBank)) }, () => { if (live) setBank(fallbackBank) })
+    supabase.rpc('admin_bank_details').then(({ data }) => { if (live) setBank(chooseBank(bankFromSettings(data), fallbackBank)) }, () => { if (live) setBank(fallbackBank) })
     return () => { live = false }
   }, [open, bank, booking])
   // A press outside, or Escape, closes the choices.
