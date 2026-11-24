@@ -79,8 +79,8 @@ select throws_ok($$select public.admin_confirm_pay_later('00000000-0000-4000-800
   'PT409', 'Booking state changed', 'A cash request is approved, not confirmed pay later');
 select throws_ok($$select public.admin_confirm_pay_later('00000000-0000-4000-8000-00000000f004', gen_random_uuid(), pg_temp.v('00000000-0000-4000-8000-00000000f004', 'b'), pg_temp.v('00000000-0000-4000-8000-00000000f004', 'p'))$$,
   'PT409', 'Booking state changed', 'A booking already confirmed and paid is left alone');
-select ok(not exists (select 1 from public.admin_payment_review_queue(0) q where q.id in ('00000000-0000-4000-8000-00000000f001', '00000000-0000-4000-8000-00000000f002')),
-  'Confirmed bookings leave the payment review queue');
+select is((select count(*)::integer from public.admin_payment_review_queue(0) q where q.id in ('00000000-0000-4000-8000-00000000f001', '00000000-0000-4000-8000-00000000f002')), 2,
+  'Confirmed bookings with the transfer still to come stay in To check from the moment they are confirmed');
 reset role;
 
 select results_eq($$select b.booking_status, p.status, p.paid_at is null from public.bookings b join public.booking_payments p on p.booking_id = b.id

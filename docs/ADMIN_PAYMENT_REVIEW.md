@@ -1,5 +1,7 @@
 # Admin shell and payment review (local implementation, 2026-10-07)
 
+> 2026-11-23 (ADR-114): the queue now also returns confirmed bank-transfer bookings not paid yet from the moment they are confirmed (next 8 weeks, sorted last) and extras owed on paid bookings at any time. The app shows the ones before their session under "Coming up · not paid yet", outside the badge and totals. Cash is listed only after the session, as before.
+
 Branch: `codex/admin-payment-review`, based on `origin/main` at `14552fa`.
 This slice is not deployed. Hosted Supabase and production are unchanged.
 

@@ -185,6 +185,6 @@ select is((select count(*)::integer from public.command_requests where command_t
 select is((select count(*)::integer from public.event_outbox where event_type='booking.bank_transfer_received'),1,'One receipt outbox event');
 update public.bookings set booking_status='completed' where client_id=(select id from t_clients) and date=(clock_timestamp() at time zone 'Europe/London')::date+14;
 select lives_ok($$select public.admin_record_bank_transfer_received(b.id,gen_random_uuid(),b.updated_at,p.updated_at) from public.bookings b join public.booking_payments p on p.booking_id=b.id where b.client_id=(select id from t_clients) and b.booking_status='completed'$$,'Completed bank pending payment can be received');
-select is((select count(*)::integer from public.admin_payment_review_queue(0) where id in(select t.booking_id from t_bookings t)),0,'Admin pending transfer appointments do not enter Payment Review');
+select is((select count(*)::integer from public.admin_payment_review_queue(0) where id in(select t.booking_id from t_bookings t)),0,'Admin bookings, once paid, are not in Payment Review');
 select * from finish();
 rollback;

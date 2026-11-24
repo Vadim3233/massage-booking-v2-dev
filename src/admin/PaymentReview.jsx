@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { clientName, dateLabel, money, sessionSummary, time, today } from './calendarPresentation.js'
-import { groupByClient, howLongAgo } from './reviewClients.js'
-import { extraOwed, loadReviewResource, needsYou, paymentActions, paymentOverdue, paymentReviewApi } from './paymentReviewApi.js'
+import { groupByClient, howLongAgo, howSoon, reviewAmount } from './reviewClients.js'
+import { comingUp, extraOwed, loadReviewResource, needsYou, owesExtra, paymentActions, paymentOverdue, paymentReviewApi } from './paymentReviewApi.js'
 import { ActionDialog } from './BookingActions.jsx'
 import { lifecycleApi } from './bookingLifecycleApi.js'
 import { minutesWords, owedExtraMinutes } from './extendApi.js'
@@ -21,6 +21,9 @@ function statusText(booking, reminder) {
   if (reminder) return `Reminder set · back ${reminderWhen(reminder.until)}`
   if (extraOwed(booking)) return booking.balance_reported_at ? `Client says ${extraWords(booking)} is paid, check your bank` : `Session done · ${extraWords(booking)} not paid yet`
   if (paymentOverdue(booking)) return cash ? 'Session done · cash not marked received' : booking.booking_payments.status === 'awaiting_verification' ? 'Session done · client says paid, check your bank' : 'Session done · not paid yet'
+  if (comingUp(booking)) return owesExtra(booking) ? `Confirmed · ${extraWords(booking)} not paid yet` : 'Confirmed · not paid yet'
+  // Confirmed, and the client says they sent the transfer before the session: it needs checking now.
+  if (['confirmed', 'completed'].includes(booking.booking_status) && booking.booking_payments?.status === 'awaiting_verification') return 'Client says paid, check your bank'
   if (cash) return 'Cash request to decide'
   return booking.booking_payments?.status === 'awaiting_transfer' ? 'Transfer not yet declared by the client' : 'Bank transfer to verify'
 }
@@ -34,13 +37,13 @@ function openBookingLink(openBooking, booking) {
 
 // One booking inside a client's card: when, what, how much, and its own buttons.
 function Line({ booking, openBooking, refresh, reminder }) {
-  const extra = extraOwed(booking)
+  const extra = extraOwed(booking) || owesExtra(booking)
   const [receiving, setReceiving] = useState(false)
   return <li className={`admin-review-line ${needsYou(booking) && !reminder ? '' : 'wait'}`} data-reference={booking.booking_reference}>
     <div className="admin-review-line-text">
       <p className="admin-review-line-when">{dateLabel(booking.date)} · {time(booking.start_minutes)}</p>
       <p className="admin-review-line-what">{sessionSummary(booking)}</p>
-      <p className="admin-review-line-status">{statusText(booking, reminder)}</p>
+      <p className="admin-review-line-status">{statusText(booking, reminder)}{comingUp(booking) ? ` · ${howSoon(booking.date)}` : ''}</p>
     </div>
     <strong className="admin-review-line-amount">{extra ? `${money(booking.balance_due_gbp)} extra` : money(booking.total_gbp)}</strong>
     <div className="admin-review-line-actions">
@@ -109,12 +112,15 @@ function ClientCard({ group, open, toggle, openBooking, refresh, putOff, all }) 
   const counted = group.counted
   const allUnpaid = counted.every(booking => paymentOverdue(booking) && !extraOwed(booking))
   const summary = counted.length === 1
-    ? `${statusText(counted[0], putOff(counted[0]))} · ${dateLabel(counted[0].date)}${counted[0].date <= today() ? `, ${howLongAgo(counted[0].date)}` : ''}`
+    ? `${statusText(counted[0], putOff(counted[0]))} · ${dateLabel(counted[0].date)}${counted[0].date < today() ? `, ${howLongAgo(counted[0].date)}` : `, ${howSoon(counted[0].date)}`}`
+    : group.section === 'coming'
+      ? `${counted.length} coming up · next ${dateLabel(group.oldest)}, ${howSoon(group.oldest)}`
     : group.section === 'waiting'
       ? `${counted.length} waiting for the client · from ${dateLabel(group.oldest)}`
       : `${allUnpaid ? `${sessionWords(counted.length)} not paid` : `${counted.length} to check`} · oldest ${dateLabel(group.oldest, { day: 'numeric', month: 'short' })}${group.oldest <= today() ? `, ${howLongAgo(group.oldest)}` : ''}`
   // A booking with no client account can still be reminded on its own.
-  const owing = group.clientId ? dueForClient(all, group.clientId) : group.items.filter(booking => reminderDue(booking))
+  // A session still to come is not chased: a Coming up card has no reminder.
+  const owing = group.section === 'coming' ? [] : group.clientId ? dueForClient(all, group.clientId) : group.items.filter(booking => reminderDue(booking))
   const first = group.first.clients?.first_name?.trim()
   // Only what still needs the Admin: a session put off with Not yet is left out, so the button agrees with the card's total.
   const settle = group.section === 'needs' ? group.active : []
@@ -180,14 +186,20 @@ export default function PaymentReview({ openBooking, revision, changed }) {
   // One card per client, closed until tapped. Which cards are open is kept while the list is read again, so a card does not shut under the Admin.
   const [openCards, setOpenCards] = useState(() => new Set())
   const toggle = key => setOpenCards(keys => { const next = new Set(keys); if (next.has(key)) next.delete(key); else next.add(key); return next })
-  const sections = current ? groupByClient(current.bookings, { needsYou: booking => needsYou(booking) && !putOff(booking), putOff, isExtra: extraOwed }) : { needs: [], reminded: [], waiting: [] }
+  // Confirmed bookings not paid yet whose session is still to come sit apart, under "Coming up", so a client who also owes for a past
+  // session has a gold card for what is owed now and a calm one for what is coming. They never count in the badge or the total.
+  const coming = current ? current.bookings.filter(booking => comingUp(booking)) : []
+  const rest = current ? current.bookings.filter(booking => !coming.includes(booking)) : []
+  const sections = current ? groupByClient(rest, { needsYou: booking => needsYou(booking) && !putOff(booking), putOff, isExtra: extraOwed }) : { needs: [], reminded: [], waiting: [] }
+  const comingGroups = groupByClient(coming, { needsYou: () => false, isExtra: owesExtra }).waiting.map(group => ({ ...group, section: 'coming' }))
+  const comingTotal = coming.reduce((sum, booking) => sum + reviewAmount(booking, owesExtra), 0)
   const needCount = sections.needs.reduce((sum, group) => sum + group.active.length, 0)
   const owed = sections.needs.reduce((sum, group) => sum + group.owed, 0)
   const remindedCount = current ? current.bookings.filter(putOff).length : 0
-  const waitingCount = current ? current.bookings.filter(booking => !needsYou(booking)).length : 0
+  const waitingCount = rest.filter(booking => !needsYou(booking)).length
   const section = (name, title, groups) => groups.length > 0 && <section className={`admin-review-section is-${name}`} aria-labelledby={`review-${name}`}>
     <h2 id={`review-${name}`} className="admin-review-section-title">{title}</h2>
-    <ul role="list" className="admin-review-list">{groups.map(group => <ClientCard key={group.key} group={group} open={openCards.has(group.key)} toggle={() => toggle(group.key)} openBooking={openBooking} refresh={refresh} putOff={putOff} all={current.bookings} />)}</ul>
+    <ul role="list" className="admin-review-list">{groups.map(group => <ClientCard key={group.key} group={group} open={openCards.has(group.key)} toggle={() => toggle(group.key)} openBooking={openBooking} refresh={refresh} putOff={putOff} all={rest} />)}</ul>
   </section>
   return <section className="admin-review" aria-labelledby="review-title">
     <header className="admin-review-heading"><div><h1 id="review-title">To check</h1><p>One card for each client. Tap a card to see each booking and confirm a payment, set a reminder or cancel. Nothing is cancelled automatically.</p></div><button className="btn--quiet btn--icon" onClick={() => { quiet.asked(); reread() }} aria-label="Refresh reviews"><Icon name="refresh" size={22} /></button></header>
@@ -195,10 +207,11 @@ export default function PaymentReview({ openBooking, revision, changed }) {
     {!current && !error && <div className="skeleton-rows" role="status"><span className="admin-sr-only">Loading payment reviews…</span><span className="skeleton" /><span className="skeleton" /></div>}
     {current && <>
       {!current.bookings.length && <p className="admin-agenda-empty"><strong>All caught up.</strong>No payments awaiting review on this page.</p>}
-      {current.bookings.length > 0 && <p className="admin-review-summary"><strong>{needCount} {needCount === 1 ? 'needs' : 'need'} you</strong>{needCount > 0 ? ` · ${money(owed)}` : ''}{sections.needs.length > 0 ? ` · ${sections.needs.length} ${sections.needs.length === 1 ? 'client' : 'clients'}` : ''}{remindedCount > 0 ? ` · ${remindedCount} ${remindedCount === 1 ? 'reminder' : 'reminders'} set` : ''}{waitingCount > 0 ? ` · ${waitingCount} waiting for the client` : ''}</p>}
+      {current.bookings.length > 0 && <p className="admin-review-summary"><strong>{needCount} {needCount === 1 ? 'needs' : 'need'} you</strong>{needCount > 0 ? ` · ${money(owed)}` : ''}{sections.needs.length > 0 ? ` · ${sections.needs.length} ${sections.needs.length === 1 ? 'client' : 'clients'}` : ''}{remindedCount > 0 ? ` · ${remindedCount} ${remindedCount === 1 ? 'reminder' : 'reminders'} set` : ''}{waitingCount > 0 ? ` · ${waitingCount} waiting for the client` : ''}{coming.length > 0 ? ` · ${coming.length} coming up ${money(comingTotal)}` : ''}</p>}
       {section('needs', 'Needs you', sections.needs)}
       {section('reminded', 'Reminder set', sections.reminded)}
       {section('waiting', 'Waiting for the client', sections.waiting)}
+      {section('coming', 'Coming up · not paid yet', comingGroups)}
       {(offset > 0 || current.hasMore) && <nav className="admin-payment-buttons" aria-label="Review pages"><button disabled={!offset} onClick={() => setOffset(value => Math.max(0, value - 50))}>Previous page</button><button disabled={!current.hasMore || offset >= 10000} onClick={() => setOffset(value => value + 50)}>Next page</button></nav>}
     </>}
   </section>

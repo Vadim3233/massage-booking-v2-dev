@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { paymentReviewFixture } from '../../tests/paymentReviewFixture.js'
-import { createPaymentReviewApi, methodSwitch, paymentActions } from './paymentReviewApi.js'
+import { comingUp, createPaymentReviewApi, methodSwitch, needsYou, paymentActions } from './paymentReviewApi.js'
 import { unwrap } from '../client/booking/bookingApi.js'
 let f, api
 beforeEach(async () => { f = await paymentReviewFixture(); api = createPaymentReviewApi(f.client) }, 30000)
@@ -48,7 +48,9 @@ describe('server-authoritative Admin payment commands', () => {
     const confirmed = await api.booking(b.id)
     expect(confirmed.booking_status).toBe('confirmed'); expect(confirmed.booking_payments.status).toBe('awaiting_transfer'); expect(confirmed.booking_payments.paid_at).toBeNull()
     expect(paymentActions(confirmed)).toEqual(['receiveBank'])
-    expect((await api.queue()).bookings.some(row => row.id === b.id)).toBe(false)
+    // Listed straight away, calmly, as coming up: nothing is asked of the Admin until the session is over.
+    const listed = (await api.queue()).bookings.find(row => row.id === b.id)
+    expect(listed).toBeTruthy(); expect(comingUp(listed)).toBe(true); expect(needsYou(listed)).toBe(false)
     await api.act('receiveBank', confirmed, crypto.randomUUID())
     const paid = await api.booking(b.id)
     expect(paid.booking_status).toBe('confirmed'); expect(paid.booking_payments.status).toBe('paid'); expect(paid.booking_payments.verified_by).toBe(f.user.id)
@@ -76,7 +78,10 @@ describe('server-authoritative Admin payment commands', () => {
       await f.prepare(0, method, 'confirmed', payment)
       // The fixture's own day is weeks ahead; the previous round moved this booking into the past, and prepare keeps the date it finds.
       await unwrap(f.admin.from('bookings').update({ date: f.date }).eq('id', f.bookings[0].id))
-      expect((await api.queue()).bookings.some(row => row.id === f.bookings[0].id)).toBe(false)
+      // Before the session: a transfer is listed at once (coming up, or needing the Admin if the client says it is sent); cash is not.
+      const before = (await api.queue()).bookings.find(row => row.id === f.bookings[0].id)
+      expect(Boolean(before)).toBe(method === 'bank_transfer')
+      if (before) { expect(comingUp(before)).toBe(payment === 'awaiting_transfer'); expect(needsYou(before)).toBe(payment === 'awaiting_verification') }
       await unwrap(f.admin.from('bookings').update({ date: '2026-01-05' }).eq('id', f.bookings[0].id))
       expect((await api.queue()).bookings.some(row => row.id === f.bookings[0].id)).toBe(true)
       const b = await api.booking(f.bookings[0].id)

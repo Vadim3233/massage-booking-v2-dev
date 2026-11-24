@@ -35,6 +35,17 @@ export function extraOwed(booking, now = Date.now()) {
   return booking.date < clock.date || (booking.date === clock.date && ends <= clock.minutes)
 }
 export const needsYou = booking => NEEDS_YOU.includes(booking.booking_payments?.status) || paymentOverdue(booking) || extraOwed(booking)
+// An extra still to pay on a paid booking, whether or not it needs the Admin yet: the line then shows the extra, not the booking's price.
+export const owesExtra = booking => ['confirmed', 'completed'].includes(booking.booking_status) && booking.booking_payments?.status === 'paid' && Number(booking.balance_due_gbp) > 0
+// Confirmed with the money still to come and the session not over yet: listed calmly under "Coming up · not paid yet", nothing asked of
+// the Admin until the session ends (or the client says they paid, which needs him at once). Cash is not listed before the session: it is
+// paid on the day.
+export function comingUp(booking, now = Date.now()) {
+  const payment = booking.booking_payments
+  if (!['confirmed', 'completed'].includes(booking.booking_status) || !payment || NEEDS_YOU.includes(payment.status)) return false
+  if (paymentOverdue(booking, now) || extraOwed(booking, now)) return false
+  return (payment.method === 'bank_transfer' && payment.status === 'awaiting_transfer') || owesExtra(booking)
+}
 export const paymentActions = booking => {
   const payment = booking.booking_payments
   // A booking waiting for payment is never cancelled automatically: the Admin confirms the payment, confirms the booking with the payment
