@@ -210,3 +210,17 @@ describe('the combined payment reminder', () => {
     expect([60, 120, 90, 45, 0, null].map(sessionLength)).toEqual(['1 hour', '2 hours', '90 min', '45 min', '', ''])
   })
 })
+
+describe('the Wise link in WhatsApp messages', () => {
+  const wiseBank = { ...bank, wiseLink: 'https://wise.com/pay/me/vadims119' }
+  const due = booking({ booking_payments: { method: 'bank_transfer', status: 'awaiting_transfer', payment_reference: 'VDM-1', amount_gbp: 90 }, date: '2020-01-01' })
+  it('goes under the reference in a reminder, the combined reminder and the share message', () => {
+    for (const text of [reminderText(due, wiseBank), combinedReminderText([due], wiseBank, 'Sam'), shareText(due, wiseBank, '{bank details}')]) {
+      expect(text).toContain('Reference: VDM-1\n\nHave Wise? Pay here: https://wise.com/pay/me/vadims119\n(please add the reference above)')
+    }
+  })
+  it('is left out when no link is saved', () => {
+    for (const text of [reminderText(due, bank), combinedReminderText([due], bank, 'Sam'), shareText(due, bank, '{bank details}')]) expect(text).not.toContain('Wise?')
+  })
+})
+

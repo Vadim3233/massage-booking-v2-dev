@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { handle } from '../api/dispatch-notifications.js'
-import { composeMessage, createDispatcher, enabledChannels, readConfig, senderFor } from './notifications.js'
+import { composeMessage, createDispatcher, enabledChannels, readConfig, senderFor, withWise } from './notifications.js'
 
 const env = { APP_BASE_URL: 'https://booking.example.com/', TELEGRAM_BOT_TOKEN: '123:SECRET-TOKEN', ADMIN_TELEGRAM_CHAT_ID: '555', RESEND_API_KEY: 're_SECRET_KEY',
   EMAIL_FROM: 'Vad <hello@example.com>', ADMIN_ALERT_EMAIL: 'vad@example.com', EMAIL_REPLY_TO: 'vad@example.com' }
@@ -408,3 +408,33 @@ describe('senderFor: gift voucher emails come from "Vadim"', () => {
     expect(senderFor({ audience: 'client', link_path: '/gift/ABC' }, '')).toBe('')
   })
 })
+
+describe('the Wise link in client messages', () => {
+  const bankBody = 'Payment of £90.00 is still due, using the reference VDM-1.\n\nAccount name: V\nSort code: 00-00-00\nAccount number: 00000000\n\nSee or change your booking: {link}'
+  const link = 'https://wise.com/pay/me/vadims119'
+  it('is added under the bank details for a client, never for the Admin, and only when a link is saved', () => {
+    expect(withWise(row({ audience: 'client', body: bankBody }), link).body).toContain('Account number: 00000000\n\nHave Wise? Pay here: https://wise.com/pay/me/vadims119')
+    expect(withWise(row({ audience: 'admin', body: bankBody }), link).body).toBe(bankBody)
+    expect(withWise(row({ audience: 'client', body: bankBody }), '').body).toBe(bankBody)
+  })
+  it('reaches the client\'s email, plain and HTML, with the saved link read once', async () => {
+    const sent = []
+    let reads = 0
+    const client = fakeClient([row({ id: 'w1', channel: 'email', audience: 'client', recipient: 'sam@example.com', body: bankBody, link_path: '' }), row({ id: 'w2', channel: 'email', audience: 'client', recipient: 'sam@example.com', body: 'All paid, thank you.', link_path: '' })])
+    client.from = () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => { reads += 1; return { data: { value: { wise_link: link } }, error: null } } }) }) })
+    await createDispatcher({ client, config: readConfig(env), fetchImpl: async (url, init) => { sent.push(JSON.parse(init.body)); return okResponse({ id: 'x' }) } }).dispatch()
+    expect(reads).toBe(1)
+    expect(sent[0].text).toContain('Have Wise? Pay here: https://wise.com/pay/me/vadims119')
+    expect(sent[0].html).toContain('href="https://wise.com/pay/me/vadims119"')
+    expect(sent[1].text).not.toContain('Wise')
+  })
+  it('still sends, without the line, when the link cannot be read', async () => {
+    const sent = []
+    const client = fakeClient([row({ id: 'w3', channel: 'email', audience: 'client', recipient: 'sam@example.com', body: bankBody, link_path: '' })])
+    client.from = () => { throw new Error('down') }
+    const result = await createDispatcher({ client, config: readConfig(env), fetchImpl: async (url, init) => { sent.push(JSON.parse(init.body)); return okResponse({ id: 'x' }) } }).dispatch()
+    expect(result.sent).toBe(1)
+    expect(sent[0].text).not.toContain('Wise')
+  })
+})
+

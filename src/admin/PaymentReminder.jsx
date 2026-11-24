@@ -7,10 +7,12 @@ import { money } from './calendarPresentation.js'
 
 const fallbackBank = paymentConfig(import.meta.env)
 
-// The bank details the client's own booking page shows: the saved ones, or the site's own when none are saved.
+// The bank details the client's own booking page shows: the saved ones, or the site's own when none are saved. They are read with the Admin's own
+// reader (admin_bank_details): get_bank_details answers only someone with a client record, so for the Admin it gave nothing and the reminder fell
+// back to the build-time details, without the saved note or Wise link.
 async function loadBank() {
   try {
-    const { data } = await supabase.rpc('get_bank_details')
+    const { data } = await supabase.rpc('admin_bank_details')
     return chooseBank(bankFromSettings(data), fallbackBank)
   } catch { return fallbackBank }
 }
