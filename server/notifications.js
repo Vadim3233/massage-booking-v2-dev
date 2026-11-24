@@ -75,7 +75,7 @@ async function sendTelegramClient(row, message, config, fetchImpl, client) {
   if (!Number.isSafeInteger(chat)) throw new Error('Telegram: no chat to send to')
   const text = `${message.title}\n\n${message.body}`.slice(0, TELEGRAM_LIMIT)
   // An amount to pay is in bold, sent as Telegram "entities" beside the plain text, so the words themselves are untouched.
-  const entities = telegramBoldEntities(text, text.length)
+  const entities = telegramBoldEntities(text)
   const payload = { chat_id: chat, text, disable_web_page_preview: true, ...(entities.length ? { entities } : {}) }
   // Cut off if Telegram does not answer, so one waiting call cannot hold up every message after it.
   const response = await fetchImpl(`https://api.telegram.org/bot${config.telegramClient.token}/sendMessage`, {

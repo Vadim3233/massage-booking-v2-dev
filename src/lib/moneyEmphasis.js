@@ -1,16 +1,18 @@
 // The amounts of money in a message to a client, so they can be made to stand out: bold in WhatsApp (*£90.00*) and Telegram, bold and bigger
 // in an email. An amount is a pound sign and a number, as the app and the database write them ("£90.00", "£1,234.00", "£90").
-// An old price is left plain ("The price is now £180.00 (it was £150.00)", "… for £90 instead of £120"), so the one that stands out is always
+// An old price is left plain ("The price is now £180.00 (it was £150.00)", "… for £90 instead of £120", "previously £100"), so the one that stands out is always
 // the one that counts.
-const AMOUNT = /£\d+(?:,\d{3})*(?:\.\d{2})?/g
-const OLD_PRICE = /(?:\bwas|\binstead of|\busually)\s*$/i
+const NUMBER = /£\d+(?:[.,]\d+)*/g
+// A number written some other way ("£90.5", "£1,2345") is left alone rather than made partly bold.
+const AMOUNT = /^£\d+(?:,\d{3})*(?:\.\d{2})?$/
+const OLD_PRICE = /(?:\bwas|\binstead of|\busually|\bpreviously)\s*:?\s*$/i
 
 // Where each amount to stand out sits in the text, as { start, end } (string indexes, which are what Telegram counts in).
 export function amountRanges(text) {
   const value = String(text ?? '')
   const ranges = []
-  for (const match of value.matchAll(AMOUNT)) {
-    if (OLD_PRICE.test(value.slice(Math.max(0, match.index - 20), match.index))) continue
+  for (const match of value.matchAll(NUMBER)) {
+    if (!AMOUNT.test(match[0]) || OLD_PRICE.test(value.slice(Math.max(0, match.index - 20), match.index))) continue
     ranges.push({ start: match.index, end: match.index + match[0].length })
   }
   return ranges

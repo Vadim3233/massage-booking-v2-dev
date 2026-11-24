@@ -31,6 +31,11 @@ describe('the HTML version of a client email', () => {
     expect(html).toContain(`A refund of <strong style="${AMOUNT_STYLE}">£1,200.50</strong> is on its way.`)
     expect(AMOUNT_STYLE).toContain('font-size:20px')
   })
+  it('leaves the amounts on a receipt as they are, since nothing is left to pay', () => {
+    const html = composeEmailHtml({ title: 'Your receipt from VadMassage', body: 'Receipt VAD-2026-0001\nDeep tissue: £90.00\nTravel: £10.00\nTotal paid: £100.00', url: '', canReply: false })
+    expect(html).not.toContain(AMOUNT_STYLE)
+    expect(html).toContain('Total paid: £100.00')
+  })
   it('puts the private link on a button and nowhere in the text, and never shows the placeholder', () => {
     const html = make()
     expect(html).toContain(`href="https://booking.example.com/account?booking=b1&amp;x=1#key=abc123"`)

@@ -37,12 +37,12 @@ export const transferDue = booking => {
 }
 
 // The treatment, then the same sentence the client saw when booking: who, how long and the price ("Deep tissue: One 2-hour session for
-// 1 person – £120.00"), so the number of people can never be misread. The price is in bold (*£120.00*) so it stands out.
+// 1 person – £120.00"), so the number of people can never be misread. fillShareMessage puts the price in bold (*£120.00*) so it stands out.
 function treatments(booking) {
   const sessions = [...(booking.booking_sessions || [])].sort((a, b) => a.position - b.position)
-  if (!sessions.length) return whatsappBoldAmounts([`${booking.treatment_duration_minutes} min`, money(booking.total_gbp)].join(' · '))
+  if (!sessions.length) return [`${booking.treatment_duration_minutes} min`, money(booking.total_gbp)].join(' · ')
   const names = [...new Set(sessions.map(session => session.service_name_snapshot).filter(Boolean))].join(' + ') || 'Massage'
-  return whatsappBoldAmounts(`${names}: ${bookingSentence(sessions.map(session => session.duration_minutes), booking.total_gbp, treatmentNoun(names))}`)
+  return `${names}: ${bookingSentence(sessions.map(session => session.duration_minutes), booking.total_gbp, treatmentNoun(names))}`
 }
 
 // The Admin can reword the message (Settings › Share message), with these blanks and no others: the database refuses any other,
@@ -116,7 +116,13 @@ export function fillShareMessage(wording, values) {
     const others = blanks.filter(blank => blank !== '{name}')
     if (others.length && others.every(blank => !values[blank.slice(1, -1)])) return []
     const named = values.name ? line : line.replace(/ ?\{name\}/g, '')
-    const filled = named.replace(BLANK, (_, name) => values[name] || '')
+    // The price in {treatment} is in bold, unless the Admin's wording already has the blank inside *bold* (an odd number of stars before it on
+    // the line), where stars inside stars would show as stars.
+    const filled = named.replace(BLANK, (_, name, at) => {
+      const value = values[name] || ''
+      const insideBold = (named.slice(0, at).match(/\*/g) || []).length % 2 === 1
+      return name === 'treatment' && !insideBold ? whatsappBoldAmounts(value) : value
+    })
     return filled.trim() ? [filled] : []
   })
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
@@ -183,8 +189,7 @@ export function reminderText(booking, bank) {
 }
 
 // One reminder for a client who owes for more than one booking: each session's date, time and length with what it comes to, the total (in bold on a
-// line of its own), and the details to
-// pay it all in one transfer, with the first booking's reference. The bookings are the ones reminderDue accepts; they are listed by date.
+// line of its own), and the details to pay it all in one transfer, with the first booking's reference. The bookings are the ones reminderDue accepts; they are listed by date.
 export const owed = booking => extraDue(booking) ? Number(booking.balance_due_gbp) : Number(paymentOf(booking)?.amount_gbp ?? booking.total_gbp) || 0
 export const owedTotal = bookings => bookings.reduce((sum, booking) => sum + owed(booking), 0)
 // The client's bookings that a reminder can be sent for, earliest first, from any list of bookings (each needs its client_id).

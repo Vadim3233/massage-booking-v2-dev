@@ -64,6 +64,11 @@ describe('the booking details the Admin sends a client', () => {
     expect(whatsappShareLink(booking(), 'Hi there')).toBe('https://wa.me/447700900123?text=Hi%20there')
     expect(whatsappShareLink(booking({ clients: { phone: '' } }), 'Hi')).toBeNull()
   })
+  it('puts the price in bold in any wording, but never stars inside stars when the wording already makes {treatment} bold', () => {
+    expect(shareText(booking(), bank, '{treatment}')).toBe('Deep tissue: One 2-hour session for 1 person – *£120.00*')
+    expect(shareText(booking(), bank, '*{treatment}*')).toBe('*Deep tissue: One 2-hour session for 1 person – £120.00*')
+    expect(shareText(booking(), bank, '*Booked:* {treatment}')).toBe('*Booked:* Deep tissue: One 2-hour session for 1 person – *£120.00*')
+  })
   it('fills the Admin\'s own wording, leaving out a line whose blank has nothing to say', () => {
     const wording = 'Hi! See you {date} at {time}.\n\n{address}\n{treatment}\n{payment}\n\n{bank details}\n\nThanks, V'
     expect(shareText(booking({ booking_payments: { method: 'cash', status: 'approved' }, address_snapshot: '' }), bank, wording))

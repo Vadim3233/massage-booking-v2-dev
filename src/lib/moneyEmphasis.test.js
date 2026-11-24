@@ -10,6 +10,10 @@ describe('making the amount to pay stand out', () => {
     expect(whatsappBoldAmounts('The price is now £180.00 (it was £150.00).')).toBe('The price is now *£180.00* (it was £150.00).')
     expect(whatsappBoldAmounts('Price £90 (was £120), £60 instead of £90, usually £100')).toBe('Price *£90* (was £120), *£60* instead of £90, usually £100')
   })
+  it('knows an old price written with a colon or "previously", and never bolds part of a number', () => {
+    expect(whatsappBoldAmounts('was: £90, previously £80, now £70')).toBe('was: £90, previously £80, now *£70*')
+    expect(whatsappBoldAmounts('£90.5 and £1,2345')).toBe('£90.5 and £1,2345')
+  })
   it('leaves a comma or full stop after an amount outside it', () => {
     expect(whatsappBoldAmounts('now £180, using the reference. Total £5.')).toBe('now *£180*, using the reference. Total *£5*.')
   })
