@@ -258,6 +258,7 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **What it does:** Vadim can send a friendly payment reminder as WhatsApp text (or copy it). When a client owes for several sessions, one reminder lists each with date, time, length and amount. Available on the To check cards, the booking page and the client's page.
 - **Why:** Clients who pay later sometimes forget; naming each session lets them check their bank.
 - **Built in:** PR #79, PR #99 (no migrations).
+- **The amount stands out (2026-11-24):** the total is on its own line in bold with a money sign ("💷 *Total to pay: £495.00*"; one session: "💷 *To pay: £90.00*"). See "Amounts to pay stand out" in section 4.
 - **For a general app:** the reminder wording.
 
 ### Late fees and refunds
@@ -317,6 +318,12 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **Why:** Clear, trustworthy messages that look like the business.
 - **Built in:** PR #8, PR #49 (ADR-055), PR #70 (ADR-074).
 - **For a general app:** brand name, colours, sending address.
+
+### Amounts to pay stand out in client messages
+- **What it does:** Wherever a client message shows money, the amount is easy to spot. WhatsApp payment reminders put the total on its own line in bold with a 💷 ("💷 *Total to pay: £495.00*"), the Share booking message has the price in bold, client Telegram messages have the amount in bold, and client emails have it bold and bigger. An old price ("it was £150.00", "instead of £90") is left plain so the client never mistakes it for what to pay.
+- **Why:** Vadim wanted clients to see at a glance how much to pay.
+- **Built in:** PR (this one), ADR-116, no migrations. Shared helper `src/lib/moneyEmphasis.js`.
+- **For a general app:** the currency sign, the emoji, and how big the email amount is.
 
 ### Morning reminder
 - **What it does:** On the morning of a confirmed appointment (from 08:00, at least an hour before) the client gets one reminder email with the time and address.

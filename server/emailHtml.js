@@ -1,3 +1,5 @@
+import { emphasiseAmounts } from '../src/lib/moneyEmphasis.js'
+
 // The HTML version of an email to a client: the same words as the plain-text version, set in the look of the booking pages. The plain text is
 // still sent with it (an email carries both and the reader's mail app shows one), so nothing is lost where HTML is not shown.
 //
@@ -41,9 +43,12 @@ function heading(title) {
   return `${lead}<em style="font-style:italic;color:${C.primary}">${escapeHtml(last)}</em>`
 }
 
-// A web address written in the text (a Google review link) is made a link people can press; everything else is plain text, with the day and time in bold.
+// A web address written in the text (a Google review link) is made a link people can press; everything else is plain text, with the day and time in bold
+// and an amount of money (but not an old price, see src/lib/moneyEmphasis.js) bold and bigger, so the client sees at once what to pay.
 const WEB_ADDRESS = /https?:\/\/[^\s"'<>]+/g
-const words = (text) => escapeHtml(text).replace(WHEN, (when) => `<strong>${when}</strong>`)
+export const AMOUNT_STYLE = `font-size:20px;font-weight:700;color:${C.ink};white-space:nowrap`
+const words = (text) => emphasiseAmounts(escapeHtml(text), (amount) => `<strong style="${AMOUNT_STYLE}">${amount}</strong>`)
+  .replace(WHEN, (when) => `<strong>${when}</strong>`)
 function inline(line) {
   let out = ''
   let from = 0

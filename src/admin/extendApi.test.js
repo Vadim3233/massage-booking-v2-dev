@@ -72,7 +72,8 @@ describe('an extra still to pay on a paid booking', () => {
     const text = reminderText(extra, bank)
     expect(text).toContain('Hi Sarah, thank you for staying a little longer!')
     expect(text).toContain('Sort code: 00-11-22')
-    expect(combinedReminderText([extra, booking({ id: 'b2', date: shiftDate(today(), -3), booking_payments: { method: 'bank_transfer', status: 'awaiting_transfer', amount_gbp: 90 } })], bank, 'Sarah')).toContain('Total: £135.00')
+    expect(text).toMatch(/18:00 · extra 30 min\n💷 \*To pay: £45\.00\*\n/)
+    expect(combinedReminderText([extra, booking({ id: 'b2', date: shiftDate(today(), -3), booking_payments: { method: 'bank_transfer', status: 'awaiting_transfer', amount_gbp: 90 } })], bank, 'Sarah')).toContain('💷 *Total to pay: £135.00*')
   })
 })
 

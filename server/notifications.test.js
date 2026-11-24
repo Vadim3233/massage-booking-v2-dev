@@ -52,6 +52,14 @@ describe('the clients-only Telegram bot', () => {
     expect(enabledChannels(same)).not.toContain('telegram_client')
     expect(readConfig({ ...env, TELEGRAM_CLIENT_BOT_TOKEN: `${env.TELEGRAM_BOT_TOKEN}\n` }).telegramClient.token).toBe('')
   })
+  it('sends the amount to pay in bold (as Telegram entities), never an old price, and leaves the words untouched', async () => {
+    const calls = []
+    const body = 'Your booking on Fri 28 Nov at 15:30 is now 2 hours.\n\nThe price is now £180.00 (it was £150.00). The amount to pay by bank transfer is now £1,180.00, using the reference VAD-4821.'
+    await createDispatcher({ client: fakeClient([message({ title: 'Your booking has changed', body })]), config: readConfig(clientEnv), fetchImpl: async (url, init) => { calls.push(JSON.parse(init.body)); return okResponse({ ok: true }) } }).dispatch()
+    const { text, entities } = calls[0]
+    expect(text).toBe(`Your booking has changed\n\n${body}`)
+    expect(entities.map(entity => [entity.type, text.slice(entity.offset, entity.offset + entity.length)])).toEqual([['bold', '£180.00'], ['bold', '£1,180.00']])
+  })
   it('does not wait for ever for Telegram: the call is cut off after a few seconds', async () => {
     const signals = []
     await createDispatcher({ client: fakeClient([message()]), config: readConfig(clientEnv), fetchImpl: async (url, init) => { signals.push(init.signal); return okResponse({ ok: true }) } }).dispatch()
