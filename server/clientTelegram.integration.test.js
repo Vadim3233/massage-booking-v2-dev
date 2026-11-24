@@ -62,7 +62,9 @@ describe('a client getting booking updates on Telegram, against local Supabase',
     const result = await createDispatcher({ client: f.admin, config: readConfig({ TELEGRAM_CLIENT_BOT_TOKEN: BOT }),
       fetchImpl: async (url, init) => { calls.push({ url, body: JSON.parse(init.body) }); return okTelegram() } }).dispatch({ limit: 50 })
     expect(result).toMatchObject({ sent: 1, failed: 0, channels: ['telegram_client'] })
-    expect(calls).toEqual([{ url: `https://api.telegram.org/bot${BOT}/sendMessage`, body: { chat_id: chat, text: `${copy.title}\n\n${copy.body}`, disable_web_page_preview: true } }])
+    const text = `${copy.title}\n\n${copy.body}`
+    expect(calls).toEqual([{ url: `https://api.telegram.org/bot${BOT}/sendMessage`, body: { chat_id: chat, text, disable_web_page_preview: true,
+      entities: [{ type: 'bold', offset: text.indexOf('£'), length: '£85.00'.length }] } }])
     expect((await deliveriesFor(row.id)).find(item => item.id === copy.id).status).toBe('sent')
     // /stop ends it: nothing more is copied.
     expect(await talk(privateMessage(chat, '/stop'))).toEqual({ handled: true, status: 'stopped' })
