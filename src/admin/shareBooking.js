@@ -2,6 +2,7 @@ import { dateLabel, hasStarted, money, time } from './calendarPresentation.js'
 import { whatsappNumber } from './contactLinks.js'
 import { bookingSentence, treatmentNoun } from '../booking/bookingWords.js'
 import { owedExtraMinutes } from './extendApi.js'
+import { wiseLines } from '../lib/wiseLink.js'
 
 // The booking details the Admin sends a client, as plain text WhatsApp shows well (*bold* with single asterisks, no headings or HTML). This is the only
 // place the message is made: "WhatsApp client" and "Share…" both use it. It never says the Admin's notes, the client's own phone or email, internal
@@ -67,6 +68,8 @@ function bankLines(booking, bank) {
   if (bank.bankName) lines.push(`Bank: ${bank.bankName}`)
   lines.push(`Sort code: ${bank.sortCode}`, `Account number: ${bank.accountNumber}`, `Reference: ${payment.payment_reference || booking.booking_reference}`)
   if (bank.note) lines.push(bank.note)
+  const wise = wiseLines(bank.wiseLink)
+  if (wise.length) lines.push('', ...wise)
   return lines.join('\n')
 }
 
@@ -148,11 +151,13 @@ export function owedLine(booking) {
   const length = extra ? (owedExtraMinutes(booking) ? `extra ${sessionLength(owedExtraMinutes(booking))}` : 'extra') : sessionLength(booking.treatment_duration_minutes)
   return `${dateLabel(booking.date).replace(',', '')}, ${time(booking.start_minutes)}${length ? ` · ${length}` : ''} - ${money(owed(booking))}`
 }
+// "Have Wise? Pay here: …" under the reference, after a blank line, when Vadim has saved his Wise link.
+const wiseBlock = bank => { const lines = wiseLines(bank?.wiseLink); return lines.length ? ['', ...lines] : [] }
 export function reminderText(booking, bank) {
   const payment = paymentOf(booking)
   const first = booking.clients?.first_name?.trim()
   const details = bank?.configured
-    ? [`Sort code: ${bank.sortCode}`, `Account number: ${bank.accountNumber}`, `Reference: ${payment?.payment_reference || booking.booking_reference}`].join('\n')
+    ? [`Sort code: ${bank.sortCode}`, `Account number: ${bank.accountNumber}`, `Reference: ${payment?.payment_reference || booking.booking_reference}`, ...wiseBlock(bank)].join('\n')
     : 'Let me know if you would like my bank details again.'
   return [
     extraDue(booking) && owedExtraMinutes(booking)
@@ -188,7 +193,7 @@ export function combinedReminderText(bookings, bank, firstName) {
   const lines = sorted.map(owedLine)
   const reference = paymentOf(sorted[0])?.payment_reference || sorted[0]?.booking_reference
   const details = bank?.configured
-    ? [`Sort code: ${bank.sortCode}`, `Account number: ${bank.accountNumber}`, `Reference: ${reference}`].join('\n')
+    ? [`Sort code: ${bank.sortCode}`, `Account number: ${bank.accountNumber}`, `Reference: ${reference}`, ...wiseBlock(bank)].join('\n')
     : 'Let me know if you would like my bank details again.'
   return [
     `${first ? `Hi ${first}, hope` : 'Hi, hope'} you're feeling good after your sessions! Just a quick reminder that payment is still outstanding:`,

@@ -2,6 +2,7 @@
 // them and records the outcome. Secrets come from the environment and never appear in results or errors.
 import { composeEmailHtml } from './emailHtml.js'
 import { CALL_LIMIT_MS } from './telegramWebhook.js'
+import { withWiseLine } from '../src/lib/wiseLink.js'
 
 const TELEGRAM_LIMIT = 4000
 
@@ -131,6 +132,19 @@ async function withPrivateLink(row, client, config) {
   } catch { return { row, code: '' } }
 }
 
+// Vadim's Wise payment link (More › Bank transfer details), read once per run. Any problem reading it means no Wise line, never a message not sent.
+async function savedWiseLink(client) {
+  try {
+    if (typeof client.from !== 'function') return ''
+    const { data, error } = await client.from('business_settings').select('value').eq('key', 'bank_details').maybeSingle()
+    return error ? '' : String(data?.value?.wise_link || '')
+  } catch { return '' }
+}
+
+// A message to a client (or a gift buyer) that gives the bank details gets "Have Wise? Pay here: …" under them when a Wise link is saved (ADR-115).
+// It is added here, as the message goes, so every email and Telegram message that asks for a transfer has it without changing the database's wording.
+export const withWise = (row, link) => (row.audience === 'admin' || !link ? row : { ...row, body: withWiseLine(row.body, link) })
+
 export function createDispatcher({ client, config, fetchImpl = fetch }) {
   const secrets = [config.telegram.token, config.telegramClient.token, config.email.apiKey]
   return {
@@ -140,16 +154,18 @@ export function createDispatcher({ client, config, fetchImpl = fetch }) {
       const { data: rows, error } = await client.rpc('claim_notification_deliveries', { p_limit: limit, p_channels: channels })
       if (error) throw new Error('Could not read the notification queue.')
       let sent = 0, failed = 0
+      const wise = rows.length ? await savedWiseLink(client) : ''
       for (const row of rows) {
         let failure = null
         let code = ''
         try {
-          const linked = await withPrivateLink(row, client, config)
+          const ready = withWise(row, wise)
+          const linked = await withPrivateLink(ready, client, config)
           code = linked.code
           const message = composeMessage(linked.row, config)
-          if (row.channel === 'telegram') await sendTelegram(row, message, config, fetchImpl)
-          else if (row.channel === 'telegram_client') await sendTelegramClient(row, message, config, fetchImpl, client)
-          else if (row.channel === 'email') await sendEmail(row, message, config, fetchImpl)
+          if (row.channel === 'telegram') await sendTelegram(ready, message, config, fetchImpl)
+          else if (row.channel === 'telegram_client') await sendTelegramClient(ready, message, config, fetchImpl, client)
+          else if (row.channel === 'email') await sendEmail(ready, message, config, fetchImpl)
           else throw new Error('Unsupported channel')
         } catch (caught) { failure = scrub(caught?.message, code ? [...secrets, code] : secrets) }
         const { error: completeError } = await client.rpc('complete_notification_delivery', { p_id: row.id, p_ok: !failure, p_error: failure })
