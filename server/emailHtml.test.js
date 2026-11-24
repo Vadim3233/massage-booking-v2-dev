@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { BUTTON_LABEL, EMAIL_COLOURS, GIFT_BUTTON_LABEL, EMAIL_TAGLINE, composeEmailHtml, escapeHtml } from './emailHtml.js'
+import { AMOUNT_STYLE, BUTTON_LABEL, EMAIL_COLOURS, GIFT_BUTTON_LABEL, EMAIL_TAGLINE, composeEmailHtml, escapeHtml } from './emailHtml.js'
 
 const LINK = 'https://booking.example.com/account?booking=b1&x=1#key=abc123'
 const BODY = 'Thank you. Your appointment is confirmed for Mon 19 Oct at 15:00 (60 minutes) at 12 Edith Road, London, SW1A 1AA.\nReference: VDM-20261016-EXAMPLE\n\nI have received your payment.\n\nSee or change your booking: {link}\n\nWarm wishes,\nVad'
@@ -25,6 +25,17 @@ describe('the HTML version of a client email', () => {
     expect(html).toContain('Warm wishes,<br>Vad')
   })
 
+  it('sets an amount to pay bold and bigger, but never an old price, and leaves the plain words the same', () => {
+    const html = composeEmailHtml({ title: 'Your booking has changed', body: 'The price is now £180.00 (it was £150.00).\nA refund of £1,200.50 is on its way.', url: '', canReply: false })
+    expect(html).toContain(`The price is now <strong style="${AMOUNT_STYLE}">£180.00</strong> (it was £150.00).`)
+    expect(html).toContain(`A refund of <strong style="${AMOUNT_STYLE}">£1,200.50</strong> is on its way.`)
+    expect(AMOUNT_STYLE).toContain('font-size:20px')
+  })
+  it('leaves the amounts on a receipt as they are, since nothing is left to pay', () => {
+    const html = composeEmailHtml({ title: 'Your receipt from VadMassage', body: 'Receipt VAD-2026-0001\nDeep tissue: £90.00\nTravel: £10.00\nTotal paid: £100.00', url: '', canReply: false })
+    expect(html).not.toContain(AMOUNT_STYLE)
+    expect(html).toContain('Total paid: £100.00')
+  })
   it('puts the private link on a button and nowhere in the text, and never shows the placeholder', () => {
     const html = make()
     expect(html).toContain(`href="https://booking.example.com/account?booking=b1&amp;x=1#key=abc123"`)

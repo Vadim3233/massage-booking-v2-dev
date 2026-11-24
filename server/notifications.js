@@ -3,6 +3,7 @@
 import { composeEmailHtml } from './emailHtml.js'
 import { CALL_LIMIT_MS } from './telegramWebhook.js'
 import { withWiseLine } from '../src/lib/wiseLink.js'
+import { telegramBoldEntities } from '../src/lib/moneyEmphasis.js'
 
 const TELEGRAM_LIMIT = 4000
 
@@ -73,9 +74,12 @@ async function sendTelegramClient(row, message, config, fetchImpl, client) {
   const chat = Number(row.recipient)
   if (!Number.isSafeInteger(chat)) throw new Error('Telegram: no chat to send to')
   const text = `${message.title}\n\n${message.body}`.slice(0, TELEGRAM_LIMIT)
+  // An amount to pay is in bold, sent as Telegram "entities" beside the plain text, so the words themselves are untouched.
+  const entities = telegramBoldEntities(text)
+  const payload = { chat_id: chat, text, disable_web_page_preview: true, ...(entities.length ? { entities } : {}) }
   // Cut off if Telegram does not answer, so one waiting call cannot hold up every message after it.
   const response = await fetchImpl(`https://api.telegram.org/bot${config.telegramClient.token}/sendMessage`, {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ chat_id: chat, text, disable_web_page_preview: true }),
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload),
     signal: AbortSignal.timeout(CALL_LIMIT_MS),
   })
   const result = await response.json().catch(() => ({}))

@@ -3,6 +3,7 @@ import { whatsappNumber } from './contactLinks.js'
 import { bookingSentence, treatmentNoun } from '../booking/bookingWords.js'
 import { owedExtraMinutes } from './extendApi.js'
 import { wiseLines } from '../lib/wiseLink.js'
+import { whatsappBoldAmounts } from '../lib/moneyEmphasis.js'
 
 // The booking details the Admin sends a client, as plain text WhatsApp shows well (*bold* with single asterisks, no headings or HTML). This is the only
 // place the message is made: "WhatsApp client" and "Share…" both use it. It never says the Admin's notes, the client's own phone or email, internal
@@ -36,7 +37,7 @@ export const transferDue = booking => {
 }
 
 // The treatment, then the same sentence the client saw when booking: who, how long and the price ("Deep tissue: One 2-hour session for
-// 1 person – £120.00"), so the number of people can never be misread.
+// 1 person – £120.00"), so the number of people can never be misread. fillShareMessage puts the price in bold (*£120.00*) so it stands out.
 function treatments(booking) {
   const sessions = [...(booking.booking_sessions || [])].sort((a, b) => a.position - b.position)
   if (!sessions.length) return [`${booking.treatment_duration_minutes} min`, money(booking.total_gbp)].join(' · ')
@@ -115,7 +116,13 @@ export function fillShareMessage(wording, values) {
     const others = blanks.filter(blank => blank !== '{name}')
     if (others.length && others.every(blank => !values[blank.slice(1, -1)])) return []
     const named = values.name ? line : line.replace(/ ?\{name\}/g, '')
-    const filled = named.replace(BLANK, (_, name) => values[name] || '')
+    // The price in {treatment} is in bold, unless the Admin's wording already has the blank inside *bold* (an odd number of stars before it on
+    // the line), where stars inside stars would show as stars.
+    const filled = named.replace(BLANK, (_, name, at) => {
+      const value = values[name] || ''
+      const insideBold = (named.slice(0, at).match(/\*/g) || []).length % 2 === 1
+      return name === 'treatment' && !insideBold ? whatsappBoldAmounts(value) : value
+    })
     return filled.trim() ? [filled] : []
   })
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim()
@@ -144,13 +151,16 @@ export function sessionLength(minutes) {
   if (!value) return ''
   return value % 60 === 0 ? `${value / 60} ${value === 60 ? 'hour' : 'hours'}` : `${value} min`
 }
-// One line naming a session so the client can recognise it and check their bank: "Fri 30 Oct, 15:30 · 1 hour - £90.00".
-// For an extra still to pay it names the extra: "Sat 15 Nov, 18:00 · extra 30 min - £45.00".
-export function owedLine(booking) {
+// One line naming a session so the client can recognise it and check their bank: "Fri 30 Oct, 15:30 · 1 hour" (owedSession), with what it comes
+// to in a list of several: "Fri 30 Oct, 15:30 · 1 hour - £90.00" (owedLine). For an extra still to pay it names the extra: "Sat 15 Nov, 18:00 · extra 30 min".
+export function owedSession(booking) {
   const extra = extraDue(booking)
   const length = extra ? (owedExtraMinutes(booking) ? `extra ${sessionLength(owedExtraMinutes(booking))}` : 'extra') : sessionLength(booking.treatment_duration_minutes)
-  return `${dateLabel(booking.date).replace(',', '')}, ${time(booking.start_minutes)}${length ? ` · ${length}` : ''} - ${money(owed(booking))}`
+  return `${dateLabel(booking.date).replace(',', '')}, ${time(booking.start_minutes)}${length ? ` · ${length}` : ''}`
 }
+export const owedLine = booking => `${owedSession(booking)} - ${money(owed(booking))}`
+// The amount to pay, on a line of its own in bold with a money sign, so it is the first thing the client's eye finds: "💷 *To pay: £90.00*".
+export const toPayLine = (label, amount) => `💷 *${label}: ${money(amount)}*`
 // "Have Wise? Pay here: …" under the reference, after a blank line, when Vadim has saved his Wise link.
 const wiseBlock = bank => { const lines = wiseLines(bank?.wiseLink); return lines.length ? ['', ...lines] : [] }
 export function reminderText(booking, bank) {
@@ -165,7 +175,8 @@ export function reminderText(booking, bank) {
       : extraDue(booking) ? `${first ? `Hi ${first}, hope` : 'Hi, hope'} you're feeling good after your session! Just a quick reminder that the extra for your booking is still outstanding:`
         : `${first ? `Hi ${first}, hope` : 'Hi, hope'} you're feeling good after your session! Just a quick reminder that payment for this session is still outstanding:`,
     '',
-    owedLine(booking),
+    owedSession(booking),
+    toPayLine('To pay', owed(booking)),
     '',
     "Here are my details in case they're handy:",
     '',
@@ -177,8 +188,8 @@ export function reminderText(booking, bank) {
   ].join('\n')
 }
 
-// One reminder for a client who owes for more than one booking: each session's date, time and length with what it comes to, the total, and the details to
-// pay it all in one transfer, with the first booking's reference. The bookings are the ones reminderDue accepts; they are listed by date.
+// One reminder for a client who owes for more than one booking: each session's date, time and length with what it comes to, the total (in bold on a
+// line of its own), and the details to pay it all in one transfer, with the first booking's reference. The bookings are the ones reminderDue accepts; they are listed by date.
 export const owed = booking => extraDue(booking) ? Number(booking.balance_due_gbp) : Number(paymentOf(booking)?.amount_gbp ?? booking.total_gbp) || 0
 export const owedTotal = bookings => bookings.reduce((sum, booking) => sum + owed(booking), 0)
 // The client's bookings that a reminder can be sent for, earliest first, from any list of bookings (each needs its client_id).
@@ -199,7 +210,8 @@ export function combinedReminderText(bookings, bank, firstName) {
     `${first ? `Hi ${first}, hope` : 'Hi, hope'} you're feeling good after your sessions! Just a quick reminder that payment is still outstanding:`,
     '',
     ...lines,
-    `Total: ${money(owedTotal(sorted))}`,
+    '',
+    toPayLine('Total to pay', owedTotal(sorted)),
     '',
     "Here are my details in case they're handy:",
     '',

@@ -27,7 +27,7 @@ describe('the booking details the Admin sends a client', () => {
       '',
       '*Massage booking – Thu 29 Oct, 17:30–19:30*',
       '55 Altenburg Gardens, London SW11 1JH',
-      'Deep tissue: One 2-hour session for 1 person – £120.00',
+      'Deep tissue: One 2-hour session for 1 person – *£120.00*',
       'Payment: paid',
       '',
       'If anything changes or you have any questions, just message me here. See you soon!',
@@ -53,7 +53,7 @@ describe('the booking details the Admin sends a client', () => {
   it('names two sessions with their lengths, and says cash plainly', () => {
     const two = booking({ treatment_duration_minutes: 90, total_gbp: 135, booking_sessions: [{ position: 2, service_name_snapshot: 'Sports', duration_minutes: 30 }, { position: 1, service_name_snapshot: 'Deep tissue', duration_minutes: 60 }],
       booking_payments: { method: 'cash', status: 'approved' } })
-    expect(shareText(two, bank)).toContain('Deep tissue + Sports: Two sessions for 2 people, one after the other (60 min + 30 min) – 1 hour 30 minutes in total – £135.00\nPayment: cash, due at the appointment')
+    expect(shareText(two, bank)).toContain('Deep tissue + Sports: Two sessions for 2 people, one after the other (60 min + 30 min) – 1 hour 30 minutes in total – *£135.00*\nPayment: cash, due at the appointment')
     expect(paymentWords(booking({ booking_payments: { method: 'cash', status: 'awaiting_approval' } }))).toBe('Payment: cash, waiting for my approval')
   })
   it('never says the notes, the client\'s own phone or email, or the booking\'s id', () => {
@@ -64,10 +64,15 @@ describe('the booking details the Admin sends a client', () => {
     expect(whatsappShareLink(booking(), 'Hi there')).toBe('https://wa.me/447700900123?text=Hi%20there')
     expect(whatsappShareLink(booking({ clients: { phone: '' } }), 'Hi')).toBeNull()
   })
+  it('puts the price in bold in any wording, but never stars inside stars when the wording already makes {treatment} bold', () => {
+    expect(shareText(booking(), bank, '{treatment}')).toBe('Deep tissue: One 2-hour session for 1 person – *£120.00*')
+    expect(shareText(booking(), bank, '*{treatment}*')).toBe('*Deep tissue: One 2-hour session for 1 person – £120.00*')
+    expect(shareText(booking(), bank, '*Booked:* {treatment}')).toBe('*Booked:* Deep tissue: One 2-hour session for 1 person – *£120.00*')
+  })
   it('fills the Admin\'s own wording, leaving out a line whose blank has nothing to say', () => {
     const wording = 'Hi! See you {date} at {time}.\n\n{address}\n{treatment}\n{payment}\n\n{bank details}\n\nThanks, V'
     expect(shareText(booking({ booking_payments: { method: 'cash', status: 'approved' }, address_snapshot: '' }), bank, wording))
-      .toBe('Hi! See you Thu 29 Oct at 17:30–19:30.\n\nDeep tissue: One 2-hour session for 1 person – £120.00\nPayment: cash, due at the appointment\n\nThanks, V')
+      .toBe('Hi! See you Thu 29 Oct at 17:30–19:30.\n\nDeep tissue: One 2-hour session for 1 person – *£120.00*\nPayment: cash, due at the appointment\n\nThanks, V')
     expect(shareText(booking(), bank, wording)).toContain('Payment: bank transfer – awaiting payment\n\nPlease pay by bank transfer to:\nName: V Massage')
     // Empty wording is the standard one, which reads exactly as before there was a choice.
     expect(shareText(booking(), bank, '  ')).toBe(shareText(booking(), bank))
@@ -166,7 +171,7 @@ describe('the payment reminder', () => {
   })
   it('is friendly, names the session (date, time, length) and what it comes to, gives the sort code, account number and reference, and says to ignore it if already sent', () => {
     expect(reminderText(pay('awaiting_transfer'), bank)).toBe(
-      "Hi Andreas, hope you're feeling good after your session! Just a quick reminder that payment for this session is still outstanding:\n\nThu 29 Oct, 17:30 · 2 hours - £120.00\n\nHere are my details in case they're handy:\n\nSort code: 00-00-00\nAccount number: 00000000\nReference: VM-1234\n\nIf you've already sent it, please ignore this. Thanks so much!\n\nWarm wishes,\nVadim")
+      "Hi Andreas, hope you're feeling good after your session! Just a quick reminder that payment for this session is still outstanding:\n\nThu 29 Oct, 17:30 · 2 hours\n💷 *To pay: £120.00*\n\nHere are my details in case they're handy:\n\nSort code: 00-00-00\nAccount number: 00000000\nReference: VM-1234\n\nIf you've already sent it, please ignore this. Thanks so much!\n\nWarm wishes,\nVadim")
   })
   it('offers the bank details again when none are saved, and never says the notes, phone, email or id', () => {
     expect(reminderText(pay('awaiting_transfer'), { configured: false })).toContain('Let me know if you would like my bank details again.')
@@ -183,7 +188,7 @@ describe('the combined payment reminder', () => {
   it('lists each session by date, time and length with what it comes to, the total, and one reference to pay it all by', () => {
     const text = combinedReminderText([owing('2', '2026-10-25', 135), owing('1', '2026-10-18', 120)], bank, 'Dan')
     expect(text).toBe(
-      "Hi Dan, hope you're feeling good after your sessions! Just a quick reminder that payment is still outstanding:\n\nSun 18 Oct, 10:00 · 90 min - £120.00\nSun 25 Oct, 10:00 · 90 min - £135.00\nTotal: £255.00\n\nHere are my details in case they're handy:\n\nSort code: 00-00-00\nAccount number: 00000000\nReference: REF-1\n\nIf you've already sent it, please ignore this. Thanks so much!\n\nWarm wishes,\nVadim")
+      "Hi Dan, hope you're feeling good after your sessions! Just a quick reminder that payment is still outstanding:\n\nSun 18 Oct, 10:00 · 90 min - £120.00\nSun 25 Oct, 10:00 · 90 min - £135.00\n\n💷 *Total to pay: £255.00*\n\nHere are my details in case they're handy:\n\nSort code: 00-00-00\nAccount number: 00000000\nReference: REF-1\n\nIf you've already sent it, please ignore this. Thanks so much!\n\nWarm wishes,\nVadim")
   })
   it('offers the bank details again when none are saved, and copes with no first name', () => {
     const text = combinedReminderText([owing('1', '2026-10-18', 120), owing('2', '2026-10-25', 135)], { configured: false }, '')
@@ -203,7 +208,7 @@ describe('the combined payment reminder', () => {
     const due = dueForClient(rows, 'richard', now)
     expect(due.map(row => row.id)).toEqual(['a', 'b'])
     expect(owedTotal(due)).toBe(340)
-    expect(combinedReminderText(due, bank, 'Richard')).toContain('Sat 17 Oct, 12:00 · 90 min - £170.00\nFri 23 Oct, 14:00 · 90 min - £170.00\nTotal: £340.00')
+    expect(combinedReminderText(due, bank, 'Richard')).toContain('Sat 17 Oct, 12:00 · 90 min - £170.00\nFri 23 Oct, 14:00 · 90 min - £170.00\n\n💷 *Total to pay: £340.00*')
     expect(dueForClient(rows, null, now)).toEqual([])
   })
   it('says a session length the way a client would', () => {

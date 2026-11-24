@@ -1,3 +1,5 @@
+import { emphasiseAmounts } from '../src/lib/moneyEmphasis.js'
+
 // The HTML version of an email to a client: the same words as the plain-text version, set in the look of the booking pages. The plain text is
 // still sent with it (an email carries both and the reader's mail app shows one), so nothing is lost where HTML is not shown.
 //
@@ -41,20 +43,25 @@ function heading(title) {
   return `${lead}<em style="font-style:italic;color:${C.primary}">${escapeHtml(last)}</em>`
 }
 
-// A web address written in the text (a Google review link) is made a link people can press; everything else is plain text, with the day and time in bold.
+// A web address written in the text (a Google review link) is made a link people can press; everything else is plain text, with the day and time in bold
+// and an amount of money (but not an old price, see src/lib/moneyEmphasis.js) bold and bigger, so the client sees at once what to pay.
 const WEB_ADDRESS = /https?:\/\/[^\s"'<>]+/g
-const words = (text) => escapeHtml(text).replace(WHEN, (when) => `<strong>${when}</strong>`)
-function inline(line) {
+export const AMOUNT_STYLE = `font-size:20px;font-weight:700;color:${C.ink};white-space:nowrap`
+// A receipt ("Total paid: …") is a record of what was paid, not something to pay, so its amounts are left as they are.
+export const isReceipt = (body) => /^Total paid:/m.test(String(body || ''))
+const amounts = (text, emphasise) => (emphasise ? emphasiseAmounts(text, (amount) => `<strong style="${AMOUNT_STYLE}">${amount}</strong>`) : text)
+const words = (text, emphasise) => amounts(escapeHtml(text), emphasise).replace(WHEN, (when) => `<strong>${when}</strong>`)
+function inline(line, emphasise = true) {
   let out = ''
   let from = 0
   for (const match of String(line).matchAll(WEB_ADDRESS)) {
     const url = match[0].replace(/[.,;:!?)]+$/, '')
-    out += words(line.slice(from, match.index)) + `<a href="${escapeHtml(url)}" style="color:${C.primary};text-decoration:underline;word-break:break-all">${escapeHtml(url)}</a>`
+    out += words(line.slice(from, match.index), emphasise) + `<a href="${escapeHtml(url)}" style="color:${C.primary};text-decoration:underline;word-break:break-all">${escapeHtml(url)}</a>`
     from = match.index + url.length
   }
-  return out + words(line.slice(from))
+  return out + words(line.slice(from), emphasise)
 }
-const paragraph = (lines, style) => `<p style="margin:0 0 16px;${style}">${lines.map(inline).join('<br>')}</p>`
+const paragraph = (lines, style, emphasise) => `<p style="margin:0 0 16px;${style}">${lines.map((line) => inline(line, emphasise)).join('<br>')}</p>`
 
 // A gift voucher's link (/gift/<code>) is not a booking, so its button says what it opens.
 const buttonLabel = (url) => (/^https?:\/\/[^/]+\/gift\//i.test(url) ? GIFT_BUTTON_LABEL : BUTTON_LABEL)
@@ -72,13 +79,14 @@ const isLinkLine = (line) => /:\s*\{link\}\s*$/.test(line) || /^\s*\{link\}\s*$/
 // as lines, a "Reference:" line is set small and quiet, and the line that holds the link becomes the button (or nothing, when there is no link).
 function blocks(body, url) {
   const out = []
+  const emphasise = !isReceipt(body)
   for (const block of String(body || '').replace(/\r\n?/g, '\n').trim().split(/\n{2,}/)) {
     const lines = block.split('\n')
     const hasLink = lines.some(isLinkLine)
     let run = []
-    const flush = () => { if (run.length) out.push(paragraph(run, `font-size:16px;line-height:1.6;color:${C.ink}`)); run = [] }
+    const flush = () => { if (run.length) out.push(paragraph(run, `font-size:16px;line-height:1.6;color:${C.ink}`, emphasise)); run = [] }
     for (const line of lines.filter((text) => !isLinkLine(text))) {
-      if (/^Reference:/.test(line)) { flush(); out.push(paragraph([line], `font-size:14px;line-height:1.5;color:${C.inkSoft}`)) } else run.push(line)
+      if (/^Reference:/.test(line)) { flush(); out.push(paragraph([line], `font-size:14px;line-height:1.5;color:${C.inkSoft}`, emphasise)) } else run.push(line)
     }
     flush()
     if (hasLink && url) out.push(button(url))
