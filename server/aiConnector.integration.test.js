@@ -7,7 +7,7 @@ import { handleMcp } from './aiConnector/mcp.js'
 // The whole road an AI assistant takes, against local Supabase with its OAuth server switched on (supabase/config.toml): it registers itself,
 // the client allows it on the consent page, it swaps the code for a token, and then books a couple's massage through /mcp as that client.
 const REDIRECT = 'http://127.0.0.1:9/callback'
-let fixture, token, oauthClientId
+let fixture, token, oauthClientId, reference
 const base64url = buffer => buffer.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 
 async function signInAsAssistant() {
@@ -37,7 +37,7 @@ async function signInAsAssistant() {
 let id = 0
 async function mcp(method, params, bearer = token) {
   const response = { statusCode: 0, headers: {}, body: '', setHeader(name, value) { this.headers[name] = value }, end(body = '') { this.body = body } }
-  const env = { SUPABASE_URL: fixture.config.API_URL, SUPABASE_ANON_KEY: fixture.config.ANON_KEY, TELEGRAM_CLIENT_BOT_USERNAME: 'VadTestBot' }
+  const env = { SUPABASE_URL: fixture.config.API_URL, SUPABASE_ANON_KEY: fixture.config.ANON_KEY, TELEGRAM_CLIENT_BOT_USERNAME: 'VadTestBot', MCP_CONFIRM_SECRET: 'integration-secret' }
   await handleMcp({ method: 'POST', headers: { host: 'book.example.test', ...(bearer ? { authorization: `Bearer ${bearer}` } : {}) }, body: { jsonrpc: '2.0', id: ++id, method, params } }, response, { env })
   return { status: response.statusCode, headers: response.headers, body: response.body ? JSON.parse(response.body) : null }
 }
@@ -81,6 +81,7 @@ describe('booking through an AI assistant, end to end', () => {
     expect(price.expected_total_gbp).toBe(190)
     const request = { treatment_id: treatment.treatment_id, lengths: [60, 60], address_id: home.address_id, area_id: areaId, date: fixture.date, time, payment_method: 'bank_transfer', expected_total_gbp: 190, second_person_name: 'Sam', client_confirmed: true }
     const booked = await call('book_appointment', request)
+    reference = booked.booking.reference
     expect(booked).toMatchObject({ booked: true, booking: { start: time, total: '£190' }, payment: { method: 'bank_transfer', amount: '£190' } })
     expect(booked.telegram.link).toMatch(/^https:\/\/t\.me\/VadTestBot\?start=/)
     const stored = await unwrap(fixture.admin.from('bookings').select('id,source_channel,address_snapshot,booking_sessions(recipient_name,duration_minutes)').eq('client_id', fixture.profile.client_id))
@@ -101,6 +102,35 @@ describe('booking through an AI assistant, end to end', () => {
     const claims = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString())
     expect(claims.client_id).toBe(oauthClientId)
   })
+  it('moves the booking only after the client taps Yes on the card (2026-07-28), marked as done through the assistant', async () => {
+    const meta = { 'io.modelcontextprotocol/protocolVersion': '2026-07-28', 'io.modelcontextprotocol/clientCapabilities': { elicitation: { form: {} } } }
+    const day = (await call('list_my_bookings')).upcoming[0]
+    const later = new Date(`${fixture.date}T12:00:00Z`); later.setUTCDate(later.getUTCDate() + 1)
+    const date = later.toISOString().slice(0, 10)
+    const free = await call('find_new_times', { booking_reference: reference, date })
+    expect(free.times.length).toBeGreaterThan(0)
+    const args = { booking_reference: reference, date, time: free.times[0] }
+    const card = (await mcp('tools/call', { name: 'move_booking', arguments: args, _meta: meta })).body.result
+    expect(card.resultType).toBe('input_required')
+    expect(card.inputRequests.confirm.params.message).toContain(`From ${day.day}, ${day.start}`)
+    const moved = (await mcp('tools/call', { name: 'move_booking', arguments: args, inputResponses: { confirm: { action: 'accept', content: { confirm: true } } }, requestState: card.requestState, _meta: meta })).body.result
+    expect(moved).toMatchObject({ resultType: 'complete', isError: false, structuredContent: { moved: true, booking: { date, start: free.times[0] } } })
+    const events = await unwrap(fixture.admin.from('event_outbox').select('event_type,payload').eq('aggregate_type', 'booking').eq('event_type', 'booking.rescheduled'))
+    expect(events.at(-1).payload.via).toBe('ai')
+  }, 60000)
+  it('cancels only with the preview\'s code (older assistants), marked as done through the assistant', async () => {
+    const preview = await call('cancel_booking', { booking_reference: reference })
+    expect(preview).toMatchObject({ needs_confirmation: true, done: false })
+    expect((await unwrap(fixture.admin.from('bookings').select('booking_status').eq('client_id', fixture.profile.client_id)))[0].booking_status).not.toBe('cancelled')
+    const done = await call('cancel_booking', { booking_reference: reference, confirmation_code: preview.confirmation_code })
+    expect(done.cancelled).toBe(true)
+    const stored = await unwrap(fixture.admin.from('bookings').select('booking_status,cancellation_reason').eq('client_id', fixture.profile.client_id))
+    expect(stored[0]).toMatchObject({ booking_status: 'cancelled', cancellation_reason: 'Cancelled through their AI assistant' })
+    const events = await unwrap(fixture.admin.from('event_outbox').select('payload').eq('event_type', 'booking.cancelled'))
+    expect(events.at(-1).payload.via).toBe('ai')
+    // The same code again changes nothing.
+    expect((await mcp('tools/call', { name: 'cancel_booking', arguments: { booking_reference: reference, confirmation_code: preview.confirmation_code } })).body.result.content[0].text).toMatch(/no longer be changed online/)
+  }, 60000)
   it('stops an assistant that asks too often', async () => {
     const user = (await fixture.client.auth.getUser()).data.user.id
     await unwrap(fixture.admin.from('ai_request_counts').update({ requests: 120 }).eq('user_id', user))

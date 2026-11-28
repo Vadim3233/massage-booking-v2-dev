@@ -7,6 +7,7 @@ export const WHAT_IT_CAN_DO = [
   'See treatments, prices and my free times',
   'See your saved addresses and your bookings',
   'Book an appointment for you, or for you and one other person, after you say yes',
+  'Move or cancel a booking, after it shows you any late fee and you say yes',
   'Tell me when you have sent a bank transfer',
   'Add your appointment to your calendar and connect Telegram updates',
 ]
@@ -17,4 +18,4 @@ export const ASSISTANT_STEPS = [
   { name: 'ChatGPT', steps: ['In ChatGPT, go to Settings, then Apps & Connectors (custom connectors may need developer mode, or a paid plan).', 'Create a connector, name it VadMassage, and paste the address.', 'Sign in with your VadMassage account and press Allow.'] },
 ]
 
-export const EXAMPLE_ASKS = ['Book me with Vadim next Tuesday evening, 60 minutes.', 'Same as last time, sometime next week.', 'Book a couples massage for me and Sam, 90 minutes each, this weekend.', "I've paid for my booking."]
+export const EXAMPLE_ASKS = ['Book me with Vadim next Tuesday evening, 60 minutes.', 'Same as last time, sometime next week.', 'Book a couples massage for me and Sam, 90 minutes each, this weekend.', "I've paid for my booking.", 'Move my Friday booking to Saturday morning.']

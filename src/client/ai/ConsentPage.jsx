@@ -60,7 +60,7 @@ export default function ConsentPage({ client = supabase }) {
         <h1 tabIndex={-1} ref={heading}>Allow <em>{name}</em>?</h1>
         <p className="lede">{name} wants to book appointments for you, as {auth.session.user.email}. It will be able to:</p>
         <ul className="consent-list">{WHAT_IT_CAN_DO.map(line => <li key={line}>{line}</li>)}</ul>
-        <p className="fine">It always asks you before it books. It can't see other clients, take payments, or change or cancel bookings. You can disconnect it any time on the <a href="/book-with-ai">Book with AI</a> page.</p>
+        <p className="fine">It always asks you before it books, moves or cancels, and shows you any late fee first. It can't see other clients or take payments. You can disconnect it any time on the <a href="/book-with-ai">Book with AI</a> page.</p>
         <div className="action-bar">
           <button className="btn--primary btn--lg btn--block" disabled={busy} onClick={() => decide(true)}>{busy ? 'Please wait…' : 'Allow'}</button>
         </div>

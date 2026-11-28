@@ -55,9 +55,10 @@ describe('the booking tools', () => {
     const free = (await tools(fakeClient({ tables: { clients: [{ no_travel_fee: true }] } })).call('get_my_booking_options')).data
     expect(free.areas.find(item => item.area_id === 'area-1').travel_fee).toBe('£0')
   })
-  it('lists eight tools, none of which cancels or moves anything', () => {
-    const names = tools(fakeClient()).list().map(tool => tool.name)
-    expect(names).toEqual(['get_my_booking_options', 'find_free_times', 'get_price', 'book_appointment', 'i_have_paid', 'list_my_bookings', 'add_to_calendar', 'connect_telegram'])
+  it('lists eleven tools; only moving and cancelling are marked as changing a booking', () => {
+    const list = tools(fakeClient()).list()
+    expect(list.map(tool => tool.name)).toEqual(['get_my_booking_options', 'find_free_times', 'get_price', 'book_appointment', 'i_have_paid', 'list_my_bookings', 'find_new_times', 'move_booking', 'cancel_booking', 'add_to_calendar', 'connect_telegram'])
+    expect(list.filter(tool => tool.annotations?.destructiveHint).map(tool => tool.name)).toEqual(['move_booking', 'cancel_booking'])
     expect(tools(fakeClient()).list().every(tool => tool.inputSchema?.type === 'object' && !('run' in tool))).toBe(true)
   })
   it('counts every call against the hourly limit, and stops when the database says so', async () => {
@@ -162,6 +163,100 @@ describe('the booking tools', () => {
     const paid = fakeClient({ list_my_bookings: [{ id: 'b1', booking_reference: 'VAD-1234', booking_status: 'confirmed', payment_status: 'paid', date: '2026-11-04', start_minutes: 1080, treatment_duration_minutes: 60, total_gbp: 85 }] })
     expect((await tools(paid).call('i_have_paid', { booking_reference: 'VAD-1234' })).data.note).toMatch(/Nothing to do/)
     expect(paid.calls.some(([name]) => name === 'declare_my_bank_transfer')).toBe(false)
+  })
+})
+
+const upcoming = { id: 'b1', booking_reference: 'VAD-1234', booking_status: 'confirmed', payment_status: 'paid', date: '2026-11-04', start_minutes: 1080, treatment_duration_minutes: 60, total_gbp: 85 }
+const secret = { TELEGRAM_CLIENT_BOT_USERNAME: 'VadMassageBot', MCP_CONFIRM_SECRET: 'test-secret' }
+const changing = (terms = {}, extra = {}) => fakeClient({
+  list_my_bookings: [upcoming],
+  get_my_change_terms: { can_change: true, free_until: '2026-11-03T18:00:00Z', cancel_fee_gbp: 0, reschedule_fee_gbp: 0, total_gbp: 85, free_cancellation_hours: 24, ...terms },
+  get_my_booking_availability: [{ start_minutes: 600 }, { start_minutes: 660 }],
+  client_cancel_booking: { ...upcoming, booking_status: 'cancelled', refund_due_gbp: 85, late_fee_due_gbp: 0 },
+  client_reschedule_booking: { ...upcoming, date: '2026-11-05', start_minutes: 600 },
+  ...extra,
+})
+const withSecret = (client, extra = {}) => tools(client, { env: secret, ...extra })
+
+describe('moving and cancelling (always asks first)', () => {
+  it('cancels only after a preview and its code, and never twice for one code', async () => {
+    const client = changing()
+    const first = (await withSecret(client).call('cancel_booking', { booking_reference: 'VAD-1234' })).data
+    expect(first).toMatchObject({ needs_confirmation: true, done: false, preview: { late_fee: 'none' } })
+    expect(first.preview.terms).toMatch(/No charge: cancelling is free until Tuesday 3 November at 18:00/)
+    expect(client.calls.some(([name]) => name === 'client_cancel_booking')).toBe(false)
+    const done = (await withSecret(client).call('cancel_booking', { booking_reference: 'VAD-1234', confirmation_code: first.confirmation_code })).data
+    expect(done).toMatchObject({ cancelled: true, refund: 'A refund of £85 is due. Vadim sends it himself, soon.' })
+    await withSecret(client).call('cancel_booking', { booking_reference: 'VAD-1234', confirmation_code: first.confirmation_code })
+    const cancels = client.calls.filter(([name]) => name === 'client_cancel_booking').map(([, args]) => args)
+    expect(cancels).toHaveLength(2)
+    expect(cancels[0]).toEqual({ p_booking_id: 'b1', p_request_id: cancels[1].p_request_id, p_acknowledged_fee: 0, p_reason: 'Cancelled through their AI assistant' })
+    expect(cancels[0].p_request_id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-a[0-9a-f]{3}-[0-9a-f]{12}$/)
+  })
+  it('names a late fee and a gift voucher being used up in the preview', async () => {
+    const late = (await withSecret(changing({ cancel_fee_gbp: 42.5, gift_late: true })).call('cancel_booking', { booking_reference: 'VAD-1234' })).data
+    expect(late.preview).toMatchObject({ late_fee: '£42.50', uses_up_gift_voucher: true })
+    expect(late.preview.terms).toBe('It is within 24 hours of the appointment, so cancelling uses up the gift voucher. It is within 24 hours of the appointment, so a late fee of £42.50 applies.')
+  })
+  it('refuses a code for another booking, another reason, another client, or after the fee changed', async () => {
+    const client = changing()
+    const code = (await withSecret(client).call('cancel_booking', { booking_reference: 'VAD-1234' })).data.confirmation_code
+    expect((await withSecret(client).call('cancel_booking', { booking_reference: 'VAD-1234', reason: 'ill', confirmation_code: code })).text).toMatch(/not for this change/)
+    expect((await withSecret(client, { userId: 'user-2' }).call('cancel_booking', { booking_reference: 'VAD-1234', confirmation_code: code })).text).toMatch(/not for this change/)
+    expect((await withSecret(client).call('cancel_booking', { booking_reference: 'VAD-1234', confirmation_code: code.slice(0, -2) + 'xx' })).text).toMatch(/not for this change/)
+    const dearer = changing({ cancel_fee_gbp: 85 })
+    const again = (await withSecret(dearer).call('cancel_booking', { booking_reference: 'VAD-1234', confirmation_code: code })).data
+    expect(again).toMatchObject({ needs_confirmation: true, preview: { late_fee: '£85' } })
+    expect(again.note).toMatch(/has changed/)
+    expect(dearer.calls.some(([name]) => name === 'client_cancel_booking')).toBe(false)
+  })
+  it('gives a fresh preview when the code has expired', async () => {
+    const client = changing()
+    const code = (await withSecret(client).call('cancel_booking', { booking_reference: 'VAD-1234' })).data.confirmation_code
+    const later = withSecret(client, { now: () => new Date('2026-11-01T09:16:00Z') })
+    expect((await later.call('cancel_booking', { booking_reference: 'VAD-1234', confirmation_code: code })).data.note).toMatch(/expired/)
+  })
+  it('will not change a booking that is over or cancelled, or work without a signing secret', async () => {
+    expect((await withSecret(changing({ can_change: false })).call('cancel_booking', { booking_reference: 'VAD-1234' })).text).toMatch(/can no longer be changed online/)
+    expect((await tools(changing()).call('cancel_booking', { booking_reference: 'VAD-1234' })).text).toMatch(/use the app/)
+    expect((await withSecret(changing()).call('cancel_booking', { booking_reference: 'VAD-9' })).text).toMatch(/no booking with that reference/)
+  })
+  it('finds new times and moves after a yes, with the late fee acknowledged', async () => {
+    const client = changing({ reschedule_fee_gbp: 20 })
+    expect((await withSecret(client).call('find_new_times', { booking_reference: 'VAD-1234', date: '2026-11-05' })).data).toMatchObject({ times: ['10:00', '11:00'], late_fee: '£20' })
+    const preview = (await withSecret(client).call('move_booking', { booking_reference: 'VAD-1234', date: '2026-11-05', time: '10:00' })).data
+    expect(preview.preview).toMatchObject({ from: 'Wednesday, 4 November 2026, 18:00', to: 'Thursday, 5 November 2026, 10:00', late_fee: '£20' })
+    expect((await withSecret(client).call('move_booking', { booking_reference: 'VAD-1234', date: '2026-11-05', time: '11:00', confirmation_code: preview.confirmation_code })).text).toMatch(/not for this change/)
+    const moved = (await withSecret(client).call('move_booking', { booking_reference: 'VAD-1234', date: '2026-11-05', time: '10:00', confirmation_code: preview.confirmation_code })).data
+    expect(moved).toMatchObject({ moved: true, booking: { date: '2026-11-05', start: '10:00' } })
+    expect(client.calls.find(([name]) => name === 'client_reschedule_booking')[1]).toMatchObject({ p_booking_id: 'b1', p_new_date: '2026-11-05', p_new_start_minutes: 600, p_acknowledged_fee: 20 })
+  })
+  it('will not move a late gift-voucher booking online', async () => {
+    expect((await withSecret(changing({ gift_late: true })).call('move_booking', { booking_reference: 'VAD-1234', date: '2026-11-05', time: '10:00' })).text).toMatch(/gift voucher/)
+  })
+  it('shows a Yes / No card where the app can, and the tap decides', async () => {
+    const client = changing({ cancel_fee_gbp: 40 })
+    const card = await withSecret(client).call('cancel_booking', { booking_reference: 'VAD-1234' }, { card: true })
+    expect(card.inputRequired.inputRequests.confirm.params).toMatchObject({ mode: 'form', requestedSchema: { properties: { confirm: { type: 'boolean', title: 'Yes, cancel it' } } } })
+    expect(card.inputRequired.inputRequests.confirm.params.message).toMatch(/late fee of £40 applies/)
+    const no = await withSecret(client).call('cancel_booking', { booking_reference: 'VAD-1234' }, { card: true, inputResponses: { confirm: { action: 'decline' } }, requestState: card.inputRequired.requestState })
+    expect(no.data).toMatchObject({ done: false, note: expect.stringMatching(/said no/) })
+    const forged = await withSecret(client).call('cancel_booking', { booking_reference: 'VAD-1234' }, { card: true, inputResponses: { confirm: { action: 'accept', content: { confirm: true } } }, requestState: 'forged.state' })
+    expect(forged.inputRequired).toBeTruthy()
+    expect(client.calls.some(([name]) => name === 'client_cancel_booking')).toBe(false)
+    const yes = await withSecret(client).call('cancel_booking', { booking_reference: 'VAD-1234' }, { card: true, inputResponses: { confirm: { action: 'accept', content: { confirm: true } } }, requestState: card.inputRequired.requestState })
+    expect(yes.data.cancelled).toBe(true)
+    expect(client.calls.find(([name]) => name === 'client_cancel_booking')[1].p_acknowledged_fee).toBe(40)
+  })
+  it('asks with a card before booking where the app can, and books only on Yes', async () => {
+    const client = fakeClient()
+    const card = await withSecret(client).call('book_appointment', booking, { card: true })
+    expect(card.inputRequired.inputRequests.confirm.params.message).toBe('Book this massage with Vadim?\nWednesday, 4 November 2026, 18:00 to 21:00\nDeep tissue 1 hour 30 minutes + Deep tissue 1 hour 30 minutes\n1 King\'s Road, London, SW3 4LP\nTotal £180, bank transfer\nFree to change or cancel more than 24 hours before the appointment. After that, a late fee of up to the full price may apply.')
+    expect(client.calls.some(([name]) => name === 'create_booking_hold')).toBe(false)
+    const no = await withSecret(client).call('book_appointment', booking, { card: true, inputResponses: { confirm: { action: 'cancel' } }, requestState: card.inputRequired.requestState })
+    expect(no.data).toEqual({ booked: false, note: 'The client said no on the card. Nothing was booked.' })
+    const yes = await withSecret(client).call('book_appointment', booking, { card: true, inputResponses: { confirm: { action: 'accept', content: { confirm: true } } }, requestState: card.inputRequired.requestState })
+    expect(yes.data.booked).toBe(true)
   })
 })
 

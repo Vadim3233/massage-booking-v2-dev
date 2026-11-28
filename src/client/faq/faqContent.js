@@ -109,7 +109,7 @@ export function clientFaq({ rules, areas = [], whatsapp = null }) {
       { q: 'How do I see my bookings?', a: ['Sign in to see your coming and earlier appointments, their payment status and your receipts.'], link: { href: '/account', text: 'Your bookings' } },
     ] },
     { title: 'Booking with your AI assistant', items: [
-      { q: 'Can I book through Claude, ChatGPT or another AI assistant?', a: ['Yes, if you have an account and a saved address. It always asks you before it books, and it never takes a payment. Changing or cancelling is done in your account.'], link: { href: '/book-with-ai', text: 'Set it up in two minutes' } },
+      { q: 'Can I book through Claude, ChatGPT or another AI assistant?', a: ['Yes, if you have an account and a saved address. It can also move or cancel a booking. It always asks you first, shows you any late fee, and never takes a payment. Changing the treatment, extras and bookings for three or more people are done in your account.'], link: { href: '/book-with-ai', text: 'Set it up in two minutes' } },
     ] },
   ]
 }

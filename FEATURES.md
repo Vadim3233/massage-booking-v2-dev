@@ -600,6 +600,12 @@ These are the things that are written for Vadim today. In a general therapist ap
 - **Built in:** PR #89, `20261119100000_ai_assistant_bookings.sql` (ADR-083). Existing clients only for now.
 - **For a general app:** connector name, who may use it (existing clients only or anyone), maximum people.
 
+### Booking guide, Yes / No card, move and cancel through the assistant
+- **What it does:** The connector now teaches the client's assistant how to book the way Vadim would (a built-in guide, "How to book with Vadim": start from the usual booking, only real free times and prices, area minimums, first visit by bank transfer, no health details, what to say after booking). The client can also move or cancel a booking through their assistant. Before anything changes, the client always says yes: in apps that can show one (Claude on paid plans, since 24 Nov 2026), a Yes / No card with the day, time, address, total or late fee; everywhere else, the assistant first gets a preview and a one-time code and may only use the code after the client says yes. Late fees, gift-voucher rules and refunds are the app's own; the card says them plainly. In Alerts and the booking History, a move or cancel made this way reads "Moved / Cancelled through their AI assistant" (Client · via AI).
+- **Why:** New MCP features (Skills over MCP, elicitation cards, version 2026-07-28) let a connector ship its own instructions and ask the person before risky steps. Booking apps like Fresha, Booksy and Square let clients move and cancel themselves with an "are you sure?" step; this gives the same through the client's own AI.
+- **Built in:** PR (this one), `20261229100000_ai_assistant_changes.sql` (ADR-117). Works with old and new assistants alike.
+- **For a general app:** the guide's wording (therapist's name, tone, rules), whether move/cancel through an assistant is allowed, and whether late cancels are allowed there.
+
 ---
 
 ## 11. Look and feel

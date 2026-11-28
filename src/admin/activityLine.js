@@ -13,12 +13,15 @@ const when = (date, minutes) => (date ? `${short(date)} ${time(Number(minutes) |
 const pounds = value => (value === null || value === undefined || value === '' ? '' : shortMoney(money(value)))
 const METHOD = { bank_transfer: 'Bank transfer', cash: 'Cash' }
 
+// Done by the client's own AI assistant: a booking it made, or a move or cancel it made (marked in the event by 20261229100000_ai_assistant_changes.sql).
+const viaAi = row => row.via === 'ai' || row.payload?.via === 'ai'
+
 // [what happened, icon kind]. A function gets the line and says it in its own words.
 const EVENTS = {
   'booking.created': row => [row.actor === 'admin' ? 'Booking added' : row.via === 'ai' ? 'Booked through their AI assistant' : 'New booking', 'booking'],
-  'booking.rescheduled': row => [row.actor === 'client' ? 'Moved their appointment' : 'Moved', 'move'],
+  'booking.rescheduled': row => [row.actor === 'client' ? viaAi(row) ? 'Moved through their AI assistant' : 'Moved their appointment' : 'Moved', 'move'],
   'booking.services_changed': row => [row.actor === 'client' ? 'Changed their booking' : 'Booking changed', 'edit'],
-  'booking.cancelled': () => ['Cancelled', 'cancel'],
+  'booking.cancelled': row => [row.actor === 'client' && viaAi(row) ? 'Cancelled through their AI assistant' : 'Cancelled', 'cancel'],
   'booking.transfer_declared': () => ['Transfer made', 'bank'],
   'booking.cash_requested': () => ['Wants to pay cash', 'cash'],
   'booking.payment_method_changed': row => [`Changed to ${row.payload?.method === 'cash' ? 'cash' : 'bank transfer'}`, 'cash'],
@@ -145,7 +148,7 @@ export function describeLine(row) {
   const amount = alert?.amount && row.event_type === 'alert' ? alert.amount : amountOf(row) || alert?.amount || ''
   return {
     what, kind, who, amount, changes, tags: tagsOf(row),
-    actor: row.actor, actorLabel: row.via === 'ai' ? 'Client · via AI' : WHO[row.actor] || 'Automatic',
+    actor: row.actor, actorLabel: row.actor === 'client' && viaAi(row) ? 'Client · via AI' : WHO[row.actor] || 'Automatic',
     note: row.note || (row.event_type === 'client.note_added' ? row.payload?.note : '') || '',
     before: row.event_type === 'booking.services_changed' && row.payload?.previous_sessions ? `Before: ${row.payload.previous_sessions}` : '',
     // Gold until read: something a client did that raised an alert. Quiet: what Vadim or the app did.
