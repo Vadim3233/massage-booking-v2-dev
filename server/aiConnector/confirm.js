@@ -33,22 +33,31 @@ export function createConfirmer({ secret, userId, now = () => new Date() }) {
   const mac = body => createHmac('sha256', secret).update(body).digest('base64url')
   return {
     available: Boolean(secret),
-    sign(tool, details, amount) {
-      const body = encode({ u: userId, t: tool, d: digestOf(tool, details), a: amount ?? null, x: now().getTime() + CONFIRM_MINUTES * 60_000 })
+    // kind: 'card' (a card's requestState) or 'code' (a confirmation code), so one can never stand in for the other.
+    sign(tool, details, amount, kind = 'code') {
+      const body = encode({ k: kind, u: userId, t: tool, d: digestOf(tool, details), a: amount ?? null, x: now().getTime() + CONFIRM_MINUTES * 60_000 })
       return `${body}.${mac(body)}`
     },
     // 'ok', 'expired', 'changed' (the amount moved since the preview) or 'invalid'.
-    check(code, tool, details, amount) {
-      if (!secret || typeof code !== 'string' || !code.includes('.')) return 'invalid'
-      const [body, signature] = code.split('.')
-      const expected = Buffer.from(mac(body))
-      const given = Buffer.from(String(signature))
-      if (expected.length !== given.length || !timingSafeEqual(expected, given)) return 'invalid'
-      const claim = decode(body)
-      if (!claim || claim.u !== userId || claim.t !== tool || claim.d !== digestOf(tool, details)) return 'invalid'
+    check(code, tool, details, amount, kind = 'code') {
+      const claim = this.claim(code, tool, details, kind)
+      if (!claim) return 'invalid'
       if (claim.x < now().getTime()) return 'expired'
       if ((claim.a ?? null) !== (amount ?? null)) return 'changed'
       return 'ok'
+    },
+    // The signed claim when the code is genuine and for exactly this change (expired or not), otherwise null.
+    claim(code, tool, details, kind = 'code') {
+      if (!secret || typeof code !== 'string') return null
+      const parts = code.split('.')
+      if (parts.length !== 2) return null
+      const [body, signature] = parts
+      const expected = Buffer.from(mac(body))
+      const given = Buffer.from(signature)
+      if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null
+      const claim = decode(body)
+      if (!claim || claim.k !== kind || claim.u !== userId || claim.t !== tool || claim.d !== digestOf(tool, details)) return null
+      return claim
     },
     // A request id for the database, the same every time this code is used.
     requestId(code) {

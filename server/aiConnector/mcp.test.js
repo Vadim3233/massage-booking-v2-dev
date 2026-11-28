@@ -80,7 +80,7 @@ describe('the 2026-07-28 protocol (no initialize, version in every request)', ()
   })
   it('refuses another modern version, naming the ones it speaks, and a request without capabilities', async () => {
     const wrong = await answer({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: { _meta: { 'io.modelcontextprotocol/protocolVersion': '2027-01-01', 'io.modelcontextprotocol/clientCapabilities': {} } } }, fakeTools)
-    expect(wrong).toMatchObject({ status: 400, error: { code: -32022, data: { supported: expect.arrayContaining(['2026-07-28', '2025-06-18']) } } })
+    expect(wrong).toMatchObject({ status: 400, error: { code: -32022, data: { supported: ['2026-07-28'] } } })
     const none = await answer({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: { _meta: { 'io.modelcontextprotocol/protocolVersion': '2026-07-28' } } }, fakeTools)
     expect(none).toMatchObject({ status: 400, error: { code: -32602 } })
   })
@@ -92,6 +92,9 @@ describe('the 2026-07-28 protocol (no initialize, version in every request)', ()
     expect(call).toHaveBeenCalledWith('cancel_booking', { booking_reference: 'VAD-1' }, { card: true, inputResponses: { confirm: { action: 'accept' } }, requestState: 'r' })
     await answer({ jsonrpc: '2.0', id: 8, method: 'tools/call', params: { name: 'cancel_booking', arguments: {}, _meta: modernMeta({}) } }, tools)
     expect(call.mock.calls[1][2].card).toBe(false)
+  })
+  it('does not fall over on a request with params: null', async () => {
+    expect((await answer({ jsonrpc: '2.0', id: 1, method: 'tools/call', params: null }, fakeTools)).error.code).toBe(-32602)
   })
   it('marks ordinary results complete, and answers an unknown method with 404', async () => {
     expect((await answer({ jsonrpc: '2.0', id: 9, method: 'tools/call', params: { name: 'good', arguments: {}, _meta: modernMeta() } }, fakeTools)).result)

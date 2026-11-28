@@ -73,7 +73,8 @@ function readBody(request) {
 // The answer carries `status` only when it is an error that has its own HTTP status in the modern transport.
 export async function answer(message, tools) {
   if (!message || message.jsonrpc !== '2.0' || typeof message.method !== 'string') return failure(message?.id, -32600, 'Invalid request')
-  const { id, method, params = {} } = message
+  const { id, method } = message
+  const params = message.params && typeof message.params === 'object' ? message.params : {}
   if (id === undefined || id === null) return null
   return eraOf(message) === 'modern' ? modern(id, method, params, tools) : legacy(id, method, params, tools)
 }
@@ -112,7 +113,7 @@ async function modern(id, method, params, tools) {
   const meta = params._meta || {}
   const version = meta[META + 'protocolVersion']
   if (version !== MODERN_VERSION) {
-    return { ...failure(id, -32022, 'Unsupported protocol version', { supported: [MODERN_VERSION, ...PROTOCOL_VERSIONS], requested: version }), status: 400 }
+    return { ...failure(id, -32022, 'Unsupported protocol version', { supported: [MODERN_VERSION], requested: version }), status: 400 }
   }
   const capabilities = meta[META + 'clientCapabilities']
   if (!capabilities || typeof capabilities !== 'object') return { ...failure(id, -32602, 'Missing client capabilities'), status: 400 }

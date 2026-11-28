@@ -260,6 +260,53 @@ describe('moving and cancelling (always asks first)', () => {
   })
 })
 
+describe('audit fixes', () => {
+  it('asks again when a gift voucher would now be used up, though the fee is still nothing', async () => {
+    const code = (await withSecret(changing()).call('cancel_booking', { booking_reference: 'VAD-1234' })).data.confirmation_code
+    const nowLate = changing({ gift_late: true })
+    const again = (await withSecret(nowLate).call('cancel_booking', { booking_reference: 'VAD-1234', confirmation_code: code })).data
+    expect(again).toMatchObject({ needs_confirmation: true, preview: { uses_up_gift_voucher: true } })
+    expect(nowLate.calls.some(([name]) => name === 'client_cancel_booking')).toBe(false)
+  })
+  it('refuses a code with anything added to it, and a card state used as a code', async () => {
+    const client = changing()
+    const code = (await withSecret(client).call('cancel_booking', { booking_reference: 'VAD-1234' })).data.confirmation_code
+    expect((await withSecret(client).call('cancel_booking', { booking_reference: 'VAD-1234', confirmation_code: `${code}.x` })).text).toMatch(/not for this change/)
+    const state = (await withSecret(client).call('cancel_booking', { booking_reference: 'VAD-1234' }, { card: true })).inputRequired.requestState
+    expect((await withSecret(client).call('cancel_booking', { booking_reference: 'VAD-1234', confirmation_code: state })).text).toMatch(/not for this change/)
+    expect(client.calls.some(([name]) => name === 'client_cancel_booking')).toBe(false)
+  })
+  it('reports a cancel or move asked again after it worked as done, without doing it again', async () => {
+    const client = changing()
+    const code = (await withSecret(client).call('cancel_booking', { booking_reference: 'VAD-1234' })).data.confirmation_code
+    const cancelled = changing({}, { list_my_bookings: [{ ...upcoming, booking_status: 'cancelled' }], get_my_booking: { ...upcoming, booking_status: 'cancelled', refund_due_gbp: 85 } })
+    expect((await withSecret(cancelled).call('cancel_booking', { booking_reference: 'VAD-1234', confirmation_code: code })).data).toMatchObject({ cancelled: true, already_done: true, refund: 'A refund of £85 is due. Vadim sends it himself, soon.' })
+    expect(cancelled.calls.some(([name]) => name === 'client_cancel_booking')).toBe(false)
+    const moveCode = (await withSecret(client).call('move_booking', { booking_reference: 'VAD-1234', date: '2026-11-05', time: '10:00' })).data.confirmation_code
+    const moved = changing({ reschedule_fee_gbp: 0 }, { list_my_bookings: [{ ...upcoming, date: '2026-11-05', start_minutes: 600 }] })
+    expect((await withSecret(moved).call('move_booking', { booking_reference: 'VAD-1234', date: '2026-11-05', time: '10:00', confirmation_code: moveCode })).data).toMatchObject({ moved: true, already_done: true })
+    expect(moved.calls.some(([name]) => name === 'client_reschedule_booking')).toBe(false)
+  })
+  it('will not "move" a booking to the time it already has', async () => {
+    expect((await withSecret(changing()).call('move_booking', { booking_reference: 'VAD-1234', date: '2026-11-04', time: '18:00' })).text).toMatch(/already at that time/)
+  })
+  it('says no charge, not a time already gone, once the free time has passed', async () => {
+    const preview = (await withSecret(changing({ free_until: '2026-10-30T18:00:00Z' })).call('cancel_booking', { booking_reference: 'VAD-1234' })).data.preview
+    expect(preview.terms).toBe('No charge for this change.')
+  })
+  it('takes a No on the card even without its state, and keeps showing the card for a Yes without one', async () => {
+    const client = changing()
+    expect((await withSecret(client).call('cancel_booking', { booking_reference: 'VAD-1234' }, { card: true, inputResponses: { confirm: { action: 'decline' } } })).data.done).toBe(false)
+    expect((await withSecret(client).call('cancel_booking', { booking_reference: 'VAD-1234' }, { card: true, inputResponses: { confirm: { action: 'accept', content: { confirm: true } } } })).inputRequired).toBeTruthy()
+    expect(client.calls.some(([name]) => name === 'client_cancel_booking')).toBe(false)
+  })
+  it('does not show the database\'s own words for a change already under way', async () => {
+    const busy = changing({}, { client_cancel_booking: Object.assign(new Error('Command in progress'), { code: 'PT409' }) })
+    const code = (await withSecret(busy).call('cancel_booking', { booking_reference: 'VAD-1234' })).data.confirmation_code
+    expect((await withSecret(busy).call('cancel_booking', { booking_reference: 'VAD-1234', confirmation_code: code })).text).toBe('That change is already being made. Check list_my_bookings in a moment.')
+  })
+})
+
 describe('small pieces', () => {
   it('reads times and London dates', () => {
     expect(parseTime('9:30')).toBe(570)

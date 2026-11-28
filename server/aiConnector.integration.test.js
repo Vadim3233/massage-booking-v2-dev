@@ -124,12 +124,13 @@ describe('booking through an AI assistant, end to end', () => {
     expect((await unwrap(fixture.admin.from('bookings').select('booking_status').eq('client_id', fixture.profile.client_id)))[0].booking_status).not.toBe('cancelled')
     const done = await call('cancel_booking', { booking_reference: reference, confirmation_code: preview.confirmation_code })
     expect(done.cancelled).toBe(true)
-    const stored = await unwrap(fixture.admin.from('bookings').select('booking_status,cancellation_reason').eq('client_id', fixture.profile.client_id))
+    const stored = await unwrap(fixture.admin.from('bookings').select('id,booking_status,cancellation_reason').eq('client_id', fixture.profile.client_id))
     expect(stored[0]).toMatchObject({ booking_status: 'cancelled', cancellation_reason: 'Cancelled through their AI assistant' })
     const events = await unwrap(fixture.admin.from('event_outbox').select('payload').eq('event_type', 'booking.cancelled'))
     expect(events.at(-1).payload.via).toBe('ai')
-    // The same code again changes nothing.
-    expect((await mcp('tools/call', { name: 'cancel_booking', arguments: { booking_reference: reference, confirmation_code: preview.confirmation_code } })).body.result.content[0].text).toMatch(/no longer be changed online/)
+    // The same code again (an assistant retrying) is reported as done, and changes nothing.
+    expect(await call('cancel_booking', { booking_reference: reference, confirmation_code: preview.confirmation_code })).toMatchObject({ cancelled: true, already_done: true })
+    expect(await unwrap(fixture.admin.from('event_outbox').select('id').eq('event_type', 'booking.cancelled').eq('aggregate_id', stored[0].id))).toHaveLength(1)
   }, 60000)
   it('stops an assistant that asks too often', async () => {
     const user = (await fixture.client.auth.getUser()).data.user.id

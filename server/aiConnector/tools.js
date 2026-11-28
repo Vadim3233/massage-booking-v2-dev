@@ -67,6 +67,7 @@ function lengthsOf(value) {
 function readable(error) {
   if (error instanceof ToolProblem) return error.message
   const message = String(error?.message || '')
+  if (/request key reused|command in progress/i.test(message)) return 'That change is already being made. Check list_my_bookings in a moment.'
   if (['22023', 'P0001', '23P01', '22P02', 'PT409'].includes(error?.code) && message && message.length < 300 && !/[{}]|violates|constraint|relation|column/i.test(message)) {
     return error.code === '23P01' ? 'That time has just been taken. Please choose another time.' : message
   }
@@ -135,10 +136,11 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
     } })
     if (ctx.card) {
       const answer = cardAnswer(ctx.inputResponses)
-      if (answer && ctx.requestState && confirmer.check(ctx.requestState, tool, details, amount) === 'ok') {
-        return answer === 'yes' ? { go: true, code: ctx.requestState } : { stop: { done: false, note: 'The client said no on the card. Nothing was changed.' } }
-      }
-      return { stop: { [INPUT_REQUIRED]: { inputRequests: cardRequest(message, yes), requestState: confirmer.sign(tool, details, amount) } } }
+      const saidNo = { stop: { done: false, note: 'The client said no on the card. Nothing was changed.' } }
+      // A no always stands. A yes counts only with the card's own state, for these exact details and amount; otherwise the card is shown again.
+      if (answer === 'no') return saidNo
+      if (answer === 'yes' && confirmer.check(ctx.requestState, tool, details, amount, 'card') === 'ok') return { go: true, code: ctx.requestState }
+      return { stop: { [INPUT_REQUIRED]: { inputRequests: cardRequest(message, yes), requestState: confirmer.sign(tool, details, amount, 'card') } } }
     }
     const code = details.confirmation_code
     if (!code) return fresh()
@@ -158,6 +160,11 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
   const hoursOf = found => Number.isInteger(found.free_cancellation_hours) ? found.free_cancellation_hours : 24
   const londonStamp = stamp => new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/London' }).format(new Date(stamp))
   const slot = booking => `${dayName(booking.date)}, ${clock(booking.start_minutes)}`
+  // "Free until …" only while that time is still ahead; a fee of 0 after it (a fee already charged, a 0% setting) is simply no charge.
+  const freeLine = (found, what) => new Date(found.free_until).getTime() > now().getTime()
+    ? `No charge: ${what} free until ${londonStamp(found.free_until)}.` : 'No charge for this change.'
+  // Whether a code or card state the client already said yes to is genuine for this change: a retry after it worked is reported as done.
+  const alreadyConfirmed = (tool, details, ctx) => Boolean(confirmer.claim(details.confirmation_code, tool, details, 'code') || (ctx.card && confirmer.claim(ctx.requestState, tool, details, 'card')))
 
   async function profile() {
     let found
@@ -529,14 +536,19 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
         if (!DATE.test(input.date || '')) throw new ToolProblem('The date is YYYY-MM-DD, for example 2026-11-04.')
         const start = parseTime(input.time)
         const booking = await findBooking(input.booking_reference)
+        const details = { booking: booking.id, date: input.date, start, confirmation_code: input.confirmation_code }
+        if (booking.date === input.date && booking.start_minutes === start && booking.booking_status !== 'cancelled') {
+          // Asked again after the move worked (a lost answer), or a "move" to where it already is.
+          if (alreadyConfirmed('move_booking', details, ctx)) return { moved: true, already_done: true, booking: bookingSummary(booking), note: 'This booking is already at that time.' }
+          throw new ToolProblem('The booking is already at that time. Nothing to change.')
+        }
         const found = await changeTerms(booking)
         if (found.gift_late) throw new ToolProblem(`This booking was paid with a gift voucher and is within ${hoursOf(found)} hours, so it can't be moved online. The client can message Vadim.`)
         const fee = Number(found.reschedule_fee_gbp) || 0
-        const details = { booking: booking.id, date: input.date, start, confirmation_code: input.confirmation_code }
         const to = `${dayName(input.date)}, ${clock(start)}`
         const charge = fee > 0
           ? `It is within ${hoursOf(found)} hours of the appointment, so a late fee of ${gbp(fee)} applies.`
-          : `No charge: changes are free until ${londonStamp(found.free_until)}.`
+          : freeLine(found, 'changes are')
         const asked = confirmation('move_booking', details, fee, ctx, {
           message: `Move your massage with Vadim?\nFrom ${slot(booking)}\nTo ${to}\n${charge}`, yes: 'Yes, move it',
           preview: { booking: bookingSummary(booking), from: slot(booking), to, late_fee: fee > 0 ? gbp(fee) : 'none', terms: charge },
@@ -568,17 +580,27 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
       annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
       async run(input, ctx = {}) {
         const booking = await findBooking(input.booking_reference)
-        const found = await changeTerms(booking)
-        const fee = Number(found.cancel_fee_gbp) || 0
         const reason = String(input.reason ?? '').trim().slice(0, 400)
         const details = { booking: booking.id, reason, confirmation_code: input.confirmation_code }
+        // Asked again after the cancel worked (a lost answer): say it is done, with what is due.
+        if (booking.booking_status === 'cancelled' && alreadyConfirmed('cancel_booking', details, ctx)) {
+          const full = await rpc('get_my_booking', { p_booking_id: booking.id }).catch(() => null)
+          return {
+            cancelled: true, already_done: true, booking: bookingSummary({ ...booking, ...(full || {}) }),
+            ...(Number(full?.late_fee_due_gbp) > 0 ? { late_fee: `A late fee of ${gbp(full.late_fee_due_gbp)} is due. Vadim will be in touch about it.` } : {}),
+            ...(Number(full?.refund_due_gbp) > 0 ? { refund: `A refund of ${gbp(full.refund_due_gbp)} is due. Vadim sends it himself, soon.` } : {}),
+          }
+        }
+        const found = await changeTerms(booking)
+        const fee = Number(found.cancel_fee_gbp) || 0
         const hours = hoursOf(found)
         const charge = [
           found.gift_late ? `It is within ${hours} hours of the appointment, so cancelling uses up the gift voucher.` : null,
           fee > 0 ? `It is within ${hours} hours of the appointment, so a late fee of ${gbp(fee)} applies.` : null,
-          !found.gift_late && fee === 0 ? `No charge: cancelling is free until ${londonStamp(found.free_until)}.` : null,
+          !found.gift_late && fee === 0 ? freeLine(found, 'cancelling is') : null,
         ].filter(Boolean).join(' ')
-        const asked = confirmation('cancel_booking', details, fee, ctx, {
+        // The yes is for this fee and this gift-voucher outcome: if either changes before the yes, the client sees a new preview.
+        const asked = confirmation('cancel_booking', details, `${fee}|${found.gift_late ? 'gift' : ''}`, ctx, {
           message: `Cancel your massage with Vadim?\n${slot(booking)} (${booking.booking_reference})\n${charge}`, yes: 'Yes, cancel it',
           preview: { booking: bookingSummary(booking), late_fee: fee > 0 ? gbp(fee) : 'none', uses_up_gift_voucher: Boolean(found.gift_late), terms: charge },
         })
