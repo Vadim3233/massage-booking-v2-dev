@@ -4,10 +4,12 @@ import { buildCalendarFile } from '../../src/client/booking/calendarFile.js'
 import { telegramLink } from '../../src/client/booking/telegramLink.js'
 import { areaForPostcode, areasHavePostcodes, postcodeOf } from '../../src/lib/address.js'
 import { hoursWords, minimumFor, minimumSentence } from '../../src/booking/bookingWords.js'
+import { CONFIRM_MINUTES, cardAnswer, cardRequest, confirmSecret, createConfirmer } from './confirm.js'
 
 // The actions a client's own AI assistant can take, signed in as that client (see api/mcp.js). Each one goes through the same client functions
 // as the app, so the database's rules (free times, notice, how far ahead, prices, one hold per client, the client's own bookings only) decide.
-// Deliberately left to the app: three or more people, extras, new addresses, health notes, moving and cancelling.
+// Deliberately left to the app: three or more people, extras, new addresses, health notes, gift vouchers and changing the treatment.
+// Moving and cancelling always ask first: a Yes / No card where the client's app can show one, otherwise a preview and a one-time code.
 
 export const MAX_PEOPLE = 2
 const MAX_DAYS = 7
@@ -20,7 +22,12 @@ export const INSTRUCTIONS = `This connector books mobile massage appointments wi
 - Before book_appointment, always show the client a summary (day, time, address, people and lengths, total price, payment method, cancellation terms) and wait for a clear yes.
 - Prices are in pounds (GBP). Payment is by bank transfer or cash (cash only where payment_methods lists it); you never take a payment yourself.
 - Do not send health or medical details through this connector. Vadim asks about health separately.
-- New addresses, bookings for three or more people, extras, and moving or cancelling are done in the app at the client's account page.`
+- To move or cancel: the first move_booking or cancel_booking call only returns a preview (and any late fee). Show it, get a clear yes, then call again with its confirmation_code. If the client's app shows a Yes / No card, their tap decides.
+- New addresses, bookings for three or more people, extras, gift vouchers and changing the treatment are done in the app at the client's account page.
+- The full guide is the skill book-with-vadim (resource skill://book-with-vadim/SKILL.md).`
+
+// A tool's answer that is a question for the client (a confirmation card), not a result: see answer() in mcp.js.
+export const INPUT_REQUIRED = Symbol('input required')
 
 export class ToolProblem extends Error {}
 // A new client (no completed, paid visit) pays by bank transfer unless Vadim marked them Trusted (20261209100000_new_clients_pay_by_transfer.sql).
@@ -60,7 +67,8 @@ function lengthsOf(value) {
 function readable(error) {
   if (error instanceof ToolProblem) return error.message
   const message = String(error?.message || '')
-  if (['22023', 'P0001', '23P01', '22P02'].includes(error?.code) && message && message.length < 300 && !/[{}]|violates|constraint|relation|column/i.test(message)) {
+  if (/request key reused|command in progress/i.test(message)) return 'That change is already being made. Check list_my_bookings in a moment.'
+  if (['22023', 'P0001', '23P01', '22P02', 'PT409'].includes(error?.code) && message && message.length < 300 && !/[{}]|violates|constraint|relation|column/i.test(message)) {
     return error.code === '23P01' ? 'That time has just been taken. Please choose another time.' : message
   }
   if (error?.code === '42501' && /not available to this client/i.test(message)) return 'That booking is not on this account.'
@@ -115,6 +123,48 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
   // One hold per client at a time: holding a new time lets go of the last one, as in the app.
   const holdKey = `ai-assistant:${userId}`
   const accountLink = origin ? `${origin}/account` : 'the account page in the app'
+  const confirmer = createConfirmer({ secret: confirmSecret(env), userId, now })
+
+  // The yes before a change. Returns { go: true, code } when the client said yes, or { stop } with what to answer instead: a card for the
+  // client's app, a preview with a confirmation code for the assistant, or "nothing changed" when they said no.
+  function confirmation(tool, details, amount, ctx, { message, yes, preview }) {
+    if (!confirmer.available) throw new ToolProblem(`This can't be done through the assistant just now. Please use the app: ${accountLink}.`)
+    const fresh = note => ({ stop: {
+      needs_confirmation: true, done: false, ...(note ? { note } : {}), preview,
+      confirmation_code: confirmer.sign(tool, details, amount), expires_in_minutes: CONFIRM_MINUTES,
+      next: `Nothing has changed yet. Show the client this preview in your own words and ask for a clear yes. Only then call ${tool} again with the same details and this confirmation_code.`,
+    } })
+    if (ctx.card) {
+      const answer = cardAnswer(ctx.inputResponses)
+      const saidNo = { stop: { done: false, note: 'The client said no on the card. Nothing was changed.' } }
+      // A no always stands. A yes counts only with the card's own state, for these exact details and amount; otherwise the card is shown again.
+      if (answer === 'no') return saidNo
+      if (answer === 'yes' && confirmer.check(ctx.requestState, tool, details, amount, 'card') === 'ok') return { go: true, code: ctx.requestState }
+      return { stop: { [INPUT_REQUIRED]: { inputRequests: cardRequest(message, yes), requestState: confirmer.sign(tool, details, amount, 'card') } } }
+    }
+    const code = details.confirmation_code
+    if (!code) return fresh()
+    const state = confirmer.check(code, tool, details, amount)
+    if (state === 'ok') return { go: true, code }
+    if (state === 'expired') return fresh('That confirmation code has expired. Here is a fresh preview: show it to the client again.')
+    if (state === 'changed') return fresh('The fee or price has changed since the last preview. Show the client this new preview and ask again.')
+    throw new ToolProblem(`That confirmation code is not for this change. Call ${tool} again without a confirmation_code for a fresh preview.`)
+  }
+
+  async function changeTerms(booking) {
+    const found = await rpc('get_my_change_terms', { p_booking_id: booking.id })
+    if (!found?.can_change) throw new ToolProblem('This booking can no longer be changed online (it has started, is over or is cancelled). The client can message Vadim.')
+    return found
+  }
+
+  const hoursOf = found => Number.isInteger(found.free_cancellation_hours) ? found.free_cancellation_hours : 24
+  const londonStamp = stamp => new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Europe/London' }).format(new Date(stamp))
+  const slot = booking => `${dayName(booking.date)}, ${clock(booking.start_minutes)}`
+  // "Free until …" only while that time is still ahead; a fee of 0 after it (a fee already charged, a 0% setting) is simply no charge.
+  const freeLine = (found, what) => new Date(found.free_until).getTime() > now().getTime()
+    ? `No charge: ${what} free until ${londonStamp(found.free_until)}.` : 'No charge for this change.'
+  // Whether a code or card state the client already said yes to is genuine for this change: a retry after it worked is reported as done.
+  const alreadyConfirmed = (tool, details, ctx) => Boolean(confirmer.claim(details.confirmation_code, tool, details, 'code') || (ctx.card && confirmer.claim(ctx.requestState, tool, details, 'card')))
 
   async function profile() {
     let found
@@ -359,7 +409,7 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
         },
       },
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
-      async run(input) {
+      async run(input, ctx = {}) {
         if (input.client_confirmed !== true) throw new ToolProblem('Show the client the summary and ask for a clear yes first.')
         if (!DATE.test(input.date || '')) throw new ToolProblem('The date is YYYY-MM-DD, for example 2026-11-04.')
         if (!['bank_transfer', 'cash'].includes(input.payment_method)) throw new ToolProblem('payment_method is bank_transfer or cash.')
@@ -373,6 +423,14 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
         const quote = await api.quote(chosen.draft)
         if (Math.abs(Number(quote.total_gbp) - Number(input.expected_total_gbp)) > 0.004) {
           throw new ToolProblem(`The total is now ${gbp(quote.total_gbp)}, not ${gbp(input.expected_total_gbp)}. Tell the client the new total and ask again.`)
+        }
+        // Where the client's app can show a Yes / No card, their tap is the final say (the summary in the chat came first).
+        if (ctx.card) {
+          const people = input.lengths.map(minutes => `${chosen.service.name} ${hoursWords(minutes)}`).join(' + ')
+          const method = input.payment_method === 'cash' ? 'cash' : 'bank transfer'
+          const message = `Book this massage with Vadim?\n${dayName(input.date)}, ${clock(start)} to ${clock(start + chosen.duration)}\n${people}\n${chosen.address.address}\nTotal ${gbp(quote.total_gbp)}, ${method}\n${terms(await rules())}`
+          const asked = confirmation('book_appointment', input, Number(quote.total_gbp), ctx, { message, yes: 'Yes, book it' })
+          if (!asked.go) return asked.stop.done === false && !asked.stop.needs_confirmation ? { booked: false, note: 'The client said no on the card. Nothing was booked.' } : asked.stop
         }
         const hold = await api.hold(input.date, start, chosen.duration, holdKey)
         const key = createHash('sha256').update(JSON.stringify([userId, input.date, start, chosen.service.id, input.lengths, chosen.address.id, chosen.area.id])).digest('hex').slice(0, 48)
@@ -432,7 +490,127 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
         return {
           upcoming: upcoming.map(bookingSummary),
           ...(past ? { past: rows.filter(row => row.date < today || row.booking_status === 'cancelled').slice(0, 10).map(bookingSummary) } : {}),
-          change_or_cancel: `Moving or cancelling is done in the app: ${accountLink}.`,
+          change_or_cancel: 'To move one, use find_new_times and move_booking. To cancel, use cancel_booking. Both ask the client first.',
+          in_the_app: `Changing the treatment, length or people is done in the app: ${accountLink}.`,
+        }
+      },
+    },
+    {
+      name: 'find_new_times',
+      title: 'Free times to move a booking',
+      description: 'Free start times on one day for moving an existing booking (same treatment and length). Only offer these times.',
+      inputSchema: {
+        type: 'object', additionalProperties: false, required: ['booking_reference', 'date'],
+        properties: { booking_reference: { type: 'string' }, date: { type: 'string', description: 'YYYY-MM-DD (London).' } },
+      },
+      annotations: { readOnlyHint: true },
+      async run({ booking_reference: reference, date }) {
+        if (!DATE.test(date || '')) throw new ToolProblem('The date is YYYY-MM-DD, for example 2026-11-04.')
+        const booking = await findBooking(reference)
+        const found = await changeTerms(booking)
+        if (found.gift_late) throw new ToolProblem(`This booking was paid with a gift voucher and is within ${hoursOf(found)} hours, so it can't be moved online. The client can message Vadim.`)
+        const rows = (await rpc('get_my_booking_availability', { p_booking_id: booking.id, p_date: date })) || []
+        return {
+          booking: bookingSummary(booking), date, day: dayName(date),
+          times: rows.map(row => clock(row.start_minutes)),
+          ...(rows.length ? {} : { note: 'No free times that day. Try another day.' }),
+          late_fee: Number(found.reschedule_fee_gbp) > 0 ? gbp(found.reschedule_fee_gbp) : undefined,
+        }
+      },
+    },
+    {
+      name: 'move_booking',
+      title: 'Move a booking',
+      description: 'Moves an existing booking to a new time from find_new_times. The first call only returns a preview and a confirmation_code; call again with the code after the client says yes.',
+      inputSchema: {
+        type: 'object', additionalProperties: false, required: ['booking_reference', 'date', 'time'],
+        properties: {
+          booking_reference: { type: 'string' },
+          date: { type: 'string', description: 'New date, YYYY-MM-DD (London).' },
+          time: { type: 'string', description: 'New start time HH:MM, one that find_new_times returned.' },
+          confirmation_code: { type: 'string', description: 'From the preview, only after the client said yes to it.' },
+        },
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
+      async run(input, ctx = {}) {
+        if (!DATE.test(input.date || '')) throw new ToolProblem('The date is YYYY-MM-DD, for example 2026-11-04.')
+        const start = parseTime(input.time)
+        const booking = await findBooking(input.booking_reference)
+        const details = { booking: booking.id, date: input.date, start, confirmation_code: input.confirmation_code }
+        if (booking.date === input.date && booking.start_minutes === start && booking.booking_status !== 'cancelled') {
+          // Asked again after the move worked (a lost answer), or a "move" to where it already is.
+          if (alreadyConfirmed('move_booking', details, ctx)) return { moved: true, already_done: true, booking: bookingSummary(booking), note: 'This booking is already at that time.' }
+          throw new ToolProblem('The booking is already at that time. Nothing to change.')
+        }
+        const found = await changeTerms(booking)
+        if (found.gift_late) throw new ToolProblem(`This booking was paid with a gift voucher and is within ${hoursOf(found)} hours, so it can't be moved online. The client can message Vadim.`)
+        const fee = Number(found.reschedule_fee_gbp) || 0
+        const to = `${dayName(input.date)}, ${clock(start)}`
+        const charge = fee > 0
+          ? `It is within ${hoursOf(found)} hours of the appointment, so a late fee of ${gbp(fee)} applies.`
+          : freeLine(found, 'changes are')
+        const asked = confirmation('move_booking', details, fee, ctx, {
+          message: `Move your massage with Vadim?\nFrom ${slot(booking)}\nTo ${to}\n${charge}`, yes: 'Yes, move it',
+          preview: { booking: bookingSummary(booking), from: slot(booking), to, late_fee: fee > 0 ? gbp(fee) : 'none', terms: charge },
+        })
+        if (!asked.go) return asked.stop
+        const after = await rpc('client_reschedule_booking', { p_booking_id: booking.id, p_request_id: confirmer.requestId(asked.code), p_new_date: input.date, p_new_start_minutes: start, p_acknowledged_fee: fee })
+        const moved = after && after.date ? after : { ...booking, date: input.date, start_minutes: start }
+        const calendarEvent = await calendar({ ...booking, ...moved, id: booking.id }).catch(() => null)
+        return {
+          moved: true, booking: bookingSummary({ ...booking, ...moved }),
+          ...(Number(moved.late_fee_due_gbp) > 0 ? { late_fee: `A late fee of ${gbp(moved.late_fee_due_gbp)} is due. Vadim will be in touch about it.` } : {}),
+          add_to_calendar: calendarEvent ? { question: 'Ask the client: shall I update your calendar?', ...calendarEvent } : undefined,
+          note: 'Vadim has been told. A confirmation email is on its way.',
+        }
+      },
+    },
+    {
+      name: 'cancel_booking',
+      title: 'Cancel a booking',
+      description: 'Cancels an existing booking. The first call only returns a preview (free, or the late fee) and a confirmation_code; call again with the code after the client says yes.',
+      inputSchema: {
+        type: 'object', additionalProperties: false, required: ['booking_reference'],
+        properties: {
+          booking_reference: { type: 'string' },
+          reason: { type: 'string', description: 'Optional, in the client\'s words. No health details.' },
+          confirmation_code: { type: 'string', description: 'From the preview, only after the client said yes to it.' },
+        },
+      },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
+      async run(input, ctx = {}) {
+        const booking = await findBooking(input.booking_reference)
+        const reason = String(input.reason ?? '').trim().slice(0, 400)
+        const details = { booking: booking.id, reason, confirmation_code: input.confirmation_code }
+        // Asked again after the cancel worked (a lost answer): say it is done, with what is due.
+        if (booking.booking_status === 'cancelled' && alreadyConfirmed('cancel_booking', details, ctx)) {
+          const full = await rpc('get_my_booking', { p_booking_id: booking.id }).catch(() => null)
+          return {
+            cancelled: true, already_done: true, booking: bookingSummary({ ...booking, ...(full || {}) }),
+            ...(Number(full?.late_fee_due_gbp) > 0 ? { late_fee: `A late fee of ${gbp(full.late_fee_due_gbp)} is due. Vadim will be in touch about it.` } : {}),
+            ...(Number(full?.refund_due_gbp) > 0 ? { refund: `A refund of ${gbp(full.refund_due_gbp)} is due. Vadim sends it himself, soon.` } : {}),
+          }
+        }
+        const found = await changeTerms(booking)
+        const fee = Number(found.cancel_fee_gbp) || 0
+        const hours = hoursOf(found)
+        const charge = [
+          found.gift_late ? `It is within ${hours} hours of the appointment, so cancelling uses up the gift voucher.` : null,
+          fee > 0 ? `It is within ${hours} hours of the appointment, so a late fee of ${gbp(fee)} applies.` : null,
+          !found.gift_late && fee === 0 ? freeLine(found, 'cancelling is') : null,
+        ].filter(Boolean).join(' ')
+        // The yes is for this fee and this gift-voucher outcome: if either changes before the yes, the client sees a new preview.
+        const asked = confirmation('cancel_booking', details, `${fee}|${found.gift_late ? 'gift' : ''}`, ctx, {
+          message: `Cancel your massage with Vadim?\n${slot(booking)} (${booking.booking_reference})\n${charge}`, yes: 'Yes, cancel it',
+          preview: { booking: bookingSummary(booking), late_fee: fee > 0 ? gbp(fee) : 'none', uses_up_gift_voucher: Boolean(found.gift_late), terms: charge },
+        })
+        if (!asked.go) return asked.stop
+        const after = await rpc('client_cancel_booking', { p_booking_id: booking.id, p_request_id: confirmer.requestId(asked.code), p_acknowledged_fee: fee, p_reason: reason || 'Cancelled through their AI assistant' })
+        return {
+          cancelled: true, booking: bookingSummary({ ...booking, ...(after || {}), booking_status: 'cancelled' }),
+          ...(Number(after?.late_fee_due_gbp) > 0 ? { late_fee: `A late fee of ${gbp(after.late_fee_due_gbp)} is due. Vadim will be in touch about it.` } : {}),
+          ...(Number(after?.refund_due_gbp) > 0 ? { refund: `A refund of ${gbp(after.refund_due_gbp)} is due. Vadim sends it himself, soon.` } : {}),
+          note: 'Vadim has been told. A confirmation email is on its way.',
         }
       },
     },
@@ -463,12 +641,14 @@ export function createTools({ client, userId, origin = '', env = {}, now = () =>
 
   return {
     list: () => tools.map(tool => Object.fromEntries(Object.entries(tool).filter(([key]) => key !== 'run'))),
-    async call(name, input = {}) {
+    // ctx: { card } when the client's app can show a confirmation card, with the card's answer (inputResponses, requestState) on the way back.
+    async call(name, input = {}, ctx = {}) {
       const tool = tools.find(item => item.name === name)
       if (!tool) return { isError: true, text: `There is no tool called ${name}.` }
       try {
         await rpc('note_ai_request')
-        const result = await tool.run(input || {})
+        const result = await tool.run(input || {}, ctx)
+        if (result && result[INPUT_REQUIRED]) return { isError: false, inputRequired: result[INPUT_REQUIRED] }
         return { isError: false, data: result }
       } catch (error) {
         return { isError: true, text: readable(error) }

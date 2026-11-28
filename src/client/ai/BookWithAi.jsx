@@ -52,7 +52,7 @@ export default function BookWithAi({ client = supabase }) {
         <ul>{EXAMPLE_ASKS.map(line => <li key={line}>“{line}”</li>)}</ul>
         <p className="fine">Your assistant can:</p>
         <ul className="consent-list">{WHAT_IT_CAN_DO.map(line => <li key={line}>{line}</li>)}</ul>
-        <p className="fine">It always asks you before it books, and it never takes a payment. New addresses, bookings for three or more people, extras, and changing or cancelling are done in <a href="/account">your account</a>. Please don't share health details through your assistant: I ask about those myself.</p>
+        <p className="fine">It always asks you before it books, moves or cancels, and it never takes a payment. Some apps show you a Yes / No button for this. New addresses, bookings for three or more people, extras, gift vouchers and changing the treatment are done in <a href="/account">your account</a>. Please don't share health details through your assistant: I ask about those myself.</p>
       </section>
       {signedIn && <section className="panel ai-connect">
         <h2>Connected assistants</h2>
